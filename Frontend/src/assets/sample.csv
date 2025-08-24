@@ -1,0 +1,9 @@
+﻿id,physicalName,logicalName,primaryKey,dataType,description,owner,status,createdAt,updatedAt
+1,users,Users,id,uuid,Table containing user information,John Doe,private,01/01/2025,null
+1,users,Users,id,uuid,Table containing user information,John Doe,private,01/01/2025,null
+1,users,Users,id,uuid,Table containing user information,John Doe,private,01/01/2025,null
+1,users,Users,id,uuid,Table containing user information,John Doe,private,01/01/2025,null
+2,departments,Departments,id,uuid,Table containing department information,John Doe,public,02/01/2024,null
+2,departments,Departments,id,uuid,Table containing department information,John Doe,public,02/01/2024,null
+2,departments,Departments,id,uuid,Table containing department information,John Doe,public,02/01/2024,null
+2,departments,Departments,id,uuid,Table containing department information,John Doe,public,02/01/2024,null
