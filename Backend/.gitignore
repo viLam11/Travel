@@ -26,8 +26,46 @@ target/
 /nbdist/
 /.nb-gradle/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
+
+# ---- Backend (Spring Boot / Maven) ----
+**/target/
+**/build/
+*.class
+*.jar
+*.war
+*.ear
+
+# Spring config (không commit secret)
+Backend/src/main/resources/application.properties
+Backend/src/main/resources/application.yml
+
+# Logs
+*.log
+
+# ---- Frontend (Node.js) ----
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+
+# Env files (secret keys, API keys)
+Frontend/.env
+Frontend/.env.local
+Frontend/.env.*.local
+
+# ---- IDE / Editor ----
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.classpath
+*.project
+.settings/
+
+# ---- OS generated ----
+.DS_Store
+Thumbs.db
