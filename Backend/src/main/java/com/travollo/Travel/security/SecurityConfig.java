@@ -36,8 +36,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/users/**", "/test/**", "/swagger-ui/**", "/swagger-ui.html", "/services/**").permitAll()
-                        .requestMatchers("/orders/**").authenticated() // chỉ /booking cần token
-                        .anyRequest().permitAll())
+//                        .requestMatchers("/orders/**").authenticated() // chỉ /booking cần token
+                        .anyRequest().authenticated())
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
