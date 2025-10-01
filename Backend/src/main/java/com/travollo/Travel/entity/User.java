@@ -38,20 +38,9 @@ public class User implements UserDetails {
     @Column(columnDefinition = "ENUM('USER', 'ADMIN', 'PROVIDER')")
     private Role role; // e.g., "USER", "ADMIN"
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<Order> orderList = new ArrayList<>();
-
-    public List<Order> getOrderList() {
-        return orderList;
-    }
-
-    public void setOrderList(List<Order> orderList) {
-        this.orderList = orderList;
-    }
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority((role.toString())));
+        return List.of(new SimpleGrantedAuthority("ROLE_"+(role.toString())));
     }
 
     @Override
@@ -61,7 +50,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return username;
+        return email;
     }
 
     public String getEmail() {
@@ -147,7 +136,6 @@ public class User implements UserDetails {
                 ", phone='" + this.getPhone() + '\'' +
                 ", address='" + this.getAddress() + '\'' +
                 ", role=" + this.getRole() +
-                ", orderList=" + this.getOrderList() +
                 '}';
     }
 }

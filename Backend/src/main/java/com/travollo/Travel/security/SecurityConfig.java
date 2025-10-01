@@ -1,7 +1,7 @@
 package com.travollo.Travel.security;
 
-
-import com.travollo.Travel.service.CustomerUserDetailService;
+import com.travollo.Travel.service.CustomUserDetailService;
+import com.travollo.Travel.utils.JWTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,16 +19,21 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.NullSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 @Configuration
 @EnableMethodSecurity
 @EnableWebSecurity
 public class SecurityConfig {
     @Autowired
-    private CustomerUserDetailService customerUserDetailService;
+    private CustomUserDetailService customerUserDetailService;
+    @Autowired
+    private JWTUtils jwtUtils;
 
     @Autowired
     private JWTAuthFilter jwtAuthFilter;
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -36,9 +41,9 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/users/**", "/test/**", "/swagger-ui/**", "/swagger-ui.html", "/services/**").permitAll()
-//                        .requestMatchers("/orders/**").authenticated() // chỉ /booking cần token
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated() )
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .securityContext(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
@@ -63,5 +68,11 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new NullSecurityContextRepository(); // stateless, không persist session
+    }
+
 
 }

@@ -46,10 +46,6 @@ public class Utils {
         userDTO.setAddress(user.getAddress());
         userDTO.setRole(user.getRole());
 
-        if (!user.getOrderList().isEmpty()) {
-            userDTO.setOrderList(user.getOrderList());
-        }
-
         return userDTO;
     }
 
