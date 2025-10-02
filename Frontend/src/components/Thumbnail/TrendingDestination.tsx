@@ -10,7 +10,16 @@ import tour5 from '../../assets/tour5.png';
 import tour6 from '../../assets/tour6.png';
 import tour7 from '../../assets/tour7.png';
 import TourSmallCard from "../Tours/TourSmallCard";
-const TOURIMGS = [{
+
+interface TourImage {
+    image: string;
+    title: string;
+    location: string;
+    duration: string;
+    price: number;
+}
+
+const TOURIMGS: TourImage[] = [{
     image: tour1,
     title: 'Centipede Tour - Guided Arizona Desert Tour By ATV',
     location: 'Arizona, USA',
@@ -30,7 +39,7 @@ const TOURIMGS = [{
     price: 200
 }, {
     image: tour4,
-    title: 'All Inclusive Ultimate Cirle Island Day Tour with Lunch ',
+    title: 'All Inclusive Ultimate Circle Island Day Tour with Lunch',
     location: 'Hawaii, USA',
     duration: '1 day',
     price: 250
@@ -52,37 +61,36 @@ const TOURIMGS = [{
     location: 'Hawaii, USA',
     duration: '4 days',
     price: 400
-}]
+}];
 
-const DEST_IMGS = [sing, roma, paris];
+const DEST_IMGS: string[] = [sing, roma, paris];
 
-export default function TrendingDestination() {
+export default function TrendingDestination(){
     return (
         <div className="trending-dest">
             <div className="text">
                 <h3>Trending Destinations</h3>
                 <div>
-                    <text>See all</text>
+                    <span>See all</span>
                 </div>
             </div>
-            
 
             <div className="container-trending">
                 {Array.from({ length: 7 }, (_, index) => (
                     <div className="dest" key={index}>
-                        <img src={DEST_IMGS[index % DEST_IMGS.length]} />
-                        <text>Paris</text>
+                        <img src={DEST_IMGS[index % DEST_IMGS.length]} alt={`Destination ${index + 1}`} />
+                        <span>Paris</span>
                     </div>
-                ))} 
+                ))}
             </div>
 
-        <div className="popular-tours">
-            {Array.from({length:7}, (_, index) =>  {
-                return(
-                  <TourSmallCard key={index} tour={TOURIMGS[index]} />
-                )
-            })}
-        </div>
+            <div className="popular-tours">
+                {Array.from({ length: 7 }, (_, index) => {
+                    return (
+                        <TourSmallCard key={index} tour={TOURIMGS[index]} />
+                    )
+                })}
+            </div>
         </div>
     )
 }
