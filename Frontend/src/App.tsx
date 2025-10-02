@@ -2,8 +2,8 @@
 import './App.scss'
 // import { Route, Routes } from 'react-router-dom'
 import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
-// import Homepage from './pages/Homepage/Homepage';
-import Homepage from './pages/Homepage2/Homepage';
+import Homepage from './pages/Homepage/Homepage';
+// import Homepage from './pages/Homepage2/Homepage';
 import LoginPage from './pages/Auth/Login/LoginPage';
 import RegisterPage from './pages/Auth/Register/RegisterPage';
 import ForgotPasswordPage from './pages/Auth/ForgotPassword/ForgotPasswordPage';
@@ -18,8 +18,8 @@ export default function App() {
       <UserProvider>
         <Router>
           <Routes>
-              {/* <Route path="/homepage" element={<Homepage />} /> */}
-              <Route path="/homepage" element={<Homepage isLoggedIn={isLoggedIn} />} />
+              <Route path="/homepage" element={<Homepage />} />
+              {/* <Route path="/homepage" element={<Homepage isLoggedIn={isLoggedIn} />} /> */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
