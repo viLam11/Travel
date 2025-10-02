@@ -2,7 +2,7 @@ import "./MainThumbnail.scss";
 import ticket from "../../assets/ticket.png";
 import balloon from "../../assets/hot-air-balloon.png";
 import medal from "../../assets/medal.png";
-import diamond from "../../assets/diamond.png"
+import diamond from "../../assets/diamond.png";
 
 export default function MainThumbnail() {
     return (
@@ -60,28 +60,28 @@ export default function MainThumbnail() {
             </div>
 
             <div className="introduction">
-                <text>Why choose Tourz</text>
+                <span>Why choose Tourz</span>
 
                 <div className="items">
                     <div className="item">
-                        <img src={ticket} alt="ticket"  />
+                        <img src={ticket} alt="ticket" />
                         <h4>Ultimate flexibility</h4>
-                        <text>You're in control, with free cancellation and payment options to satisfy any plan or budget.</text>
+                        <span>You're in control, with free cancellation and payment options to satisfy any plan or budget.</span>
                     </div>
                     <div className="item">
-                        <img src={balloon} />
-                        <h4>Memoriable experiences</h4>
-                        <text>Browser and book tours and activites so incredible, you'll want to tell your friends</text>
+                        <img src={balloon} alt="hot air balloon" />
+                        <h4>Memorable experiences</h4>
+                        <span>Browser and book tours and activities so incredible, you'll want to tell your friends</span>
                     </div>
                     <div className="item">
-                        <img src={diamond} />
+                        <img src={diamond} alt="diamond" />
                         <h4>Quality at our core</h4>
-                        <text>High-quality standards. Millions of reviews. A tourz company.</text>
+                        <span>High-quality standards. Millions of reviews. A tourz company.</span>
                     </div>
                     <div className="item">
-                         <img src={medal} />
+                        <img src={medal} alt="medal" />
                         <h4>Award-winning support</h4>
-                        <text>New prices? New plan? No problem. We're here to help, 24/7.</text>
+                        <span>New prices? New plan? No problem. We're here to help, 24/7.</span>
                     </div>
                 </div>
             </div>

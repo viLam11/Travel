@@ -1,18 +1,31 @@
-import React, { useEffect, useState } from 'react';
-export default function TourSmallCard({ tour }) {
-    useEffect(() => {
+import { useEffect } from 'react';
 
+interface Tour {
+    image: string;
+    title: string;
+    location: string;
+    duration: string;
+    price: number;
+    description?: string;
+    name?: string;
+}
+
+interface TourSmallCardProps {
+    tour: Tour;
+}
+
+export default function TourSmallCard({ tour }: TourSmallCardProps){
+    useEffect(() => {
         console.log(`TourSmallCard mounted for tour: ${tour.location}`);
     }, [tour]);
 
     return (
         <div className="tour-small-card">
-            <img src={tour.image} alt={tour.name} />
+            <img src={tour.image} alt={tour.name || tour.title} />
             <div className="tour-info">
                 <div className="location">{tour.location}</div>
-                <text>{tour.title}</text>
+                <span>{tour.title}</span>
                 <p>{tour.description}</p>
-
             </div>
             <div className="tour-details">
                 <span className="duration">{tour.duration}</span>

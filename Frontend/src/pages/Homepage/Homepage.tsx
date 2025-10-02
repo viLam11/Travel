@@ -35,7 +35,6 @@ export default function Homepage() {
                 </div>
             </div>
 
-
             <MainThumbnail />
             <div className="body">
                 <TrendingDestination />
@@ -45,7 +44,7 @@ export default function Homepage() {
                 <div className="left">
                     <div className="discount-text">
                         <span>
-                            Grab up to <span className="hightlight">35% of </span>
+                            Grab up to <span className="hightlight">35% off </span>
                             on your favorite destinations.
                         </span>
                         <span className="small-text"> Limited time offer, don't miss the opportunity!</span>
@@ -53,7 +52,6 @@ export default function Homepage() {
                     <div className="discount-button">
                         Book Now
                     </div>
-
                 </div>
                 <div className="right"></div>
             </div>
@@ -66,15 +64,15 @@ export default function Homepage() {
                 <div className="body">
                     <div className="col-1">
                         <div className="cruise">
-                            <text>Cruises</text>
+                            <span>Cruises</span>
                         </div>
                         <div className="museum">
-                            <text>Museum Tour</text>
+                            <span>Museum Tour</span>
                         </div>
                     </div>
                     <div className="col-2">
                         <div className="beach">
-                            <text>Beach Tour</text>
+                            <span>Beach Tour</span>
                         </div>
                     </div>
                     <div className="col-3">
@@ -83,18 +81,15 @@ export default function Homepage() {
                         </div>
                         <div className="row-2">
                             <div className="food">
-                                <text>Food</text>
+                                <span>Food</span>
                             </div>
                             <div className="hiking">
-                                <text>Hiking</text>
+                                <span>Hiking</span>
                             </div>
                         </div>
-
                     </div>
                 </div>
-
             </div>
-
         </div>
     )
 }
