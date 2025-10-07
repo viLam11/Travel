@@ -1,4 +1,6 @@
-// HeroSection.scss
+// HeroSection.scss - Responsive with enhanced effects
+
+// Fog container
 .fog-container {
   position: absolute;
   top: 0;
@@ -26,6 +28,7 @@
   animation-direction: alternate;
 }
 
+// Individual fog layers
 .fog-1 {
   width: 200px;
   height: 200px;
@@ -196,7 +199,7 @@
   }
 }
 
-// Enhanced text shadows for better readability
+// Enhanced text shadows
 .color-eb662b {
   text-shadow: 
     0 2px 4px rgba(0, 0, 0, 0.3),
@@ -204,41 +207,7 @@
     0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
-// Responsive adjustments
-@media (max-width: 640px) {
-  .fog {
-    filter: blur(20px);
-    opacity: 0.2;
-  }
-  
-  .fog-1, .fog-2, .fog-3, .fog-4, .fog-5 {
-    width: 120px;
-    height: 120px;
-  }
-  
-  .particle {
-    width: 2px;
-    height: 2px;
-    
-    &::before {
-      width: 3px;
-      height: 3px;
-    }
-  }
-}
-
-// Performance optimization for reduced motion
-@media (prefers-reduced-motion: reduce) {
-  .fog {
-    animation-duration: 60s;
-  }
-  
-  .particle {
-    animation-duration: 30s;
-  }
-}
-
-// Additional atmospheric effects
+// Shimmer effect
 .fog-container::after {
   content: '';
   position: absolute;
@@ -266,5 +235,140 @@
   50% {
     opacity: 0.8;
     transform: translateX(50px);
+  }
+}
+
+// Airplane animation
+.airplane-animation {
+  z-index: 20;
+}
+
+.floating-svg {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+// ========================================
+// RESPONSIVE STYLES
+// ========================================
+
+// Mobile (< 640px)
+@media (max-width: 640px) {
+  .fog {
+    filter: blur(20px);
+    opacity: 0.25;
+  }
+  
+  .fog-1, .fog-2, .fog-3, .fog-4, .fog-5 {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .particle {
+    width: 2px;
+    height: 2px;
+    
+    &::before {
+      width: 3px;
+      height: 3px;
+    }
+  }
+  
+  .color-eb662b {
+    text-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+  
+  .airplane-animation {
+    transform: scale(0.6);
+    transform-origin: top right;
+  }
+  
+  .floating-svg {
+    animation: float 4s ease-in-out infinite;
+  }
+}
+
+// Tablet (641px - 1024px)
+@media (min-width: 641px) and (max-width: 1024px) {
+  .fog {
+    filter: blur(25px);
+    opacity: 0.3;
+  }
+  
+  .fog-1, .fog-2, .fog-3, .fog-4, .fog-5 {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .particle {
+    width: 3px;
+    height: 3px;
+    
+    &::before {
+      width: 4px;
+      height: 4px;
+    }
+  }
+  
+  .airplane-animation {
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+}
+
+// Desktop (> 1024px)
+@media (min-width: 1025px) {
+  .fog-1 {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .fog-2 {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .fog-3 {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .fog-4 {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .fog-5 {
+    width: 350px;
+    height: 350px;
+  }
+}
+
+// Performance optimization
+@media (prefers-reduced-motion: reduce) {
+  .fog {
+    animation-duration: 60s;
+  }
+  
+  .particle {
+    animation-duration: 30s;
+  }
+  
+  .floating-svg {
+    animation: none;
+  }
+  
+  .fog-container::after {
+    animation: none;
   }
 }

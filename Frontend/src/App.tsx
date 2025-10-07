@@ -2,8 +2,8 @@
 import './App.scss'
 // import { Route, Routes } from 'react-router-dom'
 import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
-import Homepage from './pages/Homepage/Homepage';
-// import Homepage from './pages/Homepage2/Homepage';
+// import Homepage from './pages/Homepage/Homepage';
+import Homepage from './pages/Homepage2/Homepage';
 import LoginPage from './pages/Auth/Login/LoginPage';
 import RegisterPage from './pages/Auth/Register/RegisterPage';
 import ForgotPasswordPage from './pages/Auth/ForgotPassword/ForgotPasswordPage';
@@ -11,15 +11,17 @@ import ResetPasswordPage from './pages/Auth/ResetPassword/ResetPasswordPage';
 import { useQueryClient, useMutation, useQuery, QueryClientProvider } from '@tanstack/react-query'
 import { UserContext, UserProvider } from './contexts/UserContext';
 import { Toaster } from 'react-hot-toast';
+import { useState } from 'react';
+
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   return (
     <QueryClientProvider client={useQueryClient()}>
       <UserProvider>
         <Router>
           <Routes>
+              {/* <Route path="/homepage" element={<Homepage />} /> */}
               <Route path="/homepage" element={<Homepage />} />
-              {/* <Route path="/homepage" element={<Homepage isLoggedIn={isLoggedIn} />} /> */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -71,13 +73,7 @@ export default function App() {
                   },
                 }}
               /> */}
-              {/* Toggle Button for Demo - Remove in production */}
-            <button
-              onClick={() => setIsLoggedIn(!isLoggedIn)}
-              className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg transition-colors z-50"
-            >
-              {isLoggedIn ? '🔓 Đăng xuất (Demo)' : '🔒 Đăng nhập (Demo)'}
-            </button>
+          
           </Routes>
         </Router>
       </UserProvider>

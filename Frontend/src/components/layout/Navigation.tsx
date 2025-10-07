@@ -1,19 +1,27 @@
-// src/components/layout/Navigation.jsx
+// src/components/layout/Navigation.tsx
 import React from 'react';
 import { Search } from 'lucide-react';
 
-const Navigation = ({ isLoggedIn }) => {
+interface NavigationProps {
+  isLoggedIn: boolean;
+  setIsLoggedIn: (value: boolean) => void;
+}
+
+const Navigation: React.FC<NavigationProps> = ({ isLoggedIn, setIsLoggedIn }) => {
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <svg className="w-8 h-8 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l8 4V17c0 4.52-3.03 8.77-7 10.12V4.18z"/>
               <path d="M12 6L6 9v6c0 3.31 2.12 6.36 5 7.41V6z" opacity="0.7"/>
             </svg>
             <span className="text-xl font-bold text-gray-800">viatours</span>
+          </div> */}
+          <div className="w-10">
+              <div className="font-bold text-[26px] text-[#eb662b]">Vitours</div>
           </div>
 
           {/* Search Bar */}
@@ -42,9 +50,12 @@ const Navigation = ({ isLoggedIn }) => {
 
             {isLoggedIn ? (
               <>
-                <a href="#" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
+                <button
+                  onClick={() => setIsLoggedIn(false)}
+                  className="text-gray-700 hover:text-orange-500 font-medium transition-colors"
+                >
                   Đăng xuất
-                </a>
+                </button>
                 <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-colors">
                   Người dùng
                 </button>
@@ -54,7 +65,10 @@ const Navigation = ({ isLoggedIn }) => {
                 <a href="#" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
                   Đăng ký
                 </a>
-                <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-colors">
+                <button
+                  onClick={() => setIsLoggedIn(true)}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-colors"
+                >
                   Đăng nhập
                 </button>
               </>

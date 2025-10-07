@@ -27,7 +27,7 @@ const FormInput: React.FC<FormInputProps> = ({
 }) => {
   return (
     <div>
-      <label className="block text-sm font-medium text-orange-500 mb-1">
+      <label className="block text-xs sm:text-sm font-medium text-orange-500 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       
@@ -35,7 +35,7 @@ const FormInput: React.FC<FormInputProps> = ({
         error ? 'border-red-500' : 'border-gray-300'
       }`}>
         {icon && (
-          <div className="pl-3 text-gray-400">
+          <div className="pl-2.5 sm:pl-3 text-gray-400 flex-shrink-0">
             {icon}
           </div>
         )}
@@ -45,7 +45,7 @@ const FormInput: React.FC<FormInputProps> = ({
           name={name}
           value={value}
           onChange={onChange}
-          className="flex-1 px-3 py-3 outline-none text-gray-700"
+          className="flex-1 px-2.5 sm:px-3 py-2.5 sm:py-3 outline-none text-gray-700 text-sm sm:text-base"
           placeholder={placeholder}
         />
         
@@ -53,7 +53,7 @@ const FormInput: React.FC<FormInputProps> = ({
       </div>
       
       {error && (
-        <p className="text-red-500 text-sm mt-1">{error}</p>
+        <p className="text-red-500 text-xs sm:text-sm mt-1">{error}</p>
       )}
     </div>
   );

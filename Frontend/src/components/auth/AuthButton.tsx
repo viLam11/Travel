@@ -20,7 +20,7 @@ const AuthButton: React.FC<AuthButtonProps> = ({
   disabled = false,
   className = "",
 }) => {
-  const baseClasses = "w-full font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-md cursor-pointer";
+  const baseClasses = "font-semibold py-2.5 sm:py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-md cursor-pointer text-sm sm:text-base";
   const variantClasses = {
     primary: "bg-orange-500 hover:bg-orange-600 text-white disabled:bg-orange-300",
     secondary: "bg-gray-200 hover:bg-gray-300 text-gray-700 disabled:bg-gray-100"
@@ -37,8 +37,8 @@ const AuthButton: React.FC<AuthButtonProps> = ({
     >
       {loading ? (
         <div className="flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-          Loading...
+          <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+          <span className="text-sm sm:text-base">Loading...</span>
         </div>
       ) : (
         children
