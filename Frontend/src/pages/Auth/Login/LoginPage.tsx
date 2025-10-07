@@ -6,7 +6,7 @@ import EmailInput from "../../../components/auth/EmailInput";
 import PasswordInput from "../../../components/auth/PasswordInput";
 import AuthButton from "../../../components/auth/AuthButton";
 import SocialLogin from "../../../components/auth/SocialLogin";
-import AirplaneAnimation from "@/components/ui/Airplane/airplane/AirplaneAnimation";
+import AirplaneAnimation from "@/components/ui/Airplane/AirplaneAnimation";
 
 interface FormData {
   email: string;
@@ -94,26 +94,30 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  return (
+   return (
     <AuthLayout 
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
-      {/* Welcome Header */}
-      <AirplaneAnimation/>
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-orange-500 mb-1">
-          Welcome
-        </h1>
-        <p className="text-gray-500">Login with Email</p>
+      {/* Airplane Animation - Hidden on mobile */}
+      <div className="hidden lg:block">
+        <AirplaneAnimation />
       </div>
 
-      {/* Login Form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Welcome Header - Responsive text sizes */}
+      <div className="mb-6 sm:mb-8 text-center px-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-orange-500 mb-1">
+          Welcome
+        </h1>
+        <p className="text-sm sm:text-base text-gray-500">Login with Email</p>
+      </div>
+
+      {/* Login Form - Responsive spacing */}
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 px-4 sm:px-0">
         {/* General Error Display */}
         {errors.general && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 text-sm">{errors.general}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-red-600 text-xs sm:text-sm">{errors.general}</p>
           </div>
         )}
 
@@ -139,47 +143,48 @@ const LoginPage: React.FC = () => {
           required
         />
 
-        {/* Forgot Password */}
+        {/* Forgot Password - Responsive text size */}
         <div className="text-right">
           <button
             type="button"
             onClick={() => navigate("/forgot-password")}
-            className="text-sm text-gray-500 hover:text-orange-500 transition-colors hover:underline cursor-pointer"
+            className="text-xs sm:text-sm text-gray-500 hover:text-orange-500 transition-colors hover:underline cursor-pointer"
           >
             Forgot your password?
           </button>
         </div>
 
-        {/* Login Button */}
+        {/* Login Button - Full width on mobile */}
         <AuthButton
           type="submit"
           variant="primary"
           loading={loading}
           disabled={loading}
+          className="w-full"
         >
           LOGIN
         </AuthButton>
 
-        {/* Divider */}
-        <div className="relative my-6">
+        {/* Divider - Responsive margin */}
+        <div className="relative my-4 sm:my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">OR</span>
+          <div className="relative flex justify-center text-xs sm:text-sm">
+            <span className="px-3 sm:px-4 bg-white text-gray-500">OR</span>
           </div>
         </div>
 
         {/* Social Login */}
         <SocialLogin />
 
-        {/* Register Link */}
-        <div className="text-center mt-6">
-          <span className="text-gray-600">Don't have account? </span>
+        {/* Register Link - Responsive text size */}
+        <div className="text-center mt-4 sm:mt-6">
+          <span className="text-xs sm:text-sm text-gray-600">Don't have account? </span>
           <button
             type="button"
             onClick={() => navigate("/register")}
-            className="text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline cursor-pointer"
+            className="text-xs sm:text-sm text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline cursor-pointer"
           >
             Register Now
           </button>

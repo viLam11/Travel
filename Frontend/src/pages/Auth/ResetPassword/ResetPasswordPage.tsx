@@ -32,24 +32,18 @@ const ResetPasswordPage: React.FC = () => {
   const token = searchParams.get('token');
 
   useEffect(() => {
-    // Validate token when component mounts
     if (!token) {
       setTokenValid(false);
       setErrors({ token: "Invalid or missing reset token" });
     } else {
-      // Simulate token validation
       validateToken(token);
     }
   }, [token]);
 
   const validateToken = async (resetToken: string) => {
     try {
-      // Simulate API call to validate token
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log("Validating token:", resetToken);
-      
-      // For demo purposes, assume token is valid
-      // In real app, check with backend
       setTokenValid(true);
     } catch (error) {
       setTokenValid(false);
@@ -64,7 +58,6 @@ const ResetPasswordPage: React.FC = () => {
       [name]: value,
     });
 
-    // Clear error when user starts typing
     if (errors[name as keyof FormErrors]) {
       setErrors({
         ...errors,
@@ -76,7 +69,6 @@ const ResetPasswordPage: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
@@ -85,7 +77,6 @@ const ResetPasswordPage: React.FC = () => {
       newErrors.password = "Password must contain uppercase, lowercase and number";
     }
 
-    // Confirm password validation
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
     } else if (formData.password !== formData.confirmPassword) {
@@ -106,7 +97,6 @@ const ResetPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       console.log("Password reset:", {
@@ -116,7 +106,6 @@ const ResetPasswordPage: React.FC = () => {
 
       setPasswordReset(true);
       
-      // Redirect to login after success
       setTimeout(() => {
         navigate("/login");
       }, 3000);
@@ -131,35 +120,35 @@ const ResetPasswordPage: React.FC = () => {
     }
   };
 
-  // Invalid token state
   if (!tokenValid) {
     return (
       <AuthLayout 
         heroTitle="Travelista Tours"
         heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
       >
-        <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center px-4">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <svg className="w-7 h-7 sm:w-8 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Reset Link</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Invalid Reset Link</h1>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
             This password reset link is invalid or has expired.
           </p>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <AuthButton
               onClick={() => navigate("/forgot-password")}
               variant="primary"
+              className="w-full"
             >
               Request New Reset Link
             </AuthButton>
             
             <button
               onClick={() => navigate("/login")}
-              className="text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline"
+              className="text-sm sm:text-base text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline"
             >
               Back to Login
             </button>
@@ -169,24 +158,23 @@ const ResetPasswordPage: React.FC = () => {
     );
   }
 
-  // Success state
   if (passwordReset) {
     return (
       <AuthLayout 
         heroTitle="Travelista Tours"
         heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
       >
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center px-4">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <svg className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Password Reset Successful!</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Password Reset Successful!</h1>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
             Your password has been successfully updated.
           </p>
-          <p className="text-sm text-orange-500">
+          <p className="text-xs sm:text-sm text-orange-500">
             Redirecting to login page in 3 seconds...
           </p>
         </div>
@@ -199,15 +187,14 @@ const ResetPasswordPage: React.FC = () => {
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-orange-500 mb-1">
+      <div className="mb-6 sm:mb-8 text-center px-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-orange-500 mb-1">
           New Password
         </h1>
-        <p className="text-gray-500">Enter your new password</p>
+        <p className="text-sm sm:text-base text-gray-500">Enter your new password</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Password Field */}
+      <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6 px-4 sm:px-0">
         <PasswordInput
           label="New Password"
           name="password"
@@ -218,7 +205,6 @@ const ResetPasswordPage: React.FC = () => {
           required
         />
 
-        {/* Confirm Password Field */}
         <PasswordInput
           label="Confirm New Password"
           name="confirmPassword"
@@ -229,12 +215,11 @@ const ResetPasswordPage: React.FC = () => {
           required
         />
 
-        {/* Password Requirements */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</h4>
-          <ul className="text-sm text-gray-600 space-y-1">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+          <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Password Requirements:</h4>
+          <ul className="text-xs sm:text-sm text-gray-600 space-y-1.5">
             <li className={`flex items-center ${formData.password.length >= 8 ? 'text-green-600' : ''}`}>
-              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs ${
+              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${
                 formData.password.length >= 8 ? 'bg-green-100 text-green-600' : 'bg-gray-200'
               }`}>
                 {formData.password.length >= 8 ? '✓' : '•'}
@@ -242,7 +227,7 @@ const ResetPasswordPage: React.FC = () => {
               At least 8 characters
             </li>
             <li className={`flex items-center ${/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'text-green-600' : ''}`}>
-              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs ${
+              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${
                 /(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'bg-green-100 text-green-600' : 'bg-gray-200'
               }`}>
                 {/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? '✓' : '•'}
@@ -250,7 +235,7 @@ const ResetPasswordPage: React.FC = () => {
               Upper and lowercase letters
             </li>
             <li className={`flex items-center ${/(?=.*\d)/.test(formData.password) ? 'text-green-600' : ''}`}>
-              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs ${
+              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${
                 /(?=.*\d)/.test(formData.password) ? 'bg-green-100 text-green-600' : 'bg-gray-200'
               }`}>
                 {/(?=.*\d)/.test(formData.password) ? '✓' : '•'}
@@ -260,20 +245,19 @@ const ResetPasswordPage: React.FC = () => {
           </ul>
         </div>
 
-        {/* Submit Button */}
         <AuthButton
           type="submit"
           variant="primary"
           loading={loading}
           disabled={loading}
+          className="w-full"
         >
           RESET PASSWORD
         </AuthButton>
 
-        {/* Error display */}
         {errors.token && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600 text-sm">{errors.token}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-red-600 text-xs sm:text-sm">{errors.token}</p>
           </div>
         )}
       </form>
