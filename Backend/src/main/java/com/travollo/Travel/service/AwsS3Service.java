@@ -18,10 +18,10 @@ import java.io.InputStream;
 @Service
 public class AwsS3Service {
     private final String bucketName = "travello-bucket-2004";
-//    @Value("${aws.s3.access.key}")
+    @Value("${aws.s3.access.key}")
     private String awsS3AccessKey;
 
-//    @Value("${aws.s3.secret.key}")
+    @Value("${aws.s3.secret.key}")
     private String awsS3ASecretKey;
 
     public String saveImageToS3(MultipartFile photo) {

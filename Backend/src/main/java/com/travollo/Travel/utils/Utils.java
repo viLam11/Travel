@@ -1,7 +1,9 @@
 package com.travollo.Travel.utils;
 
+import com.travollo.Travel.dto.CustomUserDetails;
 import com.travollo.Travel.dto.UserDTO;
 import com.travollo.Travel.entity.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.security.SecureRandom;
 
@@ -49,4 +51,7 @@ public class Utils {
         return userDTO;
     }
 
+    public static UserDetails mapUserEntityToUserDetails(User user) {
+        return new CustomUserDetails(user);
+    }
 }

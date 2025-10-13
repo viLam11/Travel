@@ -1,4 +1,4 @@
-package com.travollo.Travel.security;
+package com.travollo.Travel.config;
 
 import com.travollo.Travel.service.CustomUserDetailService;
 import com.travollo.Travel.utils.JWTUtils;
@@ -14,7 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -49,15 +48,13 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             System.out.println("HERE");
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(userEmail);
-            System.out.println("User details: " + userDetails);
+            System.out.println("User details: " + userDetails.toString());
             if (jwtUtils.isValidToken(jwtToken, userDetails)) {
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
                 UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                System.out.println("Token set details: " + token);
                 securityContext.setAuthentication(token);
                 SecurityContextHolder.setContext(securityContext);
-                System.out.println("Validated " + SecurityContextHolder.getContext().toString());
                 request.setAttribute(HttpServletResponse.class.getName() + ".AUTHENTICATION", token);
             }
         }

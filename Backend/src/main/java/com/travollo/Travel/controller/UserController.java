@@ -1,9 +1,9 @@
 package com.travollo.Travel.controller;
 
+import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.impl.UserService;
-import org.hibernate.mapping.Any;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,13 +28,16 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<Object> register(@RequestBody User userCredentials) {
-        System.out.println("Registering user: " + userCredentials);
         return userService.register(userCredentials);
     }
 
     @PostMapping("/login")
     public ResponseEntity<Object> login(@RequestBody User userCredentials) {
-        System.out.println("Logging in user: " + userCredentials);
         return userService.login(userCredentials);
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<Object> verify(@RequestBody VerifyDTO input) {
+        return userService.verifyUser(input);
     }
 }

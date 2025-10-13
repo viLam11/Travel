@@ -42,9 +42,9 @@ public class JWTUtils {
     }
 
     public boolean isValidToken(String token, UserDetails userDetails) {
-        System.out.println("## Validate token fn");
         final String username = extractUsername(token);
-        System.out.println("Extracted email token: " + username + ". \n Userdetails: " + userDetails.toString());
+        System.out.println("Extracted email: " + username);
+        System.out.println("Userdetails: " + userDetails.getUsername());
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
