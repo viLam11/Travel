@@ -14,6 +14,6 @@ public class Restaurant {
     private Long restaurantID;
     private Time openTime;
     private Time closeTime;
-    private String workingDays; // e.g., "Mon-Fri", "Everyday"
-    private String cuisineType; // e.g., "Italian", "Chinese
+    private String workingDays;
+    private String cuisineType;
 }

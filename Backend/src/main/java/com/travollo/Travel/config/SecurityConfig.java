@@ -1,4 +1,4 @@
-package com.travollo.Travel.security;
+package com.travollo.Travel.config;
 
 import com.travollo.Travel.service.CustomUserDetailService;
 import com.travollo.Travel.utils.JWTUtils;

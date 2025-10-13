@@ -1,4 +1,4 @@
-package com.travollo.Travel.security;
+package com.travollo.Travel.config;
 
 
 import org.springframework.context.annotation.Bean;

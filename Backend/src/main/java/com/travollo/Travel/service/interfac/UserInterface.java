@@ -1,6 +1,7 @@
 package com.travollo.Travel.service.interfac;
 
 import com.travollo.Travel.dto.UserDTO;
+import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.entity.Order;
 import com.travollo.Travel.entity.User;
 import org.hibernate.mapping.Any;
@@ -15,4 +16,5 @@ public interface UserInterface {
     ResponseEntity<UserDTO> getUserById(Long userID);
     ResponseEntity<List<Order>> getOrdersByUserId(Long userID);
     ResponseEntity<Object> updateUser(Long userID, User user);
+    ResponseEntity<Object> verifyUser(VerifyDTO verifyDTO);
 }
