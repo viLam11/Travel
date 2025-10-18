@@ -1,7 +1,12 @@
 package com.travollo.Travel.config;
 
+import com.travollo.Travel.entity.User;
+import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.CustomUserDetailService;
+import com.travollo.Travel.utils.AuthType;
 import com.travollo.Travel.utils.JWTUtils;
+import com.travollo.Travel.utils.Utils;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,12 +20,16 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+
+import java.util.Optional;
 
 @Configuration
 @EnableMethodSecurity
@@ -34,20 +43,68 @@ public class SecurityConfig {
     @Autowired
     private JWTAuthFilter jwtAuthFilter;
 
+    @Autowired
+    private UserRepo userRepo;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/users/**", "/test/**", "/swagger-ui/**", "/swagger-ui.html", "/services/**").permitAll()
+                        .requestMatchers("/auth/**", "/users/**", "/test/**", "/swagger-ui/**", "/swagger-ui.html", "/services/**").permitAll()
                         .anyRequest().authenticated() )
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/auth/login/google")
+                                .successHandler((request, response, authentication) -> {
+                                    OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
+                                    System.out.println("Authorities: " + token.getAuthorities());
+                                    System.out.println("Attributes: " + token.getPrincipal().getAttributes());
+                                    String email = token.getPrincipal().getAttribute("email");
+                                    Optional<User> userOptional = userRepo.findByEmail(email);
+                                    if (userOptional.isEmpty()) {
+                                        User newUser = new User();
+                                        newUser.setEmail(email);
+                                        newUser.setFullname(token.getPrincipal().getAttribute("given_name") + " " +token.getPrincipal().getAttribute("family_name")  );
+                                        newUser.setRole(com.travollo.Travel.utils.Role.USER);
+                                        newUser.setUsername(email.split("@")[0]);
+                                        newUser.setAuthProvider(AuthType.GOOGLE);
+                                        userRepo.save(newUser);
+                                    }
+                                    Optional<User> optionalUser = userRepo.findByEmail(email);
+                                    String jwt = "";
+                                    if (optionalUser.isPresent()) {
+                                        User user = optionalUser.get();
+                                        UserDetails userDetail = Utils.mapUserEntityToUserDetails(user);
+                                        jwt = jwtUtils.generateToken(userDetail);
+                                        System.out.println("Generated JWT: " + jwt);
+                                    }
+                                    String redirectUrl = "http://localhost:8080/test?jwt=" + jwt;
+                                    response.sendRedirect(redirectUrl);
+                                })
+                        .failureHandler((request, response, exception) -> {
+                            System.out.println("OAuth2 login failed: " + exception.getMessage());
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.getWriter().write("Google authentication failed: " + exception.getMessage());
+                        })
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+                        })
+                )
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .logout(logout -> logout
+                .logoutUrl("/users/logout")
+                        .deleteCookies("JSESSIONID")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .logoutSuccessUrl("/users/login?logout"));
         return httpSecurity.build();
-
     }
 
 

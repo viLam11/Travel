@@ -1,22 +1,12 @@
 package com.travollo.Travel.entity;
 
+import com.travollo.Travel.utils.AuthType;
 import com.travollo.Travel.utils.Role;
 import jakarta.persistence.*;
 import jakarta.validation.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.groups.Default;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-import org.joda.time.DateTime;
-import org.joda.time.LocalDateTime;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -43,11 +33,15 @@ public class User {
     @Column(columnDefinition = "ENUM('USER', 'ADMIN', 'PROVIDER')")
     private Role role;
 
-    @Column(name="verification_code")
+    @Column(name = "verification_code")
     private String verificationCode;
     @Column(name = "code_expired_at")
     private LocalDateTime expiredAt;
 
     private boolean isEnabled;
+
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "ENUM('LOCAL', 'GOOGLE', 'FACEBOOK') DEFAULT 'LOCAL'")
+    private AuthType authProvider = AuthType.LOCAL;
 }
 
