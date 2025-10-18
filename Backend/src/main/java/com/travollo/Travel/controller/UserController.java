@@ -26,18 +26,5 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<Object> register(@RequestBody User userCredentials) {
-        return userService.register(userCredentials);
-    }
 
-    @PostMapping("/login")
-    public ResponseEntity<Object> login(@RequestBody User userCredentials) {
-        return userService.login(userCredentials);
-    }
-
-    @PostMapping("/verify")
-    public ResponseEntity<Object> verify(@RequestBody VerifyDTO input) {
-        return userService.verifyUser(input);
-    }
 }

@@ -6,12 +6,14 @@ import com.travollo.Travel.entity.Order;
 import com.travollo.Travel.entity.User;
 import org.hibernate.mapping.Any;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 
 import java.util.List;
 
 public interface UserInterface {
     ResponseEntity<Object> register(User userCredentials);
     ResponseEntity<Object> login(User loginRequest);
+    String authenWithGoogle(String code);
     ResponseEntity<Object> getAllUsers();
     ResponseEntity<UserDTO> getUserById(Long userID);
     ResponseEntity<List<Order>> getOrdersByUserId(Long userID);

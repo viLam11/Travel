@@ -13,16 +13,15 @@ import com.travollo.Travel.utils.JWTUtils;
 import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
 import jakarta.mail.MessagingException;
-import org.joda.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -62,7 +61,7 @@ public class UserService implements UserInterface {
 
             userCredentials.setPassword(thePasswordEncoder.encode(userCredentials.getPassword()));
             userCredentials.setVerificationCode(generateVerificationCode());
-            userCredentials.setExpiredAt(LocalDateTime.now().plusHours(1));
+            userCredentials.setExpiredAt(java.time.LocalDateTime.now().plusHours(1));
             userCredentials.setEnabled(false);
 
             sendVerificationEmail(userCredentials);
@@ -186,8 +185,18 @@ public class UserService implements UserInterface {
         return response;
     };
 
-
-
+    @Override
+    public String authenWithGoogle(String email) {
+        Optional<User> optionalUser = theUserRepo.findByEmail(email);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            UserDetails userDetail = Utils.mapUserEntityToUserDetails(user);
+            String token = jwtUtils.generateToken(userDetail);
+            return token;
+        } else {
+            throw new CustomException(HttpStatus.NOT_FOUND, "User not found");
+        }
+    }
 
     @Override
     public ResponseEntity<Object> getAllUsers(){
@@ -218,4 +227,7 @@ public class UserService implements UserInterface {
     public ResponseEntity<Object> updateUser(Long userID, User user){
         return null;
     };
+
+
+
 }
