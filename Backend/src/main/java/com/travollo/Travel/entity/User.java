@@ -3,14 +3,14 @@ package com.travollo.Travel.entity;
 import com.travollo.Travel.utils.AuthType;
 import com.travollo.Travel.utils.Role;
 import jakarta.persistence.*;
-import jakarta.validation.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import java.time.LocalDateTime;
 
-@Data
+
 @Entity
 @Table(name = "users")
+@Data
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
