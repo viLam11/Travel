@@ -1,9 +1,10 @@
 package com.travollo.Travel.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import org.joda.time.DateTime;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Entity
@@ -13,12 +14,24 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long orderID;
 
-    @NotNull(message = "Datetime is required")
-    private DateTime orderDate;
+    private LocalDateTime createdAt;
     private String status; // e.g., "PENDING", "CONFIRMED", "CANCELLED"
+
     private double totalPrice;
+    private double discountPrice;
+    private double finalPrice;
+    private double deposit;
+
     private String guestPhone;
     private String note;
+
+    @ManyToMany
+    @JoinTable(
+            name = "order_discount",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name = "discount_id")
+    )
+    private List<Discount> discountList;
 
     @ManyToOne(fetch =  FetchType.EAGER)
     @JoinColumn(name = "userID")
@@ -26,5 +39,5 @@ public class Order {
 
     @ManyToOne(fetch =  FetchType.LAZY)
     @JoinColumn(name = "serviceID")
-    private Service service;
+    private TService TService;
 }
