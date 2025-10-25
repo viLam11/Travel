@@ -1,5 +1,8 @@
 package com.travollo.Travel.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.travollo.Travel.utils.ServiceType;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -26,6 +29,9 @@ public class TService {
     private Long rating;
     private String tags;
 
+    @Column(name = "thumbnail")
+    private String thumbnailUrl;
+
     @Column(name = "average_price")
     private Long averagePrice;
 
@@ -35,8 +41,10 @@ public class TService {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="provider_id", referencedColumnName = "userID")
+    @JsonIgnore
     private User provider;
 
-    @OneToMany(mappedBy = "tService", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "tService", fetch = FetchType.EAGER,  cascade = CascadeType.ALL)
+    @JsonIncludeProperties({"imageUrl", "description"})
     private List<ImageService> imageList;
 }

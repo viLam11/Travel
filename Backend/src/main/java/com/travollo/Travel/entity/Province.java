@@ -1,10 +1,13 @@
 package com.travollo.Travel.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.data.annotation.Reference;
 
 @Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "provinces")
 @Data
 public class Province {
@@ -17,7 +20,8 @@ public class Province {
     private String full_name_en;
     private String code_name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="administrative_unit_id", referencedColumnName = "id")
+    @JsonIgnore
     private AdministrativeUnit administrativeUnit;
 }
