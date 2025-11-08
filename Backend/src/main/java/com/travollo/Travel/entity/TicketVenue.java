@@ -13,8 +13,8 @@ import java.util.List;
 @Table(name = "ticket_venues")
 @Data
 public class TicketVenue extends TService {
-    private Time startTime;
-    private Time endTime;
+    private Time startTime; // HH:MM:SS
+    private Time endTime; // HH:MM:SS
 
     @OneToMany(mappedBy = "ticketVenue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Ticket> ticketList;

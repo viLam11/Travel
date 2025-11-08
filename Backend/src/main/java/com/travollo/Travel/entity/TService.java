@@ -1,8 +1,6 @@
 package com.travollo.Travel.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIncludeProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.*;
 import com.travollo.Travel.utils.ServiceType;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -13,15 +11,20 @@ import java.util.List;
 @Entity
 @Table(name = "services")
 @Inheritance(strategy = InheritanceType.JOINED)
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id"
+)
 public class TService {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String serviceName;
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @ManyToOne
-    @JoinColumn(name="province_code", referencedColumnName = "code")
+    @JoinColumn(name="province_code", referencedColumnName = "code", columnDefinition = "varchar(20)")
     private Province province;
 
     private String address;
@@ -47,4 +50,8 @@ public class TService {
     @OneToMany(mappedBy = "tService", fetch = FetchType.EAGER,  cascade = CascadeType.ALL)
     @JsonIncludeProperties({"imageUrl", "description"})
     private List<ImageService> imageList;
+
+    @OneToMany(mappedBy = "tService", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<CommentService> commentList;
 }
