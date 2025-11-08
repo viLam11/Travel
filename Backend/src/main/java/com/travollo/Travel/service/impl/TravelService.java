@@ -2,6 +2,7 @@ package com.travollo.Travel.service.impl;
 
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
+import com.travollo.Travel.repo.CommentServiceRepo;
 import com.travollo.Travel.repo.ImageServiceRepo;
 import com.travollo.Travel.repo.ProvinceRepo;
 import com.travollo.Travel.repo.ServiceRepo;
@@ -17,21 +18,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.sql.Time;
 import java.util.*;
 
 @org.springframework.stereotype.Service
 public class TravelService implements TravelServiceInterface {
     @Autowired
     private ServiceRepo serviceRepo;
-
     @Autowired
     private AwsS3Service awsS3Service;
-
     @Autowired
     private ProvinceRepo provinceRepo;
-
     @Autowired
     private ImageServiceRepo imgServiceRepo;
+    @Autowired
+    private CommentServiceRepo commentRepo;
+
 
     public ResponseEntity<Object> getAllServices(){
         try {
@@ -45,6 +47,9 @@ public class TravelService implements TravelServiceInterface {
     public ResponseEntity<Object> getServiceById(Long serviceID){
         try {
             Optional<TService> optionalTService = serviceRepo.findById(serviceID);
+            if (optionalTService.isPresent()) {
+                List<CommentService> commentList = optionalTService.get().getCommentList();
+            }
             return optionalTService.<ResponseEntity<Object>>map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving the service");
@@ -69,9 +74,6 @@ public class TravelService implements TravelServiceInterface {
             response.put("pageSize", servicesPage.getSize());
             response.put("sortBy", sortBy);
             response.put("direction", direction);
-
-            System.out.println("Paginated Services Response: " + response);
-
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while retrieving paginated services: " + e.getMessage());
@@ -98,7 +100,7 @@ public class TravelService implements TravelServiceInterface {
 
             imgServiceRepo.saveAll(imageEntities);
 
-            return ResponseEntity.ok().body("HEHE");
+            return ResponseEntity.ok().body("Re-up images");
         } catch (Exception e){
             throw new CustomException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
@@ -107,7 +109,9 @@ public class TravelService implements TravelServiceInterface {
     public ResponseEntity<Object> createService(MultipartFile thumbnail, String serviceName, String description, String provinceCode,
                                                 String address, String contactNumber, Long averagePrice,
                                                 String tags, String serviceType, User provider,
-                                                List<MultipartFile> photos)
+                                                List<MultipartFile> photos,
+                                                Time start_time, Time end_time, Time open_time, Time close_time, String working_days
+                                                )
         {
         try {
             TService newTService;
@@ -115,19 +119,24 @@ public class TravelService implements TravelServiceInterface {
             if (thumbnail != null && !thumbnail.isEmpty()) {
                 thumbnailUrl = awsS3Service.saveImageToS3(thumbnail);
             }
-
-
             Province province = provinceRepo.findById(provinceCode).orElse(null);
+
             if ("HOTEL".equals(serviceType)) {
-                newTService = new Hotel();
+                Hotel hotel = new Hotel();
+                newTService = hotel;
             } else if ( "RESTAURANT".equals(serviceType) ) {
-                newTService = new Restaurant();
+                Restaurant restaurant = new Restaurant();
+                restaurant.setOpenTime(open_time);
+                restaurant.setCloseTime(close_time);
+                restaurant.setWorkingDays(working_days);
+                newTService = restaurant;
             } else {
                 TicketVenue ticketVenue = new TicketVenue();
-                ticketVenue.setStartTime(null);
-                ticketVenue.setEndTime(null);
+                ticketVenue.setStartTime(start_time);
+                ticketVenue.setEndTime(end_time);
                 newTService = ticketVenue;
             }
+
             newTService.setServiceName(serviceName);
             newTService.setDescription(description);
             newTService.setProvince(province);
@@ -139,7 +148,6 @@ public class TravelService implements TravelServiceInterface {
             newTService.setProvider(provider);
             newTService.setThumbnailUrl(thumbnailUrl);
 
-
             System.out.println("New Service: " + newTService);
 
             TService savedService =  serviceRepo.save(newTService);
@@ -149,7 +157,6 @@ public class TravelService implements TravelServiceInterface {
                         .orElseThrow(() -> new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Service not found after saving"));
 
             }
-
             return ResponseEntity.status(HttpStatus.CREATED).body(savedService);
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());

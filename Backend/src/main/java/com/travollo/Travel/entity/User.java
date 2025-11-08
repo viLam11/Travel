@@ -1,5 +1,7 @@
 package com.travollo.Travel.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.travollo.Travel.utils.AuthType;
 import com.travollo.Travel.utils.Role;
 import jakarta.persistence.*;
@@ -11,6 +13,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 @Data
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "userID"
+)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,7 +30,6 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @NotBlank(message = "Password is required")
     private String password;
     private String fullname;
     private String phone;
