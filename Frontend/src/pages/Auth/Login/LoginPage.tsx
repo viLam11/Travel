@@ -1,11 +1,13 @@
-// src/pages/auth/LoginPage.tsx
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import AuthLayout from "../../../components/auth/AuthLayout";
-import EmailInput from "../../../components/auth/EmailInput";
-import PasswordInput from "../../../components/auth/PasswordInput";
-import AuthButton from "../../../components/auth/AuthButton";
-import SocialLogin from "../../../components/auth/SocialLogin";
+// src/pages/Auth/Login/LoginPage.tsx
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import toast from "react-hot-toast";
+import AuthLayout from "../../../components/page/auth/AuthLayout";
+import EmailInput from "../../../components/page/auth/EmailInput";
+import PasswordInput from "../../../components/page/auth/PasswordInput";
+import AuthButton from "../../../components/page/auth/AuthButton";
+import SocialLogin from "../../../components/page/auth/SocialLogin";
 import AirplaneAnimation from "@/components/ui/Airplane/AirplaneAnimation";
 
 interface FormData {
@@ -21,13 +23,25 @@ interface FormErrors {
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
-    email: "thisuix@mail.com",
+    email: "",
     password: "",
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isAuthenticated, currentUser } = useAuth();
+  const successMessage = location.state?.message;
+
+  // Redirect nếu đã login
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      const role = currentUser.user.role;
+      const redirectPath = role === 'admin' ? '/admin/dashboard' : '/homepage';
+      navigate(redirectPath, { replace: true });
+    }
+  }, [isAuthenticated, currentUser, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -75,30 +89,83 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use the login function from useAuth hook
+      await login(formData.email, formData.password);
       
-      console.log("Login attempt:", formData);
+      // Get user from localStorage (set by useAuth)
+      const storedUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const role = storedUser?.user?.role;
+
+      // Show success message
+      toast.success('Đăng nhập thành công!');
+
+      // Check for return URL
+      const returnUrl = sessionStorage.getItem('returnUrl');
       
-      // Simulate successful login
-      // In real app, handle response and redirect
-      navigate("/dashboard");
+      if (returnUrl) {
+        sessionStorage.removeItem('returnUrl');
+        navigate(returnUrl);
+      } else {
+        // Role-based redirect
+        const redirectPath = role === 'admin' ? '/admin/dashboard' : '/homepage';
+        navigate(redirectPath);
+      }
       
     } catch (error) {
       console.error("Login failed:", error);
       setErrors({
-        general: "Invalid email or password. Please try again."
+        general: "Email hoặc mật khẩu không đúng. Vui lòng thử lại."
       });
+      toast.error('Email hoặc mật khẩu không đúng!');
     } finally {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage, navigate, location.pathname]);
 
-   return (
+  return (
     <AuthLayout 
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
+      {successMessage && (
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <p className="text-green-700 text-sm sm:text-base">
+              {successMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Test Credentials Info */}
+      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm font-semibold text-blue-900 mb-2">Tài khoản test:</p>
+        <div className="space-y-2 text-xs">
+          <div className="bg-white p-2 rounded">
+            <p className="font-semibold text-blue-700">Admin:</p>
+            <p className="text-gray-600">Email: <code>admin@example.com</code></p>
+            <p className="text-gray-600">Password: <code>admin123</code></p>
+          </div>
+          <div className="bg-white p-2 rounded">
+            <p className="font-semibold text-green-700">User:</p>
+            <p className="text-gray-600">Email: <code>user@example.com</code></p>
+            <p className="text-gray-600">Password: <code>user123</code></p>
+          </div>
+        </div>
+      </div>
+
       {/* Airplane Animation - Hidden on mobile */}
       <div className="hidden lg:block">
         <AirplaneAnimation />
@@ -127,7 +194,7 @@ const LoginPage: React.FC = () => {
           name="email"
           value={formData.email}
           onChange={handleInputChange}
-          placeholder="thisuix@mail.com"
+          placeholder="admin@example.com hoặc user@example.com"
           error={errors.email}
           required
         />

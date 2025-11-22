@@ -1,9 +1,9 @@
 // src/pages/auth/ResetPasswordPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import AuthLayout from "../../../components/auth/AuthLayout";
-import PasswordInput from "../../../components/auth/PasswordInput";
-import AuthButton from "../../../components/auth/AuthButton";
+import AuthLayout from "../../../components/page/auth/AuthLayout";
+import PasswordInput from "../../../components/page/auth/PasswordInput";
+import AuthButton from "../../../components/page/auth/AuthButton";
 
 interface FormData {
   password: string;
