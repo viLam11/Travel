@@ -86,12 +86,12 @@ public class UserService implements UserInterface {
     };
 
     @Override
-    public ResponseEntity<Object> login(User loginRequest) {
+    public ResponseEntity<Object> login(String email, String password) {
          ResponseEntity<Object> response = null;
 
         try {
-            theAuthenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
-            var user = theUserRepo.findByEmail(loginRequest.getEmail())
+            theAuthenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+            var user = theUserRepo.findByEmail(email)
                    .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
 
             if (!user.isEnabled()) {
