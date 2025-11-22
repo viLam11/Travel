@@ -1,6 +1,8 @@
 package com.travollo.Travel.controller;
 
 
+import com.travollo.Travel.dto.LoginRequest;
+import com.travollo.Travel.dto.LoginResponseDTO;
 import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.repo.UserRepo;
@@ -38,8 +40,8 @@ public class AuthController {
     }
 
     @PostMapping("/login/local")
-    public ResponseEntity<Object> login(@RequestBody User userCredentials) {
-        return userService.login(userCredentials);
+    public ResponseEntity<Object> login(@RequestBody LoginRequest loginRequest) {
+        return userService.login(loginRequest.getEmail(), loginRequest.getPassword());
     }
 
     @PostMapping("/verify")

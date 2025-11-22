@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface UserInterface {
     ResponseEntity<Object> register(User userCredentials);
-    ResponseEntity<Object> login(User loginRequest);
+    ResponseEntity<Object> login(String username, String password);
     String authenWithGoogle(String code);
     ResponseEntity<Object> getAllUsers();
     ResponseEntity<UserDTO> getUserById(Long userID);

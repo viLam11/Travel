@@ -51,7 +51,7 @@ public class SecurityConfig {
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/auth/**", "/users/**", "/test/**", "/swagger-ui.html", "/services/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
+                        .requestMatchers("/auth/**", "/users/**", "/api/momo/**", "/api/vnpay/**","/api/zalopay/**", "/test/**", "/swagger-ui.html", "/services/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated() )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/auth/login/google")
