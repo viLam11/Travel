@@ -1,11 +1,21 @@
+// src/main.tsx
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { RouterProvider } from "react-router-dom";
 import { AuthProvider } from "react-oidc-context";
 import type { AuthProviderProps } from "react-oidc-context";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Provider } from 'react-redux';
+import { Toaster } from 'react-hot-toast';
+
+import { store } from './store';
 import { UserProvider } from "./contexts/UserContext";
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import router from "./routes";
+
+import "./index.css"; // or your main CSS file
+
+// ==================== CONFIG ====================
 
 const cognitoAuthConfig: AuthProviderProps = {
   authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_AdN1ymrsD",
@@ -16,14 +26,17 @@ const cognitoAuthConfig: AuthProviderProps = {
 };
 
 const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            // retry: 1,
-            // refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000,
-        },
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
     },
+  },
 });
+
+// ==================== RENDER ====================
+
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   throw new Error("Root element not found");
@@ -32,14 +45,40 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 
 root.render(
-  <QueryClientProvider client={queryClient}>
-    <React.StrictMode>
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider {...cognitoAuthConfig}>
-        <UserProvider>
-          <App />
-          <ReactQueryDevtools />
-        </UserProvider>
+        <Provider store={store}>
+          <UserProvider>
+            <RouterProvider router={router} />
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#10b981',
+                    secondary: '#fff',
+                  },
+                },
+                error: {
+                  duration: 4000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
+          </UserProvider>
+        </Provider>
       </AuthProvider>
-    </React.StrictMode>
-  </QueryClientProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  </React.StrictMode>
 );
