@@ -75,9 +75,17 @@ export class ApiClient {
     login: (data: {
       email: string;
       password: string;
-      remember_me: boolean;
+      remember_me?: boolean;
     }): ApiResponse<UserPermissions> => {
-      return this.post("/auth/login", data);
+      return this.post("/auth/login/local", data);
+    },
+
+    register: (data: any): ApiResponse<any> => {
+      return this.post("/auth/register/local", data);
+    },
+
+    verify: (data: { email: string; verificationCode: string }): ApiResponse<any> => {
+      return this.post("/auth/verify", data);
     },
 
     refresh: (): ApiResponse<void> => {
@@ -87,7 +95,167 @@ export class ApiClient {
     logout: (): ApiResponse<void> => {
       return this.post("/auth/logout", {});
     },
+
+    loginGoogle: (): ApiResponse<void> => {
+      return this.get("/auth/login/google");
+    }
   };
+
+  // Service endpoints
+  services = {
+    create: (params: {
+      serviceName: string;
+      description: string;
+      provinceCode: string;
+      address?: string;
+      contactNumber?: string;
+      averagePrice?: number;
+      tags?: string;
+      serviceType: string;
+      start_time?: string;
+      end_time?: string;
+      open_time?: string;
+      close_time?: string;
+      working_days?: string;
+    }, thumbnail: File, photos: File[]): ApiResponse<any> => {
+      const formData = new FormData();
+      formData.append('thumbnail', thumbnail);
+      photos.forEach(photo => formData.append('photo', photo));
+
+      return this.post('/services/newService', formData, {
+        params,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+
+    getById: (serviceID: number): ApiResponse<any> => {
+      return this.get(`/services/${serviceID}`);
+    },
+
+    list: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get('/services/data', { params: { page, size } });
+    },
+
+    getAll: (): ApiResponse<any> => {
+      return this.get('/services/all');
+    },
+
+    delete: (id: number): ApiResponse<any> => {
+      return this.delete(`/services/${id}`);
+    },
+
+    uploadImages: (id: number, photos: File[]): ApiResponse<any> => {
+      const formData = new FormData();
+      photos.forEach(p => formData.append('photos', p));
+
+      return this.patch(`/services/upload/img/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    }
+  };
+
+  // Comment endpoints
+  comments = {
+    getByServiceId: (serviceID: number, page?: number, size?: number, sortBy?: string, direction?: string): ApiResponse<any> => {
+      return this.get(`/comment/${serviceID}`, {
+        params: { page, size, sortBy, direction }
+      });
+    },
+
+    create: (serviceID: number, content: string, rating: number, photos?: File[]): ApiResponse<any> => {
+      const formData = new FormData();
+      formData.append('content', content);
+      formData.append('rating', rating.toString());
+      formData.append('serviceID', serviceID.toString());
+      if (photos && photos.length > 0) {
+        photos.forEach(photo => formData.append('photos', photo));
+      }
+
+      return this.post(`/comment/${serviceID}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    },
+
+    getById: (commentID: number): ApiResponse<any> => {
+      return this.get(`/comment/${commentID}`);
+    },
+
+    delete: (commentID: number): ApiResponse<any> => {
+      return this.delete(`/comment/${commentID}`);
+    },
+
+    like: (commentID: number): ApiResponse<any> => {
+      return this.post(`/comment/like/${commentID}`, {});
+    },
+
+    dislike: (commentID: number): ApiResponse<any> => {
+      return this.post(`/comment/dislike/${commentID}`, {});
+    },
+
+    unlike: (commentID: number): ApiResponse<any> => {
+      return this.post(`/comment/unlike/${commentID}`, {});
+    },
+
+    undoDislike: (commentID: number): ApiResponse<any> => {
+      return this.post(`/comment/undoDislike/${commentID}`, {});
+    }
+  };
+
+  // Payment endpoints
+  payments = {
+    zalopay: {
+      createOrder: (appuser: string, amount: number, order_id: number): ApiResponse<any> => {
+        return this.post('/api/zalopay/create-order', {}, {
+          params: { appuser, amount, order_id }
+        });
+      },
+      getStatus: (apptransid: string): ApiResponse<any> => {
+        return this.get('/api/zalopay/getstatusbyapptransid', {
+          params: { apptransid }
+        });
+      }
+    },
+    vnpay: {
+      createPayment: (vnp_OrderInfo: string, vnp_OrderType: string, vnp_Amount: number, vnp_Locale: string, vnp_BankCode: string = ""): ApiResponse<any> => {
+        return this.post('/api/vnpay/make', {}, {
+          params: { vnp_OrderInfo, vnp_OrderType, vnp_Amount, vnp_Locale, vnp_BankCode }
+        });
+      },
+      getResult: (params: any): ApiResponse<any> => {
+        return this.get('/api/vnpay/result', { params });
+      }
+    },
+    momo: {
+      createOrder: (amount: number, order_id: string): ApiResponse<any> => {
+        return this.post('/api/momo/create-order', {}, {
+          params: { amount, order_id }
+        });
+      },
+      transactionStatus: (requestId: string, orderId: string): ApiResponse<any> => {
+        return this.post('/api/momo/transactionStatus', {}, {
+          params: { requestId, orderId }
+        });
+      }
+    }
+  };
+
+  // User endpoints
+  users = {
+    getAll: (): ApiResponse<any> => {
+      return this.get('/users/all');
+    }
+  };
+
+  // Order endpoints
+  orders = {
+    getById: (id: string | number): ApiResponse<any> => {
+      return this.get(`/orders/${id}`);
+    },
+    test: (): ApiResponse<string> => {
+      return this.get('/orders/test');
+    }
+  };
+
 
 
   /**
@@ -164,21 +332,21 @@ export class ApiClient {
           items: response.data || response.results || response,
           meta: response.meta ||
             response.pagination || {
-              page: params?.page || 1,
-              per_page: params?.per_page || 10,
-              total:
-                response.total ||
-                response.count ||
-                (response.data || response.results || response).length ||
-                0,
-              total_pages:
-                response.total_pages ||
-                response.pages ||
-                Math.ceil(
-                  (response.total || response.count || 0) /
-                    (params?.per_page || 10)
-                ),
-            },
+            page: params?.page || 1,
+            per_page: params?.per_page || 10,
+            total:
+              response.total ||
+              response.count ||
+              (response.data || response.results || response).length ||
+              0,
+            total_pages:
+              response.total_pages ||
+              response.pages ||
+              Math.ceil(
+                (response.total || response.count || 0) /
+                (params?.per_page || 10)
+              ),
+          },
         };
       },
 
@@ -230,13 +398,13 @@ export class ApiClient {
     }
   }
 
-  private async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await api.get<T>(url, config);
     this.handleRateLimit(response);
     return response.data;
   }
 
-  private async post<T>(
+  public async post<T>(
     url: string,
     data: unknown,
     config?: AxiosRequestConfig
@@ -246,7 +414,7 @@ export class ApiClient {
     return response.data;
   }
 
-  private async put<T>(
+  public async put<T>(
     url: string,
     data: unknown,
     config?: AxiosRequestConfig
@@ -256,7 +424,17 @@ export class ApiClient {
     return response.data;
   }
 
-  private async delete<T>(
+  public async patch<T>(
+    url: string,
+    data: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await api.patch<T>(url, data, config);
+    this.handleRateLimit(response);
+    return response.data;
+  }
+
+  public async delete<T>(
     url: string,
     config?: AxiosRequestConfig
   ): Promise<T> {
