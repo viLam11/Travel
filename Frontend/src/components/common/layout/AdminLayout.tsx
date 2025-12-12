@@ -1,22 +1,28 @@
 // src/components/common/layout/AdminLayout.tsx
 import type { FC, ReactNode } from "react";
+
 import { Outlet } from "react-router-dom";
 import { AdminSideBar, SiteHeader } from "@/components/common/navigation";
 import NavigationProgress from "@/components/common/navigation/NavigationProgress";
 import { SidebarProvider, SidebarInset } from "@/components/ui/admin/sidebar";
 import { Container } from "@/components/common/container";
 import "@/admin.css";
+import { AdminThemeProvider, useAdminTheme } from "@/contexts/AdminThemeContext";
+import { cn } from "@/lib/utils";
+
 interface AdminLayoutProps {
     children?: ReactNode;
     showHeader?: boolean;
 }
 
-const AdminLayout: FC<AdminLayoutProps> = ({
+const AdminLayoutContent: FC<AdminLayoutProps> = ({
     children,
     showHeader = true
 }) => {
+    const { isDark } = useAdminTheme();
+
     return (
-        <div className="admin-theme">
+        <div className={cn("admin-theme", isDark ? "dark" : "")}>
             <NavigationProgress />
             <SidebarProvider
                 defaultOpen={true}
@@ -26,7 +32,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({
                     "--header-height": "calc(var(--spacing) * 12)",
                 } as React.CSSProperties}
             >
-                <AdminSideBar variant="inset"  collapsible="icon" />
+                <AdminSideBar variant="inset" collapsible="icon" />
                 <SidebarInset className="overflow-x-hidden">
                     {showHeader && (
                         <header className="sticky top-0 z-10 bg-background border-b">
@@ -34,7 +40,7 @@ const AdminLayout: FC<AdminLayoutProps> = ({
                         </header>
                     )}
                     <main className="flex-1 overflow-auto">
-                        <Container className="py-6"  maxWidth="full" withPadding={true}>
+                        <Container className="py-6" maxWidth="full" withPadding={true}>
                             {children || <Outlet />}
                         </Container>
                     </main>
@@ -43,5 +49,13 @@ const AdminLayout: FC<AdminLayoutProps> = ({
         </div>
     );
 };
+
+const AdminLayout: FC<AdminLayoutProps> = (props) => {
+    return (
+        <AdminThemeProvider>
+            <AdminLayoutContent {...props} />
+        </AdminThemeProvider>
+    );
+}
 
 export default AdminLayout;
