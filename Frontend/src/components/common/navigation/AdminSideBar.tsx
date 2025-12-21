@@ -155,7 +155,7 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
                         <SidebarMenuButton size="lg" asChild>
                             <Link to={ROUTES.ADMIN_DASHBOARD}>
                                 <div className="font-bold text-xl text-[#eb662b]">
-                                    Vitours
+                                    Travello
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight ml-2">
                                     <span className="truncate font-medium">Admin Panel</span>

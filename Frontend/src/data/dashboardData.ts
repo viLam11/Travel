@@ -4,7 +4,7 @@ export interface Booking {
   id: string;
   guest: string;
   service: string;
-  serviceType: "hotel" | "tour";
+  serviceType: "hotel" | "ticket";
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -28,7 +28,7 @@ export interface TopProvider {
   name: string;
   revenue: number;
   bookings: number;
-  type: "hotel" | "tour";
+  type: "hotel" | "ticket";
 }
 
 export interface BookingStatus {
@@ -51,8 +51,8 @@ export interface MonthlyRevenue {
 
 // Revenue by Service Type Data (Hotels & Tours only)
 export const revenueByServiceData: RevenueByService[] = [
-  { service: "Hotels", revenue: 68500, bookings: 342 },
-  { service: "Tours", revenue: 52300, bookings: 267 },
+  { service: "Hotels", revenue: 310500000, bookings: 342 },
+  { service: "Tours", revenue: 307000000, bookings: 267 },
 ];
 
 // Booking Trends (Last 7 days)
@@ -69,13 +69,13 @@ export const bookingTrendsData: BookingTrend[] = [
 // Top Service Providers (Hotels & Tours)
 export const topProvidersData: TopProvider[] = [
   { name: "Luxury Hotels Group", revenue: 18500, bookings: 67, type: "hotel" },
-  { name: "Adventure Tours Co", revenue: 16200, bookings: 89, type: "tour" },
+  { name: "Adventure Tours Co", revenue: 16200, bookings: 89, type: "ticket" },
   { name: "Beach Resorts Chain", revenue: 14800, bookings: 52, type: "hotel" },
-  { name: "Mountain Escape Tours", revenue: 12600, bookings: 71, type: "tour" },
+  { name: "Mountain Escape Tours", revenue: 12600, bookings: 71, type: "ticket" },
   { name: "City Center Hotels", revenue: 11400, bookings: 48, type: "hotel" },
-  { name: "Cultural Heritage Tours", revenue: 9800, bookings: 56, type: "tour" },
+  { name: "Cultural Heritage Tours", revenue: 9800, bookings: 56, type: "ticket" },
   { name: "Boutique Hotels Network", revenue: 8900, bookings: 41, type: "hotel" },
-  { name: "Coastal Adventure Tours", revenue: 7500, bookings: 38, type: "tour" },
+  { name: "Coastal Adventure Tours", revenue: 7500, bookings: 38, type: "ticket" },
 ];
 
 // Booking Status Distribution
@@ -115,7 +115,7 @@ export const bookingsData: Booking[] = [
     checkIn: "2024-11-25",
     checkOut: "2024-11-28",
     guests: 2,
-    amount: "$540",
+    amount: "540000000",
     status: "confirmed",
     source: "Direct",
   },
@@ -123,11 +123,11 @@ export const bookingsData: Booking[] = [
     id: "BK002",
     guest: "Trần Thị Bình",
     service: "Hoi An Heritage Tour",
-    serviceType: "tour",
+    serviceType: "ticket",
     checkIn: "2024-11-26",
     checkOut: "2024-11-27",
     guests: 1,
-    amount: "$180",
+    amount: "18000000",
     status: "pending",
     source: "Booking.com",
   },
@@ -151,7 +151,7 @@ export const bookingsData: Booking[] = [
     checkIn: "2024-11-24",
     checkOut: "2024-11-27",
     guests: 2,
-    amount: "$720",
+    amount: "720000",
     status: "completed",
     source: "Agoda",
   },
@@ -159,11 +159,11 @@ export const bookingsData: Booking[] = [
     id: "BK005",
     guest: "Hoàng Văn Em",
     service: "Ha Long Bay Cruise",
-    serviceType: "tour",
+    serviceType: "ticket",
     checkIn: "2024-11-26",
     checkOut: "2024-11-28",
     guests: 4,
-    amount: "$680",
+    amount: "680000",
     status: "pending",
     source: "Direct",
   },
@@ -183,7 +183,7 @@ export const bookingsData: Booking[] = [
     id: "BK007",
     guest: "Vũ Minh Giang",
     service: "Sapa Trekking Adventure",
-    serviceType: "tour",
+    serviceType: "ticket",
     checkIn: "2024-11-29",
     checkOut: "2024-12-02",
     guests: 3,

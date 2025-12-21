@@ -34,10 +34,11 @@ const Navigation: React.FC<NavigationProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div 
-            className="flex-shrink-0 cursor-pointer" 
+            className="flex-shrink-0 cursor-pointer flex flex-row items-center"
             onClick={() => navigate('/homepage')}
           >
-            <div className="font-bold text-xl sm:text-2xl text-[#eb662b]">Vitours</div>
+            <img src="/LOGO.png" alt="Logo" className="h-12" />
+            <div className="font-bold text-xl sm:text-2xl text-[#eb662b]">Travello</div>
           </div>
 
           {/* Desktop Search Bar */}

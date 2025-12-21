@@ -51,17 +51,17 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7 lg:gap-8">
           {/* Contact Section */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Contact</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Liên hệ</h3>
             <div className="space-y-2 text-sm text-gray-600">
-              <p>328 Queensberry Street, North Melbourne VIC 3051,</p>
-              <p>Australia.</p>
-              <p className="pt-2">ngotours.com</p>
+              <p>123 Lý Thường Kiệt, Phường Diên Hồng, TP. Hồ Chí Minh</p>
+              <p>Việt Nam.</p>
+              <p className="pt-2">travello@gmail.com</p>
             </div>
           </div>
 
           {/* Company Section */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Company</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Công ty</h3>
             <ul className="space-y-2">
               {footerSections[0].links.map((link, index) => (
                 <li key={index}>
@@ -78,7 +78,7 @@ const Footer: React.FC = () => {
 
           {/* Support Section */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Support</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Hỗ trợ</h3>
             <ul className="space-y-2">
               {footerSections[1].links.map((link, index) => (
                 <li key={index}>
@@ -95,16 +95,16 @@ const Footer: React.FC = () => {
 
           {/* Newsletter Section */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Newsletter</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Đăng ký email</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Subscribe to the free newsletter and stay up to date
+              Đăng để để nhận thông báo sớm nhất về chương trình ưu đãi, dịch vụ từ Travello
             </p>
             <form onSubmit={handleSubscribe} className="space-y-3">
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Your email address"
+                placeholder="Địa chỉ email"
                 required
                 className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
@@ -112,7 +112,7 @@ const Footer: React.FC = () => {
                 type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium transition-colors text-sm"
               >
-                Send
+                Gửi
               </button>
             </form>
 
@@ -134,7 +134,7 @@ const Footer: React.FC = () => {
         {/* Copyright - Mobile */}
         <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 text-center sm:text-left">
           <p className="text-xs sm:text-sm text-gray-500">
-            © 2025 Vitours. All rights reserved.
+            © 2025 Travello. All rights reserved.
           </p>
         </div>
       </div>

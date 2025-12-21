@@ -33,7 +33,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ isMobileOpen, onClose }) 
         <h3 className="text-sm font-semibold mb-3">Chọn thời gian du lịch</h3>
         <div className="flex items-center gap-2 bg-white text-gray-900 px-3 py-2.5 rounded-md">
           <Calendar className="w-4 h-4 text-orange-500 flex-shrink-0" />
-          <span className="text-sm">February 05 - March 14</span>
+          <span className="text-sm">5 Tháng 2 - 20 Tháng 3</span>
         </div>
       </div>
 

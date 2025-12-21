@@ -17,6 +17,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/admin/dropdown-menu';
 import {
@@ -54,25 +56,31 @@ import {
   CalendarIcon,
   Search,
   MoreHorizontal,
+  Users,
+  Settings,
+  Power,
+  Ban,
+  CheckCircle2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
-interface Room {
+// --- Interfaces Mới (Đơn giản hóa trạng thái) ---
+
+interface RoomCategory {
   id: string;
-  number: string;
-  type: string;
-  status: 'occupied' | 'available' | 'maintenance';
-  guest?: string;
-  rate: string;
-  checkIn?: string;
-  checkOut?: string;
+  name: string;
+  totalRooms: number;
+  // Trạng thái hiển thị sản phẩm: Đang bán hoặc Tạm ẩn
+  status: 'active' | 'stopped'; 
+  price: string;
   amenities: string[];
 }
 
 interface Booking {
   id: string;
   guest: string;
-  room: string;
+  roomType: string;
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -81,27 +89,28 @@ interface Booking {
   source: string;
 }
 
-// Room Card Component
-function RoomCard({ room }: { room: Room }) {
+// --- Components ---
+
+// Card hiển thị Loại phòng (Đã cập nhật logic)
+function RoomCategoryCard({ category }: { category: RoomCategory }) {
+  // Cấu hình trạng thái đơn giản
   const statusConfig = {
-    occupied: { 
-      color: 'bg-red-500', 
-      badge: 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
-      label: 'Occupied'
-    },
-    available: { 
+    active: { 
       color: 'bg-green-500', 
       badge: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
-      label: 'Available'
+      label: 'Đang hoạt động',
+      icon: CheckCircle2
     },
-    maintenance: { 
-      color: 'bg-yellow-500', 
-      badge: 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
-      label: 'Maintenance'
+    stopped: { 
+      color: 'bg-gray-400', 
+      badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+      label: 'Ngừng cung cấp',
+      icon: Ban
     },
   };
 
-  const config = statusConfig[room.status];
+  const config = statusConfig[category.status];
+  const StatusIcon = config.icon;
 
   const amenityIcons: Record<string, any> = {
     'WiFi': Wifi,
@@ -111,67 +120,84 @@ function RoomCard({ room }: { room: Room }) {
   };
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border bg-card">
+    <Card className={`shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border bg-card ${category.status === 'stopped' ? 'opacity-75' : ''}`}>
       <CardContent className="p-5">
+        {/* Header: Tên và Menu */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${config.color} shadow-sm`} />
             <div>
-              <h3 className="font-semibold text-lg text-foreground">Room {room.number}</h3>
-              <Badge variant="outline" className="mt-1.5 border-sidebar-border">{room.type}</Badge>
+              <h3 className="font-semibold text-lg text-foreground">{category.name}</h3>
+              <p className="text-sm text-muted-foreground">Tổng: {category.totalRooms} phòng</p>
             </div>
           </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-sidebar-accent">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Trạng thái hiển thị</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer text-green-600 focus:text-green-700">
+                <Power className="w-4 h-4 mr-2" />
+                Mở bán lại
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
+                <Ban className="w-4 h-4 mr-2" />
+                Ngừng cung cấp
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div className="space-y-3.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Status</p>
-            <Badge className={`${config.badge} font-medium`}>{config.label}</Badge>
+        {/* Thông tin chính */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-2 rounded-md bg-sidebar-accent/50 border border-sidebar-border/50">
+             <div className="flex items-center gap-2">
+                <Badge className={`${config.badge} font-medium border`}>
+                    <StatusIcon className="w-3 h-3 mr-1" />
+                    {config.label}
+                </Badge>
+             </div>
+             <div className="text-right">
+                <p className="text-xs text-muted-foreground font-medium uppercase">Giá niêm yết</p>
+                <p className="font-bold text-lg text-primary">{category.price}</p>
+             </div>
           </div>
 
-          {room.guest && (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Guest</p>
-              <p className="font-medium text-foreground">{room.guest}</p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Rate</p>
-            <p className="font-bold text-xl text-primary">{room.rate}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+             <Users className="w-4 h-4" />
+             <span>Sức chứa tiêu chuẩn: 2 người lớn</span>
           </div>
 
-          {room.checkIn && room.checkOut && (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Stay Period</p>
-              <p className="text-sm text-foreground">{room.checkIn} to {room.checkOut}</p>
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            {room.amenities.map((amenity) => {
+          <div className="flex gap-2 pt-1">
+            {category.amenities.map((amenity) => {
               const Icon = amenityIcons[amenity];
               return Icon ? (
                 <div 
                   key={amenity} 
-                  className="p-2.5 bg-sidebar-accent rounded-lg hover:bg-sidebar-accent/80 transition-colors" 
+                  className="p-2 bg-sidebar-accent rounded-md text-sidebar-accent-foreground" 
                   title={amenity}
                 >
-                  <Icon className="w-4 h-4 text-sidebar-accent-foreground" />
+                  <Icon className="w-4 h-4" />
                 </div>
               ) : null;
             })}
           </div>
         </div>
 
+        {/* Actions */}
         <div className="flex gap-2 mt-5 pt-4 border-t border-sidebar-border">
           <Button variant="outline" size="sm" className="flex-1 hover:bg-sidebar-accent border-sidebar-border">
             <Eye className="w-4 h-4 mr-1.5" />
-            View
+            Chi tiết
           </Button>
-          <Button variant="default" size="sm" className="flex-1 ">
+          <Button variant="default" size="sm" className="flex-1">
             <Edit className="w-4 h-4 mr-1.5" />
-            Edit
+            Sửa
           </Button>
         </div>
       </CardContent>
@@ -179,7 +205,7 @@ function RoomCard({ room }: { room: Room }) {
   );
 }
 
-// New Booking Dialog Component
+// Dialog tạo đặt phòng mới (Giữ nguyên logic)
 function NewBookingDialog() {
   const [date, setDate] = useState<Date>();
 
@@ -188,173 +214,117 @@ function NewBookingDialog() {
       <DialogTrigger asChild>
         <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
           <Plus className="w-4 h-4 mr-2" />
-          New Booking
+          Tạo đặt phòng
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] bg-popover border-sidebar-border">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Create New Booking</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Add a new booking for a room. Fill in all required information.
+          <DialogTitle>Tạo đặt phòng mới</DialogTitle>
+          <DialogDescription>
+            Tạo booking thủ công cho khách vãng lai hoặc đặt qua điện thoại.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="guest-name" className="text-foreground">Guest Name</Label>
-            <Input id="guest-name" placeholder="John Doe" className="bg-input border-border" />
+            <Label htmlFor="guest-name">Tên khách hàng</Label>
+            <Input id="guest-name" placeholder="Nguyễn Văn A" className="bg-input border-border" />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="room" className="text-foreground">Room</Label>
+            <Label htmlFor="room-type">Loại phòng</Label>
             <Select>
-              <SelectTrigger id="room" className="bg-input border-border">
-                <SelectValue placeholder="Select room" />
+              <SelectTrigger id="room-type" className="bg-input border-border">
+                <SelectValue placeholder="Chọn loại phòng" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border-sidebar-border">
-                <SelectItem value="101">Room 101 - Standard</SelectItem>
-                <SelectItem value="102">Room 102 - Standard</SelectItem>
-                <SelectItem value="103">Room 103 - Deluxe</SelectItem>
-                <SelectItem value="201">Room 201 - Suite</SelectItem>
+              <SelectContent>
+                <SelectItem value="std">Standard</SelectItem>
+                <SelectItem value="dlx">Deluxe</SelectItem>
+                <SelectItem value="ste">Suite</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label className="text-foreground">Check-in</Label>
+              <Label>Nhận phòng</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-start border-border">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Pick date"}
+                    {date ? format(date, "PPP", { locale: vi }) : "Chọn ngày"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-popover border-sidebar-border">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                  />
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={date} onSelect={setDate} />
                 </PopoverContent>
               </Popover>
             </div>
             <div className="grid gap-2">
-              <Label className="text-foreground">Check-out</Label>
+              <Label>Trả phòng</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-start border-border">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    Pick date
+                    Chọn ngày
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-popover border-sidebar-border">
+                <PopoverContent className="w-auto p-0">
                   <Calendar mode="single" />
                 </PopoverContent>
               </Popover>
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="guests" className="text-foreground">Number of Guests</Label>
-            <Input id="guests" type="number" placeholder="2" className="bg-input border-border" />
-          </div>
         </div>
         <DialogFooter>
-          <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            Create Booking
-          </Button>
+          <Button type="submit">Xác nhận đặt</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// Main Room Management Page
+// Main Page
 export default function RoomManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>();
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const rooms: Room[] = [
+  // Dữ liệu mẫu Hạng phòng (Chỉ còn active/stopped)
+  const roomCategories: RoomCategory[] = [
     {
       id: '1',
-      number: '101',
-      type: 'Standard',
-      status: 'occupied',
-      guest: 'John Smith',
-      rate: '$120/night',
-      checkIn: '2024-01-15',
-      checkOut: '2024-01-18',
+      name: 'Standard Room',
+      totalRooms: 20,
+      status: 'active', // Đang hiển thị cho khách đặt
+      price: '1.200.000₫',
       amenities: ['WiFi', 'TV', 'Coffee'],
     },
     {
       id: '2',
-      number: '102',
-      type: 'Standard',
-      status: 'available',
-      rate: '$120/night',
-      amenities: ['WiFi', 'TV', 'Coffee'],
+      name: 'Deluxe Room',
+      totalRooms: 10,
+      status: 'active',
+      price: '2.500.000₫',
+      amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
     },
     {
       id: '3',
-      number: '103',
-      type: 'Deluxe',
-      status: 'maintenance',
-      rate: '$180/night',
+      name: 'Executive Suite',
+      totalRooms: 5,
+      status: 'stopped', // Chủ nhà tắt loại phòng này (ví dụ đang sửa chữa cả tầng)
+      price: '4.500.000₫',
       amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
     },
     {
       id: '4',
-      number: '201',
-      type: 'Suite',
-      status: 'occupied',
-      guest: 'Sarah Wilson',
-      rate: '$300/night',
-      checkIn: '2024-01-14',
-      checkOut: '2024-01-20',
-      amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
-    },
-    {
-      id: '5',
-      number: '202',
-      type: 'Suite',
-      status: 'available',
-      rate: '$300/night',
+      name: 'Family Bungalow',
+      totalRooms: 3,
+      status: 'active',
+      price: '3.200.000₫',
       amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
     },
   ];
 
   const bookings: Booking[] = [
-    {
-      id: 'BK001',
-      guest: 'Michael Johnson',
-      room: '301',
-      checkIn: '2024-01-20',
-      checkOut: '2024-01-23',
-      guests: 2,
-      amount: '$540',
-      status: 'confirmed',
-      source: 'Direct',
-    },
-    {
-      id: 'BK002',
-      guest: 'Emma Davis',
-      room: '205',
-      checkIn: '2024-01-22',
-      checkOut: '2024-01-25',
-      guests: 1,
-      amount: '$360',
-      status: 'pending',
-      source: 'Booking.com',
-    },
-    {
-      id: 'BK003',
-      guest: 'Robert Brown',
-      room: '104',
-      checkIn: '2024-01-25',
-      checkOut: '2024-01-28',
-      guests: 3,
-      amount: '$432',
-      status: 'confirmed',
-      source: 'Expedia',
-    },
+    { id: 'BK001', guest: 'Trần Văn Bảo', roomType: 'Standard Room', checkIn: '20/01/2025', checkOut: '23/01/2025', guests: 2, amount: '3.600.000₫', status: 'confirmed', source: 'Trực tiếp' },
+    { id: 'BK002', guest: 'Nguyễn Thị Mai', roomType: 'Deluxe Room', checkIn: '22/01/2025', checkOut: '25/01/2025', guests: 1, amount: '7.500.000₫', status: 'pending', source: 'Booking.com' },
   ];
 
   return (
@@ -363,148 +333,85 @@ export default function RoomManagementPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Room Management</h1>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Quản lý hạng phòng</h1>
             <p className="text-muted-foreground mt-1.5">
-              Manage rooms, bookings, and availability
+              Thiết lập thông tin các loại phòng và trạng thái mở bán
             </p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="border-sidebar-border hover:bg-sidebar-accent">
               <Filter className="w-4 h-4 mr-2" />
-              Filter
+              Bộ lọc
             </Button>
             <NewBookingDialog />
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="room-status" className="w-full">
         <TabsList className="bg-muted border border-sidebar-border">
-          <TabsTrigger value="room-status" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-            Room Status
-          </TabsTrigger>
-          <TabsTrigger value="bookings" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-            Bookings
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-            Calendar View
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-            Integrations
-          </TabsTrigger>
+          <TabsTrigger value="room-status">Danh sách hạng phòng</TabsTrigger>
+          <TabsTrigger value="bookings">Đơn đặt phòng</TabsTrigger>
+          <TabsTrigger value="calendar">Lịch biểu</TabsTrigger>
         </TabsList>
 
-        {/* Room Status Tab */}
+        {/* Tab Danh sách hạng phòng */}
         <TabsContent value="room-status" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search rooms..."
+                placeholder="Tìm kiếm loại phòng..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-input border-border"
               />
             </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto border-border">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "26/08/2025"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-popover border-sidebar-border">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                />
-              </PopoverContent>
-            </Popover>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {rooms.map((room) => (
-              <RoomCard key={room.id} room={room} />
+            {roomCategories.map((category) => (
+              <RoomCategoryCard key={category.id} category={category} />
             ))}
           </div>
         </TabsContent>
 
-        {/* Bookings Tab */}
+        {/* Tab Bookings */}
         <TabsContent value="bookings" className="space-y-4 mt-6">
           <Card className="shadow-sm border-sidebar-border bg-card">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
               <div>
-                <h3 className="text-xl font-semibold text-foreground">Recent Bookings</h3>
-                <p className="text-sm text-muted-foreground mt-1">View and manage all bookings</p>
+                <h3 className="text-xl font-semibold">Đơn đặt gần đây</h3>
+                <p className="text-sm text-muted-foreground mt-1">Quản lý booking từ các nguồn</p>
               </div>
-              <Button variant="outline" size="sm" className="border-sidebar-border hover:bg-sidebar-accent">
-                View All
-              </Button>
             </CardHeader>
             <CardContent>
               <div className="rounded-lg border border-sidebar-border overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-sidebar-border">
-                      <TableHead className="font-semibold text-foreground">Booking ID</TableHead>
-                      <TableHead className="font-semibold text-foreground">Guest</TableHead>
-                      <TableHead className="font-semibold text-foreground">Room</TableHead>
-                      <TableHead className="font-semibold text-foreground">Check-in</TableHead>
-                      <TableHead className="font-semibold text-foreground">Check-out</TableHead>
-                      <TableHead className="font-semibold text-foreground">Guests</TableHead>
-                      <TableHead className="font-semibold text-foreground">Amount</TableHead>
-                      <TableHead className="font-semibold text-foreground">Status</TableHead>
-                      <TableHead className="font-semibold text-foreground">Source</TableHead>
-                      <TableHead className="font-semibold text-foreground">Actions</TableHead>
+                    <TableRow className="bg-muted/50 border-b border-sidebar-border">
+                      <TableHead>Mã Đặt</TableHead>
+                      <TableHead>Khách hàng</TableHead>
+                      <TableHead>Loại phòng</TableHead>
+                      <TableHead>Check-in</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {bookings.map((booking) => (
-                      <TableRow 
-                        key={booking.id}
-                        className="hover:bg-muted/30 border-b border-sidebar-border transition-colors"
-                      >
-                        <TableCell className="font-medium text-foreground">{booking.id}</TableCell>
-                        <TableCell className="text-foreground">{booking.guest}</TableCell>
-                        <TableCell className="font-medium text-foreground">{booking.room}</TableCell>
+                      <TableRow key={booking.id} className="border-b border-sidebar-border">
+                        <TableCell className="font-medium">{booking.id}</TableCell>
+                        <TableCell>{booking.guest}</TableCell>
+                        <TableCell>{booking.roomType}</TableCell>
                         <TableCell className="text-muted-foreground">{booking.checkIn}</TableCell>
-                        <TableCell className="text-muted-foreground">{booking.checkOut}</TableCell>
-                        <TableCell className="text-foreground">{booking.guests}</TableCell>
-                        <TableCell className="font-semibold text-primary">{booking.amount}</TableCell>
                         <TableCell>
-                          <Badge
-                            className={
-                              booking.status === 'confirmed'
-                                ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                                : booking.status === 'pending'
-                                ? 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
-                                : 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                            }
-                          >
-                            {booking.status}
+                          <Badge className={booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                            {booking.status === 'confirmed' ? 'Đã xác nhận' : 'Chờ xử lý'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{booking.source}</TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="hover:bg-sidebar-accent">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover border-sidebar-border">
-                              <DropdownMenuItem className="hover:bg-sidebar-accent cursor-pointer">
-                                <Eye className="w-4 h-4 mr-2" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="hover:bg-sidebar-accent cursor-pointer">
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button variant="ghost" size="sm"><MoreHorizontal className="w-4 h-4" /></Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -515,23 +422,14 @@ export default function RoomManagementPage() {
           </Card>
         </TabsContent>
 
-        {/* Calendar View Tab */}
+        {/* Calendar Tab */}
         <TabsContent value="calendar" className="mt-6">
           <Card className="shadow-sm border-sidebar-border bg-card">
-            <CardContent className="p-12">
-              <p className="text-muted-foreground text-center text-lg">
-                Calendar view coming soon...
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Integrations Tab */}
-        <TabsContent value="integrations" className="mt-6">
-          <Card className="shadow-sm border-sidebar-border bg-card">
-            <CardContent className="p-12">
-              <p className="text-muted-foreground text-center text-lg">
-                Integrations coming soon...
+            <CardContent className="p-12 flex flex-col items-center text-center">
+              <CalendarIcon className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold text-foreground">Quản lý tồn kho theo ngày</h3>
+              <p className="text-muted-foreground max-w-md mt-2">
+                Tại đây bạn sẽ xem được chi tiết ngày nào "Hết phòng" (Full Slot) dựa trên các đơn đặt thực tế của từng loại phòng.
               </p>
             </CardContent>
           </Card>
