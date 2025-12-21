@@ -129,10 +129,10 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
           {/* Tags */}
           <div className="flex flex-wrap gap-2">
             <span className="text-xs px-3 py-1.5 bg-white text-orange-500 rounded-md border border-orange-200 font-medium">
-              Best Price Guarantee
+              Cam Kết Giá Tốt
             </span>
             <span className="text-xs px-3 py-1.5 bg-white text-green-600 rounded-md border border-green-200 font-medium">
-              Free Cancellation
+              Hủy Miễn Phí
             </span>
           </div>
         </div>
@@ -144,8 +144,8 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
 
           {/* Price */}
           <div className="mb-4">
-            <p className="text-sm text-gray-400 line-through mb-1">$1200</p>
-            <p className="text-sm text-gray-600 mb-1">From <span className="text-2xl font-bold text-orange-500">{destination.price}</span></p>
+            <p className="text-sm text-gray-400 line-through mb-1">1.200.000 VND</p>
+            <p className="text-sm text-gray-600 mb-1">Từ <span className="text-2xl font-bold text-orange-500">{destination.price}</span></p>
           </div>
 
           {/* Book Button */}

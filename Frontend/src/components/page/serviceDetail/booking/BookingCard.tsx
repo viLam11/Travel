@@ -147,14 +147,14 @@ const BookingCard: React.FC<BookingCardProps> = ({
       </button>
 
       {/* Test Room Booking Button */}
-      {onRoomBookNow && (
+      {/* {onRoomBookNow && (
         <button 
           onClick={onRoomBookNow}
           className="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-lg font-bold text-sm transition-all"
         >
           ĐẶT PHÒNG (TEST)
         </button>
-      )}
+      )} */}
     </div>
   );
 };

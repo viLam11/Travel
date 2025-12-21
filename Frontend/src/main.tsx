@@ -78,7 +78,6 @@ root.render(
           </UserProvider>
         </Provider>
       </AuthProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </React.StrictMode>
 );

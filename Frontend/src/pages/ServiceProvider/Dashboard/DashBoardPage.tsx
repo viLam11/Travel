@@ -14,7 +14,7 @@ import {
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { 
   Calendar, 
-  DollarSign, 
+  Banknote, // Đã thay thế DollarSign bằng Banknote
   Users, 
   Eye, 
   Edit,
@@ -46,6 +46,12 @@ import {
   type Booking,
 } from '@/data/dashboardData';
 
+// --- Utility: Hàm định dạng tiền tệ VND ---
+const formatCurrency = (value: number | string) => {
+  const amount = typeof value === 'string' ? parseFloat(value) : value;
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+};
+
 // Stats Card Component
 function StatsCard({ stat }: { stat: any }) {
   const Icon = stat.icon;
@@ -58,12 +64,12 @@ function StatsCard({ stat }: { stat: any }) {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-            <p className="text-3xl font-bold mb-2">{stat.value}</p>
+            <p className="text-2xl font-bold mb-2">{stat.value}</p>
             {stat.change && (
               <div className={`flex items-center gap-1 text-sm ${trendColor}`}>
                 <TrendIcon className="w-4 h-4" />
                 <span className="font-medium">{stat.change}</span>
-                <span className="text-muted-foreground">vs yesterday</span>
+                <span className="text-muted-foreground">so với hôm qua</span>
               </div>
             )}
           </div>
@@ -89,7 +95,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="flex items-center gap-2 hover:text-foreground font-semibold"
         >
-          Booking ID
+          Mã đặt chỗ
           <ArrowUpDown className="w-4 h-4" />
         </button>
       ),
@@ -97,7 +103,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
     },
     {
       accessorKey: "guest",
-      header: "Guest Name",
+      header: "Tên khách",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
@@ -111,26 +117,26 @@ function BookingsTable({ data }: { data: Booking[] }) {
     },
     {
       accessorKey: "service",
-      header: "Service",
+      header: "Dịch vụ",
       cell: ({ row }) => <span className="font-medium">{row.getValue("service")}</span>,
     },
     {
       accessorKey: "serviceType",
-      header: "Type",
+      header: "Loại hình",
       cell: ({ row }) => {
         const type = row.getValue("serviceType") as string;
         return (
           <Badge 
             className={type === "hotel" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}
           >
-            {type === "hotel" ? "Hotel" : "Tour"}
+            {type === "hotel" ? "Khách sạn" : "Vé tham quan"}
           </Badge>
         );
       },
     },
     {
       accessorKey: "checkIn",
-      header: "Check-in",
+      header: "Ngày nhận/đi",
       cell: ({ row }) => {
         const date = new Date(row.getValue("checkIn"));
         return <span>{date.toLocaleDateString('vi-VN')}</span>;
@@ -138,7 +144,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
     },
     {
       accessorKey: "checkOut",
-      header: "Check-out",
+      header: "Ngày trả/về",
       cell: ({ row }) => {
         const date = new Date(row.getValue("checkOut"));
         return <span>{date.toLocaleDateString('vi-VN')}</span>;
@@ -146,7 +152,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
     },
     {
       accessorKey: "guests",
-      header: "Guests",
+      header: "Số khách",
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           <Users className="w-4 h-4" />
@@ -156,21 +162,24 @@ function BookingsTable({ data }: { data: Booking[] }) {
     },
     {
       accessorKey: "amount",
-      header: "Amount",
-      cell: ({ row }) => <span className="font-semibold">{row.getValue("amount")}</span>,
+      header: "Tổng tiền",
+      cell: ({ row }) => {
+        const amount = row.getValue("amount");
+        return <span className="font-semibold">{formatCurrency(amount as number)}</span>;
+      },
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: "Trạng thái",
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
         const statusConfig = {
-          confirmed: { bg: "bg-green-100", text: "text-green-700", label: "Confirmed" },
-          pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Pending" },
-          cancelled: { bg: "bg-red-100", text: "text-red-700", label: "Cancelled" },
-          completed: { bg: "bg-blue-100", text: "text-blue-700", label: "Completed" },
+          confirmed: { bg: "bg-green-100", text: "text-green-700", label: "Đã xác nhận" },
+          pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Chờ xử lý" },
+          cancelled: { bg: "bg-red-100", text: "text-red-700", label: "Đã hủy" },
+          completed: { bg: "bg-blue-100", text: "text-blue-700", label: "Hoàn thành" },
         };
-        const config = statusConfig[status as keyof typeof statusConfig];
+        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
         
         return (
           <Badge className={`${config.bg} ${config.text} hover:${config.bg}`}>
@@ -180,26 +189,19 @@ function BookingsTable({ data }: { data: Booking[] }) {
       },
     },
     {
-      accessorKey: "source",
-      header: "Source",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.getValue("source")}</span>
-      ),
-    },
-    {
       id: "actions",
-      header: "Actions",
+      header: "Thao tác",
       cell: () => (
         <div className="flex gap-1">
           <button 
             className="p-2 hover:bg-muted rounded-lg transition-colors"
-            title="View Details"
+            title="Xem chi tiết"
           >
             <Eye className="w-4 h-4 text-muted-foreground" />
           </button>
           <button 
             className="p-2 hover:bg-muted rounded-lg transition-colors"
-            title="Edit Booking"
+            title="Sửa đơn đặt"
           >
             <Edit className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -234,13 +236,13 @@ function BookingsTable({ data }: { data: Booking[] }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <input
           type="text"
-          placeholder="Search bookings..."
+          placeholder="Tìm kiếm đơn đặt..."
           value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="px-4 py-2 border border-input bg-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent w-full sm:w-64"
         />
         <div className="text-sm text-muted-foreground">
-          Showing {table.getRowModel().rows.length} of {data.length} bookings
+          Hiển thị {table.getRowModel().rows.length} trên tổng số {data.length} đơn
         </div>
       </div>
 
@@ -276,7 +278,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
               ) : (
                 <tr>
                   <td colSpan={columns.length} className="text-center p-8 text-muted-foreground">
-                    No bookings found
+                    Không tìm thấy dữ liệu
                   </td>
                 </tr>
               )}
@@ -288,7 +290,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          Trang {table.getState().pagination.pageIndex + 1} trên {table.getPageCount()}
         </div>
         <div className="flex gap-2">
           <Button 
@@ -298,7 +300,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Previous
+            Trước
           </Button>
           <Button 
             variant="outline" 
@@ -306,7 +308,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
             onClick={() => table.nextPage()} 
             disabled={!table.getCanNextPage()}
           >
-            Next
+            Tiếp
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
@@ -319,7 +321,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
 export default function TravelServicesDashboard() {
   const stats = [
     {
-      title: "Total Bookings Today",
+      title: "Tổng đơn đặt hôm nay",
       value: "143",
       icon: Calendar,
       color: "text-chart-1",
@@ -328,7 +330,7 @@ export default function TravelServicesDashboard() {
       trend: "up",
     },
     {
-      title: "Active Services",
+      title: "Dịch vụ đang hoạt động",
       value: "68",
       icon: Briefcase,
       color: "text-chart-2",
@@ -337,16 +339,16 @@ export default function TravelServicesDashboard() {
       trend: "up",
     },
     {
-      title: "Revenue Today",
-      value: "$24,680",
-      icon: DollarSign,
+      title: "Doanh thu hôm nay",
+      value: "617.500.000 ₫",
+      icon: Banknote, // Sử dụng icon Banknote
       color: "text-chart-3",
       iconBg: "bg-yellow-100 dark:bg-yellow-950",
       change: "+23%",
       trend: "up",
     },
     {
-      title: "Service Providers",
+      title: "Nhà cung cấp dịch vụ",
       value: "89",
       icon: Users,
       color: "text-chart-4",
@@ -361,22 +363,22 @@ export default function TravelServicesDashboard() {
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Hotels & Tours Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Welcome back! Here's an overview of your services platform.</p>
+          <h1 className="text-3xl font-bold"></h1>
+          <p className="text-muted-foreground mt-1">Chào mừng trở lại! Dưới đây là tổng quan về nền tảng dịch vụ của bạn.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline">
             <Calendar className="w-4 h-4 mr-2" />
-            Export Report
+            Xuất báo cáo
           </Button>
           <Button variant="default" className="bg-primary hover:bg-primary/90">
-            New Booking
+            Tạo đơn mới
           </Button>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, index) => (
           <StatsCard key={index} stat={stat} />
         ))}
@@ -392,7 +394,7 @@ export default function TravelServicesDashboard() {
         </div>
       </div>
 
-      {/* Charts Section - Row 2 */}
+      {/* Charts Section - Row 2
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="xl:col-span-2">
           <TopProvidersChart data={topProvidersData} />
@@ -403,22 +405,22 @@ export default function TravelServicesDashboard() {
         <div className="xl:col-span-1">
           <PopularDestinationsChart data={popularDestinationsData} />
         </div>
-      </div>
+      </div> */}
 
-      {/* Charts Section - Row 3 */}
+      {/* Charts Section - Row 3
       <div className="grid grid-cols-1">
         <MonthlyRevenueChart data={monthlyRevenueData} />
-      </div>
+      </div> */}
 
       {/* Recent Bookings Card */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
           <div>
-            <CardTitle className="text-xl font-semibold">Recent Bookings</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Manage and track all service bookings</p>
+            <CardTitle className="text-xl font-semibold">Đơn đặt gần đây</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Quản lý và theo dõi tất cả các đơn đặt dịch vụ</p>
           </div>
           <Button variant="outline" size="sm">
-            View All Bookings
+            Xem tất cả
           </Button>
         </CardHeader>
         <CardContent>

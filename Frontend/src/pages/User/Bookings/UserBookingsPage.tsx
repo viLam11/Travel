@@ -18,19 +18,6 @@ interface Booking {
 
 const MOCK_BOOKINGS: Booking[] = [
   {
-    id: '1',
-    type: 'hotel',
-    name: 'Khách sạn Mường Thanh Luxury',
-    location: 'Đà Nẵng',
-    checkIn: '2025-12-01',
-    checkOut: '2025-12-05',
-    guests: 2,
-    status: 'upcoming',
-    totalPrice: 3500000,
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400',
-    bookingCode: 'VT001234',
-  },
-  {
     id: '2',
     type: 'tour',
     name: 'Tour Vịnh Hạ Long 2N1Đ',
@@ -119,8 +106,8 @@ const UserBookingsPage: React.FC = () => {
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+      // style: 'currency',
+      // currency: 'VND',
     }).format(price);
   };
 
@@ -225,8 +212,7 @@ const UserBookingsPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-orange-600 font-bold">
-                        <DollarSign className="w-5 h-5" />
-                        <span className="text-lg">{formatPrice(booking.totalPrice)}</span>
+                        <span className="text-lg">{formatPrice(booking.totalPrice)} VND</span>
                       </div>
                     </div>
                   </div>

@@ -5,13 +5,13 @@ const mockData: Record<string, ServiceDetail> = {
   // Data cho Hà Nội
   '1': {
     id: '1',
-    name: 'Nhà Thờ Đức Bà',
+    name: 'VinWonders Phú Quốc',
     type: 'place',
     rating: 4.8,
     reviews: 269,
-    location: 'Quận 1, TP.HCM',
-    address: '124 Phường Bến Nghé, TP.HCM',
-    description: 'Đây là di tích lịch sử văn hóa nổi tiếng được đông đảo du khách trong nước và nước ngoài đến tham quan. Nơi này được công nhận là Di tích lịch sử văn hóa quốc gia tại Quyết định số 77A/VHQD ngày 25/6/1976 của Bộ trưởng Bộ Văn hóa.',
+    location: 'Phú Quốc, Kiên Giang',
+    address: 'VinWonders Phú Quốc, Gành Dầu, Phú Quốc, Kiên Giang',
+    description: 'VinWonders Phú Quốc sở hữu 6 phân khu, tượng trưng cho 6 vùng lãnh địa với 12 chủ đề đặc sắc lấy cảm hứng từ các nền văn minh nổi tiếng của nhân loại và các câu chuyện cổ tích, giai thoại thế giới, kiến tạo nên trải nghiệm diệu kỳ, mới lạ đầy cuốn hút với hơn 100 trò chơi khủng. Tất cả mang đến nhiều trải nghiệm ấn tượng, hiếm có tại Việt Nam mà vẫn đậm tính giải trí, giáo dục và nghệ thuật cao, phù hợp với mọi lứa tuổi, mọi quốc tịch.',
     openingHours: '05-09-2025',
     duration: '1 ngày',
     priceAdult: 200000,
@@ -23,16 +23,10 @@ const mockData: Record<string, ServiceDetail> = {
       { code: 'HCM_5090FF', value: 90000, applied: true }
     ],
     images: [
-      'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1528127269322-539801943592?w=800&h=600&fit=crop'
+      '/WinWonder0.jpg', '/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg','/VinWonder.jpg',
     ],
     thumbnails: [
-      'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=150&h=150&fit=crop',
-      'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=150&h=150&fit=crop',
-      'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=150&h=150&fit=crop',
-      'https://images.unsplash.com/photo-1528127269322-539801943592?w=150&h=150&fit=crop'
+      '/WinWonder0.jpg','/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg','/VinWonder.jpg',
     ],
     features: [
       { icon: 'mapPin', title: 'Điểm tham quan và lân cận', desc: 'Nhà thờ, Cafe, Đường sách' },
