@@ -1,5 +1,6 @@
 package com.travollo.Travel.exception;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -11,6 +12,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException ex) {
         ErrorResponse error = new ErrorResponse(ex.getStatus().value(), ex.getMessage());
         return new ResponseEntity<>(error, ex.getStatus());
+    }
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<ErrorResponse> handleTokenExpired(ExpiredJwtException ex) {
+        ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
 
     // Handle tất cả Exception còn lại

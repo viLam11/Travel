@@ -1,6 +1,7 @@
 package com.travollo.Travel.utils;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class JWTUtils {
         return extractClaims(token, Claims::getSubject);
     }
 
-    private <T> T extractClaims(String token, Function<Claims, T> claimsTFunction) {
+    public <T> T extractClaims(String token, Function<Claims, T> claimsTFunction) {
         return claimsTFunction.apply(Jwts.parser().verifyWith(Key).build().parseSignedClaims(token).getPayload());
     }
 
@@ -48,7 +49,7 @@ public class JWTUtils {
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    private boolean isTokenExpired(String token) {
+    public boolean isTokenExpired(String token) {
         return extractClaims(token, Claims::getExpiration).before(new Date());
     }
 }

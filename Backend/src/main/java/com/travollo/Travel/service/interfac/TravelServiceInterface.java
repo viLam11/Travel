@@ -5,6 +5,7 @@ import com.travollo.Travel.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.sql.Time;
 import java.util.List;
 
 public interface TravelServiceInterface {
@@ -13,7 +14,9 @@ public interface TravelServiceInterface {
     ResponseEntity<Object> getServices(int page, int size, String sortBy, String direction);
     ResponseEntity<Object> createService(MultipartFile photo, String serviceName, String description, String provinceCode,
                                          String address, String contactNumber, Long averagePrice,
-                                         String tags, String serviceType, User provider, List<MultipartFile> photos);
+                                         String tags, String serviceType, User provider, List<MultipartFile> photos,
+                                         Time start_time, Time end_time, Time open_time, Time close_time, String working_days
+                                         );
     ResponseEntity<Object> updateService(Long serviceID, TService updatedTService);
     ResponseEntity<Object> deleteService(Long serviceID);
 }

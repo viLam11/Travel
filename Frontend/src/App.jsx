@@ -13,6 +13,8 @@ export default function App() {
         <Router>
           <Routes>
               <Route path="/homepage" element={<Homepage />} />
+               <Route path="/homepage" element={<Homepage />} />
+               <Route path="/success/payment" element={<div>SUCCESS PAYMENT</div>} />
               <Route path="*" element={<div>404 Not Found</div>} />
           </Routes>
         </Router>
