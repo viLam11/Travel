@@ -1,2 +1,66 @@
-Frontend/node_modules/
+# =========================================
+# Global ignores
+# =========================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Environment files
+*.env
+.env
+application.properties
+application.yml
+
+# =========================================
+# Backend (Java Spring Boot / Maven)
+# =========================================
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/
+dependency-reduced-pom.xml
+
+# Gradle (nếu sau này dùng)
+.gradle/
+build/
+
+# Compiled
+*.class
+*.jar
+*.war
+*.ear
+
+# =========================================
+# Frontend (Node.js / React / Vue / Angular)
+# =========================================
 node_modules/
+dist/
+build/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================================
+# OS / Tooling
+# =========================================
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+
+# Mac
+.AppleDouble
+.LSOverride
+
+# Docker
+*.pid
