@@ -1,0 +1,118 @@
+// src/pages/auth/LoginPage.scss
+
+.travelist-title {
+  font-family: 'Dancing Script', cursive;
+  background: linear-gradient(45deg, #ffffff, #f0f9ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(90deg, #ff6b35, #f7931e);
+    border-radius: 2px;
+  }
+}
+
+// Animation cho floating elements
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(30px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+// Custom input focus effects
+.custom-input {
+  position: relative;
+  
+  &:focus-within {
+    .input-icon {
+      color: #f97316;
+      transform: scale(1.1);
+    }
+  }
+}
+
+// Smooth transitions cho buttons
+.social-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Login button gradient animation
+.login-btn {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transition: left 0.5s;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+    
+    .hero-section {
+      min-height: 40vh;
+    }
+    
+    .login-section {
+      width: 100%;
+      padding: 2rem 1rem;
+    }
+  }
+  
+  .travelist-title {
+    font-size: 3rem;
+    text-align: center;
+  }
+}
