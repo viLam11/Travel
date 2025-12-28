@@ -1,4 +1,4 @@
-// src/components/home/RegionSection.tsx
+// src/components/page/home/RegionSection.tsx
 import React, { useState } from 'react';
 import { useLazyImage } from '../../../hooks/useLazyImage';
 import { useNavigate } from 'react-router-dom';
@@ -8,12 +8,16 @@ interface Region {
   name: string;
   location: string;
   image: string;
+  destinationSlug: string; //  Add slug
+  regionSlug: string;      //  Add region slug
 }
 
 interface Place {
   id: string;
   name: string;
   image: string;
+  destinationSlug: string; //  Add slug
+  regionSlug: string;      //  Add region slug
 }
 
 interface RegionData {
@@ -21,7 +25,7 @@ interface RegionData {
   places: Place[];
 }
 
-// RegionCard Component với final enhanced hook
+// RegionCard Component
 interface RegionCardProps {
   id: string;
   name: string;
@@ -39,23 +43,22 @@ const RegionCard: React.FC<RegionCardProps> = ({
   image,
   onClick,
   type = 'main',
-  fallbackImage = '/images/placeholder-region.jpg' //Default fallback
+  fallbackImage = '/images/placeholder-region.jpg'
 }) => {
-  // ✨ Final enhanced hook với fallback support
-  const { 
-    ref, 
-    imageLoaded, 
+  const {
+    ref,
+    imageLoaded,
     showPlaceholder,
     shouldLoadImage,
     hasError,
-    currentSrc, //Có thể là fallback
+    currentSrc,
     setImageLoaded,
-    setHasError 
+    setHasError
   } = useLazyImage<HTMLDivElement>(image, {
     rootMargin: '150px',
-    once: true, // Disconnect sau lần đầu
+    once: true,
     priority: 'low',
-    fallbackSrc: fallbackImage, //Auto fallback on error
+    fallbackSrc: fallbackImage,
     onInView: () => {
       console.log(`👀 Region in view: ${type === 'main' ? location : name}`);
     },
@@ -64,8 +67,8 @@ const RegionCard: React.FC<RegionCardProps> = ({
     }
   });
 
-  const heightClass = type === 'main' 
-    ? 'h-48 sm:h-56 lg:h-72' 
+  const heightClass = type === 'main'
+    ? 'h-48 sm:h-56 lg:h-72'
     : 'h-40 sm:h-44 lg:h-52';
 
   const titleSize = type === 'main'
@@ -74,28 +77,20 @@ const RegionCard: React.FC<RegionCardProps> = ({
 
   return (
     <div onClick={onClick} className="group cursor-pointer">
-      <div 
+      <div
         ref={ref}
         className={`relative ${heightClass} rounded-xl sm:rounded-2xl overflow-hidden shadow-lg`}
       >
         {/* Skeleton với Shimmer Effect */}
         {showPlaceholder && (
-          // <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200">
-          //   <div className="absolute inset-0">
-          //     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent shimmer"></div>
-          //   </div>
-          //   <div className="absolute inset-0 flex items-center justify-center">
-          //     <div className="text-gray-400 text-sm font-medium">Đang tải...</div>
-          //   </div>
-          // </div>
-           <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-gray-300 border-t-orange-500 rounded-full animate-spin"></div>
             </div>
           </div>
         )}
 
-        {/* Error State - Chỉ show nếu fallback cũng fail */}
+        {/* Error State */}
         {hasError && (
           <div className="absolute inset-0 bg-gray-300 flex flex-col items-center justify-center text-gray-500">
             <svg className="w-12 sm:w-16 h-12 sm:h-16 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,9 +100,9 @@ const RegionCard: React.FC<RegionCardProps> = ({
           </div>
         )}
 
-        {/* Actual Image - 2️⃣ Dùng currentSrc */}
+        {/* Actual Image */}
         {shouldLoadImage && (
-          <img 
+          <img
             src={currentSrc}
             alt={type === 'main' ? location : name}
             onLoad={() => setImageLoaded(true)}
@@ -121,7 +116,7 @@ const RegionCard: React.FC<RegionCardProps> = ({
           />
         )}
 
-        {/* Content Overlays - Chỉ hiện khi image loaded */}
+        {/* Content Overlays */}
         {imageLoaded && (
           <>
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -140,13 +135,6 @@ const RegionCard: React.FC<RegionCardProps> = ({
             <div className="h-full bg-orange-500 progress-bar"></div>
           </div>
         )}
-
-        {/* 2️⃣ Fallback indicator (dev only) */}
-        {imageLoaded && currentSrc === fallbackImage && process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded z-20">
-            Fallback
-          </div>
-        )}
       </div>
     </div>
   );
@@ -155,69 +143,166 @@ const RegionCard: React.FC<RegionCardProps> = ({
 // Main RegionSection Component
 const RegionSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('north');
-
   const navigate = useNavigate();
+
+  //  FIXED: Data với proper slugs
   const regionData: Record<string, RegionData> = {
     north: {
       regions: [
-        { id: '1', name: 'Miền Bắc', location: 'Hạ Long', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop' },
-        { id: '2', name: 'Miền Bắc', location: 'Sapa', image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=400&fit=crop' },
-        { id: '3', name: 'Miền Bắc', location: 'Hà Nội', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop' }
+        {
+          id: '1',
+          name: 'Miền Bắc',
+          location: 'Hạ Long',
+          image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop',
+          destinationSlug: 'ha-long',
+          regionSlug: 'mien-bac'
+        },
+        {
+          id: '2',
+          name: 'Miền Bắc',
+          location: 'Sapa',
+          image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=400&fit=crop',
+          destinationSlug: 'sapa',
+          regionSlug: 'mien-bac'
+        },
+        {
+          id: '3',
+          name: 'Miền Bắc',
+          location: 'Hà Nội',
+          image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop',
+          destinationSlug: 'ha-noi',
+          regionSlug: 'mien-bac'
+        }
       ],
       places: [
-        { id: '4', name: 'Tam Cốc', image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=300&fit=crop' },
-        { id: '5', name: 'Ninh Bình', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=300&fit=crop' },
-        { id: '6', name: 'Mai Châu', image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=300&fit=crop' }
+        {
+          id: '4',
+          name: 'Ninh Bình',
+          image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=300&fit=crop',
+          destinationSlug: 'ninh-binh',
+          regionSlug: 'mien-bac'
+        },
+        {
+          id: '5',
+          name: 'Hải Phòng',
+          image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=300&fit=crop',
+          destinationSlug: 'hai-phong',
+          regionSlug: 'mien-bac'
+        }
       ]
     },
     central: {
       regions: [
-        { id: '7', name: 'Miền Trung', location: 'Đà Nẵng', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop' },
-        { id: '8', name: 'Miền Trung', location: 'Hội An', image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop' },
-        { id: '9', name: 'Miền Trung', location: 'Huế', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop' }
+        {
+          id: '7',
+          name: 'Miền Trung',
+          location: 'Đà Nẵng',
+          image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop',
+          destinationSlug: 'da-nang',
+          regionSlug: 'mien-trung'
+        },
+        {
+          id: '8',
+          name: 'Miền Trung',
+          location: 'Hội An',
+          image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop',
+          destinationSlug: 'hoi-an',
+          regionSlug: 'mien-trung'
+        },
+        {
+          id: '9',
+          name: 'Miền Trung',
+          location: 'Huế',
+          image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop',
+          destinationSlug: 'hue',
+          regionSlug: 'mien-trung'
+        }
       ],
       places: [
-        { id: '10', name: 'Huế', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=300&fit=crop' },
-        { id: '11', name: 'Phong Nha', image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=300&fit=crop' },
-        { id: '12', name: 'Quy Nhơn', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=300&fit=crop' }
+        {
+          id: '10',
+          name: 'Nha Trang',
+          image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=300&fit=crop',
+          destinationSlug: 'nha-trang',
+          regionSlug: 'mien-trung'
+        },
+        {
+          id: '11',
+          name: 'Quy Nhơn',
+          image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=300&fit=crop',
+          destinationSlug: 'quy-nhon',
+          regionSlug: 'mien-trung'
+        }
       ]
     },
     south: {
       regions: [
-        { id: '13', name: 'Miền Nam', location: 'Phú Quốc', image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop' },
-        { id: '14', name: 'Miền Nam', location: 'Vũng Tàu', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop' },
-        { id: '15', name: 'Miền Nam', location: 'Cần Thơ', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop' }
+        {
+          id: '13',
+          name: 'Miền Nam',
+          location: 'Phú Quốc',
+          image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop',
+          destinationSlug: 'phu-quoc',
+          regionSlug: 'mien-nam'
+        },
+        {
+          id: '14',
+          name: 'Miền Nam',
+          location: 'Vũng Tàu',
+          image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop',
+          destinationSlug: 'vung-tau',
+          regionSlug: 'mien-nam'
+        },
+        {
+          id: '15',
+          name: 'Miền Nam',
+          location: 'TP. Hồ Chí Minh',
+          image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop',
+          destinationSlug: 'ho-chi-minh',
+          regionSlug: 'mien-nam'
+        }
       ],
       places: [
-        { id: '16', name: 'Nha Trang', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=300&fit=crop' },
-        { id: '17', name: 'Đà Lạt', image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=300&fit=crop' },
-        { id: '18', name: 'Mũi Né', image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=300&fit=crop' }
+        {
+          id: '17',
+          name: 'Đà Lạt',
+          image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=300&fit=crop',
+          destinationSlug: 'da-lat',
+          regionSlug: 'mien-nam'
+        },
+        {
+          id: '18',
+          name: 'Cần Thơ',
+          image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=300&fit=crop',
+          destinationSlug: 'can-tho',
+          regionSlug: 'mien-nam'
+        }
       ]
     }
   };
 
   const currentData = regionData[activeTab];
 
-  const handleRegionClick = (location: string) => {
-    console.log('Navigate to:', location);
-    // TODO: Implement navigation
-    // const urlLocation = location.toLowerCase().replace(/\s+/g, '-');
- 
-     const urlSlug = location
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
-      .replace(/đ/g, 'd')
-      .replace(/\s+/g, '-');
-    
-    // Navigate: /destination/ha-noi
-       // navigate(`/destination/${urlLocation}`, { state: { location } });
-    navigate(`/destinations/${urlSlug}`);
+  //  FIXED: Navigate với region + destination
+  const handleRegionClick = (region: Region) => {
+    console.log('Navigate to:', region.location);
+
+    // Navigate with query params for filtering
+    const queryParams = new URLSearchParams();
+    queryParams.append('destination', region.location); // Use exact name for now
+
+    navigate(`/destinations?${queryParams.toString()}`);
   };
 
-  const handlePlaceClick = (name: string) => {
-    console.log('Navigate to:', name);
-    // TODO: Implement navigation
+  //  FIXED: Navigate với region + destination
+  const handlePlaceClick = (place: Place) => {
+    console.log('Navigate to:', place.name);
+
+    // Navigate with query params for filtering
+    const queryParams = new URLSearchParams();
+    queryParams.append('destination', place.name);
+
+    navigate(`/destinations?${queryParams.toString()}`);
   };
 
   return (
@@ -240,11 +325,10 @@ const RegionSection: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-2 sm:pb-3 px-2 font-bold text-base sm:text-lg lg:text-xl transition-all whitespace-nowrap ${
-                  activeTab === tab
+                className={`pb-2 sm:pb-3 px-2 font-bold text-base sm:text-lg lg:text-xl transition-all whitespace-nowrap ${activeTab === tab
                     ? 'text-[#1A1D7A] border-b-3 sm:border-b-4 border-blue-600'
                     : 'text-gray-600 hover:text-orange-500'
-                }`}
+                  }`}
               >
                 {tab === 'north' ? 'Miền Bắc' : tab === 'central' ? 'Miền Trung' : 'Miền Nam'}
               </button>
@@ -259,7 +343,7 @@ const RegionSection: React.FC = () => {
               key={region.id}
               {...region}
               type="main"
-              onClick={() => handleRegionClick(region.location)}
+              onClick={() => handleRegionClick(region)}
             />
           ))}
         </div>
@@ -269,10 +353,12 @@ const RegionSection: React.FC = () => {
           {currentData.places.map((place) => (
             <RegionCard
               key={place.id}
-              {...place}
+              name={place.name}
               location={place.name}
+              image={place.image}
               type="place"
-              onClick={() => handlePlaceClick(place.name)}
+              onClick={() => handlePlaceClick(place)}
+              id={place.id}
             />
           ))}
         </div>
@@ -285,13 +371,6 @@ const RegionSection: React.FC = () => {
         }
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out;
-        }
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .shimmer {
-          animation: shimmer 2s infinite;
         }
         @keyframes progress {
           0% { width: 0%; }

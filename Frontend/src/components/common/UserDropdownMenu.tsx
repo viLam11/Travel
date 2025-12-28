@@ -1,15 +1,15 @@
 // src/components/common/UserDropdownMenu.tsx
-import React, { useRef, useEffect} from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  User, 
-  Calendar, 
-  Receipt, 
-  Heart, 
-  Settings, 
-  Bell, 
-  LogOut 
+import {
+  User,
+  Calendar,
+  Receipt,
+  Heart,
+  Settings,
+  Bell,
+  LogOut
 } from 'lucide-react';
 import Avatar from '@/components/common/avatar/Avatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,7 +46,7 @@ const UserDropdownMenu: React.FC<UserDropdownMenuProps> = ({ isOpen, onClose, ch
   const handleLogout = () => {
     logout();
     toast.success('Đăng xuất thành công!');
-    navigate('/login');
+    navigate('/homepage');
     onClose();
   };
 
@@ -111,13 +111,13 @@ const UserDropdownMenu: React.FC<UserDropdownMenuProps> = ({ isOpen, onClose, ch
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <Avatar name={currentUser.user.name} size="md" />
+              <Avatar name={currentUser.user?.name || 'User'} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 truncate">
-                  {currentUser.user.name}
+                  {currentUser.user?.name || 'User'}
                 </p>
                 <p className="text-sm text-gray-500 truncate">
-                  {currentUser.user.email}
+                  {currentUser.user?.email || 'No email'}
                 </p>
               </div>
             </div>
@@ -133,7 +133,7 @@ const UserDropdownMenu: React.FC<UserDropdownMenuProps> = ({ isOpen, onClose, ch
               }
 
               const Icon = item.icon!;
-              
+
               return (
                 <button
                   key={item.path}
@@ -145,9 +145,8 @@ const UserDropdownMenu: React.FC<UserDropdownMenuProps> = ({ isOpen, onClose, ch
                       handleMenuClick(item.path!);
                     }
                   }}
-                  className={`w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                    item.disabled ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   <Icon className={`w-5 h-5 ${item.color}`} />
                   <span className="text-sm text-gray-700">{item.label}</span>

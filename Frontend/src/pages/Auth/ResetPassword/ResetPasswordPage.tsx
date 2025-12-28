@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout from "../../../components/page/auth/AuthLayout";
 import PasswordInput from "../../../components/page/auth/PasswordInput";
 import AuthButton from "../../../components/page/auth/AuthButton";
+import apiClient from "@/services/apiClient";
 
 interface FormData {
   password: string;
@@ -31,25 +32,16 @@ const ResetPasswordPage: React.FC = () => {
 
   const token = searchParams.get('token');
 
+
   useEffect(() => {
     if (!token) {
       setTokenValid(false);
       setErrors({ token: "Invalid or missing reset token" });
     } else {
-      validateToken(token);
+      // Token will be validated by backend when submitting
+      setTokenValid(true);
     }
   }, [token]);
-
-  const validateToken = async (resetToken: string) => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log("Validating token:", resetToken);
-      setTokenValid(true);
-    } catch (error) {
-      setTokenValid(false);
-      setErrors({ token: "Reset link has expired or is invalid" });
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -89,7 +81,7 @@ const ResetPasswordPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -97,23 +89,31 @@ const ResetPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log("Password reset:", {
-        token,
-        newPassword: formData.password,
+      await apiClient.auth.resetPassword({
+        token: token!,
+        newPassword: formData.password
       });
 
       setPasswordReset(true);
-      
+
       setTimeout(() => {
         navigate("/login");
       }, 3000);
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Password reset failed:", error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to reset password";
+
+      // Translate common errors to Vietnamese
+      let vietnameseError = errorMessage;
+      if (errorMessage.includes("Invalid or expired")) {
+        vietnameseError = "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn";
+      } else if (errorMessage.includes("Password must")) {
+        vietnameseError = "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số";
+      }
+
       setErrors({
-        token: "Failed to reset password. Please try again."
+        token: vietnameseError
       });
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ const ResetPasswordPage: React.FC = () => {
 
   if (!tokenValid) {
     return (
-      <AuthLayout 
+      <AuthLayout
         heroTitle="Travelista Tours"
         heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
       >
@@ -136,7 +136,7 @@ const ResetPasswordPage: React.FC = () => {
           <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
             This password reset link is invalid or has expired.
           </p>
-          
+
           <div className="space-y-3 sm:space-y-4">
             <AuthButton
               onClick={() => navigate("/forgot-password")}
@@ -145,7 +145,7 @@ const ResetPasswordPage: React.FC = () => {
             >
               Request New Reset Link
             </AuthButton>
-            
+
             <button
               onClick={() => navigate("/login")}
               className="text-sm sm:text-base text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline"
@@ -160,7 +160,7 @@ const ResetPasswordPage: React.FC = () => {
 
   if (passwordReset) {
     return (
-      <AuthLayout 
+      <AuthLayout
         heroTitle="Travelista Tours"
         heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
       >
@@ -183,7 +183,7 @@ const ResetPasswordPage: React.FC = () => {
   }
 
   return (
-    <AuthLayout 
+    <AuthLayout
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
@@ -219,25 +219,22 @@ const ResetPasswordPage: React.FC = () => {
           <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Password Requirements:</h4>
           <ul className="text-xs sm:text-sm text-gray-600 space-y-1.5">
             <li className={`flex items-center ${formData.password.length >= 8 ? 'text-green-600' : ''}`}>
-              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${
-                formData.password.length >= 8 ? 'bg-green-100 text-green-600' : 'bg-gray-200'
-              }`}>
+              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${formData.password.length >= 8 ? 'bg-green-100 text-green-600' : 'bg-gray-200'
+                }`}>
                 {formData.password.length >= 8 ? '✓' : '•'}
               </span>
               At least 8 characters
             </li>
             <li className={`flex items-center ${/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'text-green-600' : ''}`}>
-              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${
-                /(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'bg-green-100 text-green-600' : 'bg-gray-200'
-              }`}>
+              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? 'bg-green-100 text-green-600' : 'bg-gray-200'
+                }`}>
                 {/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) ? '✓' : '•'}
               </span>
               Upper and lowercase letters
             </li>
             <li className={`flex items-center ${/(?=.*\d)/.test(formData.password) ? 'text-green-600' : ''}`}>
-              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${
-                /(?=.*\d)/.test(formData.password) ? 'bg-green-100 text-green-600' : 'bg-gray-200'
-              }`}>
+              <span className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center text-xs flex-shrink-0 ${/(?=.*\d)/.test(formData.password) ? 'bg-green-100 text-green-600' : 'bg-gray-200'
+                }`}>
                 {/(?=.*\d)/.test(formData.password) ? '✓' : '•'}
               </span>
               At least one number

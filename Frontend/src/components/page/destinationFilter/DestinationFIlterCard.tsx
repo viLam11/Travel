@@ -38,10 +38,10 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
     priority: 'low',
     fallbackSrc: '/images/placeholder-destination.jpg',
     onLoad: () => {
-      console.log(`✅ Image loaded: ${destination.title}`);
+      console.log(`Image loaded: ${destination.title}`);
     },
     onError: () => {
-      console.error(`❌ Image failed: ${destination.title}`);
+      console.error(`Image failed: ${destination.title}`);
     }
   });
 

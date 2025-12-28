@@ -49,7 +49,31 @@ public class AuthController {
         return userService.verifyUser(input);
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<Object> resendOTP(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        return userService.resendVerificationCode(email);
+    }
+
+    // ==================== FORGOT PASSWORD ENDPOINTS ====================
+    
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Object> forgotPassword(@RequestBody com.travollo.Travel.dto.ForgotPasswordRequest request) {
+        return userService.sendPasswordResetOTP(request.getEmail());
+    }
+
+    @PostMapping("/verify-reset-otp")
+    public ResponseEntity<Object> verifyResetOTP(@RequestBody com.travollo.Travel.dto.VerifyResetOTPRequest request) {
+        return userService.verifyPasswordResetOTP(request.getEmail(), request.getOtp());
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Object> resetPassword(@RequestBody com.travollo.Travel.dto.ResetPasswordRequest request) {
+        return userService.resetPassword(request.getToken(), request.getNewPassword());
+    }
+
     @GetMapping("/login/google")
+
     public void loginGoogleAuth(HttpServletResponse response) throws IOException {
          response.sendRedirect("/oauth2/authorization/google");
     }

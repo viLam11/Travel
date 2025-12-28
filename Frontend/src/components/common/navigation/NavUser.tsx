@@ -46,7 +46,7 @@ const NavUser = ({
 
     const handleLogout = async () => {
         await authService.logout();
-        navigate(ROUTES.LOGIN);
+        navigate(ROUTES.HOMEPAGE);
     }
 
     return (

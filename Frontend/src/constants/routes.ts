@@ -6,15 +6,15 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
-  RESET_PASSWORD: '/reset-password/:token',
+  RESET_PASSWORD: '/reset-password',
   VERIFY_EMAIL: '/verify-email',
-  
+
   // ==================== USER ROUTES ====================
   HOMEPAGE: '/homepage',
   DESTINATIONS: '/destinations',
   DESTINATION_DETAIL: '/destinations/:destination',
   SERVICE_DETAIL: '/destinations/:destination/:serviceType/:idSlug',
-  
+
   // User Profile Routes
   USER_ROOT: '/user',
   USER_PROFILE: '/user/profile',
@@ -23,7 +23,7 @@ export const ROUTES = {
   USER_SAVED: '/user/saved',
   USER_SETTINGS: '/user/settings',
   USER_NOTIFICATIONS: '/user/notifications',
-  
+
   // ==================== ADMIN ROUTES ====================
   ADMIN_ROOT: '/admin',
   ADMIN_DASHBOARD: '/admin/dashboard',
@@ -40,7 +40,7 @@ export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {
   [ROUTES.ADMIN_USERS]: { roles: ['admin'] },
   [ROUTES.ADMIN_BOOKINGS]: { roles: ['admin'] },
   [ROUTES.ADMIN_REVIEWS]: { roles: ['admin'] },
-  
+
   // User profile routes require authentication (user or admin)
   [ROUTES.USER_PROFILE]: { roles: ['user', 'admin'] },
   [ROUTES.USER_BOOKINGS]: { roles: ['user', 'admin'] },
@@ -79,11 +79,11 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.ADMIN_USERS]: 'Users',
   [ROUTES.ADMIN_BOOKINGS]: 'Bookings',
   [ROUTES.ADMIN_REVIEWS]: 'Reviews',
-  
+
   // Public routes
   [ROUTES.HOMEPAGE]: 'Trang chủ',
   [ROUTES.DESTINATIONS]: 'Địa điểm',
-  
+
   // User profile routes
   [ROUTES.USER_PROFILE]: 'Chỉnh sửa hồ sơ',
   [ROUTES.USER_BOOKINGS]: 'Đặt chỗ của tôi',

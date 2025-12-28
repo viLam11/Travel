@@ -2,9 +2,10 @@
 import type { ServiceDetail } from '../types/serviceDetail.types';
 import { mockServiceDetailApi } from '../mock/mockServiceDetailApi';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// const API_BASE_URL = 'http://localhost:3000/api' ;
+const API_BASE_URL = 'http://18.179.249.34:8080' ;
 
-// ✅ Toggle này để switch giữa mock và real API
+// Toggle này để switch giữa mock và real API
 const USE_MOCK_API = true; // Set to false khi có backend thật
 
 const realApi = {
