@@ -7,6 +7,7 @@
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.5</version>
 		<relativePath/>
+		<relativePath/>
 	</parent>
 	<groupId>travel</groupId>
 	<artifactId>Travel</artifactId>
@@ -64,6 +65,12 @@
             <artifactId>spring-boot-starter-mail</artifactId>
             <version>3.5.3</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-mail -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+            <version>3.5.3</version>
+        </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-api -->
         <dependency>
@@ -71,6 +78,7 @@
             <artifactId>jjwt-api</artifactId>
             <version>0.12.6</version>
         </dependency>
+
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -102,6 +110,12 @@
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <version>3.0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.momo-wallet</groupId>
+            <artifactId>momopayment</artifactId>
+            <version>1.0</version>
         </dependency>
 
         <dependency>
@@ -167,10 +181,25 @@
 
 
     <build>
+<!--    <repositories>-->
+<!--        <repository>-->
+<!--            <id>ossrh</id>-->
+<!--            <url>https://oss.sonatype.org/content/repositories/snapshots</url>-->
+<!--        </repository>-->
+<!--    </repositories>-->
+
+
+    <build>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
 			</plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
