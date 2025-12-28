@@ -1,5 +1,6 @@
 // src/components/common/Breadcrumb.tsx
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
 
 export interface BreadcrumbItem {
@@ -36,7 +37,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
   const renderItem = (item: BreadcrumbItem, index: number) => {
     const isLast = index === items.length - 1;
-    const isClickable = item.href || item.onClick;
+    const isClickable = (item.href || item.onClick) && !isLast && !item.isActive;
 
     const content = (
       <>
@@ -47,7 +48,21 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
       </>
     );
 
-    if (isClickable && !isLast) {
+    // Nếu có href và clickable → dùng Link
+    if (isClickable && item.href) {
+      return (
+        <Link
+          key={index}
+          to={item.href}
+          className="text-gray-600 hover:text-orange-500 transition-colors text-sm font-medium"
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    // Nếu có onClick → dùng button
+    if (isClickable && item.onClick) {
       return (
         <button
           key={index}
@@ -59,6 +74,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
       );
     }
 
+    // Trang cuối hoặc active → span
     return (
       <span
         key={index}
@@ -88,59 +104,3 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
 };
 
 export default Breadcrumb;
-
-// ============================================
-// BREADCRUMB SECTION COMPONENT (With Header)
-// ============================================
-
-interface BreadcrumbSectionProps {
-  breadcrumbItems: BreadcrumbItem[];
-  title: string;
-  subtitle?: string;
-  separator?: 'chevron' | 'slash' | 'dot';
-  showHomeIcon?: boolean;
-  className?: string;
-  backgroundGradient?: boolean;
-}
-
-export const BreadcrumbSection: React.FC<BreadcrumbSectionProps> = ({
-  breadcrumbItems,
-  title,
-  subtitle,
-  separator = 'dot',
-  showHomeIcon = false,
-  className = '',
-  backgroundGradient = true
-}) => {
-  return (
-    <div
-      className={`
-        ${backgroundGradient ? 'bg-gradient-to-r from-orange-50 to-red-50' : 'bg-gray-50'}
-        py-8 border-b border-gray-200
-        ${className}
-      `}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb
-          items={breadcrumbItems}
-          separator={separator}
-          showHomeIcon={showHomeIcon}
-          className="mb-3"
-        />
-
-        {/* Page Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          {title}
-        </h1>
-
-        {/* Optional Subtitle */}
-        {subtitle && (
-          <p className="text-sm sm:text-base text-gray-600 mt-2">
-            {subtitle}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};

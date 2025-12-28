@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
 import AuthLayout from "../../../components/page/auth/AuthLayout";
-import EmailInput from "../../../components/page/auth/EmailInput";
+import UsernameOrEmailInput from "../../../components/page/auth/UsernameOrEmailInput";
 import PasswordInput from "../../../components/page/auth/PasswordInput";
 import AuthButton from "../../../components/page/auth/AuthButton";
 import SocialLogin from "../../../components/page/auth/SocialLogin";
@@ -38,7 +38,7 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && currentUser) {
       const role = currentUser.user.role;
-      const redirectPath = role === 'admin' ? '/admin/dashboard' : '/homepage';
+      const redirectPath = role === 'PROVIDER' ? '/admin/dashboard' : '/homepage';
       navigate(redirectPath, { replace: true });
     }
   }, [isAuthenticated, currentUser, navigate]);
@@ -62,17 +62,25 @@ const LoginPage: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Email/Username validation
     if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = "Email hoặc Tên đăng nhập là bắt buộc";
+    } else if (formData.email.includes('@')) {
+      // If it looks like an email, validate as email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = "Email không hợp lệ";
+      }
+    } else {
+      // If it doesn't have @, validate as username (e.g. min length)
+      if (formData.email.length < 3) {
+        newErrors.email = "Tên đăng nhập phải có ít nhất 3 ký tự";
+      }
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = "Mật khẩu là bắt buộc";
     }
 
     setErrors(newErrors);
@@ -81,47 +89,53 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
+    // Clear previous errors
+    setErrors({});
 
     try {
       // Use the login function from useAuth hook
       await login(formData.email, formData.password);
-      
-      // Get user from localStorage (set by useAuth)
-      const storedUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const role = storedUser?.user?.role;
+
+      // Get user from currentUser (already set by useAuth)
+      const role = currentUser?.user?.role;
 
       // Show success message
       toast.success('Đăng nhập thành công!');
 
       // Check for return URL
       const returnUrl = sessionStorage.getItem('returnUrl');
-      
+
       if (returnUrl) {
         sessionStorage.removeItem('returnUrl');
         navigate(returnUrl);
       } else {
         // Role-based redirect
-        const redirectPath = role === 'admin' ? '/admin/dashboard' : '/homepage';
+        const redirectPath = role === 'PROVIDER' ? '/admin/dashboard' : '/homepage';
         navigate(redirectPath);
       }
-      
-    } catch (error) {
-      console.error("Login failed:", error);
-      setErrors({
-        general: "Email hoặc mật khẩu không đúng. Vui lòng thử lại."
-      });
-      toast.error('Email hoặc mật khẩu không đúng!');
+
+    } catch (error: any) {
+      console.error("Đăng nhập thất bại (LoginPage):", error);
+
+      // useAuth already handles error message mapping to Vietnamese
+      // Display as inline error instead of toast for better UX and security
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại.";
+
+      // Set general error to display below password field
+      setErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => {
@@ -132,7 +146,7 @@ const LoginPage: React.FC = () => {
   }, [successMessage, navigate, location.pathname]);
 
   return (
-    <AuthLayout 
+    <AuthLayout
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
@@ -149,12 +163,13 @@ const LoginPage: React.FC = () => {
         </div>
       )}
 
-      {/* Test Credentials Info */}
+      {/* Test Credentials Info - Uncomment if using mock auth */}
+      {/* 
       <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm font-semibold text-blue-900 mb-2">Tài khoản test:</p>
+        <p className="text-sm font-semibold text-blue-900 mb-2">Tài khoản test (Mock):</p>
         <div className="space-y-2 text-xs">
           <div className="bg-white p-2 rounded">
-            <p className="font-semibold text-blue-700">Admin:</p>
+            <p className="font-semibold text-blue-700">Admin/Provider:</p>
             <p className="text-gray-600">Email: <code>admin@example.com</code></p>
             <p className="text-gray-600">Password: <code>admin123</code></p>
           </div>
@@ -165,36 +180,30 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
       </div>
+      */}
 
       {/* Airplane Animation - Hidden on mobile */}
-      <div className="hidden lg:block">
+      {/* <div className="hidden lg:block">
         <AirplaneAnimation />
-      </div>
+      </div> */}
 
       {/* Welcome Header - Responsive text sizes */}
       <div className="mb-6 sm:mb-8 text-center px-4">
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-orange-500 mb-1">
           Welcome
         </h1>
-        <p className="text-sm sm:text-base text-gray-500">Login with Email</p>
+        <p className="text-sm sm:text-base text-gray-500">Login with Email or Username</p>
       </div>
 
       {/* Login Form - Responsive spacing */}
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 px-4 sm:px-0">
-        {/* General Error Display */}
-        {errors.general && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-            <p className="text-red-600 text-xs sm:text-sm">{errors.general}</p>
-          </div>
-        )}
-
-        {/* Email Field */}
-        <EmailInput
-          label="Email Id"
+        {/* Username or Email Field */}
+        <UsernameOrEmailInput
+          label="Email hoặc Tên đăng nhập"
           name="email"
           value={formData.email}
           onChange={handleInputChange}
-          placeholder="admin@example.com hoặc user@example.com"
+          placeholder="Nhập email hoặc tên đăng nhập"
           error={errors.email}
           required
         />
@@ -209,6 +218,13 @@ const LoginPage: React.FC = () => {
           error={errors.password}
           required
         />
+
+        {/* General Error Message - Simple red text */}
+        {errors.general && (
+          <p className="text-red-600 text-sm -mt-2 animate-fade-in">
+            {errors.general}
+          </p>
+        )}
 
         {/* Forgot Password - Responsive text size */}
         <div className="text-right">

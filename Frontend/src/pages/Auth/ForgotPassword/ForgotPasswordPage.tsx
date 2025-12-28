@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import AuthLayout from "../../../components/page/auth/AuthLayout";
 import EmailInput from "../../../components/page/auth/EmailInput";
 import AuthButton from "../../../components/page/auth/AuthButton";
+import apiClient from "@/services/apiClient";
 
 interface FormData {
   email: string;
@@ -64,9 +65,9 @@ const ForgotPasswordPage: React.FC = () => {
     const newOtp = formData.otp.split('');
     newOtp[index] = value.slice(-1);
     const otpString = newOtp.join('');
-    
+
     setFormData({ ...formData, otp: otpString });
-    
+
     if (errors.otp) {
       setErrors({ ...errors, otp: "" });
     }
@@ -87,7 +88,7 @@ const ForgotPasswordPage: React.FC = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 6);
     if (!/^\d+$/.test(pastedData)) return;
-    
+
     setFormData({ ...formData, otp: pastedData.padEnd(6, '') });
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
@@ -116,23 +117,28 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateEmail()) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Gửi OTP đến:", formData.email);
-      
-      // TODO: Call API to send OTP
-      // await api.sendPasswordResetOTP(formData.email);
-      
+      await apiClient.auth.forgotPassword({ email: formData.email });
+
       setStep(2);
       setCountdown(60);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gửi OTP thất bại:", error);
-      setErrors({ email: "Email không tồn tại trong hệ thống hoặc có lỗi xảy ra." });
+      const errorMessage = error?.response?.data?.message || error?.message || "Có lỗi xảy ra";
+
+      // Translate common errors to Vietnamese
+      let vietnameseError = errorMessage;
+      if (errorMessage.includes("Email not found")) {
+        vietnameseError = "Email không tồn tại trong hệ thống";
+      } else if (errorMessage.includes("Account not verified")) {
+        vietnameseError = "Tài khoản chưa được xác thực. Vui lòng xác thực tài khoản trước";
+      }
+
+      setErrors({ email: vietnameseError });
     } finally {
       setLoading(false);
     }
@@ -140,23 +146,31 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateOTP()) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Xác thực OTP:", formData.otp);
-      
-      // TODO: Call API to verify OTP
-      // const response = await api.verifyPasswordResetOTP(formData.email, formData.otp);
-      
-      // Chuyển sang trang reset password với token
-      navigate(`/reset-password?token=verified_${formData.email}_${formData.otp}`);
-    } catch (error) {
+      const response = await apiClient.auth.verifyResetOTP({
+        email: formData.email,
+        otp: formData.otp
+      });
+
+      // Navigate to reset password page with token
+      navigate(`/reset-password?token=${response.resetToken}`);
+    } catch (error: any) {
       console.error("Xác thực OTP thất bại:", error);
-      setErrors({ otp: "Mã OTP không đúng. Vui lòng thử lại." });
+      const errorMessage = error?.response?.data?.message || error?.message || "Có lỗi xảy ra";
+
+      // Translate common errors to Vietnamese
+      let vietnameseError = errorMessage;
+      if (errorMessage.includes("Invalid OTP")) {
+        vietnameseError = "Mã OTP không đúng. Vui lòng thử lại";
+      } else if (errorMessage.includes("expired")) {
+        vietnameseError = "Mã OTP đã hết hạn. Vui lòng gửi lại mã mới";
+      }
+
+      setErrors({ otp: vietnameseError });
     } finally {
       setLoading(false);
     }
@@ -164,15 +178,12 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleResendOTP = async () => {
     if (countdown > 0) return;
-    
+
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log("Gửi lại OTP đến:", formData.email);
-      
-      // TODO: Call API to resend OTP
-      // await api.resendPasswordResetOTP(formData.email);
-      
+      // Reuse forgot-password endpoint
+      await apiClient.auth.forgotPassword({ email: formData.email });
+
       setCountdown(60);
       setFormData({ ...formData, otp: "" });
       // Clear all OTP inputs
@@ -180,9 +191,10 @@ const ForgotPasswordPage: React.FC = () => {
         if (input) input.value = "";
       });
       inputRefs.current[0]?.focus();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gửi lại OTP thất bại:", error);
-      setErrors({ otp: "Không thể gửi lại OTP. Vui lòng thử lại." });
+      const errorMessage = error?.response?.data?.message || error?.message || "Không thể gửi lại OTP";
+      setErrors({ otp: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -191,7 +203,7 @@ const ForgotPasswordPage: React.FC = () => {
   // STEP 1: Nhập Email
   if (step === 1) {
     return (
-      <AuthLayout 
+      <AuthLayout
         heroTitle="Travelista Tours"
         heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
       >
@@ -250,7 +262,7 @@ const ForgotPasswordPage: React.FC = () => {
 
   // STEP 2: Nhập OTP
   return (
-    <AuthLayout 
+    <AuthLayout
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
@@ -276,7 +288,7 @@ const ForgotPasswordPage: React.FC = () => {
               {Array.from({ length: 6 }).map((_, index) => (
                 <input
                   key={index}
-                  ref={(el) => {(inputRefs.current[index] = el)}}
+                  ref={(el) => { (inputRefs.current[index] = el) }}
                   type="text"
                   inputMode="numeric"
                   maxLength={1}
@@ -284,13 +296,12 @@ const ForgotPasswordPage: React.FC = () => {
                   onChange={(e) => handleOTPChange(index, e.target.value)}
                   onKeyDown={(e) => handleOTPKeyDown(index, e)}
                   onPaste={index === 0 ? handleOTPPaste : undefined}
-                  className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 rounded-lg outline-none transition-all ${
-                    errors.otp 
-                      ? 'border-red-500' 
-                      : formData.otp[index] 
-                      ? 'border-orange-500 bg-orange-50' 
+                  className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 rounded-lg outline-none transition-all ${errors.otp
+                    ? 'border-red-500'
+                    : formData.otp[index]
+                      ? 'border-orange-500 bg-orange-50'
                       : 'border-gray-300 focus:border-orange-500'
-                  }`}
+                    }`}
                 />
               ))}
             </div>

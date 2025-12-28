@@ -1,23 +1,55 @@
 // src/pages/User/Profile/UserProfilePage.tsx
-import React, { useState } from 'react';
-import { Camera, Save, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Camera, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/common/avatar/Avatar';
 import toast from 'react-hot-toast';
+import apiClient from '@/services/apiClient';
 
 const UserProfilePage: React.FC = () => {
   const { currentUser } = useAuth();
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     name: currentUser?.user?.name || '',
     email: currentUser?.user?.email || '',
-    phone: '',
+    phone: currentUser?.user?.phoneNumber || '',
     dateOfBirth: '',
     gender: '',
-    address: '',
+    address: currentUser?.user?.address || '',
     city: '',
     country: 'Việt Nam',
   });
+
+  // Fetch user data on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!currentUser?.user?.userID) return;
+
+      setIsLoading(true);
+      try {
+        const userData = await apiClient.users.getById(currentUser.user.userID);
+        setFormData({
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phoneNumber || '',
+          dateOfBirth: '',
+          gender: '',
+          address: userData.address || '',
+          city: '',
+          country: 'Việt Nam',
+        });
+      } catch (error: any) {
+        console.error('Error fetching user data:', error);
+        toast.error('Không thể tải thông tin người dùng');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser?.user?.userID]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -26,21 +58,58 @@ const UserProfilePage: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement API call to update profile
-    toast.success('Cập nhật hồ sơ thành công!');
+
+    if (!currentUser?.user?.userID) {
+      toast.error('Không tìm thấy thông tin người dùng');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await apiClient.users.update(currentUser.user.userID, {
+        fullname: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+      });
+
+      toast.success('Cập nhật hồ sơ thành công!');
+
+      // Update localStorage with new user data
+      const updatedUser = {
+        ...currentUser,
+        user: {
+          ...currentUser.user,
+          fullname: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+        }
+      };
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+      // Reload page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast.error(error?.response?.data?.message || 'Cập nhật hồ sơ thất bại');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Chỉnh sửa hồ sơ</h1>
-      
+
       {/* Avatar Section */}
       <div className="mb-8 flex items-center gap-6 p-6 bg-gray-50 rounded-lg">
         <div className="relative">
-          <Avatar 
-            name={currentUser?.user?.name || 'User'} 
+          <Avatar
+            name={currentUser?.user?.name || 'User'}
             size="xl"
           />
           {/* TODO: Uncomment khi implement upload avatar
@@ -195,15 +264,17 @@ const UserProfilePage: React.FC = () => {
         <div className="flex gap-4 pt-4 border-t border-gray-200">
           <button
             type="submit"
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+            disabled={isSaving || isLoading}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5" />
-            <span>Lưu thay đổi</span>
+            <span>{isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
           </button>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={isSaving}
+            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Hủy
           </button>

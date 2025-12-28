@@ -42,7 +42,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     priority: 'low',
     fallbackSrc: fallbackImage, // 2️⃣ Auto fallback on error
     onLoad: () => {
-      console.log(`✅ Image loaded: ${title}`);
+      console.log(` Image loaded: ${title}`);
     },
     onError: () => {
       console.error(`❌ Image failed (using fallback): ${title}`);

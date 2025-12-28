@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, MapPin, Calendar, ChevronDown, X, Compass, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../../services/apiClient';
 import bgImage from '../../../../assets/thumnail.png';
+
 interface SearchFormData {
   destination: string;
   startDate: string;
@@ -8,11 +11,11 @@ interface SearchFormData {
   tripType: string[];
 }
 
-// Mock data
-const destinations = [
-  'Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Nha Trang', 'Phú Quốc',
-  'Hội An', 'Huế', 'Đà Lạt', 'Hạ Long', 'Sapa', 'Quy Nhơn', 'Vũng Tàu'
-];
+interface Province {
+  code: string;
+  name: string;
+  full_name: string;
+}
 
 const tripTypes = [
   { id: 'beach', label: 'Biển' },
@@ -23,10 +26,8 @@ const tripTypes = [
   { id: 'resort', label: 'Resort' }
 ];
 
-// Background images
-
 const backgroundImages = [
-  bgImage, 
+  bgImage,
   'https://images.unsplash.com/photo-1528127269322-539801943592?w=1920&q=80', // Ha Long Bay
   'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=1920&q=80', // Hoi An
   'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1920&q=80', // Hanoi
@@ -34,6 +35,7 @@ const backgroundImages = [
 ];
 
 const HeroSection: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<SearchFormData>({
     destination: '',
     startDate: '',
@@ -47,7 +49,11 @@ const HeroSection: React.FC = () => {
 
   // Destination combobox states
   const [showDestinations, setShowDestinations] = useState(false);
-  const [filteredDestinations, setFilteredDestinations] = useState(destinations);
+  // Store all provinces fetched from API
+  const [allProvinces, setAllProvinces] = useState<Province[]>([]);
+  // Store filtered result locally
+  const [filteredDestinations, setFilteredDestinations] = useState<Province[]>([]);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<string | null>(null);
   const destinationRef = useRef<HTMLDivElement>(null);
 
   // Date picker state
@@ -61,17 +67,18 @@ const HeroSection: React.FC = () => {
   // Auto-play slider
   useEffect(() => {
     if (!isAutoPlaying) return;
-    
+
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % backgroundImages.length);
-    }, 5000); // Chuyển slide mỗi 5 giây
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
 
-  // Close dropdowns when clicking outside
+  // Click outside handler logic...
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // ... (Keep existing outside click logic)
       if (destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
         setShowDestinations(false);
       }
@@ -82,12 +89,26 @@ const HeroSection: React.FC = () => {
         setShowTripTypes(false);
       }
     };
-
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Slider controls
+  // Fetch all provinces on first focus or mount (Optional: fetch on mount for faster UX)
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const fullList = await apiClient.provinces.getAll();
+        setAllProvinces(fullList);
+        setFilteredDestinations(fullList); // Initially show all
+      } catch (error) {
+        console.error("Failed to load provinces", error);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+
+  // Slider controls...
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % backgroundImages.length);
     setIsAutoPlaying(false);
@@ -103,22 +124,41 @@ const HeroSection: React.FC = () => {
     setIsAutoPlaying(false);
   };
 
-  // Filter destinations based on input
+  // CLIENT-SIDE FILTERING LOGIC
   const handleDestinationChange = (value: string) => {
     setFormData({ ...formData, destination: value });
-    const filtered = destinations.filter(dest =>
-      dest.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredDestinations(filtered);
+    setSelectedProvinceCode(null);
     setShowDestinations(true);
+
+    if (!value.trim()) {
+      // If empty, show full list
+      setFilteredDestinations(allProvinces);
+    } else {
+      // Filter locally
+      const normalizedKeyword = value.toLowerCase();
+      const filtered = allProvinces.filter(p =>
+        p.name.toLowerCase().includes(normalizedKeyword) ||
+        p.full_name.toLowerCase().includes(normalizedKeyword)
+      );
+      setFilteredDestinations(filtered);
+    }
   };
 
-  const selectDestination = (dest: string) => {
-    setFormData({ ...formData, destination: dest });
+  const handleDestinationFocus = () => {
+    setShowDestinations(true);
+    // Ensure we show full list or currently filtered list
+    if (!formData.destination) {
+      setFilteredDestinations(allProvinces);
+    }
+  };
+
+  const selectDestination = (province: Province) => {
+    setFormData({ ...formData, destination: province.full_name });
+    setSelectedProvinceCode(province.code);
     setShowDestinations(false);
   };
 
-  // Toggle trip type selection
+  // Trip Type logic
   const toggleTripType = (typeId: string) => {
     const newTypes = formData.tripType.includes(typeId)
       ? formData.tripType.filter(t => t !== typeId)
@@ -130,16 +170,29 @@ const HeroSection: React.FC = () => {
     setFormData({ ...formData, tripType: formData.tripType.filter(t => t !== typeId) });
   };
 
+  // Search Action
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.destination.trim()) {
       alert('Vui lòng nhập địa điểm');
       return;
     }
 
-    console.log('Search:', formData);
-    // Navigate logic here
+    // Build query params
+    const queryParams = new URLSearchParams();
+
+    // Nếu user chọn từ list -> dùng code, nếu không -> dùng keyword
+    // Hiện tại filter page hỗ trợ keyword search
+    if (formData.destination) queryParams.append('destination', formData.destination);
+    if (selectedProvinceCode) queryParams.append('provinceCode', selectedProvinceCode);
+
+    if (formData.startDate) queryParams.append('startDate', formData.startDate);
+    if (formData.endDate) queryParams.append('endDate', formData.endDate);
+    if (formData.tripType.length > 0) queryParams.append('types', formData.tripType.join(','));
+
+    console.log('Navigating to destinations with:', queryParams.toString());
+    navigate(`/destinations?${queryParams.toString()}`);
   };
 
   const formatDateRange = () => {
@@ -150,7 +203,6 @@ const HeroSection: React.FC = () => {
     return formData.startDate ? new Date(formData.startDate).toLocaleDateString('vi-VN') : '';
   };
 
-  // Render selected trip types with truncation logic
   const renderSelectedTripTypes = () => {
     const MAX_VISIBLE_TAGS = 2;
     const selectedTypes = formData.tripType
@@ -171,7 +223,6 @@ const HeroSection: React.FC = () => {
 
     return (
       <>
-        {/* Mobile: scroll ngang */}
         <div className="flex sm:hidden items-center gap-2 overflow-x-auto scrollbar-hide max-w-full">
           {selectedTypes.map((type) => (
             <span
@@ -190,14 +241,12 @@ const HeroSection: React.FC = () => {
           ))}
         </div>
 
-        {/* Desktop: tối đa 2 tag + counter */}
         <div className="hidden sm:flex items-center gap-1 pr-8 overflow-hidden max-w-[180px]">
           {visibleTags.map((type) => (
             <span
               key={type.id}
-              className={`inline-flex items-center bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-sm flex-shrink-0 ${
-                visibleTags.length > 1 ? 'max-w-[60px]' : ''
-              }`}
+              className={`inline-flex items-center bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-sm flex-shrink-0 ${visibleTags.length > 1 ? 'max-w-[60px]' : ''
+                }`}
             >
               <span className="truncate">{type.label}</span>
               <X
@@ -222,21 +271,18 @@ const HeroSection: React.FC = () => {
 
   return (
     <div className="relative h-[400px] sm:h-[700px] overflow-visible pb-8 sm:pb-0">
-      {/* Background Slider */}
       <div className="absolute inset-0 w-[90vw] rounded-b-[40px] mx-auto overflow-hidden pointer-events-none ">
         {backgroundImages.map((image, index) => (
           <div
             key={index}
-            className={`absolute inset-0 bg-center bg-cover bg-no-repeat transition-opacity duration-1000 ${
-              index === currentSlide ? 'opacity-100' : 'opacity-0'
-            }`}
+            className={`absolute inset-0 bg-center bg-cover bg-no-repeat transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
+              }`}
             style={{
               backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(${image})`,
             }}
           />
         ))}
 
-        {/* Slider Controls */}
         <button
           onClick={prevSlide}
           className="absolute left-4 top-[35%] lg:top-1/2 -translate-y-1/2 z-10 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-white p-2 rounded-full transition-all hidden md:flex items-center justify-center pointer-events-auto"
@@ -253,23 +299,20 @@ const HeroSection: React.FC = () => {
           <ChevronRight className="w-6 h-6" />
         </button>
 
-        {/* Slider Dots */}
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 flex gap-2 pointer-events-auto">
           {backgroundImages.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                index === currentSlide
-                  ? 'bg-white w-8'
-                  : 'bg-white/50 hover:bg-white/75'
-              }`}
+              className={`w-2 h-2 rounded-full transition-all ${index === currentSlide
+                ? 'bg-white w-8'
+                : 'bg-white/50 hover:bg-white/75'
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
         </div>
 
-        {/* Wave SVG */}
         <svg
           className="absolute block left-0 bottom-[-35px] w-full h-[80px] pointer-events-none"
           viewBox="0 0 1440 80"
@@ -282,8 +325,7 @@ const HeroSection: React.FC = () => {
           />
         </svg>
       </div>
-      
-      {/* Content */}
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center items-center text-center md:-mt-10 -mt-0 ">
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-3 drop-shadow-lg">
           Tận hưởng chuyến đi
@@ -292,11 +334,9 @@ const HeroSection: React.FC = () => {
           Trải nghiệm du lịch đầy màu sắc, khám phá mọi miền đất nước, tận hưởng kỳ nghỉ tại nơi bạn yêu thích
         </p>
 
-        {/* Search Box */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 w-full max-w-4xl overflow-visible pt-5">
           <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_auto] gap-2 sm:gap-3 overflow-visible items-end">
-            
-            {/* Destination Combobox */}
+
             <div className="relative overflow-visible" ref={destinationRef}>
               <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
                 Địa điểm
@@ -308,31 +348,30 @@ const HeroSection: React.FC = () => {
                   placeholder="Chọn hoặc tìm địa điểm"
                   value={formData.destination}
                   onChange={(e) => handleDestinationChange(e.target.value)}
-                  onFocus={() => setShowDestinations(true)}
+                  onFocus={handleDestinationFocus}
                   className="w-full pl-9 pr-9 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all"
                 />
-                <ChevronDown 
+                <ChevronDown
                   className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer hover:text-orange-500 transition-all duration-200 ${showDestinations ? 'rotate-180' : ''}`}
                   onClick={() => setShowDestinations(!showDestinations)}
                 />
               </div>
-              
+
               {showDestinations && filteredDestinations.length > 0 && (
                 <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-45 overflow-y-auto">
-                  {filteredDestinations.map((dest) => (
+                  {filteredDestinations.map((province) => (
                     <div
-                      key={dest}
-                      onClick={() => selectDestination(dest)}
-                      className="px-4 py-2.5 hover:bg-orange-50 cursor-pointer text-sm sm:text-base transition-colors"
+                      key={province.code}
+                      onClick={() => selectDestination(province)}
+                      className="px-4 py-2.5 hover:bg-orange-50 cursor-pointer text-sm sm:text-base transition-colors text-left"
                     >
-                      {dest}
+                      {province.full_name}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Date Range Picker */}
             <div className="relative overflow-visible" ref={datePickerRef}>
               <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
                 Thời gian
@@ -347,12 +386,12 @@ const HeroSection: React.FC = () => {
                   readOnly
                   className="w-full pl-9 pr-9 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent cursor-pointer hover:border-orange-400 transition-all"
                 />
-                <ChevronDown 
+                <ChevronDown
                   className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer hover:text-orange-500 transition-all duration-200 ${showDatePicker ? 'rotate-180' : ''}`}
                   onClick={() => setShowDatePicker(!showDatePicker)}
                 />
               </div>
-              
+
               {showDatePicker && (
                 <div className="absolute z-[100] left-0 right-0 min-w-[auto] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 sm:p-4">
                   <div className="space-y-3">
@@ -386,7 +425,6 @@ const HeroSection: React.FC = () => {
               )}
             </div>
 
-            {/* Trip Type Multi-select */}
             <div className="relative overflow-visible" ref={tripTypeRef}>
               <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
                 Loại hình
@@ -394,18 +432,17 @@ const HeroSection: React.FC = () => {
 
               <div
                 className={`relative border rounded-lg px-3 py-2.5 sm:py-3 cursor-pointer transition-all min-h-[42px] sm:min-h-[50px] flex items-center
-                  ${showTripTypes 
-                    ? "border-transparent ring-2 ring-orange-500" 
+                  ${showTripTypes
+                    ? "border-transparent ring-2 ring-orange-500"
                     : "border-gray-300 hover:border-orange-400"}
                 `}
                 onClick={() => setShowTripTypes((prev) => !prev)}
               >
                 {renderSelectedTripTypes()}
-                
+
                 <ChevronDown
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-all duration-200 ${
-                    showTripTypes ? 'rotate-180' : ''
-                  }`}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-all duration-200 ${showTripTypes ? 'rotate-180' : ''
+                    }`}
                 />
               </div>
 
@@ -429,8 +466,7 @@ const HeroSection: React.FC = () => {
               )}
             </div>
 
-            {/* Search Button */}
-            <button 
+            <button
               onClick={handleSearch}
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-lg font-medium transition-colors h-[42px] sm:h-[50px] whitespace-nowrap text-sm sm:text-base mt-auto flex items-center justify-center gap-2"
             >

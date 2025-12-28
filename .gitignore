@@ -64,3 +64,5 @@ $RECYCLE.BIN/
 
 # Docker
 *.pid
+
+Frontend/api-docs.json

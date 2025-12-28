@@ -11,6 +11,7 @@ import { Toaster } from 'react-hot-toast';
 
 import { store } from './store';
 import { UserProvider } from "./contexts/UserContext";
+import { AuthProvider as CustomAuthProvider } from "@/contexts/AuthContext";
 import router from "./routes";
 
 import "./index.css"; // or your main CSS file
@@ -49,33 +50,35 @@ root.render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider {...cognitoAuthConfig}>
         <Provider store={store}>
-          <UserProvider>
-            <RouterProvider router={router} />
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
+          <CustomAuthProvider>
+            <UserProvider>
+              <RouterProvider router={router} />
+              <Toaster
+                position="top-right"
+                toastOptions={{
                   duration: 3000,
-                  iconTheme: {
-                    primary: '#10b981',
-                    secondary: '#fff',
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
                   },
-                },
-                error: {
-                  duration: 4000,
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
+                  success: {
+                    duration: 3000,
+                    iconTheme: {
+                      primary: '#10b981',
+                      secondary: '#fff',
+                    },
                   },
-                },
-              }}
-            />
-          </UserProvider>
+                  error: {
+                    duration: 4000,
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+            </UserProvider>
+          </CustomAuthProvider>
         </Provider>
       </AuthProvider>
     </QueryClientProvider>

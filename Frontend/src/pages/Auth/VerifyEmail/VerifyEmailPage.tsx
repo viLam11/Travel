@@ -17,7 +17,7 @@ const VerifyEmailPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { email, userData } = (location.state as LocationState) || {};
-  
+
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,9 +51,9 @@ const VerifyEmailPage: React.FC = () => {
     const newOtp = otp.split('');
     newOtp[index] = value.slice(-1);
     const otpString = newOtp.join('');
-    
+
     setOtp(otpString);
-    
+
     if (error) {
       setError("");
     }
@@ -74,7 +74,7 @@ const VerifyEmailPage: React.FC = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 6);
     if (!/^\d+$/.test(pastedData)) return;
-    
+
     setOtp(pastedData.padEnd(6, ''));
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
@@ -82,7 +82,7 @@ const VerifyEmailPage: React.FC = () => {
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (otp.length !== 6) {
       setError("Vui lòng nhập đủ 6 số");
       return;
@@ -90,26 +90,28 @@ const VerifyEmailPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log("Xác thực OTP:", { email, otp, userData });
-      
-      // TODO: Call API verify OTP và tạo tài khoản
-      // const response = await api.verifyEmailAndRegister({ email, otp, ...userData });
-      
+      // Real Backend API call
+      const apiClient = (await import("@/services/apiClient")).default;
+      await apiClient.auth.verify({
+        email: email,
+        verificationCode: otp
+      });
+
+      console.log("Xác thực OTP thành công:", { email, otp });
+
       setVerificationSuccess(true);
-      
+
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate("/login", { 
-          state: { message: "Đăng ký thành công! Vui lòng đăng nhập." }
+        navigate("/login", {
+          state: { message: "Xác thực email thành công! Vui lòng đăng nhập." }
         });
       }, 3000);
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Xác thực OTP thất bại:", error);
-      setError("Mã OTP không đúng. Vui lòng thử lại.");
+      const errorMessage = error?.response?.data?.message || error?.message || "Mã OTP không đúng. Vui lòng thử lại.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -117,26 +119,39 @@ const VerifyEmailPage: React.FC = () => {
 
   const handleResendOTP = async () => {
     if (countdown > 0) return;
-    
+
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log("Gửi lại OTP đến:", email);
-      // TODO: Call API resend OTP
-      
+      // Call real Backend API
+      const apiClient = (await import("@/services/apiClient")).default;
+      const toast = (await import("react-hot-toast")).default;
+
+      await apiClient.auth.resendOTP({ email });
+
+      // Success - reset countdown and clear inputs
       setCountdown(60);
       setOtp("");
       setError("");
-      
+
       // Clear all OTP inputs
       inputRefs.current.forEach(input => {
         if (input) input.value = "";
       });
       inputRefs.current[0]?.focus();
-    } catch (error) {
+
+      // Show success toast
+      toast.success("Đã gửi lại mã OTP. Vui lòng kiểm tra email!");
+    } catch (error: any) {
       console.error("Gửi lại OTP thất bại:", error);
-      setError("Không thể gửi lại OTP. Vui lòng thử lại.");
+      const toast = (await import("react-hot-toast")).default;
+
+      // Extract error message
+      let errorMessage = "Không thể gửi lại OTP. Vui lòng thử lại.";
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -145,7 +160,7 @@ const VerifyEmailPage: React.FC = () => {
   // Success screen
   if (verificationSuccess) {
     return (
-      <AuthLayout 
+      <AuthLayout
         heroTitle="Travelista Tours"
         heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
       >
@@ -177,7 +192,7 @@ const VerifyEmailPage: React.FC = () => {
 
   // OTP Input screen
   return (
-    <AuthLayout 
+    <AuthLayout
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
@@ -189,8 +204,11 @@ const VerifyEmailPage: React.FC = () => {
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Xác Thực Email</h1>
-        <p className="text-sm sm:text-base text-gray-600 mb-6">
-          Chúng tôi đã gửi mã OTP đến <strong className="break-all text-orange-500">{email}</strong>
+        <p className="text-sm sm:text-base text-gray-600 mb-2">
+          Chúng tôi đã gửi mã OTP đến
+        </p>
+        <p className="text-sm sm:text-base font-semibold text-orange-500 break-words mb-6">
+          {email}
         </p>
 
         <form onSubmit={handleVerifyOTP} className="space-y-6">
@@ -205,7 +223,7 @@ const VerifyEmailPage: React.FC = () => {
                   key={index}
                   ref={(el) => {
                     inputRefs.current[index] = el;
-                    }}
+                  }}
                   type="text"
                   inputMode="numeric"
                   maxLength={1}
@@ -213,13 +231,12 @@ const VerifyEmailPage: React.FC = () => {
                   onChange={(e) => handleOTPChange(index, e.target.value)}
                   onKeyDown={(e) => handleOTPKeyDown(index, e)}
                   onPaste={index === 0 ? handleOTPPaste : undefined}
-                  className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 rounded-lg outline-none transition-all ${
-                    error 
-                      ? 'border-red-500' 
-                      : otp[index] 
-                      ? 'border-orange-500 bg-orange-50' 
+                  className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-semibold border-2 rounded-lg outline-none transition-all ${error
+                    ? 'border-red-500'
+                    : otp[index]
+                      ? 'border-orange-500 bg-orange-50'
                       : 'border-gray-300 focus:border-orange-500'
-                  }`}
+                    }`}
                 />
               ))}
             </div>

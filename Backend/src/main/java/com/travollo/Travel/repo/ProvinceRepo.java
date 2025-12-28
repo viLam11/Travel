@@ -6,4 +6,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProvinceRepo extends JpaRepository<Province, String> {
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Province p WHERE lower(p.name) LIKE lower(concat('%', ?1, '%')) OR lower(p.name_en) LIKE lower(concat('%', ?1, '%'))")
+    java.util.List<Province> findByNameContainingIgnoreCase(String keyword);
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Province p WHERE p.administrativeRegion.macroRegion = ?1")
+    java.util.List<Province> findByMacroRegion(String macroRegion);
 }

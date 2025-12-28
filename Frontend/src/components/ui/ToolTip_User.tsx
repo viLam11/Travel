@@ -11,8 +11,8 @@ interface TooltipProps {
   delay?: number;
   className?: string;
   onlyWhenTruncated?: boolean;
-  onlyWhenTruncatedSelector?: string; // ✅ NEW
-}
+  onlyWhenTruncatedSelector?: string; // NEW
+} 
 
 const Tooltip: React.FC<TooltipProps> = ({
   content,
@@ -32,7 +32,7 @@ const Tooltip: React.FC<TooltipProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ Kiểm tra truncate
+  // Kiểm tra truncate
   useEffect(() => {
     if (!onlyWhenTruncated) return;
     const targetEl = onlyWhenTruncatedSelector
@@ -59,7 +59,7 @@ const Tooltip: React.FC<TooltipProps> = ({
     setIsVisible(false);
   };
 
-  // ✅ Auto-position
+  // Auto-position
   useEffect(() => {
     if (!isVisible || !triggerRef.current || !tooltipRef.current) return;
 

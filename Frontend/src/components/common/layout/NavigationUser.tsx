@@ -12,7 +12,7 @@ interface NavigationProps {
   onNavigateToDestinations?: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ 
+const Navigation: React.FC<NavigationProps> = ({
   onFilterClick,
   onNavigateToDestinations
 }) => {
@@ -25,7 +25,7 @@ const Navigation: React.FC<NavigationProps> = ({
   const handleLogout = () => {
     logout();
     toast.success('Đăng xuất thành công!');
-    navigate('/login');
+    navigate('/homepage');
   };
 
   return (
@@ -33,7 +33,7 @@ const Navigation: React.FC<NavigationProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div 
+          <div
             className="flex-shrink-0 cursor-pointer flex flex-row items-center"
             onClick={() => navigate('/homepage')}
           >
@@ -61,7 +61,7 @@ const Navigation: React.FC<NavigationProps> = ({
             >
               <Search className="w-5 h-5" />
             </button>
-            
+
             <button
               onClick={() => {
                 if (onFilterClick) {
@@ -78,7 +78,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-4 lg:gap-6">
-            <button 
+            <button
               onClick={() => {
                 if (onNavigateToDestinations) {
                   onNavigateToDestinations();
@@ -90,13 +90,13 @@ const Navigation: React.FC<NavigationProps> = ({
             >
               Địa điểm
             </button>
-            <button 
+            <button
               onClick={() => toast('Tính năng đang phát triển')}
               className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
             >
               Hoạt động
             </button>
-            <button 
+            <button
               onClick={() => toast('Tính năng đang phát triển')}
               className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
             >
@@ -106,24 +106,23 @@ const Navigation: React.FC<NavigationProps> = ({
             {isAuthenticated ? (
               <>
                 {/* User Avatar + Name with Dropdown */}
-                <UserDropdownMenu 
-                  isOpen={isUserDropdownOpen} 
+                <UserDropdownMenu
+                  isOpen={isUserDropdownOpen}
                   onClose={() => setIsUserDropdownOpen(false)}
                 >
                   <button
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                     className="flex items-center gap-2 hover:bg-gray-50 rounded-full px-3 py-1.5 transition-colors"
                   >
-                    <Avatar 
-                      name={currentUser?.user?.name || 'User'} 
+                    <Avatar
+                      name={currentUser?.user?.name || 'User'}
                       size="sm"
                     />
                     <span className="text-sm font-medium text-gray-700">
                       {currentUser?.user?.name}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${
-                      isUserDropdownOpen ? 'rotate-180' : ''
-                    }`} />
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''
+                      }`} />
                   </button>
                 </UserDropdownMenu>
 
@@ -139,7 +138,7 @@ const Navigation: React.FC<NavigationProps> = ({
               </>
             ) : (
               <>
-                <button 
+                <button
                   onClick={() => navigate('/register')}
                   className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
                 >
@@ -173,19 +172,19 @@ const Navigation: React.FC<NavigationProps> = ({
         {/* Mobile Menu */}
         {isMobileMenuOpen && !onFilterClick && (
           <div className="md:hidden border-t border-gray-200 py-4 space-y-3">
-            <button 
+            <button
               onClick={() => navigate('/destinations')}
               className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
             >
               Địa điểm
             </button>
-            <button 
+            <button
               onClick={() => toast('Tính năng đang phát triển')}
               className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
             >
               Hoạt động
             </button>
-            <button 
+            <button
               onClick={() => toast('Tính năng đang phát triển')}
               className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
             >
@@ -223,7 +222,7 @@ const Navigation: React.FC<NavigationProps> = ({
               </>
             ) : (
               <>
-                <button 
+                <button
                   onClick={() => navigate('/register')}
                   className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
                 >

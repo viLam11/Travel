@@ -96,8 +96,25 @@ export class ApiClient {
       return this.post("/auth/logout", {});
     },
 
+    resendOTP: (data: { email: string }): ApiResponse<any> => {
+      return this.post("/auth/resend-otp", data);
+    },
+
     loginGoogle: (): ApiResponse<void> => {
       return this.get("/auth/login/google");
+    },
+
+    // Forgot Password methods
+    forgotPassword: (data: { email: string }): ApiResponse<any> => {
+      return this.post("/auth/forgot-password", data);
+    },
+
+    verifyResetOTP: (data: { email: string; otp: string }): ApiResponse<{ statusCode: number; message: string; resetToken: string }> => {
+      return this.post("/auth/verify-reset-otp", data);
+    },
+
+    resetPassword: (data: { token: string; newPassword: string }): ApiResponse<any> => {
+      return this.post("/auth/reset-password", data);
     }
   };
 
@@ -151,6 +168,19 @@ export class ApiClient {
       return this.patch(`/services/upload/img/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+    },
+
+    search: (params: {
+      keyword?: string;
+      serviceType?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      page?: number;
+      size?: number;
+      sortBy?: string;
+      direction?: string;
+    }): ApiResponse<any> => {
+      return this.get('/services/search', { params });
     }
   };
 
@@ -243,6 +273,18 @@ export class ApiClient {
   users = {
     getAll: (): ApiResponse<any> => {
       return this.get('/users/all');
+    },
+
+    getProfile: (): ApiResponse<any> => {
+      return this.get('/users/me');
+    },
+
+    getById: (userID: number): ApiResponse<any> => {
+      return this.get(`/users/${userID}`);
+    },
+
+    update: (userID: number, data: { fullname?: string; phone?: string; address?: string }): ApiResponse<any> => {
+      return this.put(`/users/${userID}`, data);
     }
   };
 
@@ -253,6 +295,21 @@ export class ApiClient {
     },
     test: (): ApiResponse<string> => {
       return this.get('/orders/test');
+    }
+  };
+
+  // Province endpoints
+  provinces = {
+    search: (query: string): ApiResponse<any[]> => {
+      return this.get('/provinces/search', { params: { query } });
+    },
+
+    getByRegion: (region: 'north' | 'central' | 'south'): ApiResponse<any[]> => {
+      return this.get(`/provinces/region/${region}`);
+    },
+
+    getAll: (): ApiResponse<any[]> => {
+      return this.get('/provinces/all');
     }
   };
 

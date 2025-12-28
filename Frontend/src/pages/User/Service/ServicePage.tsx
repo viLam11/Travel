@@ -1,4 +1,3 @@
-// src/pages/DestinationDetailPage.tsx
 import React, { useState } from 'react';
 import Navigation from '../../../components/common/layout/NavigationUser';
 import Footer from '../../../components/common/layout/Footer';
@@ -14,7 +13,7 @@ interface Destination {
   image: string;
 }
 
-const DestinationDetailPage: React.FC = () => {
+const ServicePage: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [dateRange] = useState({ start: 'February 05', end: 'March 14' });
@@ -251,4 +250,4 @@ const DestinationDetailPage: React.FC = () => {
   );
 };
 
-export default DestinationDetailPage;
+export default ServicePage;
