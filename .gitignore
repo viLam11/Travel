@@ -16,7 +16,7 @@ Thumbs.db
 # Environment files
 *.env
 .env
-#application.properties
+application.properties
 application.yml
 
 # =========================================
