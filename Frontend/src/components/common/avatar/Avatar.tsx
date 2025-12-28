@@ -7,12 +7,30 @@ interface AvatarProps {
   className?: string;
 }
 
-const Avatar: React.FC<AvatarProps> = ({ 
-  name, 
-  avatarUrl, 
+const Avatar: React.FC<AvatarProps> = ({
+  name,
+  avatarUrl,
   size = 'md',
-  className = '' 
+  className = ''
 }) => {
+  const sizeClasses = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-12 h-12 text-base',
+    xl: 'w-16 h-16 text-xl',
+  };
+
+  // Kiểm tra nếu name không hợp lệ
+  if (!name || typeof name !== 'string') {
+    return (
+      <div className={`${sizeClasses[size]} ${className}`}>
+        <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold">
+          ?
+        </div>
+      </div>
+    );
+  }
+
   // Lấy chữ cái đầu của tên
   const getInitials = (fullName: string): string => {
     const names = fullName.trim().split(' ');
@@ -34,20 +52,14 @@ const Avatar: React.FC<AvatarProps> = ({
       'bg-red-500',
       'bg-teal-500',
     ];
-    
+
     const charCodeSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
     return colors[charCodeSum % colors.length];
   };
 
-  const sizeClasses = {
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-12 h-12 text-base',
-    xl: 'w-16 h-16 text-xl',
-  };
-
   const bgColor = getColorFromName(name);
   const initials = getInitials(name);
+
 
   return (
     <div className={`${sizeClasses[size]} ${className}`}>
@@ -64,7 +76,7 @@ const Avatar: React.FC<AvatarProps> = ({
         </div>
       )}
       */}
-      
+
       {/* Temporary: Hiển thị initials */}
       <div className={`w-full h-full rounded-full ${bgColor} flex items-center justify-center text-white font-semibold`}>
         {initials}

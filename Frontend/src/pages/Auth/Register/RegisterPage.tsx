@@ -1,15 +1,17 @@
 // src/pages/auth/RegisterPage.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import toast from "react-hot-toast";
 import AuthLayout from "../../../components/page/auth/AuthLayout";
 import EmailInput from "../../../components/page/auth/EmailInput";
 import PasswordInput from "../../../components/page/auth/PasswordInput";
 import AuthButton from "../../../components/page/auth/AuthButton";
 import SocialLogin from "../../../components/page/auth/SocialLogin";
+import FormInput from "../../../components/page/auth/FormInput";
 
 interface FormData {
-  firstName: string;
-  lastName: string;
+  username: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -17,8 +19,7 @@ interface FormData {
 }
 
 interface FormErrors {
-  firstName?: string;
-  lastName?: string;
+  username?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
@@ -27,8 +28,7 @@ interface FormErrors {
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
-    firstName: "",
-    lastName: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -38,6 +38,7 @@ const RegisterPage: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -57,16 +58,12 @@ const RegisterPage: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "Tên là bắt buộc";
-    } else if (formData.firstName.length < 2) {
-      newErrors.firstName = "Tên phải có ít nhất 2 ký tự";
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Họ là bắt buộc";
-    } else if (formData.lastName.length < 2) {
-      newErrors.lastName = "Họ phải có ít nhất 2 ký tự";
+    if (!formData.username.trim()) {
+      newErrors.username = "Tên đăng nhập là bắt buộc";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Tên đăng nhập phải có ít nhất 3 ký tự";
+    } else if (!/^[a-zA-Z0-9._]+$/.test(formData.username)) {
+      newErrors.username = "Tên đăng nhập không được có dấu, khoảng trắng hoặc ký tự đặc biệt (ngoại trừ . và _)";
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -100,7 +97,7 @@ const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -108,43 +105,64 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulate API call - Gửi OTP đến email
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log("Gửi OTP đến email:", formData.email);
-      
-      // TODO: Call API để gửi OTP
-      // await api.sendRegistrationOTP({ email: formData.email });
-      
-      // Chuyển sang trang verify email với thông tin user
+      // Call real Backend API
+      await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+
+      // Navigate to verify email page
       navigate("/verify-email", {
         state: {
           email: formData.email,
-          userData: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            password: formData.password,
-          }
         }
       });
-      
-    } catch (error) {
-      console.error("Gửi OTP thất bại:", error);
-      setErrors({
-        email: "Không thể gửi email xác thực. Vui lòng thử lại."
-      });
+
+    } catch (error: any) {
+      console.error("Registration failed:", error);
+      // Attempt to extract the error message
+      let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error?.response?.data) {
+        // Handle backend ErrorResponse structure { status, message }
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+
+      // Debug: Log the extracted error message
+      console.log("Extracted errorMessage:", errorMessage);
+
+      // Special handling for specific errors to map to fields
+      const lowerMessage = errorMessage.toLowerCase();
+      if (lowerMessage.includes("username") || lowerMessage.includes("tên đăng nhập")) {
+        setErrors({ ...errors, username: "Tên đăng nhập đã tồn tại" });
+      } else if (lowerMessage.includes("email")) {
+        setErrors({ ...errors, email: "Email đã tồn tại" });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthLayout 
+    <AuthLayout
       heroTitle="Travelista Tours"
       heroSubtitle="Travel is the only purchase that enriches you in ways beyond material wealth"
     >
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 w-full max-w-md px-4 sm:px-0">
-        
+
         {/* Header */}
         <div className="mb-4 text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-500 mb-1">
@@ -153,46 +171,34 @@ const RegisterPage: React.FC = () => {
           <p className="text-sm sm:text-base text-gray-500">Tạo tài khoản mới</p>
         </div>
 
-        {/* Name Fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-orange-500 mb-1">
-              Tên <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              className={`w-full px-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg outline-none transition-all focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                errors.firstName ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Nguyễn Văn"
-            />
-            {errors.firstName && (
-              <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.firstName}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-orange-500 mb-1">
-              Họ <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              className={`w-full px-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg outline-none transition-all focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
-                errors.lastName ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="A"
-            />
-            {errors.lastName && (
-              <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.lastName}</p>
-            )}
-          </div>
-        </div>
+        {/* Username */}
+        {/* Username */}
+        <FormInput
+          label="Tên đăng nhập"
+          name="username"
+          type="text"
+          value={formData.username}
+          onChange={handleInputChange}
+          placeholder="HoangAnh123"
+          error={errors.username}
+          required
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          }
+        />
 
         {/* Email */}
         <EmailInput
@@ -216,7 +222,7 @@ const RegisterPage: React.FC = () => {
             error={errors.password}
             required
           />
-          
+
           {/* Progressive Password Validation - Show only unmet requirements */}
           {formData.password && (
             <div className="mt-1.5 space-y-1">
@@ -229,7 +235,7 @@ const RegisterPage: React.FC = () => {
                   Mật khẩu phải có ít nhất 8 ký tự
                 </p>
               )}
-              
+
               {formData.password.length >= 8 && !/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) && (
                 <p className="text-red-500 text-xs flex items-center">
                   <svg className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -238,7 +244,7 @@ const RegisterPage: React.FC = () => {
                   Mật khẩu phải có chữ hoa và chữ thường
                 </p>
               )}
-              
+
               {formData.password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) && !/(?=.*\d)/.test(formData.password) && (
                 <p className="text-red-500 text-xs flex items-center">
                   <svg className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -293,8 +299,8 @@ const RegisterPage: React.FC = () => {
         )}
 
         {/* Submit Button */}
-        <AuthButton 
-          type="submit" 
+        <AuthButton
+          type="submit"
           variant="primary"
           loading={loading}
           disabled={loading}

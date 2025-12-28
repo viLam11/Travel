@@ -3,19 +3,22 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const SocialLogin: React.FC = () => {
-  const handleSocialLogin = (provider: string) => {
-    console.log(`Login with ${provider}`);
+  const handleGoogleLogin = () => {
+    // Redirect to backend Google OAuth endpoint
+    // Backend will redirect to Google login, then back to frontend callback
+    window.location.href = 'http://localhost:8080/auth/login/google';
   };
 
   return (
     <div className="w-full">
       <motion.button
+        type="button"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={() => handleSocialLogin('Google')}
+        onClick={handleGoogleLogin}
         className="w-full flex items-center justify-center py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer bg-white border border-gray-300 hover:bg-gray-50"
       >
         <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" viewBox="0 0 24 24">

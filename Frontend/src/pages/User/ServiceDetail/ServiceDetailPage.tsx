@@ -14,7 +14,7 @@ import {
   Info,
   Lock,
 } from "lucide-react";
-import Navigation from "../../../components/common/layout/NavigationUser";
+import BreadcrumbSection from '../../../components/common/BreadcrumbSection'
 import Footer from "../../../components/common/layout/Footer";
 import ServiceBookingModal from "../../../components/page/serviceDetail/modals/ServiceBookingModal";
 import RoomBookingModal from "../../../components/page/serviceDetail/modals/RoomBookingModal";
@@ -25,9 +25,11 @@ import {
   loadServiceDetail,
   clearServiceDetail,
 } from "../../../store/slices/serviceDetailSlice";
+import { getDestinationInfo } from '@/constants/regions';
 
 const ServiceDetailPage: React.FC = () => {
-  const { destination, serviceType, idSlug } = useParams<{
+  const { region, destination, serviceType, idSlug } = useParams<{
+    region: string;
     destination: string;
     serviceType: string;
     idSlug: string;
@@ -105,8 +107,15 @@ const ServiceDetailPage: React.FC = () => {
 
   // Load service detail
   useEffect(() => {
-    if (!destination || !serviceType || !idSlug) {
-      navigate("/homepage");
+    if (!destination || !serviceType || !idSlug || !region) {
+      navigate('/homepage');
+      return;
+    }
+
+    // Validate region-destination mapping
+    const destInfo = getDestinationInfo(destination);
+    if (!destInfo || destInfo.region !== region) {
+      navigate('/homepage');
       return;
     }
 
@@ -461,8 +470,13 @@ const ServiceDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* <Navigation isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} /> */}
-
+      {/* Breadcrumb Section - AUTO MODE with Service Name */}
+      <BreadcrumbSection
+        auto
+        serviceName={service.name}
+        title={service.name}
+        subtitle={`${service.location} • ${service.rating}★ (${service.reviews} đánh giá)`}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Title Section */}
         <div className="mb-6">

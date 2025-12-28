@@ -18,12 +18,14 @@ const RegisterPage = lazy(() => import("@/pages/Auth/Register/RegisterPage"));
 const ForgotPasswordPage = lazy(() => import("@/pages/Auth/ForgotPassword/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/Auth/ResetPassword/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("@/pages/Auth/VerifyEmail/VerifyEmailPage"));
+const GoogleCallbackPage = lazy(() => import("@/pages/Auth/GoogleCallback/GoogleCallbackPage"));
 
 // User Pages
 const Homepage = lazy(() => import("@/pages/User/Homepage/Homepage"));
 const DestinationFilterPage = lazy(() => import("@/pages/User/DestinationFilter/DestinationFilterPage"));
-const DestinationDetailPage = lazy(() => import("@/pages/DestinationDetail/DestinationDetailPage"));
+const DestinationDetailPage = lazy(() => import("@/pages/User/DestinationDetail/DestinationDetailPage"));
 const ServiceDetailPage = lazy(() => import("@/pages/User/ServiceDetail/ServiceDetailPage"));
+const ServicePage = lazy(() => import("@/pages/User/Service/ServicePage"));
 
 // User Profile Pages
 const UserProfilePage = lazy(() => import("@/pages/User/Profile/UserProfilePage"));
@@ -37,15 +39,16 @@ const AdminAddServicePage = lazy(() => import("@/pages/ServiceProvider/Services/
 const AdminRoomManagementPage = lazy(() => import("@/pages/ServiceProvider/Rooms/RoomManagementPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 
+
 // ==================== HELPER FUNCTIONS ====================
 
 const createProtectedRoute = (
-  path: string, 
-  element: ReactNode, 
+  path: string,
+  element: ReactNode,
   requiredRole?: 'admin' | 'user'
 ): ReactNode => {
   const permissions = ROUTE_PERMISSIONS[path];
-  
+
   if (!permissions && !requiredRole) {
     return element;
   }
@@ -87,6 +90,10 @@ const routes: RouteObject[] = [
     path: ROUTES.VERIFY_EMAIL,
     element: withSuspense(VerifyEmailPage as LazyExoticComponent<ComponentType<unknown>>),
   },
+  {
+    path: '/auth/google/callback',
+    element: withSuspense(GoogleCallbackPage as LazyExoticComponent<ComponentType<unknown>>),
+  },
 
   // ==================== USER ROUTES (với UserLayout) ====================
   {
@@ -101,19 +108,54 @@ const routes: RouteObject[] = [
         path: ROUTES.HOMEPAGE,
         element: withSuspense(Homepage as LazyExoticComponent<ComponentType<unknown>>),
       },
+      // {
+      //   path: ROUTES.DESTINATIONS,
+      //   element: withSuspense(DestinationFilterPage as LazyExoticComponent<ComponentType<unknown>>),
+      // },
+      // {
+      //   path: ROUTES.DESTINATION_DETAIL,
+      //   element: withSuspense(DestinationDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+      // },
+      // {
+      //   path: ROUTES.SERVICE_DETAIL,
+      //   element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+      // },
+
+      // ==================== DESTINATION ROUTES - NEW STRUCTURE ====================
+
+      // Filter Page - Có thể filter theo region hoặc destination
+      // Example: /destinations?region=mien-bac
+      // Example: /destinations/mien-trung/da-nang/hotel
       {
-        path: ROUTES.DESTINATIONS,
+        path: 'destinations',
         element: withSuspense(DestinationFilterPage as LazyExoticComponent<ComponentType<unknown>>),
       },
+
+      // Destination Detail Page - Hiển thị overview của 1 tỉnh
+      // URL: /destinations/:region/:destination
+      // Example: /destinations/mien-trung/da-nang
       {
-        path: ROUTES.DESTINATION_DETAIL,
-        element: withSuspense(DestinationDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+        path: 'destinations/:region/:destination',
+        // element: withSuspense(DestinationDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+        element: withSuspense(ServicePage as LazyExoticComponent<ComponentType<unknown>>),
       },
+
+      // Filter by Service Type - List hotels/places trong 1 tỉnh
+      // URL: /destinations/:region/:destination/:serviceType
+      // Example: /destinations/mien-trung/da-nang/hotel
       {
-        path: ROUTES.SERVICE_DETAIL,
+        path: 'destinations/:region/:destination/:serviceType',
+        element: withSuspense(DestinationFilterPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
+      // Service Detail Page - Chi tiết 1 hotel/place cụ thể
+      // URL: /destinations/:region/:destination/:serviceType/:idSlug
+      // Example: /destinations/mien-trung/da-nang/hotel/101-vinpearl-resort
+      {
+        path: 'destinations/:region/:destination/:serviceType/:idSlug',
         element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
       },
-      
+
       // ==================== USER PROFILE ROUTES (Protected) ====================
       {
         path: ROUTES.USER_ROOT,
@@ -143,6 +185,11 @@ const routes: RouteObject[] = [
             path: "saved",
             element: withSuspense(UserSavedPage as LazyExoticComponent<ComponentType<unknown>>),
           },
+          {
+            path: "success/payment",
+            element: <div>SUCCESS PAYMENT</div>,
+            // element: withSuspense(UserSavedPage as LazyExoticComponent<ComponentType<unknown>>),
+          }
         ],
       },
     ],

@@ -2,18 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { MapPin } from 'lucide-react';
-import type { AppDispatch, RootState } from '../../store';
-import { loadDestination } from '../../store/slices/destinationSlice';
-import Navigation from '../../components/common/layout/NavigationUser';
-import Footer from '../../components/common/layout/Footer';
-import DestinationCard from '../../components/common/DestinationCard';
+import type { AppDispatch, RootState } from '../../../store';
+import { loadDestination } from '../../../store/slices/destinationSlice';
+// import Navigation from '../../components/common/layout/NavigationUser';
+import Footer from '../../../components/common/layout/Footer';
+import DestinationCard from '../../../components/common/DestinationCard';
+import BreadcrumbSection from '../../../components/common/BreadcrumbSection';
+import { getDestinationInfo } from '@/constants/regions';
 
 const DestinationDetailPage: React.FC = () => {
-  const { destination } = useParams<{ destination: string }>();
+  const { region, destination } = useParams<{ region: string; destination: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showAll, setShowAll] = useState(false); // Toggle tổng hợp
   const [showAllHighlights, setShowAllHighlights] = useState(false);
   const [showAllFood, setShowAllFood] = useState(false);
@@ -28,14 +30,19 @@ const DestinationDetailPage: React.FC = () => {
    * Load destination data khi component mount hoặc destination thay đổi
    */
   useEffect(() => {
-    if (!destination) {
+    if (!destination || !region) {
       navigate('/homepage');
       return;
     }
-
+    // Validate region-destination mapping
+    const destInfo = getDestinationInfo(destination);
+    if (!destInfo || destInfo.region !== region) {
+      navigate('/homepage');
+      return;
+    }
     dispatch(loadDestination(destination));
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [destination, dispatch, navigate]);
+  }, [destination, region, dispatch, navigate]);
 
   /**
    * Handle booking
@@ -44,7 +51,7 @@ const DestinationDetailPage: React.FC = () => {
     console.log('Booking destination:', id);
     // Determine service type based on section
     let serviceType = 'place'; // Default
-    
+
     // You can pass serviceType as prop or determine from item
     if (item.category === 'food') serviceType = 'restaurant';
     if (item.category === 'hotel') serviceType = 'hotel';
@@ -55,11 +62,11 @@ const DestinationDetailPage: React.FC = () => {
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
-    
+
     const idSlug = `${id}-${titleSlug}`;
 
-    // Navigate to service detail page
-    navigate(`/destinations/${destination}/${serviceType}/${idSlug}`);
+    // Navigate với region trong URL
+    navigate(`/destinations/${region}/${destination}/${serviceType}/${idSlug}`);
     // TODO: Implement booking logic
   };
 
@@ -142,7 +149,11 @@ const DestinationDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* <Navigation isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} /> */}
-
+      <BreadcrumbSection
+        auto
+        title={`Khám phá ${data.name}`}
+        subtitle={`${totalItems} dịch vụ • ${data.region}`}
+      />
       {/* Hero Section */}
       <div className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] overflow-hidden">
         <img
@@ -151,7 +162,7 @@ const DestinationDetailPage: React.FC = () => {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-        
+
         <div className="absolute inset-0 flex flex-col justify-center items-center text-center px-4">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <MapPin className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-orange-500" />
@@ -170,7 +181,7 @@ const DestinationDetailPage: React.FC = () => {
 
       {/* Content Sections */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header với nút "Xem tất cả dịch vụ" */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 pt-8 sm:pt-12">
           <div>
@@ -181,10 +192,10 @@ const DestinationDetailPage: React.FC = () => {
               Tổng cộng {totalItems} dịch vụ
             </p>
           </div>
-          
+
           {/* Nút "Xem tất cả" tổng hợp */}
           {!showAll && hasMoreItems && (
-            <button 
+            <button
               onClick={handleViewAll}
               className="text-orange-500 hover:text-orange-600 font-medium text-sm underline transition-colors"
             >

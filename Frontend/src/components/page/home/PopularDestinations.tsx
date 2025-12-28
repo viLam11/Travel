@@ -1,5 +1,6 @@
-// src/components/home/PopularDestinations.tsx
+// src/components/page/home/PopularDestinations.tsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DestinationCard from '../../common/DestinationCard';
 
 interface Destination {
@@ -9,113 +10,153 @@ interface Destination {
   priceRange: string;
   openingHours: string;
   image: string;
+  destinationSlug: string; //  Add slug
+  regionSlug: string;      //  Add region slug
+  serviceType: 'place' | 'hotel'; //  Add service type
 }
 
 const PopularDestinations: React.FC = () => {
+  const navigate = useNavigate();
   const [showAll, setShowAll] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
-  // Initial 6 items
+  //  FIXED: Initial destinations with proper navigation data
   const initialDestinations: Destination[] = [
     {
       id: '1',
       title: 'NHÀ THỜ ĐỨC BÀ',
-      location: '124 đường ABC',
-      priceRange: '100.000 VND',
-      openingHours: '7:00 - 17:00',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop'
+      location: 'TP. Hồ Chí Minh',
+      priceRange: 'Miễn phí',
+      openingHours: '8:00 - 11:00, 15:00 - 16:00',
+      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop',
+      destinationSlug: 'ho-chi-minh',
+      regionSlug: 'mien-nam',
+      serviceType: 'place'
     },
     {
       id: '2',
       title: 'CHÙA MỘT CỘT',
-      location: 'Số 5, đường Chùa Một Cột',
-      priceRange: '780 - 1970',
+      location: 'Hà Nội',
+      priceRange: 'Miễn phí',
       openingHours: '6:00 - 18:00',
-      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop',
+      destinationSlug: 'ha-noi',
+      regionSlug: 'mien-bac',
+      serviceType: 'place'
     },
     {
       id: '3',
       title: 'HỒ HOÀN KIẾM',
-      location: 'Quận Hoàn Kiếm, Hà Nội',
+      location: 'Hà Nội',
       priceRange: 'Miễn phí',
       openingHours: '24/7',
-      image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop',
+      destinationSlug: 'ha-noi',
+      regionSlug: 'mien-bac',
+      serviceType: 'place'
     },
     {
       id: '4',
-      title: 'ĐỒNG VĂN THẠCH',
-      location: 'Tp. Quảng Ngãi (Quảng Ngãi)',
-      priceRange: '700 - 1930',
-      openingHours: '8:00 - 17:00',
-      image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=300&fit=crop'
+      title: 'PHỐ CỔ HỘI AN',
+      location: 'Hội An',
+      priceRange: '120.000 VND',
+      openingHours: '7:00 - 22:00',
+      image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=300&fit=crop',
+      destinationSlug: 'hoi-an',
+      regionSlug: 'mien-trung',
+      serviceType: 'place'
     },
     {
       id: '5',
-      title: 'PHỐ CỔ HỘI AN',
-      location: 'Tp. Hội An (Quảng Nam)',
-      priceRange: '750 - 1700',
-      openingHours: '7:00 - 22:00',
-      image: 'https://th.bing.com/th/id/R.d73ab86bb1b4d3b887501c9b88bc6b4f?rik=ajEKq%2fY5iEMiSg&pid=ImgRaw&r=0'
+      title: 'CẦU RỒNG ĐÀ NẴNG',
+      location: 'Đà Nẵng',
+      priceRange: 'Miễn phí',
+      openingHours: '21:00 - 22:00',
+      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop',
+      destinationSlug: 'da-nang',
+      regionSlug: 'mien-trung',
+      serviceType: 'place'
     },
     {
       id: '6',
-      title: 'CẦU RỒNG ĐÀ NẴNG',
-      location: 'Tp. Đà Nẵng (Đà Nẵng)',
-      priceRange: 'Miễn phí',
-      openingHours: '21:00 - 22:00',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop'
+      title: 'VINPEARL NHA TRANG',
+      location: 'Nha Trang',
+      priceRange: '500.000 - 2.000.000 VND',
+      openingHours: '9:00 - 22:00',
+      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop',
+      destinationSlug: 'nha-trang',
+      regionSlug: 'mien-trung',
+      serviceType: 'hotel'
     }
   ];
 
-  // Additional items for lazy load
+  //  FIXED: Additional destinations with proper navigation data
   const additionalDestinations: Destination[] = [
     {
       id: '7',
       title: 'BẢO TÀNG HỒ CHÍ MINH',
-      location: 'Số 19, Ngọc Hà, Ba Đình',
-      priceRange: '50.000 VND',
+      location: 'Hà Nội',
+      priceRange: '40.000 VND',
       openingHours: '8:00 - 17:00',
-      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop',
+      destinationSlug: 'ha-noi',
+      regionSlug: 'mien-bac',
+      serviceType: 'place'
     },
     {
       id: '8',
       title: 'ĐỈNH FANSIPAN',
-      location: 'Sapa, Lào Cai',
+      location: 'Sapa',
       priceRange: '600.000 VND',
       openingHours: '7:30 - 17:30',
-      image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop',
+      destinationSlug: 'sapa',
+      regionSlug: 'mien-bac',
+      serviceType: 'place'
     },
     {
       id: '9',
       title: 'VỊNH HẠ LONG',
-      location: 'Tp. Hạ Long, Quảng Ninh',
+      location: 'Hạ Long',
       priceRange: '300.000 - 1.500.000 VND',
       openingHours: '6:00 - 18:00',
-      image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=300&fit=crop',
+      destinationSlug: 'ha-long',
+      regionSlug: 'mien-bac',
+      serviceType: 'place'
     },
     {
       id: '10',
       title: 'PHÚ QUỐC',
-      location: 'Kiên Giang',
+      location: 'Phú Quốc',
       priceRange: '500.000 - 2.000.000 VND',
       openingHours: '24/7',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop',
+      destinationSlug: 'phu-quoc',
+      regionSlug: 'mien-nam',
+      serviceType: 'place'
     },
     {
       id: '11',
       title: 'ĐÀ LẠT',
-      location: 'Lâm Đồng',
+      location: 'Đà Lạt',
       priceRange: '400.000 - 1.200.000 VND',
       openingHours: '24/7',
-      image: 'https://th.bing.com/th/id/R.d73ab86bb1b4d3b887501c9b88bc6b4f?rik=ajEKq%2fY5iEMiSg&pid=ImgRaw&r=0'
+      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop',
+      destinationSlug: 'da-lat',
+      regionSlug: 'mien-nam',
+      serviceType: 'place'
     },
     {
       id: '12',
-      title: 'NHA TRANG',
-      location: 'Khánh Hòa',
+      title: 'VŨNG TÀU',
+      location: 'Vũng Tàu',
       priceRange: '300.000 - 1.000.000 VND',
       openingHours: '24/7',
-      image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop',
+      destinationSlug: 'vung-tau',
+      regionSlug: 'mien-nam',
+      serviceType: 'place'
     }
   ];
 
@@ -133,9 +174,33 @@ const PopularDestinations: React.FC = () => {
     setIsLoading(false);
   };
 
+  //  FIXED: Navigate với proper URL structure
   const handleBook = (id: string): void => {
     console.log('Booking destination:', id);
-    // TODO: Implement booking logic
+    
+    // Find destination by id
+    const destination = destinations.find(d => d.id === id);
+    
+    if (!destination) {
+      console.error('Destination not found:', id);
+      return;
+    }
+
+    // Create slug for service detail
+    const titleSlug = destination.title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/đ/g, 'd')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    
+    const idSlug = `${id}-${titleSlug}`;
+
+    // Navigate: /destinations/:region/:destination/:serviceType/:idSlug
+    navigate(
+      `/destinations/${destination.regionSlug}/${destination.destinationSlug}/${destination.serviceType}/${idSlug}`
+    );
   };
 
   return (
@@ -155,7 +220,6 @@ const PopularDestinations: React.FC = () => {
             </button>
           )}
         </div>
-
 
         {/* Destinations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
