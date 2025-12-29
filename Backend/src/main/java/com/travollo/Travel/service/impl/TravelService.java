@@ -2,10 +2,7 @@ package com.travollo.Travel.service.impl;
 
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
-import com.travollo.Travel.repo.CommentServiceRepo;
-import com.travollo.Travel.repo.ImageServiceRepo;
-import com.travollo.Travel.repo.ProvinceRepo;
-import com.travollo.Travel.repo.ServiceRepo;
+import com.travollo.Travel.repo.*;
 import com.travollo.Travel.service.AwsS3Service;
 import com.travollo.Travel.service.interfac.TravelServiceInterface;
 import com.travollo.Travel.utils.ServiceType;
@@ -33,6 +30,9 @@ public class TravelService implements TravelServiceInterface {
     private ImageServiceRepo imgServiceRepo;
     @Autowired
     private CommentServiceRepo commentRepo;
+
+    @Autowired
+    private TicketRepo ticketRepo;
 
 
     public ResponseEntity<Object> getAllServices(){
@@ -252,6 +252,17 @@ public class TravelService implements TravelServiceInterface {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while searching services: " + e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> getTicketsByServiceId(Long serviceID) {
+        try {
+            TicketVenue ticketVenue = (TicketVenue) serviceRepo.findById(serviceID)
+                    .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Ticket venue not found"));
+
+            return ResponseEntity.ok(ticketVenue.getTicketList());
+        } catch (Exception e) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving top-rated services");
         }
     }
 }

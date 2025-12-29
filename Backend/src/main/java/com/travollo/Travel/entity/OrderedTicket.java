@@ -1,5 +1,6 @@
 package com.travollo.Travel.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
@@ -17,6 +18,7 @@ public class OrderedTicket {
 
     @ManyToOne
     @JoinColumn(name ="ticket_id")
+    @JsonBackReference
     private Ticket ticket;
 
     private int amount;

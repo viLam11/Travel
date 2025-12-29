@@ -139,6 +139,11 @@ public class ServiceController {
         return travelService.deleteService(id);
     }
 
+    @GetMapping("/{id}/tickets")
+    ResponseEntity<Object> getTicketsByServiceId(@PathVariable Long id) {
+        return travelService.getTicketsByServiceId(id);
+    }
+
     @GetMapping("/search")
     public ResponseEntity<Object> searchServicesInProvince(
             @RequestParam(value = "provinceCode", required = false) String provinceCode,

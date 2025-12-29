@@ -64,8 +64,8 @@ public class OrderController {
 
     @GetMapping("/all")
     public ResponseEntity<Object> getOrdersByUser(
-            int page,
-            int size,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
             HttpServletRequest request
     ){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

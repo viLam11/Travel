@@ -1,14 +1,16 @@
 // src/components/booking/BookingCard.tsx
-import React from 'react';
-import { MapPin, Calendar, Clock, CheckCircle } from 'lucide-react';
-import type { ServiceDetail } from '@/types/serviceDetail.types';
+import React from "react";
+import { MapPin, Calendar, Clock, CheckCircle } from "lucide-react";
+import type { ServiceDetail } from "@/types/serviceDetail.types";
 
 interface BookingCardProps {
   service: ServiceDetail;
-  adultCount: number;
-  setAdultCount: (count: number) => void;
-  childCount: number;
-  setChildCount: (count: number) => void;
+  // adultCount: number;
+  // setAdultCount: (count: number) => void;
+  // childCount: number;
+  // setChildCount: (count: number) => void;
+  tickets: any[];
+  setTickets: (tickets: any[]) => void;
   finalPrice: number;
   onBookNow: () => void;
   onRoomBookNow?: () => void;
@@ -16,19 +18,40 @@ interface BookingCardProps {
 
 const BookingCard: React.FC<BookingCardProps> = ({
   service,
-  adultCount,
-  setAdultCount,
-  childCount,
-  setChildCount,
+  // adultCount,
+  // setAdultCount,
+  // childCount,
+  // setChildCount,
+  tickets,
+  setTickets,
   finalPrice,
   onBookNow,
-  onRoomBookNow
+  onRoomBookNow,
 }) => {
+  const updateTicketQuantity = (id: number, delta: number) => {
+    const newList = [...tickets];
+    const index = newList.findIndex((t) => t.id === id);
+
+    if (index !== -1) {
+      // Chỉ thay đổi đúng phần tử tại vị trí đó
+      const currentCount = newList[index].count || 0;
+      newList[index] = {
+        ...newList[index],
+        count: Math.max(0, currentCount + delta),
+      };
+      setTickets(newList);
+    }
+  };
+
   return (
     <div className="sticky top-24 bg-white border-2 border-gray-200 rounded-xl p-4 lg:p-5 shadow-md md:max-h-[85vh] overflow-y-auto">
       <div className="text-center mb-4 pb-4 border-b border-gray-200">
-        <h2 className="text-sm font-bold text-gray-900 mb-1">ĐƠN ĐẶT DỊCH VỤ</h2>
-        <h3 className="text-xs font-semibold text-gray-700 line-clamp-2">{service.name}</h3>
+        <h2 className="text-sm font-bold text-gray-900 mb-1">
+          ĐƠN ĐẶT DỊCH VỤ
+        </h2>
+        <h3 className="text-xs font-semibold text-gray-700 line-clamp-2">
+          {service.name}
+        </h3>
       </div>
 
       <div className="space-y-2.5 mb-4">
@@ -36,7 +59,9 @@ const BookingCard: React.FC<BookingCardProps> = ({
           <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-900">Địa điểm:</p>
-            <p className="text-xs text-gray-600 line-clamp-2">{service.address}</p>
+            <p className="text-xs text-gray-600 line-clamp-2">
+              {service.address}
+            </p>
           </div>
         </div>
 
@@ -59,8 +84,8 @@ const BookingCard: React.FC<BookingCardProps> = ({
 
       <div className="space-y-3 mb-4 pb-4 border-b border-gray-200">
         <h4 className="font-semibold text-gray-900 text-sm">Số lượng</h4>
-        
-        <div className="space-y-2">
+
+        {/* <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-900">Người lớn (18+):</p>
@@ -104,6 +129,46 @@ const BookingCard: React.FC<BookingCardProps> = ({
               </button>
             </div>
           </div>
+        </div> */}
+
+        <div className="space-y-3">
+          {tickets.map((ticket) => (
+            <div
+              key={ticket.id}
+              className="bg-gray-50 rounded-lg p-4 border border-transparent hover:border-gray-200 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                {/* Thông tin vé - Chữ nhẹ nhàng, không in đậm quá mức */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-800 mb-1">{ticket.name}:</p>
+                  <p className="text-sm font-bold text-orange-500">
+                    {ticket.price.toLocaleString()} VNĐ / người
+                  </p>
+                </div>
+
+                {/* Bộ điều khiển số lượng - Giữ đúng style nút tròn cũ */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => updateTicketQuantity(ticket.id, -1)}
+                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-white hover:border-orange-400 transition-colors text-gray-600"
+                  >
+                    −
+                  </button>
+
+                  <span className="w-6 text-center text-sm font-medium text-gray-700">
+                    {ticket.count}
+                  </span>
+
+                  <button
+                    onClick={() => updateTicketQuantity(ticket.id, +1)}
+                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-white hover:border-orange-400 transition-colors text-gray-600"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -112,34 +177,47 @@ const BookingCard: React.FC<BookingCardProps> = ({
         {service.additionalServices.map((s, idx) => (
           <div key={idx} className="flex items-center justify-between text-xs">
             <span className="text-gray-700">{s.name}</span>
-            <span className="font-semibold text-gray-900">{s.price.toLocaleString()} đ</span>
+            <span className="font-semibold text-gray-900">
+              {s.price.toLocaleString()} đ
+            </span>
           </div>
         ))}
       </div>
 
-      {service.discounts.map((d, idx) => (
-        d.applied && (
-          <div key={idx} className="mb-4 pb-4 border-b border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-2 text-sm">Mã giảm giá</h4>
-            <div className="flex items-center justify-between bg-orange-50 p-2 rounded-lg">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-orange-500" />
-                <span className="font-medium text-gray-900 text-xs">{d.code}</span>
+      {service.discounts.map(
+        (d, idx) =>
+          d.applied && (
+            <div key={idx} className="mb-4 pb-4 border-b border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2 text-sm">
+                Mã giảm giá
+              </h4>
+              <div className="flex items-center justify-between bg-orange-50 p-2 rounded-lg">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-orange-500" />
+                  <span className="font-medium text-gray-900 text-xs">
+                    {d.code}
+                  </span>
+                </div>
+                <span className="font-semibold text-orange-600 text-xs">
+                  -{d.value.toLocaleString()} đ
+                </span>
               </div>
-              <span className="font-semibold text-orange-600 text-xs">-{d.value.toLocaleString()} đ</span>
             </div>
-          </div>
-        )
-      ))}
+          )
+      )}
 
       <div className="mb-4">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-gray-900 text-sm">Thành tiền:</span>
-          <span className="font-bold text-orange-500 text-lg">{finalPrice.toLocaleString()} VNĐ</span>
+          <span className="font-semibold text-gray-900 text-sm">
+            Thành tiền:
+          </span>
+          <span className="font-bold text-orange-500 text-lg">
+            {finalPrice.toLocaleString()} VNĐ
+          </span>
         </div>
       </div>
 
-      <button 
+      <button
         onClick={onBookNow}
         className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-2.5 rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
       >

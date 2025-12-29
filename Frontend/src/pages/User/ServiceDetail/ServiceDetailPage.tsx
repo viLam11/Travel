@@ -26,6 +26,16 @@ import {
   clearServiceDetail,
 } from "../../../store/slices/serviceDetailSlice";
 import { getDestinationInfo } from '@/constants/regions';
+import apiClient from "@/services/apiClient";
+import type { CreateOrderRequest } from "@/types/order.types";
+
+type TicketItem = {
+  id: number;
+  name: string;
+  price: number;
+  // serviceID: number;
+  count: number;
+}
 
 const ServiceDetailPage: React.FC = () => {
   const { region, destination, serviceType, idSlug } = useParams<{
@@ -65,6 +75,7 @@ const ServiceDetailPage: React.FC = () => {
     "wallet"
   );
   const [showDiscountSection, setShowDiscountSection] = useState(true);
+  const [ticketList, setTicketList] = useState<TicketItem[]>([]);
 
   // Room booking modal state - Updated for multiple rooms
   const [showRoomBookingModal, setShowRoomBookingModal] = useState(false);
@@ -129,6 +140,26 @@ const ServiceDetailPage: React.FC = () => {
     };
   }, [destination, serviceType, idSlug, dispatch, navigate]);
 
+  useEffect(() => {
+    const fetchTickets = async () => {
+        if (service?.id) {
+          try {
+            const response: any = await apiClient.tickets.getByServiceId(Number(service.id));
+            if (response && Array.isArray(response)) {
+              let ticketData = response.map((item: any) => ({ name: item.name, id: item.id, price: item.price, count: 0 })); 
+              setTicketList(ticketData);
+            } else if (response?.data) {
+              setTicketList(response.data);
+            }
+            console.log("Tickets loaded:", response);
+          } catch (error) {
+            console.error("Lỗi khi lấy danh sách ticket:", error);
+          }
+        }
+      };    
+  fetchTickets();
+  }, [service]);
+
   // Handlers
   const handlePrevImage = () => {
     if (!service) return;
@@ -160,17 +191,41 @@ const ServiceDetailPage: React.FC = () => {
   };
 
   const handleConfirmBooking = () => {
-    console.log("Booking confirmed:", {
-      date: bookingDate,
-      duration: bookingDuration,
-      name: customerName,
-      phone: customerPhone,
-      email: customerEmail,
-      note: customerNote,
-      paymentMethod,
-      adultCount,
-      childCount,
-    });
+    const handleCreateOrder = async () => {
+      const orderData: CreateOrderRequest = {
+        tickets: ticketList.map(ticket => ({ id: ticket.id, quantity: ticket.count })),
+        rooms: [],
+        checkInDate: new Date().toISOString(), 
+        checkOutDate: new Date(Date.now() + 86400000).toISOString(), // +1 ngày
+        guestPhone: customerPhone,
+        note: customerNote,
+        discountIds: []
+      };
+
+      console.log("Booking confirmed:", { orderData });
+
+      try {
+        const response = await apiClient.orders.create(orderData);
+        if (response && response.payUrl) {
+        const paymentUrl = response.payUrl;
+        console.log("Đang mở liên kết thanh toán MoMo:", paymentUrl);
+        const newWindow = window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+        // if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        //   window.location.href = paymentUrl;
+        // }
+      } else {
+        console.error("Không tìm thấy payUrl trong phản hồi từ server");
+        alert("Lỗi hệ thống: Không thể khởi tạo link thanh toán.");
+      }
+        console.log("Order created successfully:", response);
+      } catch (error) {
+        console.error("Failed to create order:", error);
+      }
+    };
+
+    handleCreateOrder();
+
+
     handleCloseModal();
   };
 
@@ -759,10 +814,12 @@ const ServiceDetailPage: React.FC = () => {
           <div className="lg:col-span-1">
             <BookingCard
               service={service}
-              adultCount={adultCount}
-              setAdultCount={setAdultCount}
-              childCount={childCount}
-              setChildCount={setChildCount}
+              // adultCount={adultCount}
+              // setAdultCount={setAdultCount}
+              // childCount={childCount}
+              // setChildCount={setChildCount}
+              tickets={ticketList}
+              setTickets={setTicketList}
               finalPrice={finalPrice}
               onBookNow={handleBookNow}
               onRoomBookNow={handleRoomBookNow}
@@ -775,6 +832,8 @@ const ServiceDetailPage: React.FC = () => {
 
       {/* Booking Modal */}
       <ServiceBookingModal
+        ticketList={ticketList}
+        setTicketList={setTicketList}
         isOpen={showServiceBookingModal}
         onClose={handleCloseModal}
         service={service}

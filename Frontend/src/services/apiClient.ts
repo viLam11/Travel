@@ -2,6 +2,7 @@ import api from "./api";
 import type {
   UserPermissions,
 } from "@/types/models.types";
+import type { CreateOrderRequest } from "@/types/order.types";
 
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
 
@@ -308,8 +309,20 @@ export class ApiClient {
     },
     test: (): ApiResponse<string> => {
       return this.get('/orders/test');
+    },
+    create: (data: CreateOrderRequest): ApiResponse<any> => {
+      return this.post('/orders/create', data); 
+    },
+    getAll: (): ApiResponse<any> => { 
+      return this.get('/orders/all');
     }
   };
+
+  tickets = {
+    getByServiceId: (serviceId: number): ApiResponse<any[]> => {
+      return this.get(`/services/${serviceId}/tickets`); 
+    }
+  }
 
   // Province endpoints
   provinces = {
@@ -323,6 +336,12 @@ export class ApiClient {
 
     getAll: (): ApiResponse<any[]> => {
       return this.get('/provinces/all');
+    }
+  };
+
+  transactions = {
+    getAll: (): ApiResponse<any> => { 
+      return this.get('/orders/all');
     }
   };
 

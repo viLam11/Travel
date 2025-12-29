@@ -3,6 +3,7 @@ import React from 'react';
 import { X, Plus, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
 import type { ServiceDetail } from '@/types/serviceDetail.types';
 import CustomSelect from '@/components/common/CustomSelect';
+import { set } from 'date-fns';
 
 interface Discount {
   id: string;
@@ -19,6 +20,8 @@ interface Discount {
 }
 
 interface ServiceBookingModalProps {
+  ticketList: any[];
+  setTicketList: (tickets: any[]) => void;
   isOpen: boolean;
   onClose: () => void;
   service: ServiceDetail;
@@ -49,6 +52,8 @@ interface ServiceBookingModalProps {
 }
 
 const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
+  ticketList,
+  setTicketList,
   isOpen,
   onClose,
   service,
@@ -236,6 +241,22 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     { value: '1 tuần', label: '1 tuần' }
   ];
 
+
+  const updateTicketQuantity = (id: number, delta: number) => {
+  const newList = [...ticketList]; 
+    const index = newList.findIndex(t => t.id === id);
+  
+  if (index !== -1) {
+    // Chỉ thay đổi đúng phần tử tại vị trí đó
+    const currentCount = newList[index].count || 0;
+    newList[index] = {
+      ...newList[index],
+      count: Math.max(0, currentCount + delta)
+    };
+    setTicketList(newList);
+  }
+};
+
   // Thêm vào useEffect để đóng dropdown khi click bên ngoài
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -365,7 +386,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                   {/* Ticket Types */}
                   <div>
                     <h3 className="text-base font-bold text-gray-900 mb-3">Các loại vé:</h3>
-                    <div className="space-y-3">
+                    {/* <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div>
@@ -421,7 +442,41 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
+
+                    {ticketList.map((ticket) => (
+                      <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 mb-3">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {ticket.name}:
+                            </p>
+                            <p className="text-sm font-bold text-orange-500">
+                              {ticket.price} VNĐ / người
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateTicketQuantity(ticket.id, -1)}
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors"
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center font-semibold">{ticket.count}</span>
+                            <button
+                              onClick={() => updateTicketQuantity(ticket.id, +1)}
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      </div>
+                    ))}
+
+
                   </div>
             
                   {service.additionalServices && service.additionalServices.length > 0 && (
