@@ -203,4 +203,51 @@ public class TravelService implements TravelServiceInterface {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while deleting the service");
         }
     };
+
+    public ResponseEntity<Object> searchServices(
+            String keyword,
+            String serviceType,
+            Long minPrice,
+            Long maxPrice,
+            Long minRating,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        try {
+            Sort sort = direction.equalsIgnoreCase("desc") ?
+                    Sort.by(sortBy).descending() :
+                    Sort.by(sortBy).ascending();
+
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            ServiceType serviceTypeEnum = null;
+            if (serviceType != null && !serviceType.isEmpty()) {
+                serviceTypeEnum = ServiceType.valueOf(serviceType);
+            }
+
+            Page<TService> servicesPage = serviceRepo.searchServices(
+                    keyword,
+                    serviceTypeEnum,
+                    minPrice,
+                    maxPrice,
+                    minRating,
+                    pageable
+            );
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("services", servicesPage.getContent());
+            response.put("currentPage", servicesPage.getNumber());
+            response.put("totalItems", servicesPage.getTotalElements());
+            response.put("totalPages", servicesPage.getTotalPages());
+            response.put("pageSize", servicesPage.getSize());
+            response.put("sortBy", sortBy);
+            response.put("direction", direction);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while searching services: " + e.getMessage());
+        }
+    }
 }

@@ -21,7 +21,7 @@ public class Room {
     private RoomType type;
 
     @Column(precision = 15, scale = 2)
-    private BigDecimal basePrice;
+    private BigDecimal price;
 
     private int quantity;
     private String name;

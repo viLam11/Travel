@@ -19,7 +19,7 @@ public class OrderedTicket {
     @JoinColumn(name ="ticket_id")
     private Ticket ticket;
 
-    private BigDecimal amount;
+    private int amount;
     private BigDecimal price;
     private LocalDateTime validStart;
     private LocalDateTime validEnd;

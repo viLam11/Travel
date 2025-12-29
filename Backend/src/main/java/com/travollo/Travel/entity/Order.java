@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,11 +20,11 @@ public class Order {
     private LocalDateTime createdAt;
     private String status; // e.g., "PENDING", "CONFIRMED", "CANCELLED"
 
-    private double totalPrice;
-    private double discountPrice;
+    private BigDecimal totalPrice;
+    private BigDecimal discountPrice;
 
-    private double finalPrice;
-    private double deposit;
+    private BigDecimal finalPrice;
+    private BigDecimal deposit;
 
     private String guestPhone;
     private String note;

@@ -20,7 +20,7 @@ public class OrderedRoom {
     @JoinColumn(name = "room_id")
     private Room room;
 
-    private BigDecimal amount;
+    private Integer amount;
     private BigDecimal price;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
