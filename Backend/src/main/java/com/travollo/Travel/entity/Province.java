@@ -29,14 +29,6 @@ public class Province {
     @JoinColumn(name = "administrative_region_id")
     private AdministrativeRegion administrativeRegion;
 
-    @jakarta.persistence.Transient
+    @Column(name = "image_url", length = 500)
     private String imageUrl;
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
 }

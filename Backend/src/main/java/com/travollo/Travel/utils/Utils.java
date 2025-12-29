@@ -53,6 +53,10 @@ public class Utils {
         userDTO.setFullname(user.getFullname());
         userDTO.setPhone(user.getPhone());
         userDTO.setAddress(user.getAddress());
+        userDTO.setDateOfBirth(user.getDateOfBirth());
+        userDTO.setGender(user.getGender());
+        userDTO.setCity(user.getCity());
+        userDTO.setCountry(user.getCountry());
         userDTO.setRole(user.getRole());
 
         return userDTO;
@@ -68,6 +72,10 @@ public class Utils {
         userDTO.setFullname(user.getFullname());
         userDTO.setPhone(user.getPhone());
         userDTO.setAddress(user.getAddress());
+        userDTO.setDateOfBirth(user.getDateOfBirth());
+        userDTO.setGender(user.getGender());
+        userDTO.setCity(user.getCity());
+        userDTO.setCountry(user.getCountry());
         userDTO.setRole(user.getRole());
 
         return userDTO;

@@ -68,12 +68,13 @@ public class ServiceController {
             @RequestParam(value = "serviceType", required = false) String serviceType,
             @RequestParam(value = "minPrice", required = false) Long minPrice,
             @RequestParam(value = "maxPrice", required = false) Long maxPrice,
+            @RequestParam(value = "minRating", required = false) Double minRating,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestParam(value = "sortBy", defaultValue = "id") String sortBy,
             @RequestParam(value = "direction", defaultValue = "asc") String direction
     ) {
-        return travelService.searchServices(keyword, serviceType, minPrice, maxPrice, page, size, sortBy, direction);
+        return travelService.searchServices(keyword, serviceType, minPrice, maxPrice, minRating, page, size, sortBy, direction);
     }
 
     @GetMapping("/{serviceID}")

@@ -265,6 +265,18 @@ public class UserService implements UserInterface {
             if (user.getAddress() != null) {
                 existingUser.setAddress(user.getAddress());
             }
+            if (user.getDateOfBirth() != null) {
+                existingUser.setDateOfBirth(user.getDateOfBirth());
+            }
+            if (user.getGender() != null) {
+                existingUser.setGender(user.getGender());
+            }
+            if (user.getCity() != null) {
+                existingUser.setCity(user.getCity());
+            }
+            if (user.getCountry() != null) {
+                existingUser.setCountry(user.getCountry());
+            }
             
             // Save updated user
             User updatedUser = theUserRepo.save(existingUser);

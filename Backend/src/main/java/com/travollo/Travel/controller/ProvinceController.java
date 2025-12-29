@@ -16,9 +16,6 @@ public class ProvinceController {
     @Autowired
     private ProvinceRepo provinceRepo;
 
-    @Autowired
-    private com.travollo.Travel.repo.ServiceRepo serviceRepo;
-
     @GetMapping("/search")
     public ResponseEntity<List<Province>> searchProvinces(@RequestParam("query") String query) {
         List<Province> provinces = provinceRepo.findByNameContainingIgnoreCase(query);
@@ -27,25 +24,7 @@ public class ProvinceController {
 
     @GetMapping("/region/{regionName}")
     public ResponseEntity<List<Province>> getProvincesByRegion(@PathVariable String regionName) {
-        // regionName expected: 'north', 'central', 'south'
         List<Province> provinces = provinceRepo.findByMacroRegion(regionName);
-        
-        // Populate images for each province from available services
-        for (Province p : provinces) {
-            try {
-                com.travollo.Travel.entity.TService service = serviceRepo.findFirstByProvinceCodeAndThumbnailUrlNotNull(p.getCode());
-                if (service != null && service.getThumbnailUrl() != null) {
-                    p.setImageUrl(service.getThumbnailUrl());
-                } else {
-                     // Placeholder if no service image found
-                    p.setImageUrl("https://images.unsplash.com/photo-1504198458649-3128b932f49e?w=800&q=80");
-                }
-            } catch (Exception e) {
-                // Fallback on error
-                p.setImageUrl("https://images.unsplash.com/photo-1504198458649-3128b932f49e?w=800&q=80");
-            }
-        }
-        
         return ResponseEntity.ok(provinces);
     }
 

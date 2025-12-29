@@ -113,11 +113,12 @@ const ServiceDetailPage: React.FC = () => {
     }
 
     // Validate region-destination mapping
-    const destInfo = getDestinationInfo(destination);
-    if (!destInfo || destInfo.region !== region) {
-      navigate('/homepage');
-      return;
-    }
+    // Temporarily disabled to allow navigation with placeholder destinations
+    // const destInfo = getDestinationInfo(destination);
+    // if (!destInfo || destInfo.region !== region) {
+    //   navigate('/homepage');
+    //   return;
+    // }
 
     const id = extractId(idSlug);
     dispatch(loadServiceDetail({ destination, serviceType, id }));
@@ -507,9 +508,8 @@ const ServiceDetailPage: React.FC = () => {
                 className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-500 transition-colors"
               >
                 <Heart
-                  className={`w-4 h-4 ${
-                    isFavorite ? "fill-orange-500 text-orange-500" : ""
-                  }`}
+                  className={`w-4 h-4 ${isFavorite ? "fill-orange-500 text-orange-500" : ""
+                    }`}
                 />
                 Thêm vào danh sách yêu thích
               </button>
@@ -533,11 +533,10 @@ const ServiceDetailPage: React.FC = () => {
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                      currentImageIndex === idx
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx
                         ? "border-orange-500 ring-2 ring-orange-200"
                         : "border-gray-200 hover:border-orange-300"
-                    }`}
+                      }`}
                   >
                     <img
                       src={thumb}
@@ -587,11 +586,10 @@ const ServiceDetailPage: React.FC = () => {
               <div className="flex gap-6 sm:gap-8">
                 <button
                   onClick={() => setActiveTab("info")}
-                  className={`pb-3 font-semibold transition-colors relative ${
-                    activeTab === "info"
+                  className={`pb-3 font-semibold transition-colors relative ${activeTab === "info"
                       ? "text-gray-900"
                       : "text-gray-500 hover:text-gray-700"
-                  }`}
+                    }`}
                 >
                   Thông tin
                   {activeTab === "info" && (
@@ -600,11 +598,10 @@ const ServiceDetailPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab("reviews")}
-                  className={`pb-3 font-semibold transition-colors relative ${
-                    activeTab === "reviews"
+                  className={`pb-3 font-semibold transition-colors relative ${activeTab === "reviews"
                       ? "text-gray-900"
                       : "text-gray-500 hover:text-gray-700"
-                  }`}
+                    }`}
                 >
                   Đánh giá
                   {activeTab === "reviews" && (
@@ -655,11 +652,10 @@ const ServiceDetailPage: React.FC = () => {
                         <button
                           key={month}
                           onClick={() => setSelectedMonth(monthKeys[idx])}
-                          className={`py-3 text-xs sm:text-sm font-medium transition-colors ${
-                            selectedMonth === monthKeys[idx]
+                          className={`py-3 text-xs sm:text-sm font-medium transition-colors ${selectedMonth === monthKeys[idx]
                               ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500"
                               : "text-gray-600 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           {month}
                         </button>
@@ -684,11 +680,10 @@ const ServiceDetailPage: React.FC = () => {
                             {day ? (
                               <button
                                 disabled={!day.available}
-                                className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all ${
-                                  day.available
+                                className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all ${day.available
                                     ? "bg-gray-50 hover:bg-orange-100 text-orange-600 font-medium cursor-pointer"
                                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                }`}
+                                  }`}
                               >
                                 <span>{day.day}</span>
                                 {day.price && (

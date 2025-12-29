@@ -20,18 +20,18 @@ interface DestinationCardProps {
   onClick?: () => void;
 }
 
-const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,onClick }) => {
+const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook, onClick }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const navigate = useNavigate();
   // Removed duplicate onBook function declaration.
   // Use the onBook prop passed to the component instead.
-  const { 
-    ref, 
-    imageLoaded, 
+  const {
+    ref,
+    imageLoaded,
     hasError,
     currentSrc,
     setImageLoaded,
-    setHasError 
+    setHasError
   } = useLazyImage<HTMLDivElement>(destination.image, {
     rootMargin: '150px',
     once: true,
@@ -47,14 +47,14 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
 
   return (
     <div
-    onClick={onClick} 
-    className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 p-5">
-      
+      onClick={onClick}
+      className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 p-5">
+
       {/* Card Layout: Image Left, Content Middle, Price Right */}
       <div className="flex flex-col sm:flex-row gap-5">
-        
+
         {/* LEFT: Image Section */}
-        <div 
+        <div
           ref={ref}
           className="w-full sm:w-[280px] h-48 sm:h-[200px] flex-shrink-0 relative overflow-hidden bg-gray-200 rounded-xl"
         >
@@ -93,7 +93,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
               `}
             />
           )}
-          
+
           {/* Discount Badge */}
           {destination.discount && (
             <div className="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-md shadow-md">
@@ -107,7 +107,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
           {/* Location */}
           <div className="mb-3">
             <p className="text-sm text-gray-600 mb-2">{destination.location}</p>
-            
+
             {/* Title */}
             <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2 leading-snug">
               {destination.title}
@@ -150,7 +150,10 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook,o
 
           {/* Book Button */}
           <button
-            onClick={() => onBook(destination.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook(destination.id);
+            }}
             className="w-full bg-white hover:bg-orange-500 text-orange-500 hover:text-white border-2 border-orange-500 px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
           >
             ĐẶT NGAY

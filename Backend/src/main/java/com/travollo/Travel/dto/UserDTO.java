@@ -13,7 +13,12 @@ public class UserDTO {
     private String email;
     private String fullname;
     private String phone;
+
     private String address;
+    private String dateOfBirth;
+    private String gender;
+    private String city;
+    private String country;
     private Role role;
 
     private List<Order> orderList;

@@ -205,7 +205,7 @@ public class TravelService implements TravelServiceInterface {
     };
 
     @Override
-    public ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, int page, int size, String sortBy, String direction) {
+    public ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, Double minRating, int page, int size, String sortBy, String direction) {
         try {
             Sort sort = direction.equalsIgnoreCase("desc") ?
                     Sort.by(sortBy).descending() :
@@ -222,7 +222,7 @@ public class TravelService implements TravelServiceInterface {
                 }
             }
 
-            Page<TService> servicesPage = serviceRepo.searchServices(keyword, typeEnum, minPrice, maxPrice, pageable);
+            Page<TService> servicesPage = serviceRepo.searchServices(keyword, typeEnum, minPrice, maxPrice, minRating, pageable);
 
             Map<String, Object> response = new HashMap<>();
             response.put("services", servicesPage.getContent());

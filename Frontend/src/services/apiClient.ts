@@ -175,12 +175,25 @@ export class ApiClient {
       serviceType?: string;
       minPrice?: number;
       maxPrice?: number;
+      minRating?: number;
       page?: number;
       size?: number;
       sortBy?: string;
       direction?: string;
     }): ApiResponse<any> => {
-      return this.get('/services/search', { params });
+      // Create query params
+      const queryParams = new URLSearchParams();
+      if (params.keyword) queryParams.append('keyword', params.keyword);
+      if (params.serviceType) queryParams.append('serviceType', params.serviceType);
+      if (params.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
+      if (params.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
+      if (params.minRating !== undefined) queryParams.append('minRating', params.minRating.toString());
+      queryParams.append('page', (params.page || 0).toString());
+      queryParams.append('size', (params.size || 10).toString());
+      queryParams.append('sortBy', params.sortBy || 'id');
+      queryParams.append('direction', params.direction || 'asc');
+
+      return this.get(`/services/search?${queryParams.toString()}`);
     }
   };
 
@@ -283,7 +296,7 @@ export class ApiClient {
       return this.get(`/users/${userID}`);
     },
 
-    update: (userID: number, data: { fullname?: string; phone?: string; address?: string }): ApiResponse<any> => {
+    update: (userID: number, data: { fullname?: string; phone?: string; address?: string; dateOfBirth?: string; gender?: string; city?: string; country?: string }): ApiResponse<any> => {
       return this.put(`/users/${userID}`, data);
     }
   };
@@ -436,6 +449,11 @@ export class ApiClient {
    * Handle rate limit headers from response
    */
   private handleRateLimit(response: AxiosResponse): void {
+    // Safety check: response might be undefined if API call failed
+    if (!response || !response.headers) {
+      return;
+    }
+
     const limit = response.headers["x-ratelimit-limit"];
     const remaining = response.headers["x-ratelimit-remaining"];
     const reset = response.headers["x-ratelimit-reset"];
@@ -456,9 +474,13 @@ export class ApiClient {
   }
 
   public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await api.get<T>(url, config);
-    this.handleRateLimit(response);
-    return response.data;
+    try {
+      const response = await api.get<T>(url, config);
+      this.handleRateLimit(response);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   public async post<T>(

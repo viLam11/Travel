@@ -33,7 +33,12 @@ public class User {
     private String password;
     private String fullname;
     private String phone;
+
     private String address;
+    private String dateOfBirth;
+    private String gender;
+    private String city;
+    private String country;
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('USER', 'ADMIN', 'PROVIDER')")
     private Role role;

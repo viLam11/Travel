@@ -1,22 +1,27 @@
 // src/components/page/destinationFilter/FilterSidebar.tsx
 import React, { useState } from 'react';
-import { X, ChevronUp, ChevronDown, Star, TrendingUp } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Star, TrendingUp, MapPin } from 'lucide-react';
 import { SORT_OPTIONS, type SortValue } from '@/constants/regions';
+import LocationSelector from '@/components/common/LocationSelector';
 
 interface FilterSidebarProps {
   isMobileOpen: boolean;
   onClose: () => void;
-  
+
+  // Location
+  selectedLocation?: string;
+  onLocationChange?: (code: string, name: string) => void;
+
   // Price filter
   priceRange: [number, number];
   onPriceChange: (range: [number, number]) => void;
   minPrice?: number;
   maxPrice?: number;
-  
+
   // Sort
   sortBy: SortValue;
   onSortChange: (sort: SortValue) => void;
-  
+
   // Rating filter
   minRating: number;
   onRatingChange: (rating: number) => void;
@@ -25,6 +30,8 @@ interface FilterSidebarProps {
 const FilterSidebar: React.FC<FilterSidebarProps> = ({
   isMobileOpen,
   onClose,
+  selectedLocation,
+  onLocationChange,
   priceRange,
   onPriceChange,
   minPrice = 0,
@@ -37,7 +44,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   const [isPriceExpanded, setIsPriceExpanded] = useState(true);
   const [isSortExpanded, setIsSortExpanded] = useState(true);
   const [isRatingExpanded, setIsRatingExpanded] = useState(true);
-  
+  const [isLocationExpanded, setIsLocationExpanded] = useState(true);
+
   // Local state cho input fields
   const [minInput, setMinInput] = useState(priceRange[0].toString());
   const [maxInput, setMaxInput] = useState(priceRange[1].toString());
@@ -45,10 +53,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   // Format currency VND
   const formatPrice = (price: number) => {
     if (price >= 1000000) {
-      return `${(price / 1000000).toFixed(1)}tr`;
+      return `${(price / 1000000).toFixed(1)} tr`;
     }
     if (price >= 1000) {
-      return `${(price / 1000).toFixed(0)}k`;
+      return `${(price / 1000).toFixed(0)} k`;
     }
     return price.toString();
   };
@@ -56,10 +64,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   // Handle slider change
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'min' | 'max') => {
     const value = parseInt(e.target.value);
-    const newRange: [number, number] = type === 'min' 
+    const newRange: [number, number] = type === 'min'
       ? [value, Math.max(value, priceRange[1])]
       : [Math.min(value, priceRange[0]), value];
-    
+
     onPriceChange(newRange);
     setMinInput(newRange[0].toString());
     setMaxInput(newRange[1].toString());
@@ -78,11 +86,11 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   const handleInputBlur = (type: 'min' | 'max') => {
     const value = parseInt(type === 'min' ? minInput : maxInput) || 0;
     const clampedValue = Math.max(minPrice, Math.min(maxPrice, value));
-    
+
     const newRange: [number, number] = type === 'min'
       ? [clampedValue, Math.max(clampedValue, priceRange[1])]
       : [Math.min(clampedValue, priceRange[0]), clampedValue];
-    
+
     onPriceChange(newRange);
     setMinInput(newRange[0].toString());
     setMaxInput(newRange[1].toString());
@@ -108,6 +116,36 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         )}
       </div>
 
+      {/* LOCATION SELECTOR */}
+      <div className="border-b border-gray-200 pb-6">
+        <button
+          onClick={() => setIsLocationExpanded(!isLocationExpanded)}
+          className="flex items-center justify-between w-full mb-4"
+        >
+          <span className="font-semibold text-gray-900 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-orange-500" />
+            Địa điểm
+          </span>
+          {isLocationExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+
+        {isLocationExpanded && (
+          <div className="space-y-4">
+            <LocationSelector
+              selectedCode={selectedLocation}
+              onSelect={(code, name) => onLocationChange?.(code, name)}
+              placeholder="Chọn tỉnh/thành phố"
+              showIcon={false}
+              selectClassName="bg-gray-50 border-2 border-transparent hover:border-gray-300 text-gray-900 cursor-pointer"
+            />
+          </div>
+        )}
+      </div>
+
       {/* SORT BY */}
       <div className="border-b border-gray-200 pb-6">
         <button
@@ -130,11 +168,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             {SORT_OPTIONS.map((option) => (
               <label
                 key={option.value}
-                className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                  sortBy === option.value
-                    ? 'bg-orange-50 border-2 border-orange-500'
-                    : 'bg-gray-50 border-2 border-transparent hover:border-gray-300'
-                }`}
+                className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${sortBy === option.value
+                  ? 'bg-orange-50 border-2 border-orange-500'
+                  : 'bg-gray-50 border-2 border-transparent hover:border-gray-300'
+                  } `}
               >
                 <input
                   type="radio"
@@ -182,7 +219,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
               </span>
               <span className="text-gray-400">—</span>
               <span className="text-gray-600">
-                {priceRange[1] >= maxPrice ? `${formatPrice(maxPrice)}+ VND` : `${formatPrice(priceRange[1])} VND`}
+                {priceRange[1] >= maxPrice ? `${formatPrice(maxPrice)} + VND` : `${formatPrice(priceRange[1])} VND`}
               </span>
             </div>
 
@@ -190,13 +227,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             <div className="relative pt-2 pb-4">
               {/* Background track */}
               <div className="absolute h-2 w-full bg-gray-200 rounded-full" style={{ top: '50%', transform: 'translateY(-50%)' }} />
-              
+
               {/* Active track */}
-              <div 
+              <div
                 className="absolute h-2 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full"
                 style={{
-                  left: `${(priceRange[0] / maxPrice) * 100}%`,
-                  right: `${100 - (priceRange[1] / maxPrice) * 100}%`,
+                  left: `${(priceRange[0] / maxPrice) * 100}% `,
+                  right: `${100 - (priceRange[1] / maxPrice) * 100}% `,
                   top: '50%',
                   transform: 'translateY(-50%)'
                 }}
@@ -278,11 +315,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             {[5, 4, 3, 2, 1].map((rating) => (
               <label
                 key={rating}
-                className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                  minRating === rating
-                    ? 'bg-orange-50 border-2 border-orange-500'
-                    : 'bg-gray-50 border-2 border-transparent hover:border-gray-300'
-                }`}
+                className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${minRating === rating
+                  ? 'bg-orange-50 border-2 border-orange-500'
+                  : 'bg-gray-50 border-2 border-transparent hover:border-gray-300'
+                  } `}
               >
                 <input
                   type="radio"
@@ -296,9 +332,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                       key={i}
-                      className={`w-4 h-4 ${
-                        i < rating ? 'text-orange-400 fill-orange-400' : 'text-gray-300'
-                      }`}
+                      className={`w-4 h-4 ${i < rating ? 'text-orange-400 fill-orange-400' : 'text-gray-300'
+                        } `}
                     />
                   ))}
                   <span className="ml-2 text-sm text-gray-600">trở lên</span>
