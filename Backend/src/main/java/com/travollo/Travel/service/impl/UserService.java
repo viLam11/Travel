@@ -2,7 +2,10 @@ package com.travollo.Travel.service.impl;
 
 import com.travollo.Travel.dto.LoginResponseDTO;
 import com.travollo.Travel.dto.UserDTO;
+<<<<<<< HEAD
 import com.travollo.Travel.dto.ErrorResponse;
+=======
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.entity.Order;
 import com.travollo.Travel.entity.User;
@@ -60,10 +63,13 @@ public class UserService implements UserInterface {
                 throw new CustomException(HttpStatus.BAD_REQUEST, "Email is already in use");
             }
 
+<<<<<<< HEAD
             if (theUserRepo.existsByUsername(userCredentials.getUsername())) {
                 throw new CustomException(HttpStatus.BAD_REQUEST, "Username is already in use");
             }
 
+=======
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
             userCredentials.setPassword(thePasswordEncoder.encode(userCredentials.getPassword()));
             userCredentials.setVerificationCode(generateVerificationCode());
             userCredentials.setExpiredAt(java.time.LocalDateTime.now().plusHours(1));
@@ -78,10 +84,16 @@ public class UserService implements UserInterface {
                         .body(userDTO);
 
         } catch(CustomException e) {
+<<<<<<< HEAD
             ErrorResponse errorResponse = new ErrorResponse(e.getStatus().value(), e.getMessage());
             response = ResponseEntity
                         .status(e.getStatus())
                         .body(errorResponse);
+=======
+            response = ResponseEntity
+                        .status(e.getStatus())
+                        .body(e.getMessage());
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
         }
 
         catch (Exception e) {
@@ -97,6 +109,7 @@ public class UserService implements UserInterface {
 
         try {
             theAuthenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+<<<<<<< HEAD
             User user;
             if (email.contains("@")) {
                 user = theUserRepo.findByEmail(email)
@@ -105,6 +118,10 @@ public class UserService implements UserInterface {
                  user = theUserRepo.findByUsername(email)
                         .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
             }
+=======
+            var user = theUserRepo.findByEmail(email)
+                   .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 
             if (!user.isEnabled()) {
                 throw new RuntimeException("Account not verified. Please verify your account.");
@@ -129,6 +146,24 @@ public class UserService implements UserInterface {
         return  response;
     };
 
+<<<<<<< HEAD
+=======
+    public void resendVerificationCode(String email) {
+        Optional<User> optionalUser = theUserRepo.findByEmail(email);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            if (user.isEnabled()) {
+                throw new RuntimeException("Account is already verified");
+            }
+            user.setVerificationCode(generateVerificationCode());
+            user.setExpiredAt(LocalDateTime.now().plusHours(1));
+            sendVerificationEmail(user);
+            theUserRepo.save(user);
+        } else {
+            throw new RuntimeException("User not found");
+        }
+    }
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 
     private void sendVerificationEmail(User user) { //TODO: Update with company logo
         String subject = "Account Verification";
@@ -161,6 +196,7 @@ public class UserService implements UserInterface {
 
     @Override
     public ResponseEntity<Object> verifyUser(VerifyDTO verifyDTO) {
+<<<<<<< HEAD
         try {
             Optional<User> optionalUser = theUserRepo.findByEmail(verifyDTO.getEmail());
             if (!optionalUser.isPresent()) {
@@ -197,6 +233,27 @@ public class UserService implements UserInterface {
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse(500, "Verification failed: " + e.getMessage()));
         }
+=======
+        ResponseEntity<Object> response = null;
+        Optional<User> optionalUser = theUserRepo.findByEmail(verifyDTO.getEmail());
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            if (user.getExpiredAt().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("Verification code has expired");
+            }
+            if (verifyDTO.getVerificationCode().equals(user.getVerificationCode())) {
+                user.setEnabled(true);
+                user.setVerificationCode(null);
+                user.setExpiredAt(null);
+                theUserRepo.save(user);
+            } else {
+                response = ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid verification code");
+            }
+        } else {
+            response = ResponseEntity.status(HttpStatus.OK).body("User not found");
+        }
+        return response;
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
     };
 
     @Override
@@ -218,7 +275,11 @@ public class UserService implements UserInterface {
         try {
             List<User> users = theUserRepo.findAll();
             List<UserDTO> userDTOs = users.stream().map(Utils::mapUserEntityToDTO).toList();
+<<<<<<< HEAD
             response = ResponseEntity   
+=======
+            response = ResponseEntity
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
                     .status(HttpStatus.OK)
                     .body(userDTOs);
             return response;
@@ -229,6 +290,7 @@ public class UserService implements UserInterface {
 
     @Override
     public ResponseEntity<UserDTO> getUserById(Long userID){
+<<<<<<< HEAD
         try {
             User user = theUserRepo.findById(userID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
@@ -242,6 +304,9 @@ public class UserService implements UserInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error fetching user: " + e.getMessage());
         }
+=======
+        return null;
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
     };
 
     @Override
@@ -251,6 +316,7 @@ public class UserService implements UserInterface {
 
     @Override
     public ResponseEntity<Object> updateUser(Long userID, User user){
+<<<<<<< HEAD
         try {
             User existingUser = theUserRepo.findById(userID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
@@ -483,3 +549,11 @@ public class UserService implements UserInterface {
 
 }
 
+=======
+        return null;
+    };
+
+
+
+}
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e

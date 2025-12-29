@@ -3,6 +3,7 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
+<<<<<<< HEAD
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -16,4 +17,8 @@
       <module name="Travel" options="-parameters" />
     </option>
   </component>
+=======
+    </annotationProcessing>
+  </component>
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 </project>

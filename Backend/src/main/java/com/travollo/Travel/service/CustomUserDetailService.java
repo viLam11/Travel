@@ -16,6 +16,7 @@ public class CustomUserDetailService implements UserDetailsService {
     private UserRepo theUserRepo;
 
     @Override
+<<<<<<< HEAD
     public UserDetails loadUserByUsername(String usernameOrEmail) {
         User foundUser;
         if (usernameOrEmail.contains("@")) {
@@ -25,6 +26,12 @@ public class CustomUserDetailService implements UserDetailsService {
             foundUser = theUserRepo.findByUsername(usernameOrEmail)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Username not found"));
         }
+=======
+    public UserDetails loadUserByUsername(String email) {
+        System.out.println("Email: " + email);
+        User foundUser = theUserRepo.findByEmail(email)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "email not exists"));
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
         return Utils.mapUserEntityToUserDetails(foundUser);
     }
 }
