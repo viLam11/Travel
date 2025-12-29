@@ -9,8 +9,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.travollo.Travel.config.MomoConfig;
+import com.travollo.Travel.dto.momo.MomoCallbackDTO;
+import com.travollo.Travel.service.impl.OrderService;
 import com.travollo.Travel.utils.MomoEncoderUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -20,12 +23,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -34,6 +33,9 @@ public class MomoPayController {
 
     @Autowired
     MomoConfig momoConfig;
+
+    @Autowired
+    private OrderService orderService;
 
     @GetMapping(value = "/test")
     public String test() {
@@ -155,6 +157,23 @@ public class MomoPayController {
         kq.put("requestType", result.get("requestType"));
         kq.put("signature", result.get("signature"));
         return kq;
+    }
+
+    @GetMapping("/callback")
+    public void callback(@ModelAttribute MomoCallbackDTO callbackDto, HttpServletResponse response) throws IOException {
+
+        String orderId = callbackDto.getOrderId();
+        int resultCode = callbackDto.getResultCode();
+
+        System.out.println("Momo Callback for Order: " + orderId + " | ResultCode: " + resultCode);
+
+        if (resultCode == 0) {
+            orderService.updateOrderStatus(orderId, "SUCCESS");
+            response.sendRedirect("http://localhost:3000/payment-success");
+        } else {
+            orderService.updateOrderStatus(orderId, "FAILED");
+            response.sendRedirect("http://localhost:3000/payment-failed");
+        }
     }
 
 }

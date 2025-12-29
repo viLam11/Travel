@@ -227,6 +227,10 @@ public class TravelService implements TravelServiceInterface {
                 serviceTypeEnum = ServiceType.valueOf(serviceType);
             }
 
+            String searchKeyword = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
+            Long searchMinPrice = (minPrice == null) ? 0L : minPrice;
+            Long searchMaxPrice = (maxPrice == null) ? Long.MAX_VALUE : maxPrice;
+
             Page<TService> servicesPage = serviceRepo.searchServices(
                     keyword,
                     serviceTypeEnum,

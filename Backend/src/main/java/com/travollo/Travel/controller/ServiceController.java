@@ -126,14 +126,14 @@ public class ServiceController {
 
     @GetMapping("/search")
     public ResponseEntity<Object> searchServicesInProvince(
-            @RequestParam("provinceCode") String provinceCode,
+            @RequestParam(value = "provinceCode", required = false) String provinceCode,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "serviceType", required = false) String serviceType,
             @RequestParam(value = "minPrice", required = false) Long minPrice,
             @RequestParam(value = "maxPrice", required = false) Long maxPrice,
             @RequestParam(value = "minRating", required = false) Long minRating,
-            @RequestParam(value = "maxRating", required = false) String sortBy,
-            @RequestParam(value = "direction", required = false) String direction,
+            @RequestParam(value = "maxRating", defaultValue = "id") String sortBy,
+            @RequestParam(value = "direction", defaultValue = "asc") String direction,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "10") int size
     ) {

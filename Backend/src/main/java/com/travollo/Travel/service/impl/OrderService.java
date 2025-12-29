@@ -1,12 +1,18 @@
 package com.travollo.Travel.service.impl;
 
+import com.travollo.Travel.dto.SuccessResponse;
 import com.travollo.Travel.dto.order.CreateOrder;
 import com.travollo.Travel.dto.order.OrderItem;
 import com.travollo.Travel.entity.*;
+import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.RoomRepo;
 import com.travollo.Travel.repo.TicketRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -115,5 +121,37 @@ public class OrderService {
             return ResponseEntity.status(500).body("Error creating order: " + e.getMessage());
         }
     }
+    public ResponseEntity<Object> updateOrderStatus(String orderID, String status) {
+        System.out.println("ORDER ID: " + orderID);
+        Order order = orderRepo.findById(orderID)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not exist"));
+        String normalizedStatus = status.toUpperCase();
+
+        if (!normalizedStatus.equals("SUCCESS") && !normalizedStatus.equals("FAILED")) {
+            throw new CustomException(HttpStatus.BAD_REQUEST,
+                    "Dữ liệu không hợp lệ! Status chỉ được phép là 'SUCCESS' hoặc 'FAILED'.");
+        }
+        if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST,
+                    "Không thể cập nhật! Đơn hàng đã kết thúc với trạng thái: " + order.getStatus());
+        }
+        order.setStatus(normalizedStatus);
+        orderRepo.save(order);
+        return ResponseEntity.ok(new SuccessResponse(status + "order"));
+    }
+
+    public ResponseEntity<Object> getAllOrderByUser(User user, int page, int size){
+        try {
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            Page<Order> orderPage = orderRepo.findByUser(user, pageable);
+            if (orderPage.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(orderPage);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }

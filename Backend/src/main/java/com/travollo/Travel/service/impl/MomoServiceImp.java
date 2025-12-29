@@ -1,6 +1,6 @@
 package com.travollo.Travel.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper; // Import thư viện Jackson
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travollo.Travel.config.MomoConfig;
 import com.travollo.Travel.service.interfac.MomoServiceInterface;
 import com.travollo.Travel.utils.MomoEncoderUtils;
@@ -46,8 +46,6 @@ public class MomoServiceImp implements MomoServiceInterface {
         json.put("requestType", "captureMoMoWallet");
         json.put("extraData", "");
 
-        // Chuỗi data signature chuẩn
-        // SỬA LẠI ĐÚNG THỨ TỰ VÀ TÊN TRƯỜNG NHƯ LOG BÁO LỖI
         String data = "partnerCode=" + partnerCode
                 + "&accessKey=" + accessKey
                 + "&requestId=" + requestId
@@ -56,8 +54,7 @@ public class MomoServiceImp implements MomoServiceInterface {
                 + "&orderInfo=" + orderInfo
                 + "&returnUrl=" + returnUrl
                 + "&notifyUrl=" + notifyUrl
-                + "&extraData="; // Lưu ý: extraData rỗng thì không cộng gì thêm sau dấu bằng
-
+                + "&extraData=";
         String hashData = MomoEncoderUtils.signHmacSHA256(data, secretKey);
         json.put("signature", hashData);
 
@@ -89,7 +86,6 @@ public class MomoServiceImp implements MomoServiceInterface {
         return sendMomoRequest(json, momoConfig.CREATE_ORDER_URL);
     }
 
-    // --- ĐÂY LÀ PHẦN SỬA LỖI QUAN TRỌNG ---
     private Map<String, Object> sendMomoRequest(JSONObject json, String url) throws Exception {
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPost post = new HttpPost(url);
@@ -105,21 +101,7 @@ public class MomoServiceImp implements MomoServiceInterface {
             resultJsonStr.append(line);
         }
 
-        // CÁCH CŨ GÂY LỖI: Dùng org.json.JSONObject để parse -> trả về JSONArray -> Jackson không hiểu
-        /*
-        JSONObject result = new JSONObject(resultJsonStr.toString());
-        Map<String, Object> map = new HashMap<>();
-        Iterator<String> keys = result.keys();
-        while(keys.hasNext()) {
-            String key = keys.next();
-            map.put(key, result.get(key)); // <--- LỖI TẠI ĐÂY NẾU VALUE LÀ JSON ARRAY
-        }
-        return map;
-        */
-
-        // CÁCH MỚI (FIX): Dùng Jackson ObjectMapper parse thẳng String ra Map chuẩn Java
         ObjectMapper mapper = new ObjectMapper();
-        // Jackson sẽ tự động chuyển Array thành List, Object thành Map -> An toàn tuyệt đối
         Map<String, Object> map = mapper.readValue(resultJsonStr.toString(), Map.class);
 
         return map;
