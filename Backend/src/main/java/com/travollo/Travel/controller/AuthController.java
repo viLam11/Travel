@@ -49,7 +49,6 @@ public class AuthController {
         return userService.verifyUser(input);
     }
 
-<<<<<<< HEAD
     @PostMapping("/resend-otp")
     public ResponseEntity<Object> resendOTP(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -75,9 +74,6 @@ public class AuthController {
 
     @GetMapping("/login/google")
 
-=======
-    @GetMapping("/login/google")
->>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
     public void loginGoogleAuth(HttpServletResponse response) throws IOException {
          response.sendRedirect("/oauth2/authorization/google");
     }

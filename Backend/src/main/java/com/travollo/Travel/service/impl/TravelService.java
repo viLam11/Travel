@@ -203,8 +203,6 @@ public class TravelService implements TravelServiceInterface {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while deleting the service");
         }
     };
-<<<<<<< HEAD
-
     @Override
     public ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, Double minRating, int page, int size, String sortBy, String direction) {
         try {
@@ -238,6 +236,4 @@ public class TravelService implements TravelServiceInterface {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while searching services: " + e.getMessage());
         }
     }
-=======
->>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 }

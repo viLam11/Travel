@@ -24,11 +24,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
         ErrorResponse error = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-<<<<<<< HEAD
                 ex.getMessage());
-=======
-                "Unexpected error: " + ex.getMessage());
->>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
