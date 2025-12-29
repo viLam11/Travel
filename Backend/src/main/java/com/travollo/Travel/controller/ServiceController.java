@@ -64,21 +64,21 @@ public class ServiceController {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving services with pagination");
         }
     }
-
-    @GetMapping("/search")
-    public ResponseEntity<Object> searchServices(
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "serviceType", required = false) String serviceType,
-            @RequestParam(value = "minPrice", required = false) Long minPrice,
-            @RequestParam(value = "maxPrice", required = false) Long maxPrice,
-            @RequestParam(value = "minRating", required = false) Double minRating,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestParam(value = "sortBy", defaultValue = "id") String sortBy,
-            @RequestParam(value = "direction", defaultValue = "asc") String direction
-    ) {
-        return travelService.searchServices(keyword, serviceType, minPrice, maxPrice, minRating, page, size, sortBy, direction);
-    }
+//
+//    @GetMapping("/search")
+//    public ResponseEntity<Object> searchServices(
+//            @RequestParam(value = "keyword", required = false) String keyword,
+//            @RequestParam(value = "serviceType", required = false) String serviceType,
+//            @RequestParam(value = "minPrice", required = false) Long minPrice,
+//            @RequestParam(value = "maxPrice", required = false) Long maxPrice,
+//            @RequestParam(value = "minRating", required = false) Long minRating,
+//            @RequestParam(value = "page", defaultValue = "0") int page,
+//            @RequestParam(value = "size", defaultValue = "10") int size,
+//            @RequestParam(value = "sortBy", defaultValue = "id") String sortBy,
+//            @RequestParam(value = "direction", defaultValue = "asc") String direction
+//    ) {
+//        return travelService.searchServices(keyword, serviceType, minPrice, maxPrice, minRating, page, size, sortBy, direction);
+//    }
 
     @GetMapping("/{serviceID}")
     ResponseEntity<Object> getServiceById(@PathVariable Long serviceID) {

@@ -19,5 +19,5 @@ public interface TravelServiceInterface {
                                          );
     ResponseEntity<Object> updateService(Long serviceID, TService updatedTService);
     ResponseEntity<Object> deleteService(Long serviceID);
-    ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, Double minRating, int page, int size, String sortBy, String direction);
+    ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, Long minRating, int page, int size, String sortBy, String direction);
 }
