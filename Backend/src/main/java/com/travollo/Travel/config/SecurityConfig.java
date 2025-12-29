@@ -57,7 +57,7 @@ public class SecurityConfig {
 //                .cors(Customizer.withDefaults())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/auth/**", "/users/**", "/api/momo/**", "/api/vnpay/**","/api/zalopay/**", "/test/**", "/swagger-ui.html", "/services/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
+                        .requestMatchers("/auth/**", "/users/**", "/api/momo/**", "/api/vnpay/**","/api/zalopay/**", "/test/**", "/swagger-ui.html", "/services/**", "/provinces/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated() )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/auth/login/google")
@@ -65,27 +65,55 @@ public class SecurityConfig {
                                     OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
                                     System.out.println("Authorities: " + token.getAuthorities());
                                     System.out.println("Attributes: " + token.getPrincipal().getAttributes());
+                                    
                                     String email = token.getPrincipal().getAttribute("email");
+                                    String givenName = token.getPrincipal().getAttribute("given_name");
+                                    String familyName = token.getPrincipal().getAttribute("family_name");
+                                    
                                     Optional<User> userOptional = userRepo.findByEmail(email);
+                                    
                                     if (userOptional.isEmpty()) {
+                                        // Case 1: User chưa tồn tại → Auto create new user
                                         User newUser = new User();
                                         newUser.setEmail(email);
-                                        newUser.setFullname(token.getPrincipal().getAttribute("given_name") + " " +token.getPrincipal().getAttribute("family_name")  );
+                                        newUser.setFullname((givenName != null ? givenName : "") + " " + (familyName != null ? familyName : ""));
                                         newUser.setRole(com.travollo.Travel.utils.Role.USER);
                                         newUser.setUsername(email.split("@")[0]);
                                         newUser.setAuthProvider(AuthType.GOOGLE);
+                                        newUser.setEnabled(true); // Google đã verify email rồi
                                         userRepo.save(newUser);
+                                        System.out.println("✅ Created new Google user: " + email);
+                                        
+                                    } else {
+                                        // Case 2: User đã tồn tại
+                                        User existingUser = userOptional.get();
+                                        
+                                        if (existingUser.getAuthProvider() == AuthType.LOCAL) {
+                                            // Case 2a: User đã đăng ký bằng LOCAL → Link accounts
+                                            existingUser.setAuthProvider(AuthType.GOOGLE);
+                                            existingUser.setEnabled(true); // Enable nếu chưa verify
+                                            userRepo.save(existingUser);
+                                            System.out.println("🔗 Linked Google account to existing LOCAL account: " + email);
+                                        }
+                                        // Case 2b: User đã login Google trước đó → OK, continue
                                     }
+                                    
+                                    // Generate JWT token
                                     Optional<User> optionalUser = userRepo.findByEmail(email);
                                     String jwt = "";
+                                    String role = "USER";
+                                    
                                     if (optionalUser.isPresent()) {
                                         User user = optionalUser.get();
                                         UserDetails userDetail = Utils.mapUserEntityToUserDetails(user);
                                         jwt = jwtUtils.generateToken(userDetail);
-                                        System.out.println("Generated JWT: " + jwt);
+                                        role = user.getRole().toString();
+                                        System.out.println("Generated JWT for user: " + email + " (Role: " + role + ")");
                                     }
-                                    String redirectUrl = "http://localhost:8080/test?jwt=" + jwt;
-                                    response.sendRedirect(redirectUrl);
+                                    
+                                    // Redirect to Frontend callback page with token
+                                    String frontendUrl = "http://localhost:3000/auth/google/callback?token=" + jwt + "&role=" + role;
+                                    response.sendRedirect(frontendUrl);
                                 })
                         .failureHandler((request, response, exception) -> {
                             System.out.println("OAuth2 login failed: " + exception.getMessage());

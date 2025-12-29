@@ -39,7 +39,7 @@ public class TService {
     private Long averagePrice;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('HOTEL', 'TICKET_VENUE')")
+    @Column(columnDefinition = "ENUM('HOTEL', 'RESTAURANT', 'TICKET_VENUE')")
     private ServiceType serviceType;
 
     @Column(name = "min_price", nullable = false)

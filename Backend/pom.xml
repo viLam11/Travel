@@ -30,6 +30,8 @@
 		<java.version>17</java.version>
         <kotlin.version>2.2.0</kotlin.version>
     </properties>
+<<<<<<< HEAD
+=======
 
     <dependencyManagement>
         <dependencies>
@@ -41,6 +43,7 @@
         </dependencies>
     </dependencyManagement>
 
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -83,7 +86,10 @@
             <version>0.12.6</version>
         </dependency>
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
@@ -116,7 +122,10 @@
             <version>3.0.2</version>
         </dependency>
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
         <dependency>
             <groupId>io.github.momo-wallet</groupId>
             <artifactId>momopayment</artifactId>
@@ -150,12 +159,29 @@
             <version>4.3.0</version>
         </dependency>
 
+<<<<<<< HEAD
+        <!-- https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>6.0.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+
+=======
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-launcher</artifactId>
             <scope>test</scope>
         </dependency>
 
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 <!--        <dependency>-->
 <!--            <groupId>javax.servlet</groupId>-->
 <!--            <artifactId>javax.servlet-api</artifactId>-->
@@ -173,6 +199,8 @@
 <!--    </repositories>-->
 
 
+<<<<<<< HEAD
+=======
 <!--    <build>-->
 <!--    <repositories>-->
 <!--        <repository>-->
@@ -182,6 +210,7 @@
 <!--    </repositories>-->
 
 
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
     <build>
 		<plugins>
 			<plugin>

@@ -25,7 +25,6 @@ const Homepage = lazy(() => import("@/pages/User/Homepage/Homepage"));
 const DestinationFilterPage = lazy(() => import("@/pages/User/DestinationFilter/DestinationFilterPage"));
 const DestinationDetailPage = lazy(() => import("@/pages/User/DestinationDetail/DestinationDetailPage"));
 const ServiceDetailPage = lazy(() => import("@/pages/User/ServiceDetail/ServiceDetailPage"));
-const ServicePage = lazy(() => import("@/pages/User/Service/ServicePage"));
 
 // User Profile Pages
 const UserProfilePage = lazy(() => import("@/pages/User/Profile/UserProfilePage"));
@@ -136,8 +135,7 @@ const routes: RouteObject[] = [
       // Example: /destinations/mien-trung/da-nang
       {
         path: 'destinations/:region/:destination',
-        // element: withSuspense(DestinationDetailPage as LazyExoticComponent<ComponentType<unknown>>),
-        element: withSuspense(ServicePage as LazyExoticComponent<ComponentType<unknown>>),
+        element: withSuspense(DestinationFilterPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
       // Filter by Service Type - List hotels/places trong 1 tỉnh

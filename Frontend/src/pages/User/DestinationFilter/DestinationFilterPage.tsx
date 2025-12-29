@@ -1,12 +1,12 @@
 // src/pages/DestinationsPage.tsx
 import React, { useState } from 'react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Footer from '../../../components/common/layout/Footer';
 import FilterSidebar from '../../../components/page/destinationFilter/FilterSidebar';
 import DestinationCard from '../../../components/page/destinationFilter/DestinationFIlterCard';
 import apiClient from '@/services/apiClient';
 import Pagination from '../../../components/common/Pagination';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-// import type { BreadcrumbSection, BreadcrumbItem } from '../../../components/common/Breadcrumb';
+import LocationSelector from '@/components/common/LocationSelector';
 import type { BreadcrumbItem } from '../../../components/common/Breadcrumb';
 import { getDestinationInfo, getServiceTypeName, type SortValue } from '@/constants/regions';
 import BreadcrumbSection from '../../../components/common/BreadcrumbSection';
@@ -15,6 +15,7 @@ interface DestinationsPageProps {
 }
 
 const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome }) => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
@@ -36,6 +37,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   // Get query params
   const keyword = searchParams.get('destination') || destination || '';
+  const paramServiceType = searchParams.get('serviceType') || serviceType || '';
   const paramStartDate = searchParams.get('startDate');
   const paramEndDate = searchParams.get('endDate');
 
@@ -53,11 +55,12 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
       // Call API
       const response: any = await apiClient.services.search({
         keyword: keyword,
-        serviceType: serviceType, // 'HOTEL', 'RESTAURANT', 'TICKET_VENUE' if mapped correctly
+        serviceType: paramServiceType, // Use from query params
         minPrice: priceRange[0],
-        maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined, // If max not changed, don't send limit
-        page: currentPage - 1, // Backend 0-indexed
-        size: 10,
+        maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined,
+        minRating: minRating > 0 ? minRating : undefined, // Only send if rating filter is active
+        page: currentPage - 1,
+        size: 5,
         sortBy: apiSortBy,
         direction: apiDirection
       });
@@ -83,7 +86,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
   React.useEffect(() => {
     fetchDestinations();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [keyword, serviceType, priceRange, sortBy, currentPage]); // Re-fetch dependencies
+  }, [keyword, serviceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
 
 
   // Get destination info for UI
@@ -91,7 +94,6 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
   const serviceTypeName = serviceType ? getServiceTypeName(serviceType, true) : '';
 
   // Determine page title and breadcrumb
-  const navigate = useNavigate();
   const getPageTitle = () => {
     if (keyword) return `Kết quả tìm kiếm cho "${keyword}"`;
     return 'Tất cả điểm đến';
@@ -99,6 +101,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   const click_card = (id: string, item: any) => {
     console.log('Navigate to:', id);
+    console.log('Item data:', item);
+
     // Determine service type based on item data from API
     // Enum Backend: HOTEL, RESTAURANT, TICKET_VENUE
     let typeSlug = 'place';
@@ -114,12 +118,17 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
     const idSlug = `${id}-${titleSlug}`;
 
-    // Construct Path: /destinations/vietnam/hanoi/hotel/101-grand-hotel
-    // We can use generic region/destination placeholders if missing from item
-    const targetRegion = region || 'vietnam';
-    const targetDest = destination || 'general';
+    // Get province code from item data
+    // If province is null or doesn't have code, use a fallback
+    const provinceCode = item.province?.code || item.province?.provinceCode || 'ha-noi';
 
-    navigate(`/destinations/${targetRegion}/${targetDest}/${typeSlug}/${idSlug}`);
+    // Construct Path: /destinations/vietnam/ha-noi/hotel/101-grand-hotel
+    const targetRegion = region || 'vietnam';
+
+    const finalUrl = `/destinations/${targetRegion}/${provinceCode}/${typeSlug}/${idSlug}`;
+    console.log('🚀 Navigating to URL:', finalUrl);
+
+    navigate(finalUrl);
   };
 
   // Breadcrumb items
@@ -138,8 +147,17 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
     }
   ];
 
-  const handleBooking = (id: string) => {
-    // console.log('Booking destination:', id);
+  const handleBooking = (id: string, event?: React.MouseEvent) => {
+    // Prevent event bubbling to parent onClick
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Find the destination item to get its details
+    const item = destinations.find(dest => dest.id === id);
+    if (item) {
+      click_card(id, item);
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -164,6 +182,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
           <FilterSidebar
             isMobileOpen={isMobileSidebarOpen}
             onClose={() => setIsMobileSidebarOpen(false)}
+            onLocationChange={(code, name) => navigate(`/destinations/vietnam/${name}/all`)}
             priceRange={priceRange}
             onPriceChange={setPriceRange}
             minPrice={0}
@@ -240,8 +259,44 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
               </div>
             ) : destinations.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-gray-500 text-lg">Không tìm thấy kết quả nào phù hợp.</p>
+              <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 px-4">
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 bg-orange-50 rounded-full">
+                    <svg className="w-12 h-12 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy kết quả</h3>
+                <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                  Không có dịch vụ nào tại địa điểm này với bộ lọc hiện tại.
+                </p>
+
+                <div className="max-w-sm mx-auto space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <p className="text-sm font-medium text-gray-700 mb-3 block text-left">Thử tìm ở địa điểm khác:</p>
+                    <LocationSelector
+                      onSelect={(code, name) => {
+                        const slug = name;
+                        // Simple navigation to trigger refresh with new location
+                        navigate(`/destinations/vietnam/${slug}/all`);
+                      }}
+                      placeholder="Chọn tỉnh/thành phố..."
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setPriceRange([0, 100000000]);
+                      setMinRating(0);
+                      setSortBy('popular');
+                    }}
+                    className="text-orange-500 hover:text-orange-600 font-medium text-sm hover:underline"
+                  >
+                    Xóa tất cả bộ lọc
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-5">

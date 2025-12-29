@@ -43,6 +43,10 @@ build/
 # =========================================
 node_modules/
 dist/
+<<<<<<< HEAD
+build/
+=======
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 
 # Package manager logs
 npm-debug.log*
@@ -63,3 +67,8 @@ $RECYCLE.BIN/
 
 # Docker
 *.pid
+<<<<<<< HEAD
+
+Frontend/api-docs.json
+=======
+>>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e

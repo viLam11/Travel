@@ -24,9 +24,8 @@ import java.util.Optional;
 @RequestMapping("/orders")
 //@PreAuthorize("hasRole('ADMIN')")
 public class OrderController {
-
-    @Autowired
-    private OrderService orderService;
+//    @Autowired
+//    private OrderServic e   orderService;
 
     @Autowired
     private UserRepo userRepo;

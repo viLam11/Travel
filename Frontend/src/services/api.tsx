@@ -50,7 +50,7 @@ const processQueue = (error: Error | null): void => {
 };
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => response, // Return full response for headers access
     async (error: AxiosError) => {
         const originalRequest = error.config as CustomAxiosRequestConfig;
         const standardError = handleGlobalError(error);

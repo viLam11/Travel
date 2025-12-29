@@ -18,12 +18,9 @@ interface Province {
 }
 
 const tripTypes = [
-  { id: 'beach', label: 'Biển' },
-  { id: 'mountain', label: 'Núi' },
-  { id: 'city', label: 'Thành phố' },
-  { id: 'culture', label: 'Văn hóa' },
-  { id: 'adventure', label: 'Mạo hiểm' },
-  { id: 'resort', label: 'Resort' }
+  { id: 'HOTEL', label: 'Khách sạn' },
+  { id: 'RESTAURANT', label: 'Nhà hàng' },
+  { id: 'TICKET_VENUE', label: 'Điểm tham quan' }
 ];
 
 const backgroundImages = [
@@ -98,10 +95,36 @@ const HeroSection: React.FC = () => {
     const fetchProvinces = async () => {
       try {
         const fullList = await apiClient.provinces.getAll();
-        setAllProvinces(fullList);
-        setFilteredDestinations(fullList); // Initially show all
+
+        // Ensure fullList is an array
+        if (Array.isArray(fullList) && fullList.length > 0) {
+          setAllProvinces(fullList);
+          setFilteredDestinations(fullList); // Initially show all
+        } else {
+          // Mock data fallback
+          const mockProvinces = [
+            { code: '01', name: 'Hà Nội', full_name: 'Thành phố Hà Nội', codeName: 'ha_noi' },
+            { code: '79', name: 'Hồ Chí Minh', full_name: 'Thành phố Hồ Chí Minh', codeName: 'ho_chi_minh' },
+            { code: '48', name: 'Đà Nẵng', full_name: 'Thành phố Đà Nẵng', codeName: 'da_nang' },
+            { code: '46', name: 'Huế', full_name: 'Thành phố Huế', codeName: 'hue' },
+            { code: '22', name: 'Quảng Ninh', full_name: 'Tỉnh Quảng Ninh', codeName: 'quang_ninh' },
+            { code: '56', name: 'Khánh Hòa', full_name: 'Tỉnh Khánh Hòa', codeName: 'khanh_hoa' },
+            { code: '68', name: 'Lâm Đồng', full_name: 'Tỉnh Lâm Đồng', codeName: 'lam_dong' },
+            { code: '91', name: 'An Giang', full_name: 'Tỉnh An Giang', codeName: 'an_giang' },
+          ];
+          setAllProvinces(mockProvinces as any);
+          setFilteredDestinations(mockProvinces as any);
+        }
       } catch (error) {
-        console.error("Failed to load provinces", error);
+        console.error("Failed to load provinces:", error);
+        // Mock data fallback on error
+        const mockProvinces = [
+          { code: '01', name: 'Hà Nội', full_name: 'Thành phố Hà Nội', codeName: 'ha_noi' },
+          { code: '79', name: 'Hồ Chí Minh', full_name: 'Thành phố Hồ Chí Minh', codeName: 'ho_chi_minh' },
+          { code: '48', name: 'Đà Nẵng', full_name: 'Thành phố Đà Nẵng', codeName: 'da_nang' },
+        ];
+        setAllProvinces(mockProvinces as any);
+        setFilteredDestinations(mockProvinces as any);
       }
     };
     fetchProvinces();
@@ -130,6 +153,12 @@ const HeroSection: React.FC = () => {
     setSelectedProvinceCode(null);
     setShowDestinations(true);
 
+    // Safety check: ensure allProvinces is an array
+    if (!Array.isArray(allProvinces)) {
+      setFilteredDestinations([]);
+      return;
+    }
+
     if (!value.trim()) {
       // If empty, show full list
       setFilteredDestinations(allProvinces);
@@ -147,7 +176,7 @@ const HeroSection: React.FC = () => {
   const handleDestinationFocus = () => {
     setShowDestinations(true);
     // Ensure we show full list or currently filtered list
-    if (!formData.destination) {
+    if (!formData.destination && Array.isArray(allProvinces)) {
       setFilteredDestinations(allProvinces);
     }
   };
@@ -182,14 +211,18 @@ const HeroSection: React.FC = () => {
     // Build query params
     const queryParams = new URLSearchParams();
 
-    // Nếu user chọn từ list -> dùng code, nếu không -> dùng keyword
-    // Hiện tại filter page hỗ trợ keyword search
+    // Destination
     if (formData.destination) queryParams.append('destination', formData.destination);
     if (selectedProvinceCode) queryParams.append('provinceCode', selectedProvinceCode);
 
+    // Dates (for future booking feature)
     if (formData.startDate) queryParams.append('startDate', formData.startDate);
     if (formData.endDate) queryParams.append('endDate', formData.endDate);
-    if (formData.tripType.length > 0) queryParams.append('types', formData.tripType.join(','));
+
+    // Service Type - backend only accepts one type, so take first selected
+    if (formData.tripType.length > 0) {
+      queryParams.append('serviceType', formData.tripType[0]);
+    }
 
     console.log('Navigating to destinations with:', queryParams.toString());
     navigate(`/destinations?${queryParams.toString()}`);

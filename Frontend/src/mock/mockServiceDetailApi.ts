@@ -23,10 +23,10 @@ const mockData: Record<string, ServiceDetail> = {
       { code: 'HCM_5090FF', value: 90000, applied: true }
     ],
     images: [
-      '/WinWonder0.jpg', '/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg','/VinWonder.jpg',
+      '/WinWonder0.jpg', '/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg', '/VinWonder.jpg',
     ],
     thumbnails: [
-      '/WinWonder0.jpg','/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg','/VinWonder.jpg',
+      '/WinWonder0.jpg', '/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg', '/VinWonder.jpg',
     ],
     features: [
       { icon: 'mapPin', title: 'Điểm tham quan và lân cận', desc: 'Nhà thờ, Cafe, Đường sách' },
@@ -195,14 +195,62 @@ export const mockServiceDetailApi = {
   ): Promise<ServiceDetail> => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     console.log(`📡 Mock API called: ${destination}/${serviceType}/${id}`);
-    
-    const data = mockData[id];
+
+    // Try to get from predefined mock data first
+    let data = mockData[id];
+
+    // If not found, generate dynamic mock data
     if (!data) {
-      throw new Error(`Service with ID "${id}" not found`);
+      console.log(`⚠️ Service ID "${id}" not in mock data, generating dynamic data...`);
+      data = {
+        id: id,
+        name: `Service ${id}`,
+        type: serviceType === 'hotel' ? 'hotel' : serviceType === 'restaurant' ? 'restaurant' : 'place',
+        rating: 4.5,
+        reviews: 100,
+        location: destination || 'Việt Nam',
+        address: `Địa chỉ dịch vụ ${id}`,
+        description: `Đây là mô tả cho dịch vụ ${id}. Thông tin chi tiết sẽ được cập nhật sau.`,
+        openingHours: '08:00 - 22:00',
+        duration: '1 ngày',
+        priceAdult: 500000,
+        priceChild: 250000,
+        additionalServices: [
+          { name: 'Bảo hiểm du lịch', price: 40000 }
+        ],
+        discounts: [],
+        images: [
+          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&h=600&fit=crop'
+        ],
+        thumbnails: [
+          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=150&h=150&fit=crop',
+          'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=150&h=150&fit=crop',
+          'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=150&h=150&fit=crop'
+        ],
+        features: [
+          { icon: 'mapPin', title: 'Vị trí', desc: 'Trung tâm thành phố' },
+          { icon: 'utensils', title: 'Ẩm thực', desc: 'Đa dạng' },
+          { icon: 'users', title: 'Đối tượng', desc: 'Gia đình, Bạn bè' },
+          { icon: 'clock', title: 'Thời gian', desc: 'Quanh năm' },
+          { icon: 'car', title: 'Phương tiện', desc: 'Xe máy, Ô tô' },
+          { icon: 'percent', title: 'Khuyến mãi', desc: 'Liên hệ để biết thêm' }
+        ],
+        availability: {
+          '2025-09': {
+            '2': '500 K', '3': '500 K', '4': '500 K', '5': '500 K', '6': '500 K', '7': '500 K',
+            '8': '500 K', '9': '500 K', '10': '500 K', '13': '500 K', '14': '500 K',
+            '15': '500 K', '16': '500 K', '17': '500 K', '18': '500 K', '19': '500 K', '20': '500 K'
+          },
+          '2025-10': {},
+          '2025-11': {}
+        }
+      };
     }
-    
+
     return data;
   },
 
@@ -212,7 +260,7 @@ export const mockServiceDetailApi = {
     endDate: string
   ): Promise<Record<string, string>> => {
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     return {
       '2025-09-01': '100 K',
       '2025-09-02': '100 K',

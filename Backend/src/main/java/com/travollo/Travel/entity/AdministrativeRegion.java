@@ -14,4 +14,7 @@ public class AdministrativeRegion {
     private String name;
     private String name_en;
     private String code_name_en;
+    
+    @jakarta.persistence.Column(name = "macro_region")
+    private String macroRegion;
 }
