@@ -223,8 +223,12 @@ public class TravelService implements TravelServiceInterface {
             Pageable pageable = PageRequest.of(page, size, sort);
 
             ServiceType serviceTypeEnum = null;
-            if (serviceType != null && !serviceType.isEmpty()) {
-                serviceTypeEnum = ServiceType.valueOf(serviceType);
+            if (serviceType != null && !serviceType.trim().isEmpty() && !serviceType.equalsIgnoreCase("ALL")) {
+                try {
+                    serviceTypeEnum = ServiceType.valueOf(serviceType.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    serviceTypeEnum = null;
+                }
             }
 
             String searchKeyword = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();

@@ -28,9 +28,11 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/admin/sidebar"
-import { authService } from "@/services/authService"
 import { ROUTES } from "@/constants/routes"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/hooks/useAuth"
+import { useLogout } from "@/hooks/useLogout"
+import toast from 'react-hot-toast';
 
 const NavUser = ({
     user,
@@ -43,10 +45,17 @@ const NavUser = ({
 }) => {
     const { isMobile } = useSidebar()
     const navigate = useNavigate()
+    
+    const { isAuthenticated, currentUser } = useAuth();
+    const { logout, isLoggingOut } = useLogout();
 
     const handleLogout = async () => {
-        await authService.logout();
-        navigate(ROUTES.HOMEPAGE);
+        console.log("Logging out user...");
+        await logout({
+            redirectTo: ROUTES.HOMEPAGE,
+            showToast: true,
+            toastMessage: 'Đã đăng xuất thành công!'
+        });
     }
 
     return (
@@ -103,9 +112,12 @@ const NavUser = ({
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleLogout}>
+                        <DropdownMenuItem
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                        >
                             <LogOut />
-                            Log out
+                            {isLoggingOut ? 'Đang đăng xuất...' : 'Log out'}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

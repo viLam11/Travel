@@ -11,6 +11,7 @@ import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.EmailService;
 import com.travollo.Travel.service.interfac.UserInterface;
 import com.travollo.Travel.utils.JWTUtils;
+import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,8 @@ public class UserService implements UserInterface {
             userCredentials.setVerificationCode(generateVerificationCode());
             userCredentials.setExpiredAt(java.time.LocalDateTime.now().plusHours(1));
             userCredentials.setEnabled(false);
+            Role userRole = userCredentials.getRole() != null ? userCredentials.getRole() : Role.USER;
+            userCredentials.setRole(userRole);
 
             sendVerificationEmail(userCredentials);
 

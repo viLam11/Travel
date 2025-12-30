@@ -36,7 +36,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
   const [minRating, setMinRating] = useState(0);
 
   // Get query params
-  const keyword = searchParams.get('destination') || destination || '';
+  const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
+  const provinceCode = destination || ''; // Province code from URL (e.g., 'ha-noi')
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
   const paramStartDate = searchParams.get('startDate');
   const paramEndDate = searchParams.get('endDate');
@@ -54,7 +55,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
       // Call API
       const response: any = await apiClient.services.search({
-        keyword: keyword,
+        provinceCode: provinceCode || undefined, // Filter by province
+        keyword: searchKeyword || undefined, // Text search
         serviceType: paramServiceType, // Use from query params
         minPrice: priceRange[0],
         maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined,
@@ -86,7 +88,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
   React.useEffect(() => {
     fetchDestinations();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [keyword, serviceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
+  }, [searchKeyword, provinceCode, serviceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
 
 
   // Get destination info for UI
@@ -95,7 +97,19 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   // Determine page title and breadcrumb
   const getPageTitle = () => {
-    if (keyword) return `Kết quả tìm kiếm cho "${keyword}"`;
+    if (searchKeyword) return `Kết quả tìm kiếm cho "${searchKeyword}"`;
+    if (provinceCode) {
+      const destInfo = getDestinationInfo(provinceCode);
+      if (destInfo) return destInfo.name;
+
+      // If not in hardcoded list, try to get from first service result
+      if (destinations.length > 0 && destinations[0].province) {
+        return destinations[0].province.fullName || destinations[0].province.name || provinceCode;
+      }
+
+      // Fallback: decode and capitalize provinceCode
+      return decodeURIComponent(provinceCode).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
     return 'Tất cả điểm đến';
   };
 
