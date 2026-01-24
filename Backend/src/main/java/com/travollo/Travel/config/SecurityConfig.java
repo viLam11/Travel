@@ -73,7 +73,6 @@ public class SecurityConfig {
                                     Optional<User> userOptional = userRepo.findByEmail(email);
                                     
                                     if (userOptional.isEmpty()) {
-                                        // Case 1: User chưa tồn tại → Auto create new user
                                         User newUser = new User();
                                         newUser.setEmail(email);
                                         newUser.setFullname((givenName != null ? givenName : "") + " " + (familyName != null ? familyName : ""));
