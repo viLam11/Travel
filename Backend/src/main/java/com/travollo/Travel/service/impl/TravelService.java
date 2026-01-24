@@ -2,10 +2,7 @@ package com.travollo.Travel.service.impl;
 
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
-import com.travollo.Travel.repo.CommentServiceRepo;
-import com.travollo.Travel.repo.ImageServiceRepo;
-import com.travollo.Travel.repo.ProvinceRepo;
-import com.travollo.Travel.repo.ServiceRepo;
+import com.travollo.Travel.repo.*;
 import com.travollo.Travel.service.AwsS3Service;
 import com.travollo.Travel.service.interfac.TravelServiceInterface;
 import com.travollo.Travel.utils.ServiceType;
@@ -33,6 +30,9 @@ public class TravelService implements TravelServiceInterface {
     private ImageServiceRepo imgServiceRepo;
     @Autowired
     private CommentServiceRepo commentRepo;
+
+    @Autowired
+    private TicketRepo ticketRepo;
 
 
     public ResponseEntity<Object> getAllServices(){
@@ -203,4 +203,70 @@ public class TravelService implements TravelServiceInterface {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while deleting the service");
         }
     };
+
+    public ResponseEntity<Object> searchServices(
+            String keyword,
+            String serviceType,
+            Long minPrice,
+            Long maxPrice,
+            Long minRating,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        try {
+            Sort sort = direction.equalsIgnoreCase("desc") ?
+                    Sort.by(sortBy).descending() :
+                    Sort.by(sortBy).ascending();
+
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            ServiceType serviceTypeEnum = null;
+            if (serviceType != null && !serviceType.trim().isEmpty() && !serviceType.equalsIgnoreCase("ALL")) {
+                try {
+                    serviceTypeEnum = ServiceType.valueOf(serviceType.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    serviceTypeEnum = null;
+                }
+            }
+
+            String searchKeyword = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
+            Long searchMinPrice = (minPrice == null) ? 0L : minPrice;
+            Long searchMaxPrice = (maxPrice == null) ? Long.MAX_VALUE : maxPrice;
+
+            Page<TService> servicesPage = serviceRepo.searchServices(
+                    keyword,
+                    serviceTypeEnum,
+                    minPrice,
+                    maxPrice,
+                    minRating,
+                    pageable
+            );
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("services", servicesPage.getContent());
+            response.put("currentPage", servicesPage.getNumber());
+            response.put("totalItems", servicesPage.getTotalElements());
+            response.put("totalPages", servicesPage.getTotalPages());
+            response.put("pageSize", servicesPage.getSize());
+            response.put("sortBy", sortBy);
+            response.put("direction", direction);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while searching services: " + e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> getTicketsByServiceId(Long serviceID) {
+        try {
+            TicketVenue ticketVenue = (TicketVenue) serviceRepo.findById(serviceID)
+                    .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Ticket venue not found"));
+
+            return ResponseEntity.ok(ticketVenue.getTicketList());
+        } catch (Exception e) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving top-rated services");
+        }
+    }
 }

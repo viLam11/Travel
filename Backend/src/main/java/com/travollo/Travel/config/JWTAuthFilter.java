@@ -38,7 +38,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
             System.out.println("auth header: " + authHeader);
 
-            if (authHeader == null || authHeader.isBlank()) {
+            if (authHeader == null || authHeader.trim().isBlank()) {
                 filterChain.doFilter(request, response);
                 return;
             }

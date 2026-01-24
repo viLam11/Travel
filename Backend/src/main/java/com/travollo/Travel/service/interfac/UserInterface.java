@@ -19,4 +19,10 @@ public interface UserInterface {
     ResponseEntity<List<Order>> getOrdersByUserId(Long userID);
     ResponseEntity<Object> updateUser(Long userID, User user);
     ResponseEntity<Object> verifyUser(VerifyDTO verifyDTO);
+    ResponseEntity<Object> resendVerificationCode(String email);
+    
+    // Forgot Password methods
+    ResponseEntity<Object> sendPasswordResetOTP(String email);
+    ResponseEntity<Object> verifyPasswordResetOTP(String email, String otp);
+    ResponseEntity<Object> resetPassword(String token, String newPassword);
 }

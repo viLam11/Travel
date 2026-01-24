@@ -16,10 +16,15 @@ public class CustomUserDetailService implements UserDetailsService {
     private UserRepo theUserRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String email) {
-        System.out.println("Email: " + email);
-        User foundUser = theUserRepo.findByEmail(email)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "email not exists"));
+    public UserDetails loadUserByUsername(String usernameOrEmail) {
+        User foundUser;
+        if (usernameOrEmail.contains("@")) {
+            foundUser = theUserRepo.findByEmail(usernameOrEmail)
+                    .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Email not found"));
+        } else {
+            foundUser = theUserRepo.findByUsername(usernameOrEmail)
+                    .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Username not found"));
+        }
         return Utils.mapUserEntityToUserDetails(foundUser);
     }
 }

@@ -2,12 +2,14 @@ package com.travollo.Travel.controller;
 
 import com.travollo.Travel.dto.comment.CreateCommentDTO;
 import com.travollo.Travel.dto.services.ServiceCreateRequest;
+import com.travollo.Travel.entity.TService;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.impl.CommentSService;
 import com.travollo.Travel.service.impl.TravelService;
 import com.travollo.Travel.utils.Role;
+import com.travollo.Travel.utils.ServiceType;
 import com.travollo.Travel.utils.Utils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,6 +17,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -61,6 +64,21 @@ public class ServiceController {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving services with pagination");
         }
     }
+//
+//    @GetMapping("/search")
+//    public ResponseEntity<Object> searchServices(
+//            @RequestParam(value = "keyword", required = false) String keyword,
+//            @RequestParam(value = "serviceType", required = false) String serviceType,
+//            @RequestParam(value = "minPrice", required = false) Long minPrice,
+//            @RequestParam(value = "maxPrice", required = false) Long maxPrice,
+//            @RequestParam(value = "minRating", required = false) Long minRating,
+//            @RequestParam(value = "page", defaultValue = "0") int page,
+//            @RequestParam(value = "size", defaultValue = "10") int size,
+//            @RequestParam(value = "sortBy", defaultValue = "id") String sortBy,
+//            @RequestParam(value = "direction", defaultValue = "asc") String direction
+//    ) {
+//        return travelService.searchServices(keyword, serviceType, minPrice, maxPrice, minRating, page, size, sortBy, direction);
+//    }
 
     @GetMapping("/{serviceID}")
     ResponseEntity<Object> getServiceById(@PathVariable Long serviceID) {
@@ -119,6 +137,37 @@ public class ServiceController {
     ResponseEntity<Object> deleteService(@PathVariable Long id) {
         System.out.println("Received request to delete service with ID: " + id);
         return travelService.deleteService(id);
+    }
+
+    @GetMapping("/{id}/tickets")
+    ResponseEntity<Object> getTicketsByServiceId(@PathVariable Long id) {
+        return travelService.getTicketsByServiceId(id);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Object> searchServicesInProvince(
+            @RequestParam(value = "provinceCode", required = false) String provinceCode,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "serviceType", required = false) String serviceType,
+            @RequestParam(value = "minPrice", required = false) Long minPrice,
+            @RequestParam(value = "maxPrice", required = false) Long maxPrice,
+            @RequestParam(value = "minRating", required = false) Long minRating,
+            @RequestParam(value = "maxRating", defaultValue = "id") String sortBy,
+            @RequestParam(value = "direction", defaultValue = "asc") String direction,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size
+    ) {
+        return travelService.searchServices(
+                                keyword,
+                                serviceType != null ? String.valueOf(ServiceType.valueOf(serviceType.toUpperCase())) : null,
+                                minPrice,
+                                maxPrice,
+                                minRating,
+                                page,
+                                size,
+                                sortBy,
+                                direction
+                        );
     }
 
 //    @PostMapping(
