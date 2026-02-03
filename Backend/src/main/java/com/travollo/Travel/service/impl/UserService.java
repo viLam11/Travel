@@ -237,7 +237,7 @@ public class UserService implements UserInterface {
     };
 
     @Override
-    public ResponseEntity<UserDTO> getUserById(Long userID){
+    public ResponseEntity<UserDTO> getUserById(String userID){
         try {
             User user = theUserRepo.findById(userID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
@@ -254,12 +254,12 @@ public class UserService implements UserInterface {
     };
 
     @Override
-    public ResponseEntity<List<Order>> getOrdersByUserId(Long userID){
+    public ResponseEntity<List<Order>> getOrdersByUserId(String userID){
         return null;
     };
 
     @Override
-    public ResponseEntity<Object> updateUser(Long userID, User user){
+    public ResponseEntity<Object> updateUser(String userID, User user){
         try {
             User existingUser = theUserRepo.findById(userID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));

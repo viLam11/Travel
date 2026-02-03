@@ -1,4 +1,4 @@
-package com.travollo.Travel.AIService.service;
+package com.travollo.Travel.domains.ai.service;
 
 import com.google.genai.Client;
 import com.google.genai.types.*;

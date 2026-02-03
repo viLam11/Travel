@@ -3,13 +3,20 @@ package com.travollo.Travel.entity;
 import com.fasterxml.jackson.annotation.*;
 import com.travollo.Travel.utils.ServiceType;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
 @Data
 @Entity
 @Table(name = "services")
+@SuperBuilder(toBuilder = true)
+@AllArgsConstructor
+@NoArgsConstructor
 @Inheritance(strategy = InheritanceType.JOINED)
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,

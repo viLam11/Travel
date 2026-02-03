@@ -1,4 +1,4 @@
-package com.travollo.Travel.AIService.dto;
+package com.travollo.Travel.domains.ai.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

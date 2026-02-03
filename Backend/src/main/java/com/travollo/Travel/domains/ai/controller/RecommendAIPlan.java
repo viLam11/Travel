@@ -1,10 +1,10 @@
-package com.travollo.Travel.AIService.controller;
+package com.travollo.Travel.domains.ai.controller;
 
 
-import com.travollo.Travel.AIService.dto.PlanRequest;
-import com.travollo.Travel.AIService.service.GeminiService;
-import com.travollo.Travel.AIService.service.PlanAIService;
-import com.travollo.Travel.dto.Response;
+import com.travollo.Travel.domains.ai.dto.PlanRequest;
+import com.travollo.Travel.domains.ai.dto.PlanResponse;
+import com.travollo.Travel.domains.ai.service.GeminiService;
+import com.travollo.Travel.domains.ai.service.PlanAIService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +24,15 @@ public class RecommendAIPlan {
         return geminiService.getAnwser(question, 1, new ArrayList<>());
     };
 
+    @GetMapping("/get-preferences")
+    public ResponseEntity<Object> getPreferenceList(
+        @RequestParam String place
+    ) {
+        return ResponseEntity.ok(planAIService.TestTopService(place));
+    }
+
     @PostMapping("/generate")
-    public ResponseEntity<Object> generatePlan(
+    public ResponseEntity<PlanResponse> generatePlan(
             @RequestBody PlanRequest planRequest
             ) {
         return ResponseEntity.ok(planAIService.generateRecommendedPlan(planRequest.getPlace(), planRequest.getAdditionalInformation(), planRequest.getNumberOfDays()));

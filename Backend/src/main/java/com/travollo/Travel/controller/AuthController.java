@@ -73,7 +73,6 @@ public class AuthController {
     }
 
     @GetMapping("/login/google")
-
     public void loginGoogleAuth(HttpServletResponse response) throws IOException {
          response.sendRedirect("/oauth2/authorization/google");
     }

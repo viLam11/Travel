@@ -1,4 +1,4 @@
-package com.travollo.Travel.AIService.dto;
+package com.travollo.Travel.domains.ai.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

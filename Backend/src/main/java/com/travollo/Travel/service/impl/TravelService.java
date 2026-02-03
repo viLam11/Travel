@@ -1,11 +1,13 @@
 package com.travollo.Travel.service.impl;
 
+import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.*;
 import com.travollo.Travel.service.AwsS3Service;
 import com.travollo.Travel.service.interfac.TravelServiceInterface;
 import com.travollo.Travel.utils.ServiceType;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,12 +15,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Time;
 import java.util.*;
 
-@org.springframework.stereotype.Service
+@Service
 public class TravelService implements TravelServiceInterface {
     @Autowired
     private ServiceRepo serviceRepo;
@@ -30,9 +33,10 @@ public class TravelService implements TravelServiceInterface {
     private ImageServiceRepo imgServiceRepo;
     @Autowired
     private CommentServiceRepo commentRepo;
-
     @Autowired
     private TicketRepo ticketRepo;
+    @Autowired
+    private ModelMapper modelMapper;
 
 
     public ResponseEntity<Object> getAllServices(){
@@ -42,7 +46,7 @@ public class TravelService implements TravelServiceInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving services");
         }
-    };
+    }
 
     public ResponseEntity<Object> getServiceById(Long serviceID){
         try {
@@ -54,7 +58,7 @@ public class TravelService implements TravelServiceInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving the service");
         }
-    };
+    }
 
     public ResponseEntity<Object> getServices(int page, int size, String sortBy, String direction) {
         try {
@@ -105,6 +109,17 @@ public class TravelService implements TravelServiceInterface {
             throw new CustomException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
+
+    public ResponseEntity<Object> createService(NewServiceRequest request)
+    {
+        try {
+            TService newTService = modelMapper.map(request, TService.class);
+            newTService.setThumbnailUrl(awsS3Service.saveImageToS3(request.getThumbnail()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(serviceRepo.save(newTService));
+        } catch (Exception e) {
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    };
 
     public ResponseEntity<Object> createService(MultipartFile thumbnail, String serviceName, String description, String provinceCode,
                                                 String address, String contactNumber, Long averagePrice,
