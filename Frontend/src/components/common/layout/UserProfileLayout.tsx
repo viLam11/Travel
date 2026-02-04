@@ -92,12 +92,12 @@ const UserProfileLayout: React.FC = () => {
             `}
           >
             <h2 className="text-xl font-bold text-gray-900 mb-6">Tài khoản của tôi</h2>
-            
+
             <nav className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
-                
+
                 return (
                   <button
                     key={item.id}
@@ -105,8 +105,8 @@ const UserProfileLayout: React.FC = () => {
                     disabled={item.disabled}
                     className={`
                       w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-                      ${active 
-                        ? 'bg-orange-50 text-orange-600 font-medium' 
+                      ${active
+                        ? 'bg-orange-50 text-orange-600 font-medium'
                         : 'text-gray-700 hover:bg-gray-50'
                       }
                       ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}

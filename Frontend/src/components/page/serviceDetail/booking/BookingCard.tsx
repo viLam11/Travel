@@ -5,6 +5,7 @@ import type { ServiceDetail } from '@/types/serviceDetail.types';
 
 interface BookingCardProps {
   service: ServiceDetail;
+  serviceType?: string; // 'hotel' or 'place'
   adultCount: number;
   setAdultCount: (count: number) => void;
   childCount: number;
@@ -16,6 +17,7 @@ interface BookingCardProps {
 
 const BookingCard: React.FC<BookingCardProps> = ({
   service,
+  serviceType = 'place',
   adultCount,
   setAdultCount,
   childCount,
@@ -24,10 +26,13 @@ const BookingCard: React.FC<BookingCardProps> = ({
   onBookNow,
   onRoomBookNow
 }) => {
+  const isHotel = serviceType === 'hotel';
   return (
     <div className="sticky top-24 bg-white border-2 border-gray-200 rounded-xl p-4 lg:p-5 shadow-md md:max-h-[85vh] overflow-y-auto">
       <div className="text-center mb-4 pb-4 border-b border-gray-200">
-        <h2 className="text-sm font-bold text-gray-900 mb-1">ĐƠN ĐẶT DỊCH VỤ</h2>
+        <h2 className="text-sm font-bold text-gray-900 mb-1">
+          {isHotel ? 'ĐƠN ĐẶT PHÒNG' : 'ĐƠN ĐẶT DỊCH VỤ'}
+        </h2>
         <h3 className="text-xs font-semibold text-gray-700 line-clamp-2">{service.name}</h3>
       </div>
 
@@ -51,15 +56,15 @@ const BookingCard: React.FC<BookingCardProps> = ({
         <div className="flex items-start gap-2">
           <Clock className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-xs font-medium text-gray-900">Thời hạn:</p>
-            <p className="text-xs text-gray-600">{service.duration}</p>
+            <p className="text-xs font-medium text-gray-900">{isHotel ? 'Giờ nhận phòng:' : 'Thời hạn:'}</p>
+            <p className="text-xs text-gray-600">{isHotel ? 'Từ 14:00' : service.duration}</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-3 mb-4 pb-4 border-b border-gray-200">
         <h4 className="font-semibold text-gray-900 text-sm">Số lượng</h4>
-        
+
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -139,11 +144,11 @@ const BookingCard: React.FC<BookingCardProps> = ({
         </div>
       </div>
 
-      <button 
-        onClick={onBookNow}
+      <button
+        onClick={isHotel ? onRoomBookNow : onBookNow}
         className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-2.5 rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
       >
-        ĐẶT NGAY
+        {isHotel ? 'ĐẶT PHÒNG' : 'ĐẶT NGAY'}
       </button>
 
       {/* Test Room Booking Button */}

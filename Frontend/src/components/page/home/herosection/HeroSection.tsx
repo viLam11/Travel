@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, MapPin, Calendar, ChevronDown, X, Compass, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../../services/apiClient';
 import bgImage from '../../../../assets/thumnail.png';
@@ -8,7 +8,7 @@ interface SearchFormData {
   destination: string;
   startDate: string;
   endDate: string;
-  tripType: string[];
+  serviceType: 'DESTINATION' | 'HOTEL'; // Changed from tripType array to single serviceType
 }
 
 interface Province {
@@ -16,12 +16,6 @@ interface Province {
   name: string;
   full_name: string;
 }
-
-const tripTypes = [
-  { id: 'HOTEL', label: 'Khách sạn' },
-  { id: 'RESTAURANT', label: 'Nhà hàng' },
-  { id: 'TICKET_VENUE', label: 'Điểm tham quan' }
-];
 
 const backgroundImages = [
   bgImage,
@@ -37,7 +31,7 @@ const HeroSection: React.FC = () => {
     destination: '',
     startDate: '',
     endDate: '',
-    tripType: []
+    serviceType: 'DESTINATION' // Default to destinations
   });
 
   // Slider states
@@ -57,10 +51,6 @@ const HeroSection: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
-  // Trip type dropdown state
-  const [showTripTypes, setShowTripTypes] = useState(false);
-  const tripTypeRef = useRef<HTMLDivElement>(null);
-
   // Auto-play slider
   useEffect(() => {
     if (!isAutoPlaying) return;
@@ -72,18 +62,14 @@ const HeroSection: React.FC = () => {
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
 
-  // Click outside handler logic...
+  // Click outside handler logic
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // ... (Keep existing outside click logic)
       if (destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
         setShowDestinations(false);
       }
       if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
         setShowDatePicker(false);
-      }
-      if (tripTypeRef.current && !tripTypeRef.current.contains(event.target as Node)) {
-        setShowTripTypes(false);
       }
     };
     document.addEventListener('click', handleClickOutside);
@@ -187,18 +173,6 @@ const HeroSection: React.FC = () => {
     setShowDestinations(false);
   };
 
-  // Trip Type logic
-  const toggleTripType = (typeId: string) => {
-    const newTypes = formData.tripType.includes(typeId)
-      ? formData.tripType.filter(t => t !== typeId)
-      : [...formData.tripType, typeId];
-    setFormData({ ...formData, tripType: newTypes });
-  };
-
-  const removeTripType = (typeId: string) => {
-    setFormData({ ...formData, tripType: formData.tripType.filter(t => t !== typeId) });
-  };
-
   // Search Action
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,13 +193,13 @@ const HeroSection: React.FC = () => {
     if (formData.startDate) queryParams.append('startDate', formData.startDate);
     if (formData.endDate) queryParams.append('endDate', formData.endDate);
 
-    // Service Type - backend only accepts one type, so take first selected
-    if (formData.tripType.length > 0) {
-      queryParams.append('serviceType', formData.tripType[0]);
-    }
+    // Service Type
+    queryParams.append('serviceType', formData.serviceType);
 
-    console.log('Navigating to destinations with:', queryParams.toString());
-    navigate(`/destinations?${queryParams.toString()}`);
+    // Navigate based on service type
+    const basePath = formData.serviceType === 'HOTEL' ? '/hotels' : '/destinations';
+    console.log(`Navigating to ${basePath} with:`, queryParams.toString());
+    navigate(`${basePath}?${queryParams.toString()}`);
   };
 
   const formatDateRange = () => {
@@ -234,72 +208,6 @@ const HeroSection: React.FC = () => {
       return `${new Date(formData.startDate).toLocaleDateString('vi-VN')} - ${new Date(formData.endDate).toLocaleDateString('vi-VN')}`;
     }
     return formData.startDate ? new Date(formData.startDate).toLocaleDateString('vi-VN') : '';
-  };
-
-  const renderSelectedTripTypes = () => {
-    const MAX_VISIBLE_TAGS = 2;
-    const selectedTypes = formData.tripType
-      .map(typeId => tripTypes.find(t => t.id === typeId))
-      .filter((type): type is { id: string; label: string } => type !== undefined);
-
-    if (selectedTypes.length === 0) {
-      return (
-        <>
-          <Compass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <span className="text-gray-400 text-sm sm:text-base pl-6">Tất cả</span>
-        </>
-      );
-    }
-
-    const visibleTags = selectedTypes.slice(0, MAX_VISIBLE_TAGS);
-    const remainingCount = selectedTypes.length - MAX_VISIBLE_TAGS;
-
-    return (
-      <>
-        <div className="flex sm:hidden items-center gap-2 overflow-x-auto scrollbar-hide max-w-full">
-          {selectedTypes.map((type) => (
-            <span
-              key={type.id}
-              className="inline-flex items-center bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-sm flex-shrink-0"
-            >
-              {type.label}
-              <X
-                className="ml-1 w-3 h-3 cursor-pointer hover:text-orange-900"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeTripType(type.id);
-                }}
-              />
-            </span>
-          ))}
-        </div>
-
-        <div className="hidden sm:flex items-center gap-1 pr-8 overflow-hidden max-w-[180px]">
-          {visibleTags.map((type) => (
-            <span
-              key={type.id}
-              className={`inline-flex items-center bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-sm flex-shrink-0 ${visibleTags.length > 1 ? 'max-w-[60px]' : ''
-                }`}
-            >
-              <span className="truncate">{type.label}</span>
-              <X
-                className="ml-1 w-3 h-3 cursor-pointer hover:text-orange-900 flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeTripType(type.id);
-                }}
-              />
-            </span>
-          ))}
-
-          {remainingCount > 0 && (
-            <span className="inline-flex items-center bg-orange-200 text-orange-800 px-2 py-0.5 rounded text-sm font-medium flex-shrink-0">
-              +{remainingCount}
-            </span>
-          )}
-        </div>
-      </>
-    );
   };
 
   return (
@@ -367,8 +275,28 @@ const HeroSection: React.FC = () => {
           Trải nghiệm du lịch đầy màu sắc, khám phá mọi miền đất nước, tận hưởng kỳ nghỉ tại nơi bạn yêu thích
         </p>
 
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 w-full max-w-4xl overflow-visible pt-5">
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_auto] gap-2 sm:gap-3 overflow-visible items-end">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 lg:p-6 w-full max-w-5xl overflow-visible">
+
+          {/* Search Form */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_2fr_auto] gap-2 sm:gap-3 overflow-visible items-end">
+
+            {/* Service Type Select */}
+            <div className="relative">
+              <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
+                Loại dịch vụ
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.serviceType}
+                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value as 'DESTINATION' | 'HOTEL' })}
+                  className="w-full px-3 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all appearance-none bg-white cursor-pointer"
+                >
+                  <option value="DESTINATION">Địa điểm</option>
+                  <option value="HOTEL">Khách sạn</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
 
             <div className="relative overflow-visible" ref={destinationRef}>
               <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
@@ -407,13 +335,13 @@ const HeroSection: React.FC = () => {
 
             <div className="relative overflow-visible" ref={datePickerRef}>
               <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
-                Thời gian
+                {formData.serviceType === 'HOTEL' ? 'Check-in - Check-out' : 'Thời gian'}
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Chọn ngày đi - về"
+                  placeholder={formData.serviceType === 'HOTEL' ? 'Chọn ngày nhận - trả phòng' : 'Chọn ngày đi - về'}
                   value={formatDateRange()}
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   readOnly
@@ -429,7 +357,9 @@ const HeroSection: React.FC = () => {
                 <div className="absolute z-[100] left-0 right-0 min-w-[auto] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 sm:p-4">
                   <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1 text-left">Ngày đi</label>
+                      <label className="text-xs font-medium text-gray-600 block mb-1 text-left">
+                        {formData.serviceType === 'HOTEL' ? 'Check-in' : 'Ngày đi'}
+                      </label>
                       <input
                         type="date"
                         value={formData.startDate}
@@ -438,7 +368,9 @@ const HeroSection: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1 text-left">Ngày về</label>
+                      <label className="text-xs font-medium text-gray-600 block mb-1 text-left">
+                        {formData.serviceType === 'HOTEL' ? 'Check-out' : 'Ngày về'}
+                      </label>
                       <input
                         type="date"
                         value={formData.endDate}
@@ -454,47 +386,6 @@ const HeroSection: React.FC = () => {
                       Xác nhận
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div className="relative overflow-visible" ref={tripTypeRef}>
-              <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
-                Loại hình
-              </label>
-
-              <div
-                className={`relative border rounded-lg px-3 py-2.5 sm:py-3 cursor-pointer transition-all min-h-[42px] sm:min-h-[50px] flex items-center
-                  ${showTripTypes
-                    ? "border-transparent ring-2 ring-orange-500"
-                    : "border-gray-300 hover:border-orange-400"}
-                `}
-                onClick={() => setShowTripTypes((prev) => !prev)}
-              >
-                {renderSelectedTripTypes()}
-
-                <ChevronDown
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-all duration-200 ${showTripTypes ? 'rotate-180' : ''
-                    }`}
-                />
-              </div>
-
-              {showTripTypes && (
-                <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-45 overflow-y-auto">
-                  {tripTypes.map((type) => (
-                    <label
-                      key={type.id}
-                      className="flex items-center px-4 py-2.5 hover:bg-orange-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.tripType.includes(type.id)}
-                        onChange={() => toggleTripType(type.id)}
-                        className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500 mr-3"
-                      />
-                      <span className="text-sm sm:text-base">{type.label}</span>
-                    </label>
-                  ))}
                 </div>
               )}
             </div>

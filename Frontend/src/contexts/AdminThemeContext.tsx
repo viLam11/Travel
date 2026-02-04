@@ -43,7 +43,15 @@ export function AdminThemeProvider({
             return window.matchMedia("(prefers-color-scheme: dark)").matches
         }
 
-        setIsDark(checkIsDark())
+        const darkMode = checkIsDark()
+        setIsDark(darkMode)
+
+        // Apply dark class to html root for global styles (scrollbars, etc)
+        if (darkMode) {
+            root.classList.add("dark")
+        } else {
+            root.classList.remove("dark")
+        }
 
         // Update localStorage
         localStorage.setItem(storageKey, theme)
@@ -51,7 +59,12 @@ export function AdminThemeProvider({
         // Listen for system changes if theme is system
         if (theme === "system") {
             const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-            const handleChange = () => setIsDark(mediaQuery.matches)
+            const handleChange = () => {
+                const newDarkMode = mediaQuery.matches
+                setIsDark(newDarkMode)
+                if (newDarkMode) root.classList.add("dark")
+                else root.classList.remove("dark")
+            }
             mediaQuery.addEventListener("change", handleChange)
             return () => mediaQuery.removeEventListener("change", handleChange)
         }

@@ -180,8 +180,62 @@ const mockData: Record<string, ServiceDetail> = {
       { icon: 'percent', title: 'Ưu đãi', desc: 'Giảm 10% cho combo' }
     ],
     availability: {
-      '2025-09': {},
       '2025-10': {},
+      '2025-11': {}
+    }
+  },
+  // Hotel mock data
+  '101': {
+    id: '101',
+    name: 'Khách sạn Melia Vinpearl',
+    type: 'hotel',
+    rating: 4.9,
+    reviews: 856,
+    location: 'Nha Trang, Khánh Hòa',
+    address: '44-46 Trần Phú, Lộc Thọ, Nha Trang, Khánh Hòa',
+    description: 'Khách sạn Melia Vinpearl Nha Trang là một trong những khách sạn 5 sao hàng đầu tại Nha Trang. Với vị trí đắc địa ngay trung tâm thành phố, view biển tuyệt đẹp, hồ bơi vô cực và các tiện nghi hiện đại, đây là lựa chọn hoàn hảo cho kỳ nghỉ của bạn.',
+    openingHours: '24/7',
+    duration: 'Linh hoạt',
+    priceAdult: 1500000, // Giá phòng/đêm
+    priceChild: 0,
+    additionalServices: [
+      { name: 'Ăn sáng buffet', price: 250000 },
+      { name: 'Spa & Massage', price: 500000 },
+      { name: 'Đưa đón sân bay', price: 300000 }
+    ],
+    discounts: [
+      { code: 'SUMMER2025', value: 300000, applied: true }
+    ],
+    images: [
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800&h=600&fit=crop'
+    ],
+    thumbnails: [
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=150&h=150&fit=crop',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=150&h=150&fit=crop',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=150&h=150&fit=crop',
+      'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=150&h=150&fit=crop',
+      'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=150&h=150&fit=crop'
+    ],
+    features: [
+      { icon: 'bed', title: 'Phòng Deluxe Ocean View', desc: '2 người • 35m² • Giường King' },
+      { icon: 'bed', title: 'Phòng Suite', desc: '4 người • 60m² • 2 Giường Queen' },
+      { icon: 'bed', title: 'Phòng Presidential', desc: '6 người • 120m² • Phòng khách riêng' }
+    ],
+    availability: {
+      '2025-09': {
+        '2': '1.5M', '3': '1.5M', '4': '1.5M', '5': '1.8M', '6': '1.8M', '7': '1.8M',
+        '8': '1.5M', '9': '1.5M', '10': '1.5M', '11': '1.5M', '12': '1.8M', '13': '1.8M',
+        '14': '1.8M', '15': '1.5M', '16': '1.5M', '17': '1.5M', '18': '1.5M', '19': '1.8M',
+        '20': '1.8M', '21': '1.8M', '22': '1.5M', '23': '1.5M', '24': '1.5M', '25': '1.5M',
+        '26': '1.8M', '27': '1.8M', '28': '1.8M', '29': '1.5M', '30': '1.5M'
+      },
+      '2025-10': {
+        '1': '1.5M', '2': '1.8M', '3': '1.8M', '4': '1.8M', '5': '1.5M'
+      },
       '2025-11': {}
     }
   }

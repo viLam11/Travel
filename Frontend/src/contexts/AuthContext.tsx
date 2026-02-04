@@ -1,6 +1,48 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import apiClient from '@/services/apiClient';
 
+// 🧪 MOCK AUTH MODE - Set to true to test with mock users
+const USE_MOCK_AUTH = true; // Change to false to use real backend
+
+// Mock Users for Testing
+const MOCK_USERS = {
+    customer: {
+        token: 'mock-token-customer',
+        user: {
+            userID: 1,
+            name: 'Nguyễn Văn A',
+            email: 'customer@test.com',
+            role: 'user',
+            phoneNumber: '0901234567',
+            address: 'Hà Nội',
+        }
+    },
+    hotelProvider: {
+        token: 'mock-token-hotel',
+        user: {
+            userID: 2,
+            name: 'Khách sạn Majestic',
+            email: 'hotel@test.com',
+            role: 'provider',
+            phoneNumber: '0902345678',
+            address: 'TP.HCM',
+            providerType: 'hotel' as 'hotel' | 'place',
+        }
+    },
+    tourProvider: {
+        token: 'mock-token-tour',
+        user: {
+            userID: 3,
+            name: 'Tour Hà Nội',
+            email: 'tour@test.com',
+            role: 'provider',
+            phoneNumber: '0903456789',
+            address: 'Hà Nội',
+            providerType: 'place' as 'hotel' | 'place',
+        }
+    },
+};
+
 interface User {
     userID: number;
     name: string;
@@ -8,6 +50,7 @@ interface User {
     role: string;
     phoneNumber?: string;
     address?: string;
+    providerType?: 'hotel' | 'place'; // For providers
 }
 
 interface LoginResponse {
@@ -22,6 +65,8 @@ interface RegisterData {
     password: string;
     phone?: string;
     address?: string;
+    role?: string; // ROLE_USER, ROLE_PROVIDER, etc.
+    providerType?: 'hotel' | 'place'; // For providers only
 }
 
 interface AuthContextType {
@@ -108,6 +153,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
 
         try {
+            // 🧪 MOCK MODE: Test with predefined users
+            if (USE_MOCK_AUTH) {
+                console.log('🧪 MOCK AUTH MODE - Testing with mock users');
+
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                let mockResponse: LoginResponse | null = null;
+
+                // Match email to mock user
+                if (email === 'customer@test.com') {
+                    mockResponse = MOCK_USERS.customer;
+                } else if (email === 'hotel@test.com') {
+                    mockResponse = MOCK_USERS.hotelProvider;
+                } else if (email === 'tour@test.com') {
+                    mockResponse = MOCK_USERS.tourProvider;
+                } else {
+                    throw new Error('Email không tồn tại. Sử dụng: customer@test.com, hotel@test.com, hoặc tour@test.com');
+                }
+
+                console.log('✅ Mock login successful:', mockResponse);
+
+                // Save mock data
+                localStorage.setItem('token', mockResponse.token);
+                localStorage.setItem('currentUser', JSON.stringify(mockResponse));
+
+                setCurrentUser(mockResponse);
+                setIsAuthenticated(true);
+                setIsLoading(false);
+                return;
+            }
+
             // Real Backend API
             const response = await apiClient.auth.login({
                 email,

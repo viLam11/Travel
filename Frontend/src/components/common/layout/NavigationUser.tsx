@@ -19,6 +19,7 @@ const Navigation: React.FC<NavigationProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
   const navigate = useNavigate();
   const { isAuthenticated, currentUser, logout } = useAuth();
 
@@ -26,6 +27,17 @@ const Navigation: React.FC<NavigationProps> = ({
     logout();
     toast.success('Đăng xuất thành công!');
     navigate('/homepage');
+  };
+
+  const handleSearch = (e?: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e && e.key !== 'Enter') return;
+    if (!searchKeyword.trim()) {
+      toast.error('Vui lòng nhập từ khóa tìm kiếm');
+      return;
+    }
+    navigate(`/destinations?keyword=${encodeURIComponent(searchKeyword)}`);
+    setSearchKeyword('');
+    setIsSearchOpen(false);
   };
 
   return (
@@ -48,6 +60,9 @@ const Navigation: React.FC<NavigationProps> = ({
               <input
                 type="text"
                 placeholder="Tìm kiếm địa điểm, hoạt động..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyDown={handleSearch}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
@@ -89,6 +104,12 @@ const Navigation: React.FC<NavigationProps> = ({
               className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
             >
               Địa điểm
+            </button>
+            <button
+              onClick={() => navigate('/hotels')}
+              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
+            >
+              Khách sạn
             </button>
             <button
               onClick={() => toast('Tính năng đang phát triển')}
@@ -163,6 +184,9 @@ const Navigation: React.FC<NavigationProps> = ({
               <input
                 type="text"
                 placeholder="Tìm kiếm địa điểm, hoạt động..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyDown={handleSearch}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
@@ -177,6 +201,12 @@ const Navigation: React.FC<NavigationProps> = ({
               className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
             >
               Địa điểm
+            </button>
+            <button
+              onClick={() => navigate('/hotels')}
+              className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
+            >
+              Khách sạn
             </button>
             <button
               onClick={() => toast('Tính năng đang phát triển')}

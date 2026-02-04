@@ -3,12 +3,23 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useAdminPortalContainer } from "@/hooks/useAdminPortalContainer"
 
 const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
 
-const DialogPortal = DialogPrimitive.Portal
+// const DialogPortal = DialogPrimitive.Portal
+const DialogPortal = (props: React.ComponentProps<typeof DialogPrimitive.Portal>) => {
+  const container = useAdminPortalContainer()
+
+  return (
+    <DialogPrimitive.Portal
+      container={container || undefined}
+      {...props}
+    />
+  )
+}
 
 const DialogClose = DialogPrimitive.Close
 

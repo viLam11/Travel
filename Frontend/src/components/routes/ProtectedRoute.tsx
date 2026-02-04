@@ -79,12 +79,34 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({
     }
 
     // Check role authorization
-    if (requiredRole && currentUser?.user?.role !== requiredRole) {
-        // Redirect based on user role
-        const redirectPath = currentUser?.user?.role === 'admin' 
-            ? '/admin/dashboard' 
-            : '/homepage';
-        return <Navigate to={redirectPath} replace />;
+    if (requiredRole && currentUser?.user?.role) {
+        const userRole = currentUser.user.role.toLowerCase();
+
+        console.log('🔒 ProtectedRoute Check:', {
+            requiredRole,
+            userRole,
+            currentUser: currentUser.user,
+            match: userRole === requiredRole.toLowerCase()
+        });
+
+        // If specific role required, check exact match
+        if (userRole !== requiredRole.toLowerCase()) {
+            console.log('❌ Role mismatch - Redirecting...');
+            // Redirect based on user role
+            const redirectPath = userRole.includes('provider') || userRole.includes('admin')
+                ? '/admin/dashboard'
+                : '/homepage';
+            return <Navigate to={redirectPath} replace />;
+        }
+    } else if (!requiredRole && currentUser?.user?.role) {
+        // No specific role required, but check if user should have access to admin
+        // This is for admin routes without requiredRole
+        const userRole = currentUser.user.role.toLowerCase();
+
+        // Block regular users from admin panel
+        if (!userRole.includes('provider') && !userRole.includes('admin')) {
+            return <Navigate to="/homepage" replace />;
+        }
     }
 
     // Nếu có children (direct element), render children

@@ -12,11 +12,11 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { 
-  Calendar, 
+import {
+  Calendar,
   Banknote, // Đã thay thế DollarSign bằng Banknote
-  Users, 
-  Eye, 
+  Users,
+  Eye,
   Edit,
   ArrowUpDown,
   ChevronLeft,
@@ -39,10 +39,6 @@ import {
   bookingsData,
   revenueByServiceData,
   bookingTrendsData,
-  topProvidersData,
-  bookingStatusData,
-  popularDestinationsData,
-  monthlyRevenueData,
   type Booking,
 } from '@/data/dashboardData';
 
@@ -126,7 +122,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
       cell: ({ row }) => {
         const type = row.getValue("serviceType") as string;
         return (
-          <Badge 
+          <Badge
             className={type === "hotel" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}
           >
             {type === "hotel" ? "Khách sạn" : "Vé tham quan"}
@@ -180,7 +176,7 @@ function BookingsTable({ data }: { data: Booking[] }) {
           completed: { bg: "bg-blue-100", text: "text-blue-700", label: "Hoàn thành" },
         };
         const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-        
+
         return (
           <Badge className={`${config.bg} ${config.text} hover:${config.bg}`}>
             {config.label}
@@ -193,13 +189,13 @@ function BookingsTable({ data }: { data: Booking[] }) {
       header: "Thao tác",
       cell: () => (
         <div className="flex gap-1">
-          <button 
+          <button
             className="p-2 hover:bg-muted rounded-lg transition-colors"
             title="Xem chi tiết"
           >
             <Eye className="w-4 h-4 text-muted-foreground" />
           </button>
-          <button 
+          <button
             className="p-2 hover:bg-muted rounded-lg transition-colors"
             title="Sửa đơn đặt"
           >
@@ -293,19 +289,19 @@ function BookingsTable({ data }: { data: Booking[] }) {
           Trang {table.getState().pagination.pageIndex + 1} trên {table.getPageCount()}
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => table.previousPage()} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Trước
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => table.nextPage()} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
             Tiếp
@@ -319,52 +315,193 @@ function BookingsTable({ data }: { data: Booking[] }) {
 
 // Main Dashboard Component
 export default function TravelServicesDashboard() {
-  const stats = [
-    {
-      title: "Tổng đơn đặt hôm nay",
-      value: "143",
-      icon: Calendar,
-      color: "text-chart-1",
-      iconBg: "bg-blue-100 dark:bg-blue-950",
-      change: "+12%",
-      trend: "up",
-    },
-    {
-      title: "Dịch vụ đang hoạt động",
-      value: "68",
-      icon: Briefcase,
-      color: "text-chart-2",
-      iconBg: "bg-green-100 dark:bg-green-950",
-      change: "+5%",
-      trend: "up",
-    },
-    {
-      title: "Doanh thu hôm nay",
-      value: "617.500.000 ₫",
-      icon: Banknote, // Sử dụng icon Banknote
-      color: "text-chart-3",
-      iconBg: "bg-yellow-100 dark:bg-yellow-950",
-      change: "+23%",
-      trend: "up",
-    },
-    {
-      title: "Nhà cung cấp dịch vụ",
-      value: "89",
-      icon: Users,
-      color: "text-chart-4",
-      iconBg: "bg-purple-100 dark:bg-purple-950",
-      change: "+8",
-      trend: "up",
-    },
-  ];
+  // TODO: Get from user context/API - for now using mock
+  // This should come from: const { user } = useAuth();
+  // 
+  // 🧪 TEST DIFFERENT PROVIDER TYPES:
+  // - 'hotel' → Shows hotel-specific metrics (occupancy, check-ins)
+  // - 'place' → Shows place-specific metrics (tickets sold, services)
+  const providerType = 'place' as 'hotel' | 'place'; // 👈 Change this to test!
+
+  // Dynamic Stats based on provider type
+  const getStats = () => {
+    if (providerType === 'hotel') {
+      return [
+        {
+          title: "Tỷ lệ lấp đầy",
+          value: "78%",
+          icon: Briefcase,
+          color: "text-chart-1",
+          iconBg: "bg-blue-100 dark:bg-blue-950",
+          change: "+5%",
+          trend: "up",
+        },
+        {
+          title: "Check-in hôm nay",
+          value: "24",
+          icon: Calendar,
+          color: "text-chart-2",
+          iconBg: "bg-green-100 dark:bg-green-950",
+          change: "+3",
+          trend: "up",
+        },
+        {
+          title: "Doanh thu hôm nay",
+          value: formatCurrency(18500000),
+          icon: Banknote,
+          color: "text-chart-3",
+          iconBg: "bg-yellow-100 dark:bg-yellow-950",
+          change: "+12%",
+          trend: "up",
+        },
+        {
+          title: "Đánh giá khách hàng",
+          value: "4.8/5",
+          icon: Users,
+          color: "text-chart-4",
+          iconBg: "bg-purple-100 dark:bg-purple-950",
+          change: "+0.2",
+          trend: "up",
+        },
+      ];
+    } else if (providerType === 'place') {
+      return [
+        {
+          title: "Dịch vụ hoạt động",
+          value: "12",
+          icon: Briefcase,
+          color: "text-chart-1",
+          iconBg: "bg-blue-100 dark:bg-blue-950",
+          change: "+3",
+          trend: "up",
+        },
+        {
+          title: "Vé bán hôm nay",
+          value: "156",
+          icon: Calendar,
+          color: "text-chart-2",
+          iconBg: "bg-green-100 dark:bg-green-950",
+          change: "+24",
+          trend: "up",
+        },
+        {
+          title: "Doanh thu hôm nay",
+          value: formatCurrency(12400000),
+          icon: Banknote,
+          color: "text-chart-3",
+          iconBg: "bg-yellow-100 dark:bg-yellow-950",
+          change: "+15%",
+          trend: "up",
+        },
+        {
+          title: "Lượt đánh giá",
+          value: "4.7/5",
+          icon: Users,
+          color: "text-chart-4",
+          iconBg: "bg-purple-100 dark:bg-purple-950",
+          change: "+0.3",
+          trend: "up",
+        },
+      ];
+    } else {
+      // Both types - combined stats
+      return [
+        {
+          title: "Tổng dịch vụ",
+          value: "17",
+          icon: Briefcase,
+          color: "text-chart-1",
+          iconBg: "bg-blue-100 dark:bg-blue-950",
+          change: "+5",
+          trend: "up",
+        },
+        {
+          title: "Đơn đặt hôm nay",
+          value: "180",
+          icon: Calendar,
+          color: "text-chart-2",
+          iconBg: "bg-green-100 dark:bg-green-950",
+          change: "+27",
+          trend: "up",
+        },
+        {
+          title: "Doanh thu hôm nay",
+          value: formatCurrency(30900000),
+          icon: Banknote,
+          color: "text-chart-3",
+          iconBg: "bg-yellow-100 dark:bg-yellow-950",
+          change: "+13%",
+          trend: "up",
+        },
+        {
+          title: "Đánh giá trung bình",
+          value: "4.75/5",
+          icon: Users,
+          color: "text-chart-4",
+          iconBg: "bg-purple-100 dark:bg-purple-950",
+          change: "+0.25",
+          trend: "up",
+        },
+      ];
+    }
+  };
+
+  const stats = getStats();
+
+  // Dynamic header text
+  const getHeaderText = () => {
+    if (providerType === 'hotel') {
+      return {
+        title: "Tổng quan khách sạn",
+        subtitle: "Quản lý phòng và đặt chỗ của khách sạn bạn.",
+        buttonText: "Tạo đặt phòng"
+      };
+    } else if (providerType === 'place') {
+      return {
+        title: "Tổng quan dịch vụ tham quan",
+        subtitle: "Quản lý các điểm tham quan và dịch vụ du lịch của bạn.",
+        buttonText: "Tạo dịch vụ mới"
+      };
+    } else {
+      return {
+        title: "Tổng quan dịch vụ",
+        subtitle: "Quản lý tất cả dịch vụ khách sạn và tham quan của bạn.",
+        buttonText: "Tạo dịch vụ mới"
+      };
+    }
+  };
+
+  const headerText = getHeaderText();
+
+  // Dynamic bookings table title
+  const getBookingsTitle = () => {
+    if (providerType === 'hotel') {
+      return {
+        title: "Đặt phòng gần đây",
+        subtitle: "Theo dõi các đơn đặt phòng của khách sạn"
+      };
+    } else if (providerType === 'place') {
+      return {
+        title: "Đặt vé gần đây",
+        subtitle: "Theo dõi các đơn đặt vé tham quan"
+      };
+    } else {
+      return {
+        title: "Đơn đặt gần đây",
+        subtitle: "Theo dõi tất cả đơn đặt phòng và vé tham quan"
+      };
+    }
+  };
+
+  const bookingsTitle = getBookingsTitle();
 
   return (
     <div className="w-full space-y-8 pb-8">
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold"></h1>
-          <p className="text-muted-foreground mt-1">Chào mừng trở lại! Dưới đây là tổng quan về nền tảng dịch vụ của bạn.</p>
+          <h1 className="text-3xl font-bold">{headerText.title}</h1>
+          <p className="text-muted-foreground mt-1">{headerText.subtitle}</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline">
@@ -372,7 +509,7 @@ export default function TravelServicesDashboard() {
             Xuất báo cáo
           </Button>
           <Button variant="default" className="bg-primary hover:bg-primary/90">
-            Tạo đơn mới
+            {headerText.buttonText}
           </Button>
         </div>
       </div>
@@ -416,8 +553,8 @@ export default function TravelServicesDashboard() {
       <Card className="border-0 shadow-sm">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
           <div>
-            <CardTitle className="text-xl font-semibold">Đơn đặt gần đây</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Quản lý và theo dõi tất cả các đơn đặt dịch vụ</p>
+            <CardTitle className="text-xl font-semibold">{bookingsTitle.title}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">{bookingsTitle.subtitle}</p>
           </div>
           <Button variant="outline" size="sm">
             Xem tất cả

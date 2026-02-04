@@ -14,7 +14,10 @@ import UserProfileLayout from "@/components/common/layout/UserProfileLayout";
 
 // Public Pages
 const LoginPage = lazy(() => import("@/pages/Auth/Login/LoginPage"));
+const RegisterLandingPage = lazy(() => import("@/pages/Auth/Register/RegisterLandingPage"));
 const RegisterPage = lazy(() => import("@/pages/Auth/Register/RegisterPage"));
+const HotelProviderRegisterPage = lazy(() => import("@/pages/Auth/Register/HotelProviderRegisterPage"));
+const TourProviderRegisterPage = lazy(() => import("@/pages/Auth/Register/TourProviderRegisterPage"));
 const ForgotPasswordPage = lazy(() => import("@/pages/Auth/ForgotPassword/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/Auth/ResetPassword/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("@/pages/Auth/VerifyEmail/VerifyEmailPage"));
@@ -23,6 +26,7 @@ const GoogleCallbackPage = lazy(() => import("@/pages/Auth/GoogleCallback/Google
 // User Pages
 const Homepage = lazy(() => import("@/pages/User/Homepage/Homepage"));
 const DestinationFilterPage = lazy(() => import("@/pages/User/DestinationFilter/DestinationFilterPage"));
+const HotelFilterPage = lazy(() => import("@/pages/User/HotelFilter/HotelFilterPage"));
 const DestinationDetailPage = lazy(() => import("@/pages/User/DestinationDetail/DestinationDetailPage"));
 const ServiceDetailPage = lazy(() => import("@/pages/User/ServiceDetail/ServiceDetailPage"));
 
@@ -35,7 +39,14 @@ const UserSavedPage = lazy(() => import("@/pages/User/Saved/UserSavedPage"));
 // Admin Pages
 const HotelDashboard = lazy(() => import("@/pages/ServiceProvider/Dashboard/DashBoardPage"));
 const AdminAddServicePage = lazy(() => import("@/pages/ServiceProvider/Services/AddServicePage"));
+const AdminServiceListPage = lazy(() => import("@/pages/ServiceProvider/Services/ServiceListPage"));
+const AdminEditServicePage = lazy(() => import("@/pages/ServiceProvider/Services/EditServicePage"));
+const AdminAddHotelPage = lazy(() => import("@/pages/ServiceProvider/Hotels/AddHotelPage"));
+const AdminHotelListPage = lazy(() => import("@/pages/ServiceProvider/Hotels/HotelListPage"));
+const AdminEditHotelPage = lazy(() => import("@/pages/ServiceProvider/Hotels/EditHotelPage"));
 const AdminRoomManagementPage = lazy(() => import("@/pages/ServiceProvider/Rooms/RoomManagementPage"));
+const AdminBookingsManagementPage = lazy(() => import("@/pages/ServiceProvider/Bookings/BookingsManagementPage"));
+const AdminReviewsManagementPage = lazy(() => import("@/pages/ServiceProvider/Reviews/ReviewsManagementPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 
 
@@ -75,7 +86,19 @@ const routes: RouteObject[] = [
   },
   {
     path: ROUTES.REGISTER,
+    element: withSuspense(RegisterLandingPage as LazyExoticComponent<ComponentType<unknown>>),
+  },
+  {
+    path: '/register/customer',
     element: withSuspense(RegisterPage as LazyExoticComponent<ComponentType<unknown>>),
+  },
+  {
+    path: '/register/hotel-owner',
+    element: withSuspense(HotelProviderRegisterPage as LazyExoticComponent<ComponentType<unknown>>),
+  },
+  {
+    path: '/register/tour-provider',
+    element: withSuspense(TourProviderRegisterPage as LazyExoticComponent<ComponentType<unknown>>),
   },
   {
     path: ROUTES.FORGOT_PASSWORD,
@@ -154,6 +177,24 @@ const routes: RouteObject[] = [
         element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
+      // ==================== HOTEL ROUTES ====================
+
+      // Hotel Filter Page - List all hotels
+      // URL: /hotels
+      // Example: /hotels?destination=Nha+Trang
+      {
+        path: 'hotels',
+        element: withSuspense(HotelFilterPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
+      // Hotel Filter by Region/Destination
+      // URL: /hotels/:region/:destination
+      // Example: /hotels/mien-trung/nha-trang
+      {
+        path: 'hotels/:region/:destination',
+        element: withSuspense(HotelFilterPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
       // ==================== USER PROFILE ROUTES (Protected) ====================
       {
         path: ROUTES.USER_ROOT,
@@ -198,7 +239,7 @@ const routes: RouteObject[] = [
     path: ROUTES.ADMIN_ROOT,
     element: (
       <ErrorBoundary>
-        <ProtectedRoute requiredRole="admin" showHeader={true}>
+        <ProtectedRoute showHeader={true}>
           <AdminLayout />
         </ProtectedRoute>
       </ErrorBoundary>
@@ -225,11 +266,11 @@ const routes: RouteObject[] = [
       },
       {
         path: "services/list",
-        element: <div className="p-6 text-lg">Admin Service List Page</div>,
+        element: withSuspense(AdminServiceListPage as LazyExoticComponent<ComponentType<unknown>>),
       },
       {
         path: "services/edit/:id",
-        element: <div className="p-6 text-lg">Admin Edit Service Page</div>,
+        element: withSuspense(AdminEditServicePage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
       // ==================== HOTELS ROUTES ====================
@@ -238,8 +279,12 @@ const routes: RouteObject[] = [
         element: withSuspense(HotelDashboard as LazyExoticComponent<ComponentType<unknown>>),
       },
       {
+        path: "hotels/list",
+        element: withSuspense(AdminHotelListPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
         path: "hotels/new",
-        element: <div className="p-6 text-lg">Admin Add Hotel Page</div>,
+        element: withSuspense(AdminAddHotelPage as LazyExoticComponent<ComponentType<unknown>>),
       },
       {
         path: "hotels/rooms",
@@ -247,7 +292,7 @@ const routes: RouteObject[] = [
       },
       {
         path: "hotels/edit/:id",
-        element: <div className="p-6 text-lg">Admin Edit Hotel Page</div>,
+        element: withSuspense(AdminEditHotelPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
       // ==================== OTHER ADMIN ROUTES ====================
@@ -257,11 +302,11 @@ const routes: RouteObject[] = [
       },
       {
         path: "bookings",
-        element: <div className="p-6 text-lg">Admin Bookings Management Page</div>,
+        element: withSuspense(AdminBookingsManagementPage as LazyExoticComponent<ComponentType<unknown>>),
       },
       {
         path: "reviews",
-        element: <div className="p-6 text-lg">Admin Reviews Management Page</div>,
+        element: withSuspense(AdminReviewsManagementPage as LazyExoticComponent<ComponentType<unknown>>),
       },
     ],
   },

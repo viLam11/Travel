@@ -4,15 +4,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   MapPin,
-  Calendar,
   Clock,
   Users,
   Heart,
-  Share2,
   ChevronLeft,
   ChevronRight,
   Info,
-  Lock,
 } from "lucide-react";
 import BreadcrumbSection from '../../../components/common/BreadcrumbSection'
 import Footer from "../../../components/common/layout/Footer";
@@ -20,12 +17,17 @@ import ServiceBookingModal from "../../../components/page/serviceDetail/modals/S
 import RoomBookingModal from "../../../components/page/serviceDetail/modals/RoomBookingModal";
 import ReviewsSection from "../../../components/page/serviceDetail/reviews/ReviewsSection";
 import BookingCard from "../../../components/page/serviceDetail/booking/BookingCard";
+import ServiceInfoTab from "../../../components/page/serviceDetail/info/ServiceInfoTab";
+import HotelInfoTab from "../../../components/page/serviceDetail/info/HotelInfoTab";
 import type { AppDispatch, RootState } from "../../../store";
 import {
   loadServiceDetail,
   clearServiceDetail,
 } from "../../../store/slices/serviceDetailSlice";
-import { getDestinationInfo } from '@/constants/regions';
+import { useAuth } from '@/hooks/useAuth';
+import { useAuthCheck } from '@/hooks/useAuthCheck';
+import toast from 'react-hot-toast';
+import AuthModal from '@/components/common/AuthModal';
 
 const ServiceDetailPage: React.FC = () => {
   const { region, destination, serviceType, idSlug } = useParams<{
@@ -37,6 +39,10 @@ const ServiceDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
+  // Auth hooks
+  const { isAuthenticated } = useAuth();
+  const { requireAuth, showAuthModal, authMessage, closeAuthModal } = useAuthCheck();
+
   // Redux state
   const {
     data: service,
@@ -45,7 +51,6 @@ const ServiceDetailPage: React.FC = () => {
   } = useSelector((state: RootState) => state.serviceDetail);
 
   // Local state
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [activeTab, setActiveTab] = useState<"info" | "reviews">("info");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -92,7 +97,6 @@ const ServiceDetailPage: React.FC = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewTitle, setReviewTitle] = useState("");
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Extract ID from slug
   const extractId = (slug: string | undefined): string => {
@@ -100,10 +104,7 @@ const ServiceDetailPage: React.FC = () => {
     return slug.split("-")[0];
   };
 
-  const encodedAddress = encodeURIComponent(
-    service?.address ?? "Hoàn Kiếm, Hà Nội"
-  );
-  const mapSrc = `https://maps.google.com/maps?q=${encodedAddress}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+
 
   // Load service detail
   useEffect(() => {
@@ -145,13 +146,10 @@ const ServiceDetailPage: React.FC = () => {
   };
 
   const handleBookNow = () => {
-    if (!isLoggedIn) {
-      // Kiểm tra đăng nhập
-      setShowAuthModal(true); // Hiện modal nếu chưa đăng nhập
-      return;
-    }
-    setShowServiceBookingModal(true);
-    document.body.style.overflow = "hidden";
+    requireAuth(() => {
+      setShowServiceBookingModal(true);
+      document.body.style.overflow = "hidden";
+    }, 'Vui lòng đăng nhập để đặt dịch vụ');
   };
 
   const handleCloseModal = () => {
@@ -175,13 +173,10 @@ const ServiceDetailPage: React.FC = () => {
   };
 
   const handleRoomBookNow = () => {
-    if (!isLoggedIn) {
-      // Kiểm tra đăng nhập
-      setShowAuthModal(true); // Hiện modal nếu chưa đăng nhập
-      return;
-    }
-    setShowRoomBookingModal(true);
-    document.body.style.overflow = "hidden";
+    requireAuth(() => {
+      setShowRoomBookingModal(true);
+      document.body.style.overflow = "hidden";
+    }, 'Vui lòng đăng nhập để đặt phòng');
   };
 
   const handleCloseRoomModal = () => {
@@ -225,38 +220,36 @@ const ServiceDetailPage: React.FC = () => {
   };
 
   const handleSubmitReview = () => {
-    if (!isLoggedIn) {
-      // Kiểm tra đăng nhập
-      setShowAuthModal(true);
+    if (reviewRating === 0) {
+      toast.error('Vui lòng chọn số sao đánh giá');
       return;
     }
 
-    if (reviewRating === 0) return;
+    requireAuth(() => {
+      const newReview = {
+        id: Date.now(),
+        author: "Bạn",
+        date: new Date().toLocaleDateString("vi-VN"),
+        rating: reviewRating,
+        title: reviewTitle,
+        content: reviewText,
+        cost: reviewCost,
+        images: reviewImages,
+        helpful: 0,
+        notHelpful: 0,
+      };
 
-    const newReview = {
-      id: Date.now(),
-      author: "Bạn",
-      date: new Date().toLocaleDateString("vi-VN"),
-      rating: reviewRating,
-      title: reviewTitle,
-      content: reviewText,
-      cost: reviewCost,
-      images: reviewImages,
-      helpful: 0,
-      notHelpful: 0,
-    };
-
-    setUserReviews((prev) => [newReview, ...prev]);
-    setReviewRating(0);
-    setReviewTitle("");
-    setReviewText("");
-    setReviewCost("");
-    setReviewImages([]);
+      setUserReviews((prev) => [newReview, ...prev]);
+      setReviewRating(0);
+      setReviewTitle("");
+      setReviewText("");
+      setReviewCost("");
+      setReviewImages([]);
+      toast.success('Đánh giá của bạn đã được gửi!');
+    }, 'Vui lòng đăng nhập để đánh giá');
   };
 
-  const months = ["Tháng 9/2025", "Tháng 10/2025", "Tháng 11/2025"];
-  const monthKeys = ["2025-09", "2025-10", "2025-11"];
-  const daysOfWeek = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
 
   const getDaysInMonth = (monthKey: string) => {
     if (!service) return [];
@@ -534,8 +527,8 @@ const ServiceDetailPage: React.FC = () => {
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
                     className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx
-                        ? "border-orange-500 ring-2 ring-orange-200"
-                        : "border-gray-200 hover:border-orange-300"
+                      ? "border-orange-500 ring-2 ring-orange-200"
+                      : "border-gray-200 hover:border-orange-300"
                       }`}
                   >
                     <img
@@ -587,8 +580,8 @@ const ServiceDetailPage: React.FC = () => {
                 <button
                   onClick={() => setActiveTab("info")}
                   className={`pb-3 font-semibold transition-colors relative ${activeTab === "info"
-                      ? "text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
+                    ? "text-gray-900"
+                    : "text-gray-500 hover:text-gray-700"
                     }`}
                 >
                   Thông tin
@@ -599,8 +592,8 @@ const ServiceDetailPage: React.FC = () => {
                 <button
                   onClick={() => setActiveTab("reviews")}
                   className={`pb-3 font-semibold transition-colors relative ${activeTab === "reviews"
-                      ? "text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
+                    ? "text-gray-900"
+                    : "text-gray-500 hover:text-gray-700"
                     }`}
                 >
                   Đánh giá
@@ -613,127 +606,25 @@ const ServiceDetailPage: React.FC = () => {
 
             {/* Tab Content */}
             {activeTab === "info" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">
-                    Thông tin
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
-                    {service.description}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                  {service.features.map((feature, idx) => (
-                    <div
-                      key={idx}
-                      className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-3">
-                        {getFeatureIcon(feature.icon)}
-                      </div>
-                      <h4 className="font-semibold text-gray-900 mb-1 text-sm">
-                        {feature.title}:
-                      </h4>
-                      <p className="text-xs sm:text-sm text-gray-600">
-                        {feature.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Đặt lịch
-                  </h3>
-                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-3 border-b border-gray-200">
-                      {months.map((month, idx) => (
-                        <button
-                          key={month}
-                          onClick={() => setSelectedMonth(monthKeys[idx])}
-                          className={`py-3 text-xs sm:text-sm font-medium transition-colors ${selectedMonth === monthKeys[idx]
-                              ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500"
-                              : "text-gray-600 hover:bg-gray-50"
-                            }`}
-                        >
-                          {month}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="p-3 sm:p-4">
-                      <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
-                        {daysOfWeek.map((day) => (
-                          <div
-                            key={day}
-                            className="text-center text-xs sm:text-sm font-medium text-gray-600 py-2"
-                          >
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                        {getDaysInMonth(selectedMonth).map((day, idx) => (
-                          <div key={idx} className="aspect-square">
-                            {day ? (
-                              <button
-                                disabled={!day.available}
-                                className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all ${day.available
-                                    ? "bg-gray-50 hover:bg-orange-100 text-orange-600 font-medium cursor-pointer"
-                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  }`}
-                              >
-                                <span>{day.day}</span>
-                                {day.price && (
-                                  <span className="text-[10px] sm:text-xs font-semibold">
-                                    {day.price}
-                                  </span>
-                                )}
-                              </button>
-                            ) : (
-                              <div className="w-full h-full" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Vị trí bản đồ
-                  </h3>
-                  <div className="bg-gray-200 rounded-xl overflow-hidden aspect-video relative shadow-sm border border-gray-100">
-                    {/* Kiểm tra nếu có địa chỉ thì hiện iframe, không thì hiện thông báo */}
-                    {service.address ? (
-                      <iframe
-                        title={`Bản đồ ${service.name}`}
-                        width="100%"
-                        height="100%"
-                        src={mapSrc}
-                        className="absolute inset-0 w-full h-full"
-                        loading="lazy" // Tốt cho hiệu năng tải trang
-                      ></iframe>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500">
-                        <p>Chưa có thông tin bản đồ</p>
-                      </div>
-                    )}
-                  </div>
-                  {/* Hiển thị dòng địa chỉ text bên dưới map */}
-                  <p className="mt-3 text-sm text-gray-600 flex items-start gap-2">
-                    Địa chỉ: <span>{service.address}</span>
-                  </p>
-                </div>
-              </div>
+              serviceType === 'hotel' ? (
+                <HotelInfoTab service={service} />
+              ) : (
+                <ServiceInfoTab
+                  service={service}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  getDaysInMonth={getDaysInMonth}
+                  getFeatureIcon={getFeatureIcon}
+                />
+              )
             )}
+
+
+
 
             {activeTab === "reviews" && (
               <ReviewsSection
-                isLoggedIn={isLoggedIn}
+                isLoggedIn={isAuthenticated}
                 reviewRating={reviewRating}
                 setReviewRating={setReviewRating}
                 reviewTitle={reviewTitle}
@@ -759,6 +650,7 @@ const ServiceDetailPage: React.FC = () => {
           <div className="lg:col-span-1">
             <BookingCard
               service={service}
+              serviceType={serviceType}
               adultCount={adultCount}
               setAdultCount={setAdultCount}
               childCount={childCount}
@@ -768,8 +660,8 @@ const ServiceDetailPage: React.FC = () => {
               onRoomBookNow={handleRoomBookNow}
             />
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
 
       <Footer />
 
@@ -835,70 +727,14 @@ const ServiceDetailPage: React.FC = () => {
         allRooms={allRooms}
         onConfirm={handleConfirmRoomBooking}
       />
-      {showAuthModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowAuthModal(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Icon */}
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                <Lock className="w-8 h-8 text-white" />
-              </div>
-            </div>
 
-            {/* Title */}
-            <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">
-              Yêu cầu đăng nhập
-            </h2>
-
-            {/* Description */}
-            <p className="text-gray-600 text-center mb-8 leading-relaxed">
-              Bạn cần đăng nhập để thực hiện đặt phòng và trải nghiệm đầy đủ các
-              tính năng của chúng tôi.
-            </p>
-
-            {/* Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  sessionStorage.setItem("returnUrl", window.location.pathname);
-                  navigate("/login");
-                }}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-              >
-                Đăng nhập ngay
-              </button>
-
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="w-full bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3.5 px-6 rounded-xl border-2 border-gray-200 hover:border-gray-300 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-              >
-                Hủy bỏ
-              </button>
-            </div>
-
-            {/* Footer note */}
-            <p className="text-xs text-gray-500 text-center mt-6">
-              Chưa có tài khoản?{" "}
-              <button
-                onClick={() => {
-                  sessionStorage.setItem("returnUrl", window.location.pathname);
-                  navigate("/register");
-                }}
-                className="text-orange-500 hover:text-orange-600 font-semibold hover:underline"
-              >
-                Đăng ký tại đây
-              </button>
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={closeAuthModal}
+        message={authMessage}
+      />
+    </div >
   );
 };
 
