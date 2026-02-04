@@ -13,8 +13,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.travollo.Travel.config.VnpayConfig;
+import com.travollo.Travel.service.VNPayService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,9 +28,35 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value = "/api/vnpay")
 public class VnpayPayController {
-
     @Autowired
     VnpayConfig vnpayConfig;
+
+    @Autowired
+    private VNPayService vnPayService;
+
+    @PostMapping("/create-payment")
+    public ResponseEntity<?> createPayment(HttpServletRequest request,
+                                           @RequestParam int amount,
+                                           @RequestParam(required = false) String bankCode) {
+        try {
+            // Lấy IP người dùng
+            String ipAddress = request.getHeader("X-FORWARDED-FOR");
+            if (ipAddress == null) {
+                ipAddress = request.getRemoteAddr();
+            }
+
+            String paymentUrl = vnPayService.createPaymentUrl(amount, bankCode, ipAddress);
+
+            Map<String, String> result = new HashMap<>();
+            result.put("code", "00");
+            result.put("message", "success");
+            result.put("data", paymentUrl);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
 
     @PostMapping("/make")
     public Map<String, String> createPayment(HttpServletRequest request, @RequestParam(name = "vnp_OrderInfo") String vnp_OrderInfo,

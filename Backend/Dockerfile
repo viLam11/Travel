@@ -1,15 +1,11 @@
-#
-# Build stage
-#
-FROM maven:3.8.3-openjdk-17 AS build
-COPY . .
+FROM maven:3.9-amazoncorretto-17 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src ./src
 RUN mvn clean package -DskipTests
-
-#
-# Package stage
-#
-FROM eclipse-temurin:17-jdk
-COPY --from=build /target/Travel-0.0.1-SNAPSHOT.jar app.jar
-# ENV PORT=8080
+FROM amazoncorretto:17-alpine-jdk
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -11,6 +11,7 @@ import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.EmailService;
 import com.travollo.Travel.service.interfac.UserInterface;
 import com.travollo.Travel.utils.JWTUtils;
+import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,8 @@ public class UserService implements UserInterface {
             userCredentials.setVerificationCode(generateVerificationCode());
             userCredentials.setExpiredAt(java.time.LocalDateTime.now().plusHours(1));
             userCredentials.setEnabled(false);
+            Role userRole = userCredentials.getRole() != null ? userCredentials.getRole() : Role.USER;
+            userCredentials.setRole(userRole);
 
             sendVerificationEmail(userCredentials);
 
@@ -234,7 +237,7 @@ public class UserService implements UserInterface {
     };
 
     @Override
-    public ResponseEntity<UserDTO> getUserById(Long userID){
+    public ResponseEntity<UserDTO> getUserById(String userID){
         try {
             User user = theUserRepo.findById(userID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));
@@ -251,12 +254,12 @@ public class UserService implements UserInterface {
     };
 
     @Override
-    public ResponseEntity<List<Order>> getOrdersByUserId(Long userID){
+    public ResponseEntity<List<Order>> getOrdersByUserId(String userID){
         return null;
     };
 
     @Override
-    public ResponseEntity<Object> updateUser(Long userID, User user){
+    public ResponseEntity<Object> updateUser(String userID, User user){
         try {
             User existingUser = theUserRepo.findById(userID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "User not found"));

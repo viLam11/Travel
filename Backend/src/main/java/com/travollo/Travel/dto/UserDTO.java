@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 public class UserDTO {
-    private Long userID;
+    private String userID;
     private String username;
     private String email;
     private String fullname;
@@ -23,11 +23,11 @@ public class UserDTO {
 
     private List<Order> orderList;
 
-    public Long getUserID() {
+    public String getUserID() {
         return userID;
     }
 
-    public void setUserID(Long userID) {
+    public void setUserID(String userID) {
         this.userID = userID;
     }
 

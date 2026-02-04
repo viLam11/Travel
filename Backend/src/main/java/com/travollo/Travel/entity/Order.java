@@ -1,5 +1,6 @@
 package com.travollo.Travel.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
@@ -38,9 +39,11 @@ public class Order {
     private List<Discount> discountList;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<OrderedTicket> orderedTickets;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<OrderedRoom> orderedRooms;
 
     @ManyToOne(fetch = FetchType.EAGER)
