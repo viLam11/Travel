@@ -1,7 +1,6 @@
 import api from "./api";
-import type {
-  UserPermissions,
-} from "@/types/models.types";
+import type { UserPermissions } from "@/types/models.types";
+import type { CreateOrderRequest } from "@/types/order.types";
 
 import type { AxiosRequestConfig, AxiosResponse } from "axios";
 
@@ -64,8 +63,8 @@ export interface ResourceAdapter<
   baseUrl: string;
 }
 
-/** 
-  * ApiClient class for type-safe API calls
+/**
+ * ApiClient class for type-safe API calls
  */
 export class ApiClient {
   private rateLimitInfo: RateLimitInfo | null = null;
@@ -84,7 +83,10 @@ export class ApiClient {
       return this.post("/auth/register/local", data);
     },
 
-    verify: (data: { email: string; verificationCode: string }): ApiResponse<any> => {
+    verify: (data: {
+      email: string;
+      verificationCode: string;
+    }): ApiResponse<any> => {
       return this.post("/auth/verify", data);
     },
 
@@ -109,39 +111,53 @@ export class ApiClient {
       return this.post("/auth/forgot-password", data);
     },
 
-    verifyResetOTP: (data: { email: string; otp: string }): ApiResponse<{ statusCode: number; message: string; resetToken: string }> => {
+    verifyResetOTP: (data: {
+      email: string;
+      otp: string;
+    }): ApiResponse<{
+      statusCode: number;
+      message: string;
+      resetToken: string;
+    }> => {
       return this.post("/auth/verify-reset-otp", data);
     },
 
-    resetPassword: (data: { token: string; newPassword: string }): ApiResponse<any> => {
+    resetPassword: (data: {
+      token: string;
+      newPassword: string;
+    }): ApiResponse<any> => {
       return this.post("/auth/reset-password", data);
-    }
+    },
   };
 
   // Service endpoints
   services = {
-    create: (params: {
-      serviceName: string;
-      description: string;
-      provinceCode: string;
-      address?: string;
-      contactNumber?: string;
-      averagePrice?: number;
-      tags?: string;
-      serviceType: string;
-      start_time?: string;
-      end_time?: string;
-      open_time?: string;
-      close_time?: string;
-      working_days?: string;
-    }, thumbnail: File, photos: File[]): ApiResponse<any> => {
+    create: (
+      params: {
+        serviceName: string;
+        description: string;
+        provinceCode: string;
+        address?: string;
+        contactNumber?: string;
+        averagePrice?: number;
+        tags?: string;
+        serviceType: string;
+        start_time?: string;
+        end_time?: string;
+        open_time?: string;
+        close_time?: string;
+        working_days?: string;
+      },
+      thumbnail: File,
+      photos: File[]
+    ): ApiResponse<any> => {
       const formData = new FormData();
-      formData.append('thumbnail', thumbnail);
-      photos.forEach(photo => formData.append('photo', photo));
+      formData.append("thumbnail", thumbnail);
+      photos.forEach((photo) => formData.append("photo", photo));
 
-      return this.post('/services/newService', formData, {
+      return this.post("/services/newService", formData, {
         params,
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
     },
 
@@ -150,11 +166,11 @@ export class ApiClient {
     },
 
     list: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get('/services/data', { params: { page, size } });
+      return this.get("/services/data", { params: { page, size } });
     },
 
     getAll: (): ApiResponse<any> => {
-      return this.get('/services/all');
+      return this.get("/services/all");
     },
 
     delete: (id: number): ApiResponse<any> => {
@@ -163,14 +179,41 @@ export class ApiClient {
 
     uploadImages: (id: number, photos: File[]): ApiResponse<any> => {
       const formData = new FormData();
-      photos.forEach(p => formData.append('photos', p));
+      photos.forEach((p) => formData.append("photos", p));
 
       return this.patch(`/services/upload/img/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { "Content-Type": "multipart/form-data" },
       });
     },
 
+    // search: (params: {
+    //   keyword?: string;
+    //   serviceType?: string;
+    //   minPrice?: number;
+    //   maxPrice?: number;
+    //   minRating?: number;
+    //   page?: number;
+    //   size?: number;
+    //   sortBy?: string;
+    //   direction?: string;
+    // }): ApiResponse<any> => {
+    //   // Create query params
+    //   const queryParams = new URLSearchParams();
+    //   if (params.keyword) queryParams.append('keyword', params.keyword);
+    //   if (params.serviceType) queryParams.append('serviceType', params.serviceType);
+    //   if (params.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
+    //   if (params.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
+    //   if (params.minRating !== undefined) queryParams.append('minRating', params.minRating.toString());
+    //   queryParams.append('page', (params.page || 0).toString());
+    //   queryParams.append('size', (params.size || 10).toString());
+    //   queryParams.append('sortBy', params.sortBy || 'id');
+    //   queryParams.append('direction', params.direction || 'asc');
+
+    //   return this.get(`/services/search?${queryParams.toString()}`);
+    // }
+
     search: (params: {
+      provinceCode?: string; // Khớp với Backend yêu cầu
       keyword?: string;
       serviceType?: string;
       minPrice?: number;
@@ -181,41 +224,54 @@ export class ApiClient {
       sortBy?: string;
       direction?: string;
     }): ApiResponse<any> => {
-      // Create query params
-      const queryParams = new URLSearchParams();
-      if (params.keyword) queryParams.append('keyword', params.keyword);
-      if (params.serviceType) queryParams.append('serviceType', params.serviceType);
-      if (params.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
-      if (params.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
-      if (params.minRating !== undefined) queryParams.append('minRating', params.minRating.toString());
-      queryParams.append('page', (params.page || 0).toString());
-      queryParams.append('size', (params.size || 10).toString());
-      queryParams.append('sortBy', params.sortBy || 'id');
-      queryParams.append('direction', params.direction || 'asc');
-
-      return this.get(`/services/search?${queryParams.toString()}`);
-    }
+      // Sử dụng params trực tiếp để Axios tự xử lý Query String
+      return this.get(`/services/search`, {
+        params: {
+          provinceCode: params.provinceCode,
+          keyword: params.keyword,
+          // serviceType: params.serviceType,
+          minPrice: params.minPrice,
+          maxPrice: params.maxPrice,
+          minRating: params.minRating,
+          page: params.page || 0,
+          size: params.size || 10,
+          sortBy: params.sortBy || "id",
+          direction: params.direction || "asc",
+        },
+      });
+    },
   };
 
   // Comment endpoints
   comments = {
-    getByServiceId: (serviceID: number, page?: number, size?: number, sortBy?: string, direction?: string): ApiResponse<any> => {
+    getByServiceId: (
+      serviceID: number,
+      page?: number,
+      size?: number,
+      sortBy?: string,
+      direction?: string
+    ): ApiResponse<any> => {
       return this.get(`/comment/${serviceID}`, {
-        params: { page, size, sortBy, direction }
+        params: { page, size, sortBy, direction },
       });
     },
 
-    create: (serviceID: number, content: string, rating: number, photos?: File[]): ApiResponse<any> => {
+    create: (
+      serviceID: number,
+      content: string,
+      rating: number,
+      photos?: File[]
+    ): ApiResponse<any> => {
       const formData = new FormData();
-      formData.append('content', content);
-      formData.append('rating', rating.toString());
-      formData.append('serviceID', serviceID.toString());
+      formData.append("content", content);
+      formData.append("rating", rating.toString());
+      formData.append("serviceID", serviceID.toString());
       if (photos && photos.length > 0) {
-        photos.forEach(photo => formData.append('photos', photo));
+        photos.forEach((photo) => formData.append("photos", photo));
       }
 
       return this.post(`/comment/${serviceID}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { "Content-Type": "multipart/form-data" },
       });
     },
 
@@ -241,64 +297,110 @@ export class ApiClient {
 
     undoDislike: (commentID: number): ApiResponse<any> => {
       return this.post(`/comment/undoDislike/${commentID}`, {});
-    }
+    },
   };
 
   // Payment endpoints
   payments = {
     zalopay: {
-      createOrder: (appuser: string, amount: number, order_id: number): ApiResponse<any> => {
-        return this.post('/api/zalopay/create-order', {}, {
-          params: { appuser, amount, order_id }
-        });
+      createOrder: (
+        appuser: string,
+        amount: number,
+        order_id: number
+      ): ApiResponse<any> => {
+        return this.post(
+          "/api/zalopay/create-order",
+          {},
+          {
+            params: { appuser, amount, order_id },
+          }
+        );
       },
       getStatus: (apptransid: string): ApiResponse<any> => {
-        return this.get('/api/zalopay/getstatusbyapptransid', {
-          params: { apptransid }
-        });
-      }
-    },
-    vnpay: {
-      createPayment: (vnp_OrderInfo: string, vnp_OrderType: string, vnp_Amount: number, vnp_Locale: string, vnp_BankCode: string = ""): ApiResponse<any> => {
-        return this.post('/api/vnpay/make', {}, {
-          params: { vnp_OrderInfo, vnp_OrderType, vnp_Amount, vnp_Locale, vnp_BankCode }
+        return this.get("/api/zalopay/getstatusbyapptransid", {
+          params: { apptransid },
         });
       },
+    },
+    vnpay: {
+      createPayment: (
+        vnp_OrderInfo: string,
+        vnp_OrderType: string,
+        vnp_Amount: number,
+        vnp_Locale: string,
+        vnp_BankCode: string = ""
+      ): ApiResponse<any> => {
+        return this.post(
+          "/api/vnpay/make",
+          {},
+          {
+            params: {
+              vnp_OrderInfo,
+              vnp_OrderType,
+              vnp_Amount,
+              vnp_Locale,
+              vnp_BankCode,
+            },
+          }
+        );
+      },
       getResult: (params: any): ApiResponse<any> => {
-        return this.get('/api/vnpay/result', { params });
-      }
+        return this.get("/api/vnpay/result", { params });
+      },
     },
     momo: {
       createOrder: (amount: number, order_id: string): ApiResponse<any> => {
-        return this.post('/api/momo/create-order', {}, {
-          params: { amount, order_id }
-        });
+        return this.post(
+          "/api/momo/create-order",
+          {},
+          {
+            params: { amount, order_id },
+          }
+        );
       },
-      transactionStatus: (requestId: string, orderId: string): ApiResponse<any> => {
-        return this.post('/api/momo/transactionStatus', {}, {
-          params: { requestId, orderId }
-        });
-      }
-    }
+      transactionStatus: (
+        requestId: string,
+        orderId: string
+      ): ApiResponse<any> => {
+        return this.post(
+          "/api/momo/transactionStatus",
+          {},
+          {
+            params: { requestId, orderId },
+          }
+        );
+      },
+    },
   };
 
   // User endpoints
   users = {
     getAll: (): ApiResponse<any> => {
-      return this.get('/users/all');
+      return this.get("/users/all");
     },
 
     getProfile: (): ApiResponse<any> => {
-      return this.get('/users/me');
+      return this.get("/users/me");
     },
 
     getById: (userID: number): ApiResponse<any> => {
       return this.get(`/users/${userID}`);
     },
 
-    update: (userID: number, data: { fullname?: string; phone?: string; address?: string; dateOfBirth?: string; gender?: string; city?: string; country?: string }): ApiResponse<any> => {
+    update: (
+      userID: number,
+      data: {
+        fullname?: string;
+        phone?: string;
+        address?: string;
+        dateOfBirth?: string;
+        gender?: string;
+        city?: string;
+        country?: string;
+      }
+    ): ApiResponse<any> => {
       return this.put(`/users/${userID}`, data);
-    }
+    },
   };
 
   // Order endpoints
@@ -307,26 +409,44 @@ export class ApiClient {
       return this.get(`/orders/${id}`);
     },
     test: (): ApiResponse<string> => {
-      return this.get('/orders/test');
-    }
+      return this.get("/orders/test");
+    },
+    create: (data: CreateOrderRequest): ApiResponse<any> => {
+      return this.post("/orders/create", data);
+    },
+    getAll: (): ApiResponse<any> => {
+      return this.get("/orders/all");
+    },
+  };
+
+  tickets = {
+    getByServiceId: (serviceId: number): ApiResponse<any[]> => {
+      return this.get(`/services/${serviceId}/tickets`);
+    },
   };
 
   // Province endpoints
   provinces = {
     search: (query: string): ApiResponse<any[]> => {
-      return this.get('/provinces/search', { params: { query } });
+      return this.get("/provinces/search", { params: { query } });
     },
 
-    getByRegion: (region: 'north' | 'central' | 'south'): ApiResponse<any[]> => {
+    getByRegion: (
+      region: "north" | "central" | "south"
+    ): ApiResponse<any[]> => {
       return this.get(`/provinces/region/${region}`);
     },
 
     getAll: (): ApiResponse<any[]> => {
-      return this.get('/provinces/all');
-    }
+      return this.get("/provinces/all");
+    },
   };
 
-
+  transactions = {
+    getAll: (): ApiResponse<any> => {
+      return this.get("/orders/all");
+    },
+  };
 
   /**
    * Create a generic resource adapter for standard CRUD operations
@@ -402,21 +522,21 @@ export class ApiClient {
           items: response.data || response.results || response,
           meta: response.meta ||
             response.pagination || {
-            page: params?.page || 1,
-            per_page: params?.per_page || 10,
-            total:
-              response.total ||
-              response.count ||
-              (response.data || response.results || response).length ||
-              0,
-            total_pages:
-              response.total_pages ||
-              response.pages ||
-              Math.ceil(
-                (response.total || response.count || 0) /
-                (params?.per_page || 10)
-              ),
-          },
+              page: params?.page || 1,
+              per_page: params?.per_page || 10,
+              total:
+                response.total ||
+                response.count ||
+                (response.data || response.results || response).length ||
+                0,
+              total_pages:
+                response.total_pages ||
+                response.pages ||
+                Math.ceil(
+                  (response.total || response.count || 0) /
+                    (params?.per_page || 10)
+                ),
+            },
         };
       },
 
@@ -513,10 +633,7 @@ export class ApiClient {
     return response.data;
   }
 
-  public async delete<T>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await api.delete<T>(url, config);
     this.handleRateLimit(response);
     return response.data;

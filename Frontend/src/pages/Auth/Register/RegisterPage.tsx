@@ -179,7 +179,7 @@ const RegisterPage: React.FC = () => {
           type="text"
           value={formData.username}
           onChange={handleInputChange}
-          placeholder="HoangAnh123"
+          placeholder="Nhập tên người dùng"
           error={errors.username}
           required
           icon={
@@ -206,7 +206,7 @@ const RegisterPage: React.FC = () => {
           name="email"
           value={formData.email}
           onChange={handleInputChange}
-          placeholder="nguyenvana@email.com"
+          placeholder="Địa chỉ email"
           error={errors.email}
           required
         />

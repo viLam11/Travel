@@ -1,8 +1,6 @@
-package com.travollo.Travel.controller;
+package com.travollo.Travel.domains.travel.controller;
 
-import com.travollo.Travel.dto.comment.CreateCommentDTO;
-import com.travollo.Travel.dto.services.ServiceCreateRequest;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;
@@ -11,14 +9,8 @@ import com.travollo.Travel.service.impl.TravelService;
 import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.ServiceType;
 import com.travollo.Travel.utils.Utils;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +19,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.sql.Time;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,24 +78,24 @@ public class ServiceController {
 
     @PostMapping(value = "/newService", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ResponseEntity<Object> createNewService(
-            @RequestParam("thumbnail") MultipartFile thumbnail,
-            @RequestParam("serviceName") String serviceName,
-            @RequestParam("description") String description,
-            @RequestParam(value = "provinceCode") String provinceCode,
-            @RequestParam(value = "address", required = false) String address,
-            @RequestParam(value = "contactNumber", required = false) String contactNumber,
-            @RequestParam(value = "averagePrice", required = false) Long averagePrice,
-            @RequestParam(value = "tags", required = false) String tags,
-            @RequestParam(value = "serviceType") String serviceType,
-            @RequestParam(value = "photo", required = false) List<MultipartFile> photos,
-            // TICKET_VENUE
-            @RequestParam(value = "start_time", required = false) Time start_time,
-            @RequestParam(value = "end_time", required = false) Time end_time,
-            // RESTAURANT
-            @RequestParam(value = "open_time", required = false) Time open_time,
-            @RequestParam(value = "close_time", required = false) Time close_time,
-            @RequestParam(value = "working_days", required = false) String working_days,
-
+//            @RequestParam("thumbnail") MultipartFile thumbnail,
+//            @RequestParam("serviceName") String serviceName,
+//            @RequestParam("description") String description,
+//            @RequestParam(value = "provinceCode") String provinceCode,
+//            @RequestParam(value = "address", required = false) String address,
+//            @RequestParam(value = "contactNumber", required = false) String contactNumber,
+//            @RequestParam(value = "averagePrice", required = false) Long averagePrice,
+//            @RequestParam(value = "tags", required = false) String tags,
+//            @RequestParam(value = "serviceType") String serviceType,
+//            @RequestParam(value = "photo", required = false) List<MultipartFile> photos,
+//            // TICKET_VENUE
+//            @RequestParam(value = "start_time", required = false) Time start_time,
+//            @RequestParam(value = "end_time", required = false) Time end_time,
+//            // RESTAURANT
+//            @RequestParam(value = "open_time", required = false) Time open_time,
+//            @RequestParam(value = "close_time", required = false) Time close_time,
+//            @RequestParam(value = "working_days", required = false) String working_days,
+            @RequestBody NewServiceRequest newServiceRequest,
             HttpServletRequest request
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -119,9 +109,7 @@ public class ServiceController {
                 return ResponseEntity.status(403).body("User is not a provider");
             }
         }
-        return travelService.createService(thumbnail, serviceName, description, provinceCode,
-                address, contactNumber, averagePrice, tags, serviceType,
-                provider.get(), photos, start_time, end_time, open_time, close_time, working_days);
+        return travelService.createService(newServiceRequest);
     }
 
 
@@ -137,6 +125,11 @@ public class ServiceController {
     ResponseEntity<Object> deleteService(@PathVariable Long id) {
         System.out.println("Received request to delete service with ID: " + id);
         return travelService.deleteService(id);
+    }
+
+    @GetMapping("/{id}/tickets")
+    ResponseEntity<Object> getTicketsByServiceId(@PathVariable Long id) {
+        return travelService.getTicketsByServiceId(id);
     }
 
     @GetMapping("/search")

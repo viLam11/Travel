@@ -1,5 +1,6 @@
 package com.travollo.Travel.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
@@ -18,6 +19,7 @@ public class OrderedRoom {
 
     @ManyToOne
     @JoinColumn(name = "room_id")
+    @JsonBackReference
     private Room room;
 
     private Integer amount;

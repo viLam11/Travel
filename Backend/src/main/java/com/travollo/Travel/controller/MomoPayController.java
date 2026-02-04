@@ -169,10 +169,10 @@ public class MomoPayController {
 
         if (resultCode == 0) {
             orderService.updateOrderStatus(orderId, "SUCCESS");
-            response.sendRedirect("http://localhost:3000/payment-success");
+            response.sendRedirect("http://localhost:3000/user/transactions");
         } else {
             orderService.updateOrderStatus(orderId, "FAILED");
-            response.sendRedirect("http://localhost:3000/payment-failed");
+            response.sendRedirect("http://localhost:3000/user/transactions");
         }
     }
 

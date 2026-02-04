@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import Avatar from '@/components/common/avatar/Avatar';
 import UserDropdownMenu from '@/components/common/UserDropdownMenu';
+import apiClient from '@/services/apiClient';
 
 interface NavigationProps {
   onFilterClick?: () => void;
@@ -24,6 +25,7 @@ const Navigation: React.FC<NavigationProps> = ({
   const { isAuthenticated, currentUser, logout } = useAuth();
 
   const handleLogout = () => {
+    apiClient.auth.logout();
     logout();
     toast.success('Đăng xuất thành công!');
     navigate('/homepage');

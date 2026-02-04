@@ -52,10 +52,10 @@ public class SecurityConfig {
     private UserRepo userRepo;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity, CorsConfigurationSource corsConfigurationSource ) throws Exception {
         httpSecurity.csrf(AbstractHttpConfigurer::disable)
 //                .cors(Customizer.withDefaults())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource(corsConfigurationSource)))
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/auth/**", "/users/**", "/api/momo/**", "/api/vnpay/**","/api/zalopay/**", "/test/**", "/swagger-ui.html", "/services/**", "/provinces/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated() )
@@ -73,7 +73,6 @@ public class SecurityConfig {
                                     Optional<User> userOptional = userRepo.findByEmail(email);
                                     
                                     if (userOptional.isEmpty()) {
-                                        // Case 1: User chưa tồn tại → Auto create new user
                                         User newUser = new User();
                                         newUser.setEmail(email);
                                         newUser.setFullname((givenName != null ? givenName : "") + " " + (familyName != null ? familyName : ""));
@@ -82,7 +81,7 @@ public class SecurityConfig {
                                         newUser.setAuthProvider(AuthType.GOOGLE);
                                         newUser.setEnabled(true); // Google đã verify email rồi
                                         userRepo.save(newUser);
-                                        System.out.println("✅ Created new Google user: " + email);
+                                        System.out.println("Created new Google user: " + email);
                                         
                                     } else {
                                         // Case 2: User đã tồn tại
@@ -93,7 +92,7 @@ public class SecurityConfig {
                                             existingUser.setAuthProvider(AuthType.GOOGLE);
                                             existingUser.setEnabled(true); // Enable nếu chưa verify
                                             userRepo.save(existingUser);
-                                            System.out.println("🔗 Linked Google account to existing LOCAL account: " + email);
+                                            System.out.println("Linked Google account to existing LOCAL account: " + email);
                                         }
                                         // Case 2b: User đã login Google trước đó → OK, continue
                                     }
@@ -166,12 +165,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(CorsConfigurationSource corsConfigurationSource) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true); // Giữ true vì bạn cần dùng cookie/auth header
+        configuration.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

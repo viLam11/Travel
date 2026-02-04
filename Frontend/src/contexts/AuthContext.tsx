@@ -258,6 +258,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
             // Call logout API to invalidate token on server
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
             await apiClient.auth.logout();
             console.log('Đăng xuất thành công (API)');
         } catch (error) {

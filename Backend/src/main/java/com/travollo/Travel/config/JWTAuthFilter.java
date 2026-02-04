@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
 
             System.out.println("auth header: " + authHeader);
 
-            if (authHeader == null || authHeader.isBlank()) {
+            if (!StringUtils.hasText(authHeader)) {
                 filterChain.doFilter(request, response);
                 return;
             }

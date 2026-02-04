@@ -224,6 +224,7 @@ const DestinationDetailPage: React.FC = () => {
               {displayedHighlights.map((item) => (
                 <DestinationCard
                   key={item.id}
+                  destination={item}
                   {...item}
                   onBook={(id) => handleBook(id, { ...item, category: 'place' })}
                 />

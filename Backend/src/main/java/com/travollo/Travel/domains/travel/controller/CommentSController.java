@@ -1,4 +1,4 @@
-package com.travollo.Travel.controller;
+package com.travollo.Travel.domains.travel.controller;
 
 import com.travollo.Travel.dto.comment.CreateCommentDTO;
 import com.travollo.Travel.entity.User;
@@ -91,12 +91,12 @@ public class CommentSController {
         return commentSService.getCommentsByServiceID(serviceID,page,size,sortBy,direction);
     }
 
-    @GetMapping("/{commentID}")
-    ResponseEntity<Object> getCommentById(
-        @PathVariable Long commentID
-    ){
-        return null;
-    }
+//    @GetMapping("/{commentID}")
+//    ResponseEntity<Object> getCommentById(
+//        @PathVariable Long commentID
+//    ){
+//        return null;
+//    }
 
     @DeleteMapping("/{commentID}")
     ResponseEntity<Object> deleteComment() {

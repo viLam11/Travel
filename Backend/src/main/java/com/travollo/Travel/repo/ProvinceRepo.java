@@ -4,6 +4,8 @@ import com.travollo.Travel.entity.Province;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface ProvinceRepo extends JpaRepository<Province, String> {
 
@@ -12,4 +14,6 @@ public interface ProvinceRepo extends JpaRepository<Province, String> {
 
     @org.springframework.data.jpa.repository.Query("SELECT p FROM Province p WHERE p.administrativeRegion.name = ?1")
     java.util.List<Province> findByMacroRegion(String macroRegion);
+
+    Optional<Province> findByName(String provinceName);
 }

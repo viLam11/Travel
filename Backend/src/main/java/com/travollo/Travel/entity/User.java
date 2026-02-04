@@ -13,14 +13,14 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 @Data
-@JsonIdentityInfo(
-        generator = ObjectIdGenerators.PropertyGenerator.class,
-        property = "userID"
-)
+//@JsonIdentityInfo(
+//        generator = ObjectIdGenerators.PropertyGenerator.class,
+//        property = "userID"
+//)
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userID;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String userID;
 
     @NotBlank(message = "Username is required")
     @Column(unique = true, nullable = false)
