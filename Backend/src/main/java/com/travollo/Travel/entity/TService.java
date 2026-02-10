@@ -24,8 +24,8 @@ import java.util.List;
 )
 public class TService {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
     private String serviceName;
     @Column(columnDefinition = "TEXT")
     private String description;

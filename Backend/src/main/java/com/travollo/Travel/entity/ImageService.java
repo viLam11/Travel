@@ -20,7 +20,7 @@ public class ImageService {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "serviceID")
+    @JoinColumn(name = "service_id")
     @JsonIgnore
     private TService tService;
 }

@@ -71,7 +71,7 @@ public class ServiceController {
 //    }
 
     @GetMapping("/{serviceID}")
-    ResponseEntity<Object> getServiceById(@PathVariable Long serviceID) {
+    ResponseEntity<Object> getServiceById(@PathVariable String serviceID) {
         return travelService.getServiceById(serviceID);
     }
 
@@ -115,20 +115,20 @@ public class ServiceController {
 
     @PatchMapping("/upload/img/{id}")
     ResponseEntity<Object> uploadImages(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody List<MultipartFile> photos
     ) {
         return travelService.uploadImages(id, photos);
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<Object> deleteService(@PathVariable Long id) {
+    ResponseEntity<Object> deleteService(@PathVariable String id) {
         System.out.println("Received request to delete service with ID: " + id);
         return travelService.deleteService(id);
     }
 
     @GetMapping("/{id}/tickets")
-    ResponseEntity<Object> getTicketsByServiceId(@PathVariable Long id) {
+    ResponseEntity<Object> getTicketsByServiceId(@PathVariable String id) {
         return travelService.getTicketsByServiceId(id);
     }
 

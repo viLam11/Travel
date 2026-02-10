@@ -9,6 +9,6 @@ import java.util.List;
 public class CreateCommentDTO {
     String content;
     Long rating;
-    Long serviceID;
+    String serviceID;
     List<MultipartFile> photos;
 }

@@ -48,7 +48,7 @@ public class TravelService implements TravelServiceInterface {
         }
     }
 
-    public ResponseEntity<Object> getServiceById(Long serviceID){
+    public ResponseEntity<Object> getServiceById(String serviceID){
         try {
             Optional<TService> optionalTService = serviceRepo.findById(serviceID);
             if (optionalTService.isPresent()) {
@@ -84,7 +84,7 @@ public class TravelService implements TravelServiceInterface {
         }
     }
 
-    public ResponseEntity<Object> uploadImages(Long id, List<MultipartFile> photos) {
+    public ResponseEntity<Object> uploadImages(String id, List<MultipartFile> photos) {
         try {
             List<String> urls = awsS3Service.saveImagesToS3(photos);
             TService service = serviceRepo.findById(id).orElse(null);
@@ -178,7 +178,7 @@ public class TravelService implements TravelServiceInterface {
         }
     };
 
-    public ResponseEntity<Object> updateService(Long serviceID, TService updatedTService){
+    public ResponseEntity<Object> updateService(String serviceID, TService updatedTService){
         try {
             Optional<TService> optionalTService = serviceRepo.findById(serviceID);
             if (optionalTService.isPresent()) {
@@ -206,7 +206,7 @@ public class TravelService implements TravelServiceInterface {
         }
     };
 
-    public ResponseEntity<Object> deleteService(Long serviceID){
+    public ResponseEntity<Object> deleteService(String serviceID){
         try {
             if (serviceRepo.existsById(serviceID)) {
                 serviceRepo.deleteById(serviceID);
@@ -274,7 +274,7 @@ public class TravelService implements TravelServiceInterface {
         }
     }
 
-    public ResponseEntity<Object> getTicketsByServiceId(Long serviceID) {
+    public ResponseEntity<Object> getTicketsByServiceId(String serviceID) {
         try {
             TicketVenue ticketVenue = (TicketVenue) serviceRepo.findById(serviceID)
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Ticket venue not found"));

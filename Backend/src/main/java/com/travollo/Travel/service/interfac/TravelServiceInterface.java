@@ -10,14 +10,14 @@ import java.util.List;
 
 public interface TravelServiceInterface {
     ResponseEntity<Object> getAllServices();
-    ResponseEntity<Object> getServiceById(Long serviceID);
+    ResponseEntity<Object> getServiceById(String serviceID);
     ResponseEntity<Object> getServices(int page, int size, String sortBy, String direction);
     ResponseEntity<Object> createService(MultipartFile photo, String serviceName, String description, String provinceCode,
                                          String address, String contactNumber, Long averagePrice,
                                          String tags, String serviceType, User provider, List<MultipartFile> photos,
                                          Time start_time, Time end_time, Time open_time, Time close_time, String working_days
                                          );
-    ResponseEntity<Object> updateService(Long serviceID, TService updatedTService);
-    ResponseEntity<Object> deleteService(Long serviceID);
+    ResponseEntity<Object> updateService(String serviceID, TService updatedTService);
+    ResponseEntity<Object> deleteService(String serviceID);
     ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, Long minRating, int page, int size, String sortBy, String direction);
 }

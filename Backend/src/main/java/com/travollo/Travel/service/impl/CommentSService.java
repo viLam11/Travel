@@ -111,7 +111,7 @@ public class CommentSService implements CommentServiceInterface {
         return null;
     }
 
-    public ResponseEntity<Object> getCommentsByServiceID(Long serviceID, Integer page, Integer size, String sortBy, String direction) {
+    public ResponseEntity<Object> getCommentsByServiceID(String serviceID, Integer page, Integer size, String sortBy, String direction) {
         TService service = serviceRepo.findById(serviceID)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
         if (page == null || size == null) {
@@ -135,12 +135,12 @@ public class CommentSService implements CommentServiceInterface {
         return ResponseEntity.ok(pageData);
     }
 
-    public ResponseEntity<Object> getCommentById(Long commentID){
+    public ResponseEntity<Object> getCommentById(String commentID){
         CommentService comment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "COMMENT NOT FOUND"));
         return ResponseEntity.ok(comment);
     }
 
-    public ResponseEntity<Object> likeComment(User user, Long commentID){
+    public ResponseEntity<Object> likeComment(User user, String commentID){
         CommentService comment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found comment"));
         System.out.println("USER: "  + user.toString());
         System.out.println("Comment: " + comment.toString());
@@ -156,7 +156,7 @@ public class CommentSService implements CommentServiceInterface {
         return ResponseEntity.ok("ok");
     }
 
-    public ResponseEntity<Object> unlikeComment(User user, Long commentID){
+    public ResponseEntity<Object> unlikeComment(User user, String commentID){
         CommentService comment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found comment"));
         boolean existLike = commentSLikeRepo.existLike(user, comment);
         if (!existLike) {
@@ -167,7 +167,7 @@ public class CommentSService implements CommentServiceInterface {
         return ResponseEntity.ok("Successfully delete the comment");
     }
 
-    public ResponseEntity<Object> dislikeComment(User user, Long commentID) {
+    public ResponseEntity<Object> dislikeComment(User user, String commentID) {
         CommentService comment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found comment"));
         boolean existDislike = commentSDislikeRepo.existByUserAndComment(user, comment);
         if (existDislike) {
@@ -179,7 +179,7 @@ public class CommentSService implements CommentServiceInterface {
         return ResponseEntity.status(HttpStatus.CREATED).body("Have ");
     }
 
-    public ResponseEntity<Object> undoDislikeComment(User user, Long commentID) {
+    public ResponseEntity<Object> undoDislikeComment(User user, String commentID) {
         CommentService comment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found comment"));
         boolean existDislike = commentSDislikeRepo.existByUserAndComment(user, comment);
         if (!existDislike) {

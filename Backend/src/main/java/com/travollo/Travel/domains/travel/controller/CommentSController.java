@@ -39,7 +39,7 @@ public class CommentSController {
     @PostMapping("/like/{commentID}")
     ResponseEntity<Object> likeComment(
             HttpServletRequest request,
-            @PathVariable Long commentID
+            @PathVariable String commentID
     ) {
         User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
         return commentSService.likeComment(user, commentID);
@@ -48,7 +48,7 @@ public class CommentSController {
     @PostMapping("/unlike/{commentID}")
     ResponseEntity<Object> unlikeComment(
             HttpServletRequest request,
-            @PathVariable Long commentID
+            @PathVariable String commentID
     ) {
         User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
         return commentSService.unlikeComment(user, commentID);
@@ -57,7 +57,7 @@ public class CommentSController {
     @PostMapping("/dislike/{commentID}")
     ResponseEntity<Object> dislikeComment(
             HttpServletRequest request,
-            @PathVariable Long commentID
+            @PathVariable String commentID
     ) {
         User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
         return commentSService.dislikeComment(user, commentID);
@@ -66,7 +66,7 @@ public class CommentSController {
     @PostMapping("/undoDislike/{commentID}")
     ResponseEntity<Object> undoDislike(
             HttpServletRequest request,
-            @PathVariable Long commentID
+            @PathVariable String commentID
     ) {
         User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
         return commentSService.undoDislikeComment(user, commentID);
@@ -82,7 +82,7 @@ public class CommentSController {
 
     @GetMapping("/{serviceID}")
     ResponseEntity<Object> getAllCommentByServiceID(
-            @PathVariable Long serviceID,
+            @PathVariable String serviceID,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "size", required = false) Integer size,
             @RequestParam(name = "sortBy", required = false, defaultValue = "createdAt") String sortBy,

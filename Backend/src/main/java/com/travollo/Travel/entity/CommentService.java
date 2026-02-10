@@ -19,7 +19,7 @@ import java.util.List;
 public class CommentService {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
     private String content;
     private Long rating;
     private int likes = 0;

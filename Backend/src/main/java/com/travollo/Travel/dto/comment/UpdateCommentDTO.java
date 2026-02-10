@@ -7,7 +7,7 @@ import java.util.List;
 
 @Data
 public class UpdateCommentDTO {
-    Long id;
+    String id;
     Long rating;
     String content;
     List<MultipartFile> photos;

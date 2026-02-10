@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface CommentSDislikeRepo extends JpaRepository<CommentDislike, Long> {
+public interface CommentSDislikeRepo extends JpaRepository<CommentDislike, String> {
     @Query("""
             SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
             FROM CommentDislike c

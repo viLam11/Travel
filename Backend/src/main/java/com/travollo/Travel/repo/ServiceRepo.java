@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface ServiceRepo extends JpaRepository<TService, Long> {
+public interface ServiceRepo extends JpaRepository<TService, String> {
     @Query(value = "SELECT * FROM services s WHERE s.province_code = ?1 AND s.thumbnail_url IS NOT NULL LIMIT 1", nativeQuery = true)
     TService findFirstByProvinceCodeAndThumbnailUrlNotNull(String provinceCode);
 

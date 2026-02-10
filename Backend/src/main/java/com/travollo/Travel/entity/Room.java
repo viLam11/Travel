@@ -14,8 +14,8 @@ import java.util.List;
 @Table(name = "rooms")
 public class Room {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long roomID;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String roomID;
 
     @Enumerated(EnumType.STRING)
     private RoomType type;

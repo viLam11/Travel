@@ -10,9 +10,9 @@ import org.springframework.stereotype.Repository;
 
 
 @Repository
-public interface CommentServiceRepo extends JpaRepository<CommentService, Long> {
+public interface CommentServiceRepo extends JpaRepository<CommentService, String> {
     Page<CommentService> findAllByTService(TService tService, Pageable pageable);
 
     @Query("SELECT COUNT(c) FROM CommentService c WHERE c.tService.id =: serviceID")
-    int countByServiceID(Long serviceID);
+    int countByServiceID(String serviceID);
 }
