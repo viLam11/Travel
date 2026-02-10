@@ -1,4 +1,4 @@
-package com.travollo.Travel.domains.orders.controller;
+package com.travollo.Travel.domains.orders.service;
 
 import com.travollo.Travel.domains.promotions.dto.DiscountResponse;
 import com.travollo.Travel.domains.promotions.entity.Discount;
@@ -110,7 +110,7 @@ public class OrderService {
                     .map(OrderedTicket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalRoomPrice = orderedRooms.stream()
                     .map(OrderedRoom::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalD
+            BigDecimal totalD;
             BigDecimal totalPrice = totalTicketPrice.add(totalRoomPrice.multiply(BigDecimal.valueOf(0.3)));
             newOrder.setTotalPrice(totalPrice);
             newOrder.setDiscountPrice(BigDecimal.ZERO);

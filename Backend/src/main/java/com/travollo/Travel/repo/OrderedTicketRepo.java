@@ -9,6 +9,6 @@ import java.util.List;
 
 
 @Repository
-public interface OrderedTicketRepo extends JpaRepository<OrderedTicket, Long> {
+public interface OrderedTicketRepo extends JpaRepository<OrderedTicket, String> {
     List<OrderedTicket> findByOrder(Order order);
 }
