@@ -16,9 +16,6 @@ Thumbs.db
 # Environment files
 *.env
 .env
-application.properties
-application.yml
-
 # =========================================
 # Backend (Java Spring Boot / Maven)
 # =========================================
@@ -27,6 +24,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/
 dependency-reduced-pom.xml
+Backend/test/resou
 
 # Gradle (nếu sau này dùng)
 .gradle/
@@ -43,10 +41,6 @@ build/
 # =========================================
 node_modules/
 dist/
-<<<<<<< HEAD
-build/
-=======
->>>>>>> 653a93b154bdf0dd944a24eef35527013d77664e
 
 # Package manager logs
 npm-debug.log*
