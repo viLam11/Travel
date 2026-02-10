@@ -9,13 +9,19 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 public class DiscountResponse {
-    private Long id;
+    private String id;
     private String name;
     private String code;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Long quantity;
     private BigDecimal minSpend;
-    private DiscountApplyType applyType;
+
+    // discount type: Fixed, Percentage
+    private DiscountType discountType;
+    // fixed price
     private Double fixedPrice;
+    // percentage
+    private Double percentage;
+    private Double maxDiscountAmount;
 }

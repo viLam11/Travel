@@ -1,16 +1,20 @@
-package com.travollo.Travel.service.impl;
+package com.travollo.Travel.domains.orders.controller;
 
+import com.travollo.Travel.domains.promotions.dto.DiscountResponse;
+import com.travollo.Travel.domains.promotions.entity.Discount;
+import com.travollo.Travel.domains.promotions.repo.DiscountRepo;
+import com.travollo.Travel.domains.promotions.service.DiscountService;
 import com.travollo.Travel.dto.SuccessResponse;
-import com.travollo.Travel.dto.order.CreateOrder;
-import com.travollo.Travel.dto.order.OrderItem;
+import com.travollo.Travel.domains.orders.dto.OrderRequest;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.OrderedTicketRepo;
 import com.travollo.Travel.repo.RoomRepo;
 import com.travollo.Travel.repo.TicketRepo;
+import com.travollo.Travel.service.impl.MomoServiceImp;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,75 +32,65 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
-    @Autowired
-    private OrderRepo orderRepo;
-
-    @Autowired
-    private TicketRepo ticketRepo;
-
-    @Autowired
-    private RoomRepo roomRepo;
-
-    @Autowired
-    private MomoServiceImp momoService;
-
-    @Autowired
-    private OrderedTicketRepo orderedTicketRepo;
-
-
+    private final OrderRepo orderRepo;
+    private final TicketRepo ticketRepo;
+    private final RoomRepo roomRepo;
+    private final MomoServiceImp momoService;
+    private final OrderedTicketRepo orderedTicketRepo;
+    private final DiscountRepo discountRepo;
+    private final DiscountService discountService;
 
     public ResponseEntity<Object> getOrderById(String id) {
         Optional<Order> foundOrder = orderRepo.findById(id);
         System.out.println("Found order " + foundOrder.toString());
-
         return foundOrder.<ResponseEntity<Object>>map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    public ResponseEntity<List<DiscountResponse>> getAllDiscountById(String id, String placeCode) {
+        return ResponseEntity.ok(discountService.getSatisfiedDiscount(id, placeCode));
+    }
+
     @Transactional
-    public ResponseEntity<Object> createOrder(CreateOrder createOrder, User user) {
+    public ResponseEntity<Object> createOrder(OrderRequest orderRequest, User user) {
         try {
             // 1. Khởi tạo đối tượng Order
             Order newOrder = new Order();
             newOrder.setCreatedAt(LocalDateTime.now());
             newOrder.setStatus("PENDING");
-            newOrder.setGuestPhone(createOrder.getGuestPhone());
-            newOrder.setNote(createOrder.getNote());
+            newOrder.setGuestPhone(orderRequest.getGuestPhone());
+            newOrder.setNote(orderRequest.getNote());
             newOrder.setUser(user);
 
             // 2. Chuyển đổi và thiết lập danh sách OrderedTicket
             // QUAN TRỌNG: Phải setOrder(newOrder) cho từng ticket
-            List<OrderedTicket> orderedTickets = createOrder.getTickets().stream().map(ticketItem -> {
+            List<OrderedTicket> orderedTickets = orderRequest.getTickets().stream().map(ticketItem -> {
                 Ticket ticketEntity = ticketRepo.findById(ticketItem.getId())
                         .orElseThrow(() -> new RuntimeException("Không tìm thấy Ticket ID: " + ticketItem.getId()));
-
                 OrderedTicket ot = new OrderedTicket();
                 ot.setTicket(ticketEntity);
                 ot.setAmount(ticketItem.getQuantity());
                 ot.setPrice(ticketEntity.getPrice().multiply(BigDecimal.valueOf(ticketItem.getQuantity())));
-                ot.setValidStart(createOrder.getCheckInDate());
-                ot.setValidEnd(createOrder.getCheckOutDate());
+                ot.setValidStart(orderRequest.getCheckInDate());
+                ot.setValidEnd(orderRequest.getCheckOutDate());
                 ot.setCreatedAt(LocalDateTime.now());
-
                 // DÒNG NÀY QUYẾT ĐỊNH VIỆC CÓ LƯU ĐƯỢC LIÊN KẾT HAY KHÔNG
                 ot.setOrder(newOrder);
-
                 return ot;
             }).collect(Collectors.toList());
 
             // 3. Chuyển đổi và thiết lập danh sách OrderedRoom (Tương tự Ticket)
-            List<OrderedRoom> orderedRooms = createOrder.getRooms().stream().map(roomItem -> {
+            List<OrderedRoom> orderedRooms = orderRequest.getRooms().stream().map(roomItem -> {
                 Room roomEntity = roomRepo.findById(roomItem.getId())
                         .orElseThrow(() -> new RuntimeException("Không tìm thấy Room ID: " + roomItem.getId()));
-
                 OrderedRoom or = new OrderedRoom();
                 or.setRoom(roomEntity);
                 or.setAmount(roomItem.getQuantity());
                 or.setPrice(roomEntity.getPrice().multiply(BigDecimal.valueOf(roomItem.getQuantity())));
-                or.setStartDate(createOrder.getCheckInDate());
-                or.setEndDate(createOrder.getCheckOutDate());
+                or.setStartDate(orderRequest.getCheckInDate());
+                or.setEndDate(orderRequest.getCheckOutDate());
                 or.setCreatedAt(LocalDateTime.now());
-
                 // THIẾT LẬP LIÊN KẾT
                 or.setOrder(newOrder);
                 return or;
@@ -106,12 +100,17 @@ public class OrderService {
             newOrder.setOrderedTickets(orderedTickets);
             newOrder.setOrderedRooms(orderedRooms);
 
+            // 5. Apply discount
+            List<Discount> discountList = orderRequest.getDiscountIds().stream()
+                    .map((id) -> discountRepo.getReferenceById(id)).toList();
+            newOrder.setDiscountList(discountList);
+
             // 5. Tính toán tổng tiền
             BigDecimal totalTicketPrice = orderedTickets.stream()
                     .map(OrderedTicket::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalRoomPrice = orderedRooms.stream()
                     .map(OrderedRoom::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
-
+            BigDecimal totalD
             BigDecimal totalPrice = totalTicketPrice.add(totalRoomPrice.multiply(BigDecimal.valueOf(0.3)));
             newOrder.setTotalPrice(totalPrice);
             newOrder.setDiscountPrice(BigDecimal.ZERO);
