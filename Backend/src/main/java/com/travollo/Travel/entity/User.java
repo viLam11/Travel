@@ -33,6 +33,7 @@ public class User {
     private String password;
     private String fullname;
     private String phone;
+    private String avatarUrl;
 
     private String address;
     private String dateOfBirth;

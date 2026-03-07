@@ -34,6 +34,7 @@ public class JWTUtils {
                 .compact();
     }
 
+    // NOTE: THIS IS EMAIL (NOT USERNAME) BECAUSE WE USE EMAIL AS PRINCIPAL
     public String extractUsername(String token) {
         return extractClaims(token, Claims::getSubject);
     }

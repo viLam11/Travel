@@ -57,7 +57,7 @@ public class SecurityConfig {
 //                .cors(Customizer.withDefaults())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource(corsConfigurationSource)))
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/auth/**", "/users/**", "/api/momo/**", "/api/vnpay/**","/api/zalopay/**", "/test/**", "/swagger-ui.html", "/services/**", "/provinces/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
+                        .requestMatchers("/ws/**","/auth/**", "/users/**", "/api/momo/**", "/api/vnpay/**","/api/zalopay/**", "/test/**", "/swagger-ui.html", "/services/**", "/provinces/**", "/v3/api-docs/**", "/swagger-ui/**",  "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated() )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/auth/login/google")
