@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
 
@@ -41,6 +42,10 @@ public class ChatMessage {
     @CreationTimestamp // default create timestamp, auto set when insert, and never update
     @Column(name = "created_at", updatable = false)
     private Timestamp createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Timestamp updatedAt;
 
     // State of the message, whether it has been read by the receiver or not
     @Builder.Default
