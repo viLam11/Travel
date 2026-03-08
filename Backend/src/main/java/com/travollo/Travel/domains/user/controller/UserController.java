@@ -1,9 +1,9 @@
-package com.travollo.Travel.controller;
+package com.travollo.Travel.domains.user.controller;
 
-import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.impl.UserService;
+import com.travollo.Travel.utils.CurrentUser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +18,12 @@ public class UserController {
     public UserController(UserRepo userRepo, UserService userService) {
         this.userService = userService;
         this.userRepo = userRepo;
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<String> test(@CurrentUser User currentUser) {
+        System.out.println("Current User: " + currentUser);
+        return ResponseEntity.ok(currentUser.toString());
     }
 
     @GetMapping("/all")

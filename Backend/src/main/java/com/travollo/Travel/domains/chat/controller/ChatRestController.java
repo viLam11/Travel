@@ -35,4 +35,11 @@ public class ChatRestController {
         chatService.markMessagesAsRead(senderId, currentUserId);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/chat-list")
+    public ResponseEntity<List<ChatMessageResponseDTO>> getChatList(Principal principal) {
+//        String currentUserEmail = principal.getName();
+
+        return null;
+    }
 }

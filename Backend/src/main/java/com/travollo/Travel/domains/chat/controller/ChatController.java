@@ -15,15 +15,12 @@ import org.springframework.stereotype.Controller;
 import java.security.Principal;
 
 @Controller
-@RequiredArgsConstructor // Tự động inject SimpMessagingTemplate
+@RequiredArgsConstructor
 public class ChatController {
 
-    // Công cụ cốt lõi để gửi tin nhắn đến một user cụ thể
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatService chatMessageService;
 
-    // Khuyến nghị: Inject thêm ChatMessageService hoặc Repository ở đây để lưu DB
-    // private final ChatMessageService chatMessageService;
 
     // --------------------------------------------------------
     // 1. KÊNH BROADCAST (Thông báo chung)
@@ -52,7 +49,7 @@ public class ChatController {
     // --------------------------------------------------------
     // 2. KÊNH PRIVATE (Chat 1-1)
     // --------------------------------------------------------
-//
+
     @MessageMapping("/chat.sendPrivateMessage")
     public void sendPrivateMessage(@Payload ChatMessageDTO payload, Principal principal) {
         // 1. IN LOG ĐỂ KIỂM TRA DỮ LIỆU
@@ -86,7 +83,7 @@ public class ChatController {
 
         } catch (Exception e) {
             System.err.println("Lỗi trong quá trình xử lý tin nhắn: " + e.getMessage());
-            e.printStackTrace(); // In ra chi tiết lỗi để dễ debug
+            e.printStackTrace();
         }
     }
 }
