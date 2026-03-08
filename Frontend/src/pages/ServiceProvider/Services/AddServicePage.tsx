@@ -47,7 +47,6 @@ interface ServiceFormData {
 const AdminAddServicePage: React.FC = () => {
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'info' | 'reviews'>('info');
 
   // Form state
   const [formData, setFormData] = useState<ServiceFormData>({
@@ -98,7 +97,7 @@ const AdminAddServicePage: React.FC = () => {
           }));
           return;
         }
-        
+
         const reader = new FileReader();
         reader.onloadend = () => {
           newImages.push(reader.result as string);
@@ -210,7 +209,7 @@ const AdminAddServicePage: React.FC = () => {
   // Submit
   const handleSubmit = async () => {
     alert('Dịch vụ đã được tạo thành công!');
-    
+
     // Reset
     setFormData({
       name: '',
@@ -313,11 +312,10 @@ const AdminAddServicePage: React.FC = () => {
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                      currentImageIndex === idx 
-                        ? 'border-primary ring-2 ring-primary/20' 
-                        : 'border-border hover:border-primary/50'
-                    }`}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx
+                      ? 'border-primary ring-2 ring-primary/20'
+                      : 'border-border hover:border-primary/50'
+                      }`}
                   >
                     <img src={thumb} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
                   </button>
@@ -330,7 +328,7 @@ const AdminAddServicePage: React.FC = () => {
                 {mockService.images[currentImageIndex] && (
                   <img src={mockService.images[currentImageIndex]} alt={mockService.name} className="w-full h-full object-cover" />
                 )}
-                
+
                 <button
                   onClick={() => setCurrentImageIndex(prev => prev === 0 ? mockService.images.length - 1 : prev - 1)}
                   className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
@@ -390,17 +388,16 @@ const AdminAddServicePage: React.FC = () => {
                     {months.map((month, idx) => (
                       <button
                         key={month}
-                        className={`py-1 text-[9px] font-medium transition-colors ${
-                          selectedMonth === monthKeys[idx]
-                            ? 'bg-primary/10 text-primary border-b-2 border-primary'
-                            : 'hover:bg-muted'
-                        }`}
+                        className={`py-1 text-[9px] font-medium transition-colors ${selectedMonth === monthKeys[idx]
+                          ? 'bg-primary/10 text-primary border-b-2 border-primary'
+                          : 'hover:bg-muted'
+                          }`}
                       >
                         {month}
                       </button>
                     ))}
                   </div>
-                  
+
                   <div className="space-y-1">
                     <div className="grid grid-cols-7 gap-0.5">
                       {daysOfWeek.map(day => (
@@ -409,16 +406,15 @@ const AdminAddServicePage: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    
+
                     <div className="grid grid-cols-7 gap-0.5">
                       {getDaysInMonth(selectedMonth).map((day, idx) => (
                         <div key={idx} className="aspect-square max-w-[28px]">
                           {day ? (
-                            <div className={`w-full h-full flex flex-col items-center justify-center rounded text-[8px] ${
-                              mockService.availability[selectedMonth]?.[day.day.toString()]
-                                ? 'bg-muted text-primary font-medium'
-                                : 'bg-muted/30 text-muted-foreground'
-                            }`}>
+                            <div className={`w-full h-full flex flex-col items-center justify-center rounded text-[8px] ${mockService.availability[selectedMonth]?.[day.day.toString()]
+                              ? 'bg-muted text-primary font-medium'
+                              : 'bg-muted/30 text-muted-foreground'
+                              }`}>
                               <span>{day.day}</span>
                               {mockService.availability[selectedMonth]?.[day.day.toString()] && (
                                 <span className="text-[6px] font-semibold">
@@ -529,322 +525,322 @@ const AdminAddServicePage: React.FC = () => {
   // ==================== FORM STEP ====================
   return (
     <div className="min-h-screen bg-muted/30 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tạo dịch vụ mới</h1>
           <p className="text-muted-foreground mt-2">Điền đầy đủ thông tin để tạo dịch vụ mới</p>
         </div>
 
-        {/* Basic Information */}
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-          <CardHeader>
-            <CardTitle>Thông tin cơ bản</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Tên dịch vụ <span className="text-destructive">*</span></Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="VD: Dinh Độc Lập - Landmark Lịch Sử"
-              />
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Information */}
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
+              <CardHeader>
+                <CardTitle>Thông tin cơ bản</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Tên dịch vụ <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="VD: Dinh Độc Lập - Landmark Lịch Sử"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Mô tả <span className="text-destructive">*</span></Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả chi tiết về dịch vụ..."
-                rows={4}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Mô tả <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Mô tả chi tiết về dịch vụ..."
+                    rows={4}
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Địa điểm <span className="text-destructive">*</span></Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="VD: Hồ Chí Minh"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Địa chỉ <span className="text-destructive">*</span></Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="VD: 135 Nam Kỳ Khởi Nghĩa..."
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Địa điểm <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="VD: Hồ Chí Minh"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Địa chỉ <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="VD: 135 Nam Kỳ Khởi Nghĩa..."
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="openingHours">Giờ mở cửa</Label>
-                <Input
-                  id="openingHours"
-                  value={formData.openingHours}
-                  onChange={(e) => setFormData(prev => ({ ...prev, openingHours: e.target.value }))}
-                  placeholder="VD: 08:00 - 18:00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="duration">Thời hạn</Label>
-                <Input
-                  id="duration"
-                  value={formData.duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                  placeholder="VD: Cả ngày, 2 giờ..."
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="openingHours">Giờ mở cửa</Label>
+                    <Input
+                      id="openingHours"
+                      value={formData.openingHours}
+                      onChange={(e) => setFormData(prev => ({ ...prev, openingHours: e.target.value }))}
+                      placeholder="VD: 08:00 - 18:00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="duration">Thời hạn</Label>
+                    <Input
+                      id="duration"
+                      value={formData.duration}
+                      onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                      placeholder="VD: Cả ngày, 2 giờ..."
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Pricing */}
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-          <CardHeader>
-            <CardTitle>Giá cả</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="priceAdult">Giá người lớn (VNĐ) <span className="text-destructive">*</span></Label>
-                <Input
-                  id="priceAdult"
-                  type="number"
-                  value={formData.priceAdult}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priceAdult: Number(e.target.value) }))}
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priceChild">Giá trẻ em (VNĐ) <span className="text-destructive">*</span></Label>
-                <Input
-                  id="priceChild"
-                  type="number"
-                  value={formData.priceChild}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priceChild: Number(e.target.value) }))}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Pricing */}
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
+              <CardHeader>
+                <CardTitle>Giá cả</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceAdult">Giá người lớn (VNĐ) <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="priceAdult"
+                      type="number"
+                      value={formData.priceAdult}
+                      onChange={(e) => setFormData(prev => ({ ...prev, priceAdult: Number(e.target.value) }))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="priceChild">Giá trẻ em (VNĐ) <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="priceChild"
+                      type="number"
+                      value={formData.priceChild}
+                      onChange={(e) => setFormData(prev => ({ ...prev, priceChild: Number(e.target.value) }))}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Images */}
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-          <CardHeader>
-            <CardTitle>Hình ảnh</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Thumbnail */}
-            <div className="space-y-2">
-              <Label>Ảnh đại diện <span className="text-destructive">*</span></Label>
-              {formData.thumbnailImage ? (
-                <div className="relative w-full h-48 rounded-lg overflow-hidden border border-sidebar-border">
-                  <img src={formData.thumbnailImage} alt="Thumbnail" className="w-full h-full object-cover" />
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    onClick={() => setFormData(prev => ({ ...prev, thumbnailImage: null }))}
-                    className="absolute top-2 right-2"
-                  >
-                    <X className="w-4 h-4" />
+            {/* Images */}
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
+              <CardHeader>
+                <CardTitle>Hình ảnh</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Thumbnail */}
+                <div className="space-y-2">
+                  <Label>Ảnh đại diện <span className="text-destructive">*</span></Label>
+                  {formData.thumbnailImage ? (
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-sidebar-border">
+                      <img src={formData.thumbnailImage} alt="Thumbnail" className="w-full h-full object-cover" />
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={() => setFormData(prev => ({ ...prev, thumbnailImage: null }))}
+                        className="absolute top-2 right-2"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-sidebar-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                      <Upload className="w-10 h-10 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground mb-1">Nhấp để chọn ảnh</p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG (tối đa 5MB)</p>
+                      <input type="file" accept="image/*" onChange={handleThumbnailUpload} className="hidden" />
+                    </label>
+                  )}
+                </div>
+
+                {/* Additional Images */}
+                <div className="space-y-2">
+                  <Label>Ảnh phụ</Label>
+                  <div className="grid grid-cols-4 gap-3 mb-3">
+                    {formData.additionalImages.map((img, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-sidebar-border">
+                        <img src={img} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover" />
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          onClick={() => removeAdditionalImage(idx)}
+                          className="absolute top-1 right-1 h-6 w-6"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-sidebar-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                    <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                    <p className="text-sm text-muted-foreground">Thêm ảnh phụ</p>
+                    <input type="file" accept="image/*" multiple onChange={handleAdditionalImagesUpload} className="hidden" />
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Features */}
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
+              <CardHeader>
+                <CardTitle>Tiện ích</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {formData.features.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {formData.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg bg-card">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{feature.title}</p>
+                          <p className="text-xs text-muted-foreground">{feature.desc}</p>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => removeFeature(idx)}
+                          className="flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      value={newFeature.title}
+                      onChange={(e) => setNewFeature(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Tiêu đề tiện ích..."
+                    />
+                    <Input
+                      value={newFeature.desc}
+                      onChange={(e) => setNewFeature(prev => ({ ...prev, desc: e.target.value }))}
+                      placeholder="Mô tả..."
+                    />
+                  </div>
+                  <Button onClick={addFeature} className="w-full" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Thêm tiện ích
                   </Button>
                 </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-sidebar-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                  <Upload className="w-10 h-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-1">Nhấp để chọn ảnh</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG (tối đa 5MB)</p>
-                  <input type="file" accept="image/*" onChange={handleThumbnailUpload} className="hidden" />
-                </label>
-              )}
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Additional Images */}
-            <div className="space-y-2">
-              <Label>Ảnh phụ</Label>
-              <div className="grid grid-cols-4 gap-3 mb-3">
-                {formData.additionalImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-sidebar-border">
-                    <img src={img} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover" />
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      onClick={() => removeAdditionalImage(idx)}
-                      className="absolute top-1 right-1 h-6 w-6"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-sidebar-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                <p className="text-sm text-muted-foreground">Thêm ảnh phụ</p>
-                <input type="file" accept="image/*" multiple onChange={handleAdditionalImagesUpload} className="hidden" />
-              </label>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Features */}
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-          <CardHeader>
-            <CardTitle>Tiện ích</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {formData.features.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {formData.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg bg-card">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{feature.title}</p>
-                      <p className="text-xs text-muted-foreground">{feature.desc}</p>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeFeature(idx)}
-                      className="flex-shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  value={newFeature.title}
-                  onChange={(e) => setNewFeature(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Tiêu đề tiện ích..."
-                />
-                <Input
-                  value={newFeature.desc}
-                  onChange={(e) => setNewFeature(prev => ({ ...prev, desc: e.target.value }))}
-                  placeholder="Mô tả..."
-                />
-              </div>
-              <Button onClick={addFeature} className="w-full" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Thêm tiện ích
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Additional Services */}
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-          <CardHeader>
-            <CardTitle>Dịch vụ thêm</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {formData.additionalServices.length > 0 && (
-              <div className="space-y-2">
-                {formData.additionalServices.map((service, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg bg-card">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{service.name}</p>
-                      <p className="text-sm text-primary font-semibold">{service.price.toLocaleString()}đ</p>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeAdditionalService(idx)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  value={newService.name}
-                  onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Tên dịch vụ..."
-                />
-                <Input
-                  type="number"
-                  value={newService.price}
-                  onChange={(e) => setNewService(prev => ({ ...prev, price: Number(e.target.value) }))}
-                  placeholder="Giá (VNĐ)"
-                />
-              </div>
-              <Button onClick={addAdditionalService} className="w-full" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Thêm dịch vụ
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Discounts */}
-        <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-          <CardHeader>
-            <CardTitle>Mã giảm giá / Ưu đãi</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {formData.discounts.length > 0 && (
-              <div className="space-y-2">
-                {formData.discounts.map((discount, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg bg-card">
-                    <div className="flex items-center gap-2 flex-1">
-                      <div>
-                        <p className="font-medium text-sm">{discount.code}</p>
-                        <p className="text-sm font-semibold text-primary">-{discount.value.toLocaleString()}đ</p>
+            {/* Additional Services */}
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
+              <CardHeader>
+                <CardTitle>Dịch vụ thêm</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {formData.additionalServices.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.additionalServices.map((service, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg bg-card">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{service.name}</p>
+                          <p className="text-sm text-primary font-semibold">{service.price.toLocaleString()}đ</p>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => removeAdditionalService(idx)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeDiscount(idx)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  value={newDiscount.code}
-                  onChange={(e) => setNewDiscount(prev => ({ ...prev, code: e.target.value }))}
-                  placeholder="Mã giảm giá..."
-                />
-                <Input
-                  type="number"
-                  value={newDiscount.value}
-                  onChange={(e) => setNewDiscount(prev => ({ ...prev, value: Number(e.target.value) }))}
-                  placeholder="Giá trị giảm (VNĐ)"
-                />
-              </div>
-              <Button onClick={addDiscount} className="w-full" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Thêm mã giảm giá
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      value={newService.name}
+                      onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Tên dịch vụ..."
+                    />
+                    <Input
+                      type="number"
+                      value={newService.price}
+                      onChange={(e) => setNewService(prev => ({ ...prev, price: Number(e.target.value) }))}
+                      placeholder="Giá (VNĐ)"
+                    />
+                  </div>
+                  <Button onClick={addAdditionalService} className="w-full" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Thêm dịch vụ
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Availability Calendar - COMPACT VERSION */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+            {/* Discounts */}
+            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
+              <CardHeader>
+                <CardTitle>Mã giảm giá / Ưu đãi</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {formData.discounts.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.discounts.map((discount, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 border border-sidebar-border rounded-lg bg-card">
+                        <div className="flex items-center gap-2 flex-1">
+                          <div>
+                            <p className="font-medium text-sm">{discount.code}</p>
+                            <p className="text-sm font-semibold text-primary">-{discount.value.toLocaleString()}đ</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => removeDiscount(idx)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      value={newDiscount.code}
+                      onChange={(e) => setNewDiscount(prev => ({ ...prev, code: e.target.value }))}
+                      placeholder="Mã giảm giá..."
+                    />
+                    <Input
+                      type="number"
+                      value={newDiscount.value}
+                      onChange={(e) => setNewDiscount(prev => ({ ...prev, value: Number(e.target.value) }))}
+                      placeholder="Giá trị giảm (VNĐ)"
+                    />
+                  </div>
+                  <Button onClick={addDiscount} className="w-full" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Thêm mã giảm giá
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Availability Calendar */}
             <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
               <CardHeader>
                 <CardTitle>Đặt lịch trống</CardTitle>
@@ -860,227 +856,183 @@ const AdminAddServicePage: React.FC = () => {
                           setSelectedMonth(monthKeys[idx]);
                           setSelectedDays(formData.availability[monthKeys[idx]] || {});
                         }}
-                        className={`py-1.5 text-[10px] font-medium transition-colors ${
-                          selectedMonth === monthKeys[idx]
-                            ? 'bg-primary/10 text-primary border-b-2 border-primary'
-                            : 'hover:bg-muted'
-                        }`}
+                        className={`py-1.5 text-[10px] font-medium transition-colors ${selectedMonth === monthKeys[idx]
+                          ? 'bg-primary/10 text-primary border-b-2 border-primary'
+                          : 'hover:bg-muted'
+                          }`}
                       >
                         {month}
                       </button>
                     ))}
                   </div>
-                  
                   <div className="p-2">
                     <div className="grid grid-cols-7 gap-0.5 mb-1">
                       {daysOfWeek.map(day => (
-                        <div key={day} className="text-center text-[8px] font-medium text-muted-foreground py-0.5">
-                          {day}
-                        </div>
+                        <div key={day} className="text-center text-[8px] font-medium text-muted-foreground py-0.5">{day}</div>
                       ))}
                     </div>
-                    
                     <div className="grid grid-cols-7 gap-0.5">
                       {getDaysInMonth(selectedMonth).map((day, idx) => (
                         <div key={idx} className="aspect-square max-w-[32px]">
                           {day ? (
                             <button
                               onClick={() => toggleDayAvailability(day.day)}
-                              className={`w-full h-full flex items-center justify-center rounded text-[9px] font-medium transition-all ${
-                                selectedDays[day.day.toString()]
-                                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                              }`}
+                              className={`w-full h-full flex items-center justify-center rounded text-[9px] font-medium transition-all ${selectedDays[day.day.toString()]
+                                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                }`}
                             >
                               {day.day}
                             </button>
-                          ) : (
-                            <div className="w-full h-full" />
-                          )}
+                          ) : <div className="w-full h-full" />}
                         </div>
                       ))}
                     </div>
-                    
                     <div className="mt-2 p-1.5 bg-primary/10 border border-primary/20 rounded-lg">
-                      <p className="text-[9px] text-primary">
-                        <strong>{Object.keys(selectedDays).length}</strong> ngày đã chọn cho {months[monthKeys.indexOf(selectedMonth)]}
-                      </p>
+                      <p className="text-[9px] text-primary"><strong>{Object.keys(selectedDays).length}</strong> ngày đã chọn cho {months[monthKeys.indexOf(selectedMonth)]}</p>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 pt-4">
+              <Button variant="outline" onClick={() => { if (confirm('Bạn có chắc muốn hủy? Dữ liệu sẽ không được lưu.')) window.location.reload(); }} className="flex-1">
+                Hủy bỏ
+              </Button>
+              <Button onClick={proceedToReview} className="flex-1">
+                Xem lại thông tin <ChevronRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
           </div>
 
-          {/* Right Sidebar - Summary & Tips */}
-          <div className="lg:col-span-1 space-y-4">
-            {/* Summary Card */}
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-              <CardHeader>
-                <CardTitle className="text-sm">Tóm tắt thông tin</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Tên dịch vụ:</span>
-                    <span className="font-medium text-right max-w-[150px] truncate">{formData.name || '-'}</span>
+          {/* Right Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-6">
+              {/* Progress Card */}
+              <Card className="bg-card border-2 border-border rounded-xl shadow-md transition-all duration-200">
+                <CardHeader>
+                  <CardTitle className="text-sm">Tiến độ hoàn thành</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Thông tin cơ bản</span>
+                      <span className="font-medium">{formData.name && formData.description && formData.location ? '✓' : '-'}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-300" style={{ width: `${formData.name && formData.description && formData.location ? 100 : 0}%` }} />
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Địa điểm:</span>
-                    <span className="font-medium">{formData.location || '-'}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Giá cả</span>
+                      <span className="font-medium">{formData.priceAdult > 0 ? '✓' : '-'}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-300" style={{ width: `${formData.priceAdult > 0 ? 100 : 0}%` }} />
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Giá người lớn:</span>
-                    <span className="font-semibold text-primary">{formData.priceAdult > 0 ? `${formData.priceAdult.toLocaleString()}đ` : '-'}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Hình ảnh</span>
+                      <span className="font-medium">{formData.thumbnailImage ? '✓' : '-'}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-300" style={{ width: `${formData.thumbnailImage ? 100 : 0}%` }} />
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Giá trẻ em:</span>
-                    <span className="font-semibold text-primary">{formData.priceChild > 0 ? `${formData.priceChild.toLocaleString()}đ` : '-'}</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Lịch trống</span>
+                      <span className="font-medium">{Object.keys(selectedDays).length > 0 ? '✓' : '-'}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-300" style={{ width: `${Object.keys(selectedDays).length > 0 ? 100 : 0}%` }} />
+                    </div>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Ảnh đại diện:</span>
-                    <span className="font-medium">{formData.thumbnailImage ? '✓' : '-'}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Ảnh phụ:</span>
-                    <span className="font-medium">{formData.additionalImages.length} ảnh</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Tiện ích:</span>
-                    <span className="font-medium">{formData.features.length} mục</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-sidebar-border">
-                    <span className="text-muted-foreground">Dịch vụ thêm:</span>
-                    <span className="font-medium">{formData.additionalServices.length} mục</span>
-                  </div>
-                  <div className="flex justify-between py-1.5">
-                    <span className="text-muted-foreground">Mã giảm giá:</span>
-                    <span className="font-medium">{formData.discounts.length} mã</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Tips Card */}
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border bg-primary/5">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Info className="w-4 h-4 text-primary" />
-                  Gợi ý
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="space-y-2 text-xs text-muted-foreground">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
-                    <p>Hãy điền đầy đủ thông tin để tăng độ tin cậy</p>
+              {/* Summary Card */}
+              <Card className="bg-card border-2 border-border rounded-xl shadow-md transition-all duration-200">
+                <CardHeader>
+                  <CardTitle className="text-sm">Tóm tắt thông tin</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Tên dịch vụ:</span>
+                      <span className="font-medium text-right max-w-[150px] truncate">{formData.name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Địa điểm:</span>
+                      <span className="font-medium">{formData.location || '-'}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Giá người lớn:</span>
+                      <span className="font-semibold text-primary">{formData.priceAdult > 0 ? `${formData.priceAdult.toLocaleString()}đ` : '-'}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Giá trẻ em:</span>
+                      <span className="font-semibold text-primary">{formData.priceChild > 0 ? `${formData.priceChild.toLocaleString()}đ` : '-'}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Ảnh đại diện:</span>
+                      <span className="font-medium">{formData.thumbnailImage ? '✓' : '-'}</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Ảnh phụ:</span>
+                      <span className="font-medium">{formData.additionalImages.length} ảnh</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Tiện ích:</span>
+                      <span className="font-medium">{formData.features.length} mục</span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-sidebar-border">
+                      <span className="text-muted-foreground">Dịch vụ thêm:</span>
+                      <span className="font-medium">{formData.additionalServices.length} mục</span>
+                    </div>
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-muted-foreground">Mã giảm giá:</span>
+                      <span className="font-medium">{formData.discounts.length} mã</span>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
-                    <p>Thêm ít nhất 4-5 ảnh chất lượng cao</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
-                    <p>Mô tả chi tiết giúp khách hàng hiểu rõ hơn</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
-                    <p>Đặt lịch trống giúp khách dễ dàng đặt chỗ</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Progress Card */}
-            <Card className="shadow-sm hover:shadow-md transition-all duration-200 border-sidebar-border">
-              <CardHeader>
-                <CardTitle className="text-sm">Tiến độ hoàn thành</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Thông tin cơ bản</span>
-                    <span className="font-medium">{formData.name && formData.description && formData.location ? '✓' : '-'}</span>
+              {/* Tips Card */}
+              <Card className="bg-primary/5 border-2 border-primary/10 rounded-xl shadow-md transition-all duration-200">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Info className="w-4 h-4 text-primary" />
+                    Gợi ý
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="space-y-2 text-xs text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                      <p>Hãy điền đầy đủ thông tin để tăng độ tin cậy</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                      <p>Thêm ít nhất 4-5 ảnh chất lượng cao</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                      <p>Mô tả chi tiết giúp khách hàng hiểu rõ hơn</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                      <p>Đặt lịch trống giúp khách dễ dàng đặt chỗ</p>
+                    </div>
                   </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ 
-                        width: `${formData.name && formData.description && formData.location ? 100 : 0}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Giá cả</span>
-                    <span className="font-medium">{formData.priceAdult > 0 ? '✓' : '-'}</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ 
-                        width: `${formData.priceAdult > 0 ? 100 : 0}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Hình ảnh</span>
-                    <span className="font-medium">{formData.thumbnailImage ? '✓' : '-'}</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ 
-                        width: `${formData.thumbnailImage ? 100 : 0}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Lịch trống</span>
-                    <span className="font-medium">{Object.keys(selectedDays).length > 0 ? '✓' : '-'}</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ 
-                        width: `${Object.keys(selectedDays).length > 0 ? 100 : 0}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-4 pb-6">
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (confirm('Bạn có chắc muốn hủy? Dữ liệu sẽ không được lưu.')) {
-                window.location.reload();
-              }
-            }}
-            className="flex-1"
-          >
-            Hủy bỏ
-          </Button>
-          <Button
-            onClick={proceedToReview}
-            className="flex-1"
-          >
-            Xem lại thông tin
-            <ChevronRight className="w-5 h-5 ml-2" />
-          </Button>
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ export function ThemeToggle({ className }: { className?: string }) {
                     <p className="">Change theme</p>
                 </TooltipContent>
             </Tooltip>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" sideOffset={5} collisionPadding={10}>
                 <DropdownMenuItem onClick={() => setTheme("light")}>
                     <Sun className="mr-2 h-4 w-4" />
                     <span>Light</span>

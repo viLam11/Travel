@@ -37,8 +37,8 @@ const LoginPage: React.FC = () => {
   // Redirect nếu đã login
   useEffect(() => {
     if (isAuthenticated && currentUser) {
-      const role = currentUser.user.role;
-      const redirectPath = role === 'PROVIDER' ? '/admin/dashboard' : '/homepage';
+      const role = currentUser.user.role?.toLowerCase() || '';
+      const redirectPath = role.includes('provider') ? '/admin/dashboard' : '/homepage';
       navigate(redirectPath, { replace: true });
     }
   }, [isAuthenticated, currentUser, navigate]);
@@ -103,7 +103,7 @@ const LoginPage: React.FC = () => {
       await login(formData.email, formData.password);
 
       // Get user from currentUser (already set by useAuth)
-      const role = currentUser?.user?.role;
+      const role = currentUser?.user?.role?.toLowerCase() || '';
 
       // Show success message
       toast.success('Đăng nhập thành công!');
@@ -116,7 +116,7 @@ const LoginPage: React.FC = () => {
         navigate(returnUrl);
       } else {
         // Role-based redirect
-        const redirectPath = role === 'PROVIDER' ? '/admin/dashboard' : '/homepage';
+        const redirectPath = role.includes('provider') ? '/admin/dashboard' : '/homepage';
         navigate(redirectPath);
       }
 

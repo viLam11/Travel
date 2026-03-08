@@ -1,57 +1,55 @@
 // src/components/booking/BookingCard.tsx
-import React from "react";
-import { MapPin, Calendar, Clock, CheckCircle } from "lucide-react";
-import type { ServiceDetail } from "@/types/serviceDetail.types";
+import React, { useState } from 'react';
+import { MapPin, Calendar, Clock, CheckCircle, ChevronDown, Users } from 'lucide-react';
+import type { ServiceDetail } from '@/types/serviceDetail.types';
 
 interface BookingCardProps {
   service: ServiceDetail;
-  // adultCount: number;
-  // setAdultCount: (count: number) => void;
-  // childCount: number;
-  // setChildCount: (count: number) => void;
-  tickets: any[];
-  setTickets: (tickets: any[]) => void;
+  serviceType?: string; // 'hotel' or 'place'
+  adultCount: number;
+  setAdultCount: (count: number) => void;
+  childCount: number;
+  setChildCount: (count: number) => void;
   finalPrice: number;
   onBookNow: () => void;
   onRoomBookNow?: () => void;
+  // Hotel specific props
+  checkInDate?: string;
+  setCheckInDate?: (date: string) => void;
+  checkOutDate?: string;
+  setCheckOutDate?: (date: string) => void;
+  guestCount?: number;
+  setGuestCount?: (count: number) => void;
 }
 
 const BookingCard: React.FC<BookingCardProps> = ({
   service,
-  // adultCount,
-  // setAdultCount,
-  // childCount,
-  // setChildCount,
-  tickets,
-  setTickets,
+  serviceType = 'place',
+  adultCount,
+  setAdultCount,
+  childCount,
+  setChildCount,
   finalPrice,
   onBookNow,
   onRoomBookNow,
+  checkInDate,
+  setCheckInDate,
+  checkOutDate,
+  setCheckOutDate,
+  guestCount,
+  setGuestCount
 }) => {
-  const updateTicketQuantity = (id: number, delta: number) => {
-    const newList = [...tickets];
-    const index = newList.findIndex((t) => t.id === id);
-
-    if (index !== -1) {
-      // Chỉ thay đổi đúng phần tử tại vị trí đó
-      const currentCount = newList[index].count || 0;
-      newList[index] = {
-        ...newList[index],
-        count: Math.max(0, currentCount + delta),
-      };
-      setTickets(newList);
-    }
-  };
+  const isHotel = serviceType === 'hotel';
+  const [showAllServices, setShowAllServices] = useState(false);
+  const [showAllDiscounts, setShowAllDiscounts] = useState(false);
 
   return (
-    <div className="sticky top-24 bg-white border-2 border-gray-200 rounded-xl p-4 lg:p-5 shadow-md md:max-h-[85vh] overflow-y-auto">
+    <div className="sticky top-24 bg-white border-2 border-gray-200 rounded-xl p-4 lg:p-5 shadow-md md:max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div className="text-center mb-4 pb-4 border-b border-gray-200">
         <h2 className="text-sm font-bold text-gray-900 mb-1">
-          ĐƠN ĐẶT DỊCH VỤ
+          {isHotel ? 'ĐƠN ĐẶT PHÒNG' : 'ĐƠN ĐẶT DỊCH VỤ'}
         </h2>
-        <h3 className="text-xs font-semibold text-gray-700 line-clamp-2">
-          {service.name}
-        </h3>
+        <h3 className="text-xs font-semibold text-gray-700 line-clamp-2">{service.name}</h3>
       </div>
 
       <div className="space-y-2.5 mb-4">
@@ -59,9 +57,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
           <MapPin className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-900">Địa điểm:</p>
-            <p className="text-xs text-gray-600 line-clamp-2">
-              {service.address}
-            </p>
+            <p className="text-xs text-gray-600 line-clamp-2">{service.address}</p>
           </div>
         </div>
 
@@ -76,152 +72,182 @@ const BookingCard: React.FC<BookingCardProps> = ({
         <div className="flex items-start gap-2">
           <Clock className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-xs font-medium text-gray-900">Thời hạn:</p>
-            <p className="text-xs text-gray-600">{service.duration}</p>
+            <p className="text-xs font-medium text-gray-900">{isHotel ? 'Giờ nhận phòng:' : 'Thời hạn:'}</p>
+            <p className="text-xs text-gray-600">{isHotel ? 'Từ 14:00' : service.duration}</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-3 mb-4 pb-4 border-b border-gray-200">
-        <h4 className="font-semibold text-gray-900 text-sm">Số lượng</h4>
-
-        {/* <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-900">Người lớn (18+):</p>
-              <p className="text-xs font-bold text-orange-500">{service.priceAdult.toLocaleString()} đ</p>
+        {isHotel ? (
+          // Hotel Interface: Dates & Guests
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-900 block">Ngày nhận phòng</label>
+                <input
+                  type="date"
+                  value={checkInDate || ''}
+                  onChange={(e) => setCheckInDate?.(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-900 block">Ngày trả phòng</label>
+                <input
+                  type="date"
+                  value={checkOutDate || ''}
+                  onChange={(e) => setCheckOutDate?.(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAdultCount(Math.max(0, adultCount - 1))}
-                className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-              >
-                −
-              </button>
-              <span className="w-6 text-center font-semibold text-sm">{adultCount}</span>
-              <button
-                onClick={() => setAdultCount(adultCount + 1)}
-                className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-              >
-                +
-              </button>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-900 block">Số lượng khách</label>
+              <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2">
+                <Users className="w-4 h-4 text-gray-500 mr-2" />
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={guestCount || 1}
+                  onChange={(e) => setGuestCount?.(parseInt(e.target.value) || 1)}
+                  className="w-full text-sm outline-none"
+                  placeholder="1 khách"
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-2 rounded text-xs text-blue-700">
+              Lưu ý: Giá phòng có thể thay đổi tùy thuộc vào ngày bạn chọn.
             </div>
           </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-900">Trẻ em ({'<'}6 tuổi):</p>
-              <p className="text-xs font-bold text-orange-500">{service.priceChild.toLocaleString()} đ</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setChildCount(Math.max(0, childCount - 1))}
-                className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-              >
-                −
-              </button>
-              <span className="w-6 text-center font-semibold text-sm">{childCount}</span>
-              <button
-                onClick={() => setChildCount(childCount + 1)}
-                className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div> */}
-
-        <div className="space-y-3">
-          {tickets.map((ticket) => (
-            <div
-              key={ticket.id}
-              className="bg-gray-50 rounded-lg p-4 border border-transparent hover:border-gray-200 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                {/* Thông tin vé - Chữ nhẹ nhàng, không in đậm quá mức */}
+        ) : (
+          // Standard Interface: Adult & Child Count
+          <>
+            <h4 className="font-semibold text-gray-900 text-sm">Số lượng</h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-800 mb-1">{ticket.name}:</p>
-                  <p className="text-sm font-bold text-orange-500">
-                    {ticket.price.toLocaleString()} VNĐ / người
-                  </p>
+                  <p className="text-xs font-medium text-gray-900">Người lớn (18+):</p>
+                  <p className="text-xs font-bold text-orange-500">{service.priceAdult.toLocaleString()} đ</p>
                 </div>
-
-                {/* Bộ điều khiển số lượng - Giữ đúng style nút tròn cũ */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => updateTicketQuantity(ticket.id, -1)}
-                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-white hover:border-orange-400 transition-colors text-gray-600"
+                    onClick={() => setAdultCount(Math.max(0, adultCount - 1))}
+                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
                   >
                     −
                   </button>
-
-                  <span className="w-6 text-center text-sm font-medium text-gray-700">
-                    {ticket.count}
-                  </span>
-
+                  <span className="w-6 text-center font-semibold text-sm">{adultCount}</span>
                   <button
-                    onClick={() => updateTicketQuantity(ticket.id, +1)}
-                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-white hover:border-orange-400 transition-colors text-gray-600"
+                    onClick={() => setAdultCount(adultCount + 1)}
+                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-900">Trẻ em ({'<'}6 tuổi):</p>
+                  <p className="text-xs font-bold text-orange-500">{service.priceChild.toLocaleString()} đ</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setChildCount(Math.max(0, childCount - 1))}
+                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center font-semibold text-sm">{childCount}</span>
+                  <button
+                    onClick={() => setChildCount(childCount + 1)}
+                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
                   >
                     +
                   </button>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
-      <div className="space-y-1.5 mb-4 pb-4 border-b border-gray-200">
-        <h4 className="font-semibold text-gray-900 text-sm">Dịch vụ thêm</h4>
-        {service.additionalServices.map((s, idx) => (
-          <div key={idx} className="flex items-center justify-between text-xs">
-            <span className="text-gray-700">{s.name}</span>
-            <span className="font-semibold text-gray-900">
-              {s.price.toLocaleString()} đ
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {service.discounts.map(
-        (d, idx) =>
-          d.applied && (
-            <div key={idx} className="mb-4 pb-4 border-b border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-2 text-sm">
-                Mã giảm giá
-              </h4>
-              <div className="flex items-center justify-between bg-orange-50 p-2 rounded-lg">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-orange-500" />
-                  <span className="font-medium text-gray-900 text-xs">
-                    {d.code}
-                  </span>
+      {/* Collapsible Additional Services */}
+      {service.additionalServices.length > 0 && (
+        <div className="mb-4 pb-4 border-b border-gray-200">
+          <button
+            onClick={() => setShowAllServices(!showAllServices)}
+            className="w-full flex items-center justify-between mb-2 hover:bg-gray-50 -mx-1 px-1 py-1 rounded transition-colors"
+          >
+            <h4 className="font-semibold text-gray-900 text-sm">Dịch vụ thêm</h4>
+            <ChevronDown
+              className={`w-4 h-4 text-gray-500 transition-transform ${showAllServices ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div className="space-y-1.5">
+            {service.additionalServices
+              .slice(0, showAllServices ? undefined : 1)
+              .map((s, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-700">{s.name}</span>
+                  <span className="font-semibold text-gray-900">{s.price.toLocaleString()} đ</span>
                 </div>
-                <span className="font-semibold text-orange-600 text-xs">
-                  -{d.value.toLocaleString()} đ
-                </span>
-              </div>
-            </div>
-          )
+              ))}
+            {!showAllServices && service.additionalServices.length > 1 && (
+              <p className="text-xs text-gray-500 italic">+{service.additionalServices.length - 1} dịch vụ khác</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Collapsible Discounts */}
+      {service.discounts.some(d => d.applied) && (
+        <div className="mb-4 pb-4 border-b border-gray-200">
+          <button
+            onClick={() => setShowAllDiscounts(!showAllDiscounts)}
+            className="w-full flex items-center justify-between mb-2 hover:bg-gray-50 -mx-1 px-1 py-1 rounded transition-colors"
+          >
+            <h4 className="font-semibold text-gray-900 text-sm">Mã giảm giá</h4>
+            <ChevronDown
+              className={`w-4 h-4 text-gray-500 transition-transform ${showAllDiscounts ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div className="space-y-2">
+            {service.discounts
+              .filter(d => d.applied)
+              .slice(0, showAllDiscounts ? undefined : 1)
+              .map((d, idx) => (
+                <div key={idx} className="flex items-center justify-between bg-orange-50 p-2 rounded-lg">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4 text-orange-500" />
+                    <span className="font-medium text-gray-900 text-xs">{d.code}</span>
+                  </div>
+                  <span className="font-semibold text-orange-600 text-xs">-{d.value.toLocaleString()} đ</span>
+                </div>
+              ))}
+            {!showAllDiscounts && service.discounts.filter(d => d.applied).length > 1 && (
+              <p className="text-xs text-gray-500 italic">+{service.discounts.filter(d => d.applied).length - 1} mã khác</p>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="mb-4">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-gray-900 text-sm">
-            Thành tiền:
-          </span>
-          <span className="font-bold text-orange-500 text-lg">
-            {finalPrice.toLocaleString()} VNĐ
-          </span>
+          <span className="font-semibold text-gray-900 text-sm">Thành tiền:</span>
+          <span className="font-bold text-orange-500 text-lg">{finalPrice.toLocaleString()} VNĐ</span>
         </div>
       </div>
 
       <button
-        onClick={onBookNow}
+        onClick={isHotel ? () => onRoomBookNow?.() : onBookNow}
         className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-2.5 rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
       >
-        ĐẶT NGAY
+        {isHotel ? 'ĐẶT PHÒNG' : 'ĐẶT NGAY'}
       </button>
 
       {/* Test Room Booking Button */}

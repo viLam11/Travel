@@ -1,48 +1,3 @@
-// import type { FC, ReactNode } from "react";
-// import { Navigate, useLocation } from "react-router-dom";
-// import { useAuth } from "@/hooks/useAuth";
-// import { ROUTES } from "@/constants/routes";
-// import { LoadingSpinner } from "@/components/common/feedback/LoadingSpinner";
-import { AdminLayout } from "@/components/common/layout";
-
-// interface ProtectedRouteProps {
-//     children: ReactNode;
-//     requiredRole?: string;
-//     redirectTo?: string;
-//     title?: string;
-//     showHeader?: boolean;
-// }
-
-// const ProtectedRoute: FC<ProtectedRouteProps> = ({
-//     children,
-//     requiredRole,
-//     redirectTo = ROUTES.LOGIN,
-//     showHeader = true,
-// }) => {
-//     const location = useLocation();
-//     const { isAuthenticated, currentUser, isLoading } = useAuth();
-
-//     if (isLoading) {
-//         return <LoadingSpinner />;
-//     }
-
-//     // if (!isAuthenticated) {
-//     //     return <Navigate to={redirectTo} state={{ from: location }} replace />;
-//     // }
-
-//     // if (requiredRole && currentUser?.user?.role !== requiredRole) {
-//     //     return <Navigate to={ROUTES.ROOT} replace />;
-//     // }
-
-//     return (
-//         <AdminLayout showHeader={showHeader}>
-//             {children}
-//         </AdminLayout>
-//     );
-// };
-
-// export default ProtectedRoute; 
-
 // src/components/routes/ProtectedRoute.tsx
 import type { FC, ReactNode } from "react";
 import { Navigate, useLocation, Outlet } from "react-router-dom";
@@ -51,16 +6,14 @@ import { LoadingSpinner } from "@/components/common/feedback/LoadingSpinner";
 
 interface ProtectedRouteProps {
     children?: ReactNode;
-    requiredRole?: 'admin' | 'user';
+    requiredRole?: 'admin' | 'provider' | 'user';
     redirectTo?: string;
-    showHeader?: boolean;
 }
 
 const ProtectedRoute: FC<ProtectedRouteProps> = ({
     children,
     requiredRole,
     redirectTo = "/login",
-    showHeader = true,
 }) => {
     const location = useLocation();
     const { isAuthenticated, currentUser, isLoading } = useAuth();
@@ -79,23 +32,41 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({
     }
 
     // Check role authorization
-    if (requiredRole && currentUser?.user?.role !== requiredRole) {
-        // Redirect based on user role
-        const redirectPath = currentUser?.user?.role === 'admin' 
-            ? '/admin/dashboard' 
-            : '/homepage';
-        return <Navigate to={redirectPath} replace />;
+    if (requiredRole && currentUser?.user?.role) {
+        const userRole = currentUser.user.role.toLowerCase();
+
+        console.log('🔒 ProtectedRoute Check:', {
+            requiredRole,
+            userRole,
+            currentUser: currentUser.user,
+            match: userRole === requiredRole.toLowerCase()
+        });
+
+        // If specific role required, check exact match
+        if (userRole !== requiredRole.toLowerCase()) {
+            console.log('❌ Role mismatch - Redirecting...');
+            // Redirect based on user role
+            let redirectPath = '/homepage';
+            if (userRole === 'admin') {
+                redirectPath = '/admin/dashboard';
+            } else if (userRole === 'provider') {
+                redirectPath = '/provider/dashboard';
+            }
+            return <Navigate to={redirectPath} replace />;
+        }
+    } else if (!requiredRole && currentUser?.user?.role) {
+        // No specific role required, but check if user should have access
+        const userRole = currentUser.user.role.toLowerCase();
+
+        // Block regular users from admin/provider panels
+        if (userRole === 'user' && (location.pathname.startsWith('/admin') || location.pathname.startsWith('/provider'))) {
+            return <Navigate to="/homepage" replace />;
+        }
     }
 
     // Nếu có children (direct element), render children
     // Nếu không có children (layout route), render Outlet
     return <>{children || <Outlet />}</>;
-
-    // return (
-    //         <AdminLayout showHeader={showHeader}>
-    //             {children}
-    //         </AdminLayout>
-    //     );
 };
 
 export default ProtectedRoute;

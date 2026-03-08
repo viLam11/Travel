@@ -7,12 +7,12 @@ interface BreadcrumbSectionProps {
   // Auto mode: tự động generate breadcrumb từ URL
   auto?: boolean;
   serviceName?: string; // Dùng cho ServiceDetailPage
-  
+
   // Manual mode: truyền breadcrumb items thủ công
   breadcrumbItems?: BreadcrumbItem[];
-  
+
   // Common props
-  title: string;
+  title?: string; // Made optional to support breadcrumb-only mode
   subtitle?: string;
   separator?: 'chevron' | 'slash' | 'dot';
   showHomeIcon?: boolean;
@@ -46,7 +46,7 @@ export const BreadcrumbSection: React.FC<BreadcrumbSectionProps> = ({
 }) => {
   // Auto generate breadcrumbs nếu auto=true
   const autoBreadcrumbs = useBreadcrumbs({ serviceName });
-  
+
   // Quyết định dùng auto hay manual breadcrumbs
   const finalBreadcrumbs = auto ? autoBreadcrumbs : (breadcrumbItems || []);
 
@@ -54,7 +54,7 @@ export const BreadcrumbSection: React.FC<BreadcrumbSectionProps> = ({
     <div
       className={`
         ${backgroundGradient ? 'bg-gradient-to-r from-orange-50 to-red-50' : 'bg-gray-50'}
-        py-8 border-b border-gray-200
+        py-3 border-b border-gray-200
         ${className}
       `}
     >
@@ -69,16 +69,20 @@ export const BreadcrumbSection: React.FC<BreadcrumbSectionProps> = ({
           />
         )}
 
-        {/* Page Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          {title}
-        </h1>
+        {/* Page Title - Only show if title is provided */}
+        {title && (
+          <>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              {title}
+            </h1>
 
-        {/* Optional Subtitle */}
-        {subtitle && (
-          <p className="text-sm sm:text-base text-gray-600 mt-2">
-            {subtitle}
-          </p>
+            {/* Optional Subtitle */}
+            {subtitle && (
+              <p className="text-sm sm:text-base text-gray-600 mt-2">
+                {subtitle}
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { toast as sonnerToast } from 'sonner';
-import { Toaster } from '@/components/ui/sonner';
+import { Toaster } from '@/components/ui/admin/sonner';
 import { useTheme } from '@/hooks/useTheme';
 import { configureErrorHandler, setToastIntegration } from '@/utils/globalErrorHandler';
 import { AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';

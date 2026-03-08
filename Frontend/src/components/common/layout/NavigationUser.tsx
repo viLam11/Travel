@@ -1,7 +1,7 @@
 // src/components/layout/NavigationUser.tsx
 import React, { useState } from 'react';
 import { Search, Menu, X, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import Avatar from '@/components/common/avatar/Avatar';
@@ -20,14 +20,31 @@ const Navigation: React.FC<NavigationProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, currentUser, logout } = useAuth();
+
+  // Returns true if current path starts with the given prefix
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/');
 
   const handleLogout = () => {
     apiClient.auth.logout();
     logout();
     toast.success('Đăng xuất thành công!');
     navigate('/homepage');
+  };
+
+  const handleSearch = (e?: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e && e.key !== 'Enter') return;
+    if (!searchKeyword.trim()) {
+      toast.error('Vui lòng nhập từ khóa tìm kiếm');
+      return;
+    }
+    navigate(`/destinations?keyword=${encodeURIComponent(searchKeyword)}`);
+    setSearchKeyword('');
+    setIsSearchOpen(false);
   };
 
   return (
@@ -50,6 +67,9 @@ const Navigation: React.FC<NavigationProps> = ({
               <input
                 type="text"
                 placeholder="Tìm kiếm địa điểm, hoạt động..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyDown={handleSearch}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
@@ -88,21 +108,42 @@ const Navigation: React.FC<NavigationProps> = ({
                   navigate('/destinations');
                 }
               }}
-              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
+              className={`text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/destinations')
+                  ? 'text-orange-500 font-semibold border-orange-500'
+                  : 'text-gray-700 hover:text-orange-500 border-transparent'
+                }`}
             >
               Địa điểm
             </button>
             <button
+              onClick={() => navigate('/hotels')}
+              className={`text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/hotels')
+                  ? 'text-orange-500 font-semibold border-orange-500'
+                  : 'text-gray-700 hover:text-orange-500 border-transparent'
+                }`}
+            >
+              Khách sạn
+            </button>
+            <button
               onClick={() => toast('Tính năng đang phát triển')}
-              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
+              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
             >
               Hoạt động
             </button>
             <button
               onClick={() => toast('Tính năng đang phát triển')}
-              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
+              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
             >
               Bài viết
+            </button>
+            <button
+              onClick={() => navigate('/ai-planner')}
+              className={`flex items-center gap-1.5 text-sm lg:text-base font-semibold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap border ${isActive('/ai-planner')
+                  ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-200'
+                  : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200'
+                }`}
+            >
+              ✨ Lập kế hoạch
             </button>
 
             {isAuthenticated ? (
@@ -165,6 +206,9 @@ const Navigation: React.FC<NavigationProps> = ({
               <input
                 type="text"
                 placeholder="Tìm kiếm địa điểm, hoạt động..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyDown={handleSearch}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
@@ -176,9 +220,17 @@ const Navigation: React.FC<NavigationProps> = ({
           <div className="md:hidden border-t border-gray-200 py-4 space-y-3">
             <button
               onClick={() => navigate('/destinations')}
-              className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
+              className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/destinations') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'
+                }`}
             >
               Địa điểm
+            </button>
+            <button
+              onClick={() => navigate('/hotels')}
+              className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/hotels') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'
+                }`}
+            >
+              Khách sạn
             </button>
             <button
               onClick={() => toast('Tính năng đang phát triển')}
@@ -191,6 +243,13 @@ const Navigation: React.FC<NavigationProps> = ({
               className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
             >
               Bài viết
+            </button>
+            <button
+              onClick={() => { navigate('/ai-planner'); setIsMobileMenuOpen(false); }}
+              className={`block w-full text-left font-semibold transition-colors py-2 ${isActive('/ai-planner') ? 'text-orange-600' : 'text-orange-500'
+                }`}
+            >
+              ✨ Lập kế hoạch AI
             </button>
 
             {isAuthenticated ? (

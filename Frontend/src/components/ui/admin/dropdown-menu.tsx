@@ -3,6 +3,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useAdminPortalContainer } from "@/hooks/useAdminPortalContainer"
 
 const DropdownMenu = DropdownMenuPrimitive.Root
 
@@ -11,12 +12,16 @@ const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 const DropdownMenuGroup = DropdownMenuPrimitive.Group
 
 // const DropdownMenuPortal = DropdownMenuPrimitive.Portal
-const DropdownMenuPortal = (props: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) => (
-  <DropdownMenuPrimitive.Portal 
-    container={document.querySelector('.admin-theme') || undefined}
-    {...props} 
-  />
-)
+const DropdownMenuPortal = (props: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) => {
+  const container = useAdminPortalContainer()
+
+  return (
+    <DropdownMenuPrimitive.Portal
+      container={container || undefined}
+      {...props}
+    />
+  )
+}
 
 const DropdownMenuSub = DropdownMenuPrimitive.Sub
 

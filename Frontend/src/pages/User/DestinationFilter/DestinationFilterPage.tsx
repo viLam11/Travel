@@ -37,10 +37,15 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   // Get query params
   const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
-  const provinceCode = destination || ''; // Province code from URL (e.g., 'ha-noi')
+  const provinceCode = destination || searchParams.get('destination') || ''; // Province code from URL (e.g., 'ha-noi')
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
   const paramStartDate = searchParams.get('startDate');
   const paramEndDate = searchParams.get('endDate');
+
+  // Active service type tab
+  const [activeServiceType, setActiveServiceType] = useState<'DESTINATION' | 'HOTEL'>(
+    (paramServiceType === 'HOTEL' ? 'HOTEL' : 'DESTINATION') as 'DESTINATION' | 'HOTEL'
+  );
 
   // Fetch API
   const fetchDestinations = async () => {
@@ -55,7 +60,6 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
       // Call API
       const response: any = await apiClient.services.search({
-        provinceCode: provinceCode || undefined, // Filter by province
         keyword: searchKeyword || undefined, // Text search
         serviceType: paramServiceType, // Use from query params
         minPrice: priceRange[0],
@@ -88,7 +92,14 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
   React.useEffect(() => {
     fetchDestinations();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [searchKeyword, provinceCode, serviceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
+  }, [searchKeyword, provinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
+
+  // Sync activeServiceType with URL params
+  React.useEffect(() => {
+    if (paramServiceType === 'HOTEL' || paramServiceType === 'DESTINATION') {
+      setActiveServiceType(paramServiceType as 'DESTINATION' | 'HOTEL');
+    }
+  }, [paramServiceType]);
 
 
   // Get destination info for UI
@@ -190,13 +201,16 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
       />
 
       {/* Main Content: Sidebar + Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="flex gap-8">
           {/* LEFT: Filter Sidebar */}
           <FilterSidebar
             isMobileOpen={isMobileSidebarOpen}
             onClose={() => setIsMobileSidebarOpen(false)}
-            onLocationChange={(code, name) => navigate(`/destinations/vietnam/${name}/all`)}
+            onLocationChange={(code, name) => {
+              // Update URL with location name as keyword to trigger search
+              navigate(`/destinations?keyword=${encodeURIComponent(name)}`);
+            }}
             priceRange={priceRange}
             onPriceChange={setPriceRange}
             minPrice={0}

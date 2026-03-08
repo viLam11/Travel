@@ -6,7 +6,7 @@ import { MOCK_REGION_DATA } from '../mock/destinationData';
  * Đặt useApi = false để dùng mock data
  */
 export const API_CONFIG = {
-  useApi: false, // ⚠️ Thay đổi thành true khi có API thật
+  useApi: false, //  Thay đổi thành true khi có API thật
   baseUrl: 'https://api.example.com', // URL API của bạn
   timeout: 5000
 };

@@ -17,6 +17,15 @@ export interface ServiceDetail {
   thumbnails: string[];
   features: Feature[];
   availability: Record<string, Record<string, string>>;
+  ticketTypes?: TicketType[];
+}
+
+export interface TicketType {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  inclusions: string[];
 }
 
 export interface AdditionalService {
