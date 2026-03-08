@@ -2,6 +2,7 @@ package com.travollo.Travel.dto;
 
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.utils.Role;
+import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +19,10 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_"+(user.getRole().toString())));
+    }
+
+    public User getUser() {
+        return user;
     }
 
     @Override

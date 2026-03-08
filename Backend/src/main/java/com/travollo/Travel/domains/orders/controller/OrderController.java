@@ -1,4 +1,4 @@
-package com.travollo.Travel.controller;
+package com.travollo.Travel.domains.orders.controller;
 
 import com.travollo.Travel.domains.orders.dto.OrderRequest;
 import com.travollo.Travel.domains.orders.service.OrderService;
@@ -11,8 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/orders")
