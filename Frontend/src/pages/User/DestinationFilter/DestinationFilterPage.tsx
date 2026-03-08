@@ -37,7 +37,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   // Get query params
   const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
-  const provinceCode = destination || ''; // Province code from URL (e.g., 'ha-noi')
+  const provinceCode = destination || searchParams.get('destination') || ''; // Province code from URL (e.g., 'ha-noi')
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
   const paramStartDate = searchParams.get('startDate');
   const paramEndDate = searchParams.get('endDate');

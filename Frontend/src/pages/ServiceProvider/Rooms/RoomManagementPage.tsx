@@ -225,14 +225,14 @@ function NewBookingDialog() {
           Tạo đặt phòng
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] bg-popover border-sidebar-border">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col bg-popover border-sidebar-border">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Tạo đặt phòng mới</DialogTitle>
           <DialogDescription>
             Tạo booking thủ công cho khách vãng lai hoặc đặt qua điện thoại.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 py-4 overflow-y-auto flex-1 pr-1">
           <div className="grid gap-2">
             <Label htmlFor="guest-name">Tên khách hàng</Label>
             <Input id="guest-name" placeholder="Nguyễn Văn A" className="bg-input border-border" />
@@ -281,7 +281,7 @@ function NewBookingDialog() {
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button type="submit">Xác nhận đặt</Button>
         </DialogFooter>
       </DialogContent>

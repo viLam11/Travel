@@ -184,9 +184,75 @@ const mockData: Record<string, ServiceDetail> = {
       '2025-11': {}
     }
   },
-  // Hotel mock data
+  // Destination mock data
   '101': {
     id: '101',
+    name: 'Vinpearl Land Nha Trang',
+    type: 'place',
+    rating: 4.8,
+    reviews: 240,
+    location: 'Nha Trang, Khánh Hòa',
+    address: 'Đảo Hòn Tre, Nha Trang, Khánh Hòa',
+    description: 'Thiên đường vui chơi giải trí đẳng cấp quốc tế tọa lạc bên bờ vịnh Nha Trang xinh đẹp. Vinpearl Land Nha Trang (nay là VinWonders Nha Trang) là điểm đến không thể bỏ qua với hàng trăm trò chơi hấp dẫn.',
+    openingHours: '08:00 - 21:00',
+    duration: '1 ngày',
+    priceAdult: 880000,
+    priceChild: 660000,
+    additionalServices: [
+      { name: 'Vé cáp treo khứ hồi', price: 200000 },
+      { name: 'Buffet trưa', price: 350000 }
+    ],
+    discounts: [],
+    images: [
+      'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800'
+    ],
+    thumbnails: [
+      'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=150',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=150',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=150'
+    ],
+    // Proper features for a theme park
+    features: [
+      { icon: 'mapPin', title: 'Vị trí', desc: 'Đảo Hòn Tre' },
+      { icon: 'utensils', title: 'Ẩm thực', desc: 'Nhà hàng, Quầy đồ ăn nhanh' },
+      { icon: 'users', title: 'Đối tượng', desc: 'Gia đình, Trẻ em, Nhóm bạn' },
+      { icon: 'clock', title: 'Giờ mở cửa', desc: '08:00 - 21:00' },
+      { icon: 'car', title: 'Phương tiện', desc: 'Cáp treo, Cano' },
+      { icon: 'percent', title: 'Ưu đãi', desc: 'Mua vé online giảm 5%' }
+    ],
+    // Ticket types to trigger the new UI
+    ticketTypes: [
+      {
+        id: "t1",
+        title: "Vé Người Lớn - Tiêu Chuẩn",
+        description: "Vé vào cổng tham quan toàn khu vực, không bao gồm cáp treo.",
+        price: 880000,
+        inclusions: ["Cổng kiểm soát vé tự động", "Tham quan Vườn Quý Vương", "Quảng trường Thần Thoại"]
+      },
+      {
+        id: "t2",
+        title: "Vé Trẻ Em - Tiêu Chuẩn",
+        description: "Dành cho trẻ em cao từ 1m - 1m4. Trẻ em dưới 1m miễn phí.",
+        price: 660000,
+        inclusions: ["Cổng kiểm soát vé tự động", "Khu vui chơi trẻ em", "Công viên nước"]
+      },
+      {
+        id: "t3",
+        title: "Combo Vé + Buffet Trưa (Người Lớn)",
+        description: "Tiết kiệm hơn khi mua combo bao gồm vé vào cổng và buffet trưa tại nhà hàng.",
+        price: 1250000,
+        inclusions: ["Vé vào cổng tiêu chuẩn", "Buffet trưa tại nhà hàng Coral", "Nước uống chào mừng"]
+      }
+    ],
+    availability: {
+      '2025-09': {}, '2025-10': {}, '2025-11': {}
+    }
+  },
+  // Hotel mock data (Moved from 101 to 203)
+  '203': {
+    id: '203',
     name: 'Khách sạn Melia Vinpearl',
     type: 'hotel',
     rating: 4.9,

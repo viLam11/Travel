@@ -22,13 +22,6 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ service }) => {
         { icon: <Waves className="w-5 h-5" />, name: "Hồ bơi", available: true },
     ];
 
-    // Room types from service features or default
-    const roomTypes = service.features?.filter((f: any) => f.icon === 'bed') || [
-        { title: "Phòng Tiêu chuẩn", desc: "2 người • 25m² • Giường đôi" },
-        { title: "Phòng Cao cấp", desc: "4 người • 35m² • 2 Giường đôi" },
-        { title: "Phòng Suite", desc: "6 người • 50m² • Phòng khách riêng" },
-    ];
-
     return (
         <div className="space-y-6">
             {/* Description */}
@@ -41,37 +34,6 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ service }) => {
                 </p>
             </div>
 
-            {/* Room Types */}
-            <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Các loại phòng
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {roomTypes.map((room: any, idx: number) => (
-                        <div
-                            key={idx}
-                            className="border border-gray-200 rounded-xl p-4 hover:border-orange-300 hover:shadow-md transition-all"
-                        >
-                            <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900 mb-1">
-                                        {room.title}
-                                    </h4>
-                                    <p className="text-sm text-gray-600">
-                                        {room.desc}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
             {/* Hotel Amenities */}
             <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
@@ -82,8 +44,8 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ service }) => {
                         <div
                             key={idx}
                             className={`flex items-center gap-3 p-3 rounded-lg ${amenity.available
-                                    ? "bg-orange-50 text-gray-900"
-                                    : "bg-gray-50 text-gray-400"
+                                ? "bg-orange-50 text-gray-900"
+                                : "bg-gray-50 text-gray-400"
                                 }`}
                         >
                             <div className={amenity.available ? "text-orange-500" : "text-gray-400"}>

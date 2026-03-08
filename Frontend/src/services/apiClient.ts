@@ -212,7 +212,7 @@ export class ApiClient {
     //   return this.get(`/services/search?${queryParams.toString()}`);
     // }
 
-    search: (params: {
+    search: async (params: {
       provinceCode?: string; // Khớp với Backend yêu cầu
       keyword?: string;
       serviceType?: string;
@@ -224,7 +224,149 @@ export class ApiClient {
       sortBy?: string;
       direction?: string;
     }): ApiResponse<any> => {
-      // Sử dụng params trực tiếp để Axios tự xử lý Query String
+      // Mock Implementation
+      if (true) { // Default to using mock for now as per user request
+        console.log("USING MOCK DATA FOR SEARCH", params);
+        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay
+
+        // Embedded Mock Data to ensure availability
+        const MOCK_DATA = [
+          // --- DESTINATIONS ---
+          {
+            id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "DESTINATION",
+            province: { code: "khanh-hoa", name: "Nha Trang", fullName: "Khánh Hòa" },
+            address: "Nha Trang, Khánh Hòa", averagePrice: 880000, thumbnailUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", rating: 4.8, reviewCount: 240, bookingCount: 1500
+          },
+          {
+            id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "DESTINATION",
+            province: { code: "da-nang", name: "Đà Nẵng", fullName: "Đà Nẵng" },
+            address: "Đà Nẵng", averagePrice: 850000, thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800", rating: 4.9, reviewCount: 1200, bookingCount: 5000
+          },
+          {
+            id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "DESTINATION",
+            province: { code: "quang-nam", name: "Hội An", fullName: "Quảng Nam" },
+            address: "Hội An, Quảng Nam", averagePrice: 0, thumbnailUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800", rating: 4.9, reviewCount: 680, bookingCount: 3000
+          },
+          {
+            id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "DESTINATION",
+            province: { code: "quang-ninh", name: "Hạ Long", fullName: "Quảng Ninh" },
+            address: "Hạ Long, Quảng Ninh", averagePrice: 290000, thumbnailUrl: "https://images.unsplash.com/photo-1506606401543-2e73709cebb4?w=800", rating: 4.7, reviewCount: 450, bookingCount: 2000
+          },
+          {
+            id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "DESTINATION",
+            province: { code: "ho-chi-minh", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
+            address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
+          },
+          // --- HOTELS ---
+          {
+            id: 201, serviceName: "Khách sạn Majestic Saigon", description: "Khách sạn di sản 5 sao.", serviceType: "HOTEL",
+            province: { code: "ho-chi-minh", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
+            address: "Quận 1, Hồ Chí Minh", averagePrice: 2500000, thumbnailUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800", rating: 4.7, reviewCount: 180, bookingCount: 850
+          },
+          {
+            id: 202, serviceName: "InterContinental Hanoi Westlake", description: "Khách sạn sang trọng Hồ Tây.", serviceType: "HOTEL",
+            province: { code: "ha-noi", name: "Hà Nội", fullName: "Hà Nội" },
+            address: "Tây Hồ, Hà Nội", averagePrice: 3200000, thumbnailUrl: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800", rating: 4.9, reviewCount: 210, bookingCount: 920
+          },
+          {
+            id: 203, serviceName: "Vinpearl Resort Nha Trang", description: "Khu nghỉ dưỡng biển.", serviceType: "HOTEL",
+            province: { code: "khanh-hoa", name: "Nha Trang", fullName: "Khánh Hòa" },
+            address: "Nha Trang, Khánh Hòa", averagePrice: 2800000, thumbnailUrl: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800", rating: 4.8, reviewCount: 350, bookingCount: 1400
+          },
+          {
+            id: 205, serviceName: "Pullman Danang Beach Resort", description: "Khu nghỉ dưỡng 5 sao.", serviceType: "HOTEL",
+            province: { code: "da-nang", name: "Đà Nẵng", fullName: "Đà Nẵng" },
+            address: "Đà Nẵng", averagePrice: 3500000, thumbnailUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800", rating: 4.8, reviewCount: 280, bookingCount: 1100
+          },
+          // --- TOURS ---
+          {
+            id: 301, serviceName: "Tour 4 đảo Phú Quốc", description: "Khám phá 4 hòn đảo.", serviceType: "TOUR",
+            province: { code: "kien-giang", name: "Phú Quốc", fullName: "Kiên Giang" },
+            address: "Phú Quốc", averagePrice: 950000, thumbnailUrl: "https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=800", rating: 4.7, reviewCount: 150, bookingCount: 800
+          }
+        ];
+
+        let results = [...MOCK_DATA];
+
+        // 1. Filter by Service Type
+        if (params.serviceType) {
+          const type = params.serviceType.toUpperCase();
+          results = results.filter(item => item.serviceType === type);
+        }
+
+        // 2. Filter by Province/Destination
+        if (params.provinceCode) {
+          // Loose matching for mock data (slug or name)
+          const pCode = params.provinceCode.toLowerCase();
+          results = results.filter(item =>
+            item.province.code.includes(pCode) ||
+            item.province.name.toLowerCase().includes(pCode) ||
+            item.province.fullName.toLowerCase().includes(pCode)
+          );
+        }
+
+        // 3. Filter by Keyword (Name or Province)
+        if (params.keyword) {
+          const lowerKeyword = params.keyword.toLowerCase();
+          results = results.filter(item =>
+            item.serviceName.toLowerCase().includes(lowerKeyword) ||
+            item.province.name.toLowerCase().includes(lowerKeyword) ||
+            item.province.fullName.toLowerCase().includes(lowerKeyword) ||
+            item.address.toLowerCase().includes(lowerKeyword)
+          );
+        }
+
+        // 4. Filter by Price
+        if (params.minPrice !== undefined) {
+          results = results.filter(item => item.averagePrice >= (params.minPrice || 0));
+        }
+        if (params.maxPrice !== undefined && params.maxPrice < 100000000) {
+          results = results.filter(item => item.averagePrice <= (params.maxPrice || 100000000));
+        }
+
+        // 5. Filter by Rating
+        if (params.minRating !== undefined && params.minRating > 0) {
+          results = results.filter(item => item.rating >= (params.minRating || 0));
+        }
+
+        // 6. Sort
+        results.sort((a, b) => {
+          let valA: any = a.id;
+          let valB: any = b.id;
+
+          if (params.sortBy === 'averagePrice') {
+            valA = a.averagePrice;
+            valB = b.averagePrice;
+          } else if (params.sortBy === 'rating') {
+            valA = a.rating;
+            valB = b.rating;
+          } else if (params.sortBy === 'bookingCount' || params.sortBy === 'popular') {
+            valA = a.bookingCount;
+            valB = b.bookingCount;
+          }
+
+          if (params.direction === 'desc') {
+            return valB - valA;
+          }
+          return valA - valB;
+        });
+
+        // 7. Pagination
+        const page = params.page || 0;
+        const size = params.size || 10;
+        const totalItems = results.length;
+        const totalPages = Math.ceil(totalItems / size);
+        const paginatedItems = results.slice(page * size, (page + 1) * size);
+
+        return {
+          services: paginatedItems,
+          totalItems,
+          totalPages,
+          currentPage: page
+        };
+      }
+
+      // Real API Call
       return this.get(`/services/search`, {
         params: {
           provinceCode: params.provinceCode,
@@ -522,21 +664,21 @@ export class ApiClient {
           items: response.data || response.results || response,
           meta: response.meta ||
             response.pagination || {
-              page: params?.page || 1,
-              per_page: params?.per_page || 10,
-              total:
-                response.total ||
-                response.count ||
-                (response.data || response.results || response).length ||
-                0,
-              total_pages:
-                response.total_pages ||
-                response.pages ||
-                Math.ceil(
-                  (response.total || response.count || 0) /
-                    (params?.per_page || 10)
-                ),
-            },
+            page: params?.page || 1,
+            per_page: params?.per_page || 10,
+            total:
+              response.total ||
+              response.count ||
+              (response.data || response.results || response).length ||
+              0,
+            total_pages:
+              response.total_pages ||
+              response.pages ||
+              Math.ceil(
+                (response.total || response.count || 0) /
+                (params?.per_page || 10)
+              ),
+          },
         };
       },
 

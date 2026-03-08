@@ -376,7 +376,7 @@ export default function ServiceListPage() {
     };
 
     const handleEdit = (service: Service) => {
-        navigate(`/admin/services/edit/${service.id}`);
+        navigate(`/provider/services/edit/${service.id}`);
     };
 
     const handleDelete = (service: Service) => {
@@ -413,10 +413,6 @@ export default function ServiceListPage() {
                     <Button variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Xuất Excel
-                    </Button>
-                    <Button onClick={() => navigate('/admin/services/new')}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Thêm dịch vụ
                     </Button>
                 </div>
             </div>

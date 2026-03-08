@@ -24,22 +24,43 @@ export const ROUTES = {
   USER_SETTINGS: '/user/settings',
   USER_NOTIFICATIONS: '/user/notifications',
 
-  // ==================== ADMIN ROUTES ====================
+  // ==================== ADMIN ROUTES (System Admin) ====================
   ADMIN_ROOT: '/admin',
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_SERVICES: '/admin/services',
-  ADMIN_USERS: '/admin/users',
-  ADMIN_BOOKINGS: '/admin/bookings',
+  ADMIN_EDIT_SERVICE: '/admin/services/edit/:id',
   ADMIN_REVIEWS: '/admin/reviews',
+  ADMIN_USERS: '/admin/users',
+
+  // ==================== SERVICE PROVIDER ROUTES ====================
+  PROVIDER_ROOT: '/provider',
+  PROVIDER_DASHBOARD: '/provider/dashboard',
+  PROVIDER_MY_SERVICE: '/provider/my-service',
+  PROVIDER_EDIT_SERVICE: '/provider/service/edit',
+  PROVIDER_ROOMS: '/provider/rooms',
+  PROVIDER_TICKETS: '/provider/tickets',
+  PROVIDER_BOOKINGS: '/provider/bookings',
+  PROVIDER_REVIEWS: '/provider/reviews',
+
+  // ==================== AI PLANNER ====================
+  AI_PLANNER: '/ai-planner',
 } as const;
 
 export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {
-  // Admin routes require 'admin' role
+  // Admin routes require 'admin' role ONLY
   [ROUTES.ADMIN_DASHBOARD]: { roles: ['admin'] },
   [ROUTES.ADMIN_SERVICES]: { roles: ['admin'] },
-  [ROUTES.ADMIN_USERS]: { roles: ['admin'] },
-  [ROUTES.ADMIN_BOOKINGS]: { roles: ['admin'] },
   [ROUTES.ADMIN_REVIEWS]: { roles: ['admin'] },
+  [ROUTES.ADMIN_USERS]: { roles: ['admin'] },
+
+  // Provider routes require 'provider' role
+  [ROUTES.PROVIDER_DASHBOARD]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_MY_SERVICE]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_EDIT_SERVICE]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_ROOMS]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_TICKETS]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_BOOKINGS]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_REVIEWS]: { roles: ['provider'] },
 
   // User profile routes require authentication (user or admin)
   [ROUTES.USER_PROFILE]: { roles: ['user', 'admin'] },
@@ -52,7 +73,7 @@ export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {
 
 // Helper functions
 export const isProtectedRoute = (path: string): boolean => {
-  return path.startsWith('/admin') || path.startsWith('/user');
+  return path.startsWith('/admin') || path.startsWith('/provider') || path.startsWith('/user');
 };
 
 export const isPublicRoute = (path: string): boolean => {
@@ -65,8 +86,9 @@ export const isPublicRoute = (path: string): boolean => {
   return publicPaths.some(p => path.startsWith(p));
 };
 
-export const getRedirectPath = (role: 'admin' | 'user' | null): string => {
+export const getRedirectPath = (role: 'admin' | 'provider' | 'user' | null): string => {
   if (role === 'admin') return ROUTES.ADMIN_DASHBOARD;
+  if (role === 'provider') return ROUTES.PROVIDER_DASHBOARD;
   if (role === 'user') return ROUTES.HOMEPAGE;
   return ROUTES.LOGIN;
 };
@@ -74,11 +96,19 @@ export const getRedirectPath = (role: 'admin' | 'user' | null): string => {
 // Route labels for breadcrumbs and navigation
 export const ROUTE_LABELS: Record<string, string> = {
   // Admin routes
-  [ROUTES.ADMIN_DASHBOARD]: 'Dashboard',
-  [ROUTES.ADMIN_SERVICES]: 'Services',
-  [ROUTES.ADMIN_USERS]: 'Users',
-  [ROUTES.ADMIN_BOOKINGS]: 'Bookings',
-  [ROUTES.ADMIN_REVIEWS]: 'Reviews',
+  [ROUTES.ADMIN_DASHBOARD]: 'Quản trị hệ thống',
+  [ROUTES.ADMIN_SERVICES]: 'Quản lý dịch vụ',
+  [ROUTES.ADMIN_REVIEWS]: 'Kiểm duyệt đánh giá',
+  [ROUTES.ADMIN_USERS]: 'Quản lý người dùng',
+
+  // Provider routes
+  [ROUTES.PROVIDER_DASHBOARD]: 'Tổng quan',
+  [ROUTES.PROVIDER_MY_SERVICE]: 'Dịch vụ của tôi',
+  [ROUTES.PROVIDER_EDIT_SERVICE]: 'Chỉnh sửa dịch vụ',
+  [ROUTES.PROVIDER_ROOMS]: 'Quản lý phòng',
+  [ROUTES.PROVIDER_TICKETS]: 'Quản lý vé',
+  [ROUTES.PROVIDER_BOOKINGS]: 'Đơn đặt',
+  [ROUTES.PROVIDER_REVIEWS]: 'Đánh giá',
 
   // Public routes
   [ROUTES.HOMEPAGE]: 'Trang chủ',

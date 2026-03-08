@@ -2,7 +2,6 @@
 import * as React from "react"
 import {
     Hotel,
-    Home,
     Settings,
     Users,
     HelpCircle,
@@ -10,8 +9,6 @@ import {
     Calendar,
     Star,
     LayoutDashboard,
-    Plus,
-    List,
     Bed,
 } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
@@ -30,137 +27,119 @@ import {
 import { useAuth } from "@/hooks/useAuth"
 
 const getNavItems = (currentPath: string, currentUser: any) => {
-    // Get provider type from user (default to 'hotel' for now, will be from backend)
-    // TODO: Get from currentUser.providerType when backend is ready
-    const providerType: 'hotel' | 'place' = currentUser?.providerType || 'hotel';
+    // Get user role and provider type
+    const userRole = currentUser?.user?.role?.toLowerCase() || 'provider';
+    const providerType: 'hotel' | 'place' = currentUser?.user?.providerType || 'hotel';
 
-    const navMain = [
-        {
-            title: "Dashboard",
-            url: ROUTES.ADMIN_DASHBOARD,
-            icon: <LayoutDashboard />,
-            isActive: currentPath === ROUTES.ADMIN_DASHBOARD,
-            visible: true,
-        },
-    ];
+    const isAdmin = userRole === 'admin';
+    const isProvider = userRole === 'provider';
 
-    // Hotel Owner Menu
-    if (providerType === 'hotel') {
+    const navMain = [];
+
+    // ==================== ADMIN NAVIGATION ====================
+    if (isAdmin) {
         navMain.push(
             {
-                title: "Hotels",
-                url: "/admin/hotels",
-                icon: <Home />,
-                isActive: currentPath.startsWith('/admin/hotels'),
+                title: "Tổng quan",
+                url: ROUTES.ADMIN_DASHBOARD,
+                icon: <LayoutDashboard />,
+                isActive: currentPath === ROUTES.ADMIN_DASHBOARD,
                 visible: true,
-                items: [
-                    {
-                        title: "Tất cả khách sạn",
-                        url: "/admin/hotels/list",
-                        icon: <List />,
-                        isActive: currentPath === "/admin/hotels/list",
-                    },
-                    {
-                        title: "Quản lý phòng",
-                        url: "/admin/hotels/rooms",
-                        icon: <Bed />,
-                        isActive: currentPath === "/admin/hotels/rooms",
-                    },
-                    {
-                        title: "Add Hotel",
-                        url: "/admin/hotels/new",
-                        icon: <Plus />,
-                        isActive: currentPath === "/admin/hotels/new",
-                    },
-
-                ]
-            } as any
-        );
-    }
-
-    // Tour Provider Menu
-    if (providerType === 'place') {
-        navMain.push(
+            },
             {
-                title: "Services",
+                title: "Dịch vụ",
                 url: ROUTES.ADMIN_SERVICES,
                 icon: <Hotel />,
                 isActive: currentPath.startsWith('/admin/services'),
                 visible: true,
-                items: [
-                    {
-                        title: "Add Service",
-                        url: ROUTES.ADMIN_SERVICES + "/new",
-                        icon: <Plus />,
-                        isActive: currentPath === ROUTES.ADMIN_SERVICES + "/new",
-                    },
-                    {
-                        title: "Service List",
-                        url: ROUTES.ADMIN_SERVICES + "/list",
-                        icon: <List />,
-                        isActive: currentPath === ROUTES.ADMIN_SERVICES + "/list",
-                    },
-                ]
+            } as any,
+            {
+                title: "Đánh giá",
+                url: ROUTES.ADMIN_REVIEWS,
+                icon: <Star />,
+                isActive: currentPath === ROUTES.ADMIN_REVIEWS,
+                visible: true,
+            } as any,
+            {
+                title: "Người dùng",
+                url: ROUTES.ADMIN_USERS,
+                icon: <Users />,
+                isActive: currentPath === ROUTES.ADMIN_USERS,
+                visible: true,
             } as any
         );
     }
 
-    // Shared menu items for both types
-    navMain.push(
-        {
-            title: "Bookings",
-            url: ROUTES.ADMIN_BOOKINGS,
-            icon: <Calendar />,
-            isActive: currentPath === ROUTES.ADMIN_BOOKINGS,
-            visible: true,
-        } as any,
-        {
-            title: "Reviews",
-            url: ROUTES.ADMIN_REVIEWS,
-            icon: <Star />,
-            isActive: currentPath === ROUTES.ADMIN_REVIEWS,
-            visible: true,
-        } as any
-    );
-
-    // Admin-only menu items
-    if (currentUser?.role === 'ROLE_ADMIN') {
+    // ==================== PROVIDER NAVIGATION ====================
+    // Allow Admin to access Provider pages for testing purposes
+    if (isProvider || isAdmin) {
         navMain.push({
-            title: "Users",
-            url: ROUTES.ADMIN_USERS,
-            icon: <Users />,
-            isActive: currentPath === ROUTES.ADMIN_USERS,
+            title: "Tổng quan",
+            url: "/provider/dashboard",
+            icon: <LayoutDashboard />,
+            isActive: currentPath === "/provider/dashboard",
+            visible: true,
+        });
+
+        // My Service - Always visible for providers
+        navMain.push({
+            title: "Dịch vụ của tôi",
+            url: ROUTES.PROVIDER_MY_SERVICE,
+            icon: <Hotel />,
+            isActive: currentPath === ROUTES.PROVIDER_MY_SERVICE,
             visible: true,
         } as any);
+
+        // Hotel Provider - Room Management
+        if (providerType === 'hotel') {
+            navMain.push({
+                title: "Quản lý phòng",
+                url: "/provider/hotels/rooms",
+                icon: <Bed />,
+                isActive: currentPath === "/provider/hotels/rooms",
+                visible: true,
+            } as any);
+        }
+
+        // Shared Provider menu items
+        navMain.push(
+            {
+                title: "Đặt chỗ",
+                url: "/provider/bookings",
+                icon: <Calendar />,
+                isActive: currentPath === "/provider/bookings",
+                visible: true,
+            } as any,
+            {
+                title: "Đánh giá",
+                url: "/provider/reviews",
+                icon: <Star />,
+                isActive: currentPath === "/provider/reviews",
+                visible: true,
+            } as any
+        );
     }
 
     return {
         navMain,
         navSecondary: [
             {
-                title: "Settings",
-                url: "/admin/settings",
+                title: "Cài đặt",
+                url: isAdmin ? "/admin/settings" : "/provider/settings",
                 icon: <Settings />,
             },
             {
-                title: "Get Help",
-                url: "/admin/help",
+                title: "Trợ giúp",
+                url: isAdmin ? "/admin/help" : "/provider/help",
                 icon: <HelpCircle />,
             },
             {
-                title: "Language",
-                url: "/admin/language",
+                title: "Ngôn ngữ",
+                url: isAdmin ? "/admin/language" : "/provider/language",
                 icon: <Languages />,
             },
         ],
-        quickActions: [
-            {
-                title: providerType === 'hotel' ? "Add Hotel" : "Add Service",
-                url: providerType === 'hotel' ? "/admin/hotels/new" : ROUTES.ADMIN_SERVICES + "/new",
-                icon: providerType === 'hotel' ? <Home /> : <Hotel />,
-                visible: true,
-            }
-        ].filter(action => action.visible)
+        quickActions: [] // Providers cannot add new services, only Admin can
     };
 };
 
@@ -168,8 +147,15 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
     const { currentUser } = useAuth();
     const location = useLocation();
 
+    const userRole = currentUser?.user?.role?.toLowerCase() || 'provider';
+    const isAdmin = userRole === 'admin';
+
     const navItems = getNavItems(location.pathname, currentUser);
     const filteredMainNav = navItems.navMain.filter(item => item.visible);
+
+    const dashboardUrl = isAdmin ? ROUTES.ADMIN_DASHBOARD : "/provider/dashboard";
+    const panelTitle = isAdmin ? "Admin Panel" : "Provider Panel";
+    const panelSubtitle = isAdmin ? "System Management" : "Service Management";
 
     return (
         <Sidebar collapsible="offcanvas" {...props}>
@@ -177,13 +163,13 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link to={ROUTES.ADMIN_DASHBOARD}>
+                            <Link to={dashboardUrl}>
                                 <div className="font-bold text-xl text-[#eb662b]">
                                     Travello
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight ml-2">
-                                    <span className="truncate font-medium">Admin Panel</span>
-                                    <span className="truncate text-xs text-muted-foreground">Service Management</span>
+                                    <span className="truncate font-medium">{panelTitle}</span>
+                                    <span className="truncate text-xs text-muted-foreground">{panelSubtitle}</span>
                                 </div>
                             </Link>
                         </SidebarMenuButton>

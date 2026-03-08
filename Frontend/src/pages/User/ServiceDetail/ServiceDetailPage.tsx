@@ -19,6 +19,8 @@ import ReviewsSection from "../../../components/page/serviceDetail/reviews/Revie
 import BookingCard from "../../../components/page/serviceDetail/booking/BookingCard";
 import ServiceInfoTab from "../../../components/page/serviceDetail/info/ServiceInfoTab";
 import HotelInfoTab from "../../../components/page/serviceDetail/info/HotelInfoTab";
+import RoomsTab from "../../../components/page/serviceDetail/info/RoomsTab";
+import TicketsTab from "../../../components/page/serviceDetail/info/TicketsTab";
 import type { AppDispatch, RootState } from "../../../store";
 import {
   loadServiceDetail,
@@ -51,7 +53,7 @@ const ServiceDetailPage: React.FC = () => {
   } = useSelector((state: RootState) => state.serviceDetail);
 
   // Local state
-  const [activeTab, setActiveTab] = useState<"info" | "reviews">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "rooms" | "reviews">("info");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("2025-09");
@@ -70,6 +72,7 @@ const ServiceDetailPage: React.FC = () => {
     "wallet"
   );
   const [showDiscountSection, setShowDiscountSection] = useState(true);
+  const [ticketList, setTicketList] = useState<any[]>([]);
 
   // Room booking modal state - Updated for multiple rooms
   const [showRoomBookingModal, setShowRoomBookingModal] = useState(false);
@@ -172,8 +175,12 @@ const ServiceDetailPage: React.FC = () => {
     handleCloseModal();
   };
 
-  const handleRoomBookNow = () => {
+  const handleRoomBookNow = (room?: any) => {
     requireAuth(() => {
+      // Pre-fill room type if room is provided
+      if (room) {
+        setRoomType(room.title);
+      }
       setShowRoomBookingModal(true);
       document.body.style.overflow = "hidden";
     }, 'Vui lòng đăng nhập để đặt phòng');
@@ -327,7 +334,6 @@ const ServiceDetailPage: React.FC = () => {
   ];
 
   const allReviews = [...userReviews, ...reviews];
-  const displayedReviews = showAllReviews ? allReviews : allReviews.slice(0, 2);
 
   // Mock rooms data with currentBookings - Updated structure
   const allRooms = [
@@ -468,8 +474,6 @@ const ServiceDetailPage: React.FC = () => {
       <BreadcrumbSection
         auto
         serviceName={service.name}
-        title={service.name}
-        subtitle={`${service.location} • ${service.rating}★ (${service.reviews} đánh giá)`}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Title Section */}
@@ -590,6 +594,18 @@ const ServiceDetailPage: React.FC = () => {
                   )}
                 </button>
                 <button
+                  onClick={() => setActiveTab("rooms")}
+                  className={`pb-3 font-semibold transition-colors relative ${activeTab === "rooms"
+                    ? "text-gray-900"
+                    : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  {serviceType === 'hotel' ? 'Các loại phòng' : 'Các loại vé'}
+                  {activeTab === "rooms" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
+                  )}
+                </button>
+                <button
                   onClick={() => setActiveTab("reviews")}
                   className={`pb-3 font-semibold transition-colors relative ${activeTab === "reviews"
                     ? "text-gray-900"
@@ -621,6 +637,17 @@ const ServiceDetailPage: React.FC = () => {
 
 
 
+
+            {activeTab === "rooms" && (
+              serviceType === 'hotel' ? (
+                <RoomsTab
+                  service={service}
+                  onRoomBookNow={handleRoomBookNow}
+                />
+              ) : (
+                <TicketsTab tickets={service.ticketTypes || []} />
+              )
+            )}
 
             {activeTab === "reviews" && (
               <ReviewsSection
@@ -658,6 +685,13 @@ const ServiceDetailPage: React.FC = () => {
               finalPrice={finalPrice}
               onBookNow={handleBookNow}
               onRoomBookNow={handleRoomBookNow}
+              // Hotel Props
+              checkInDate={checkInDate}
+              setCheckInDate={setCheckInDate}
+              checkOutDate={checkOutDate}
+              setCheckOutDate={setCheckOutDate}
+              guestCount={guestCount}
+              setGuestCount={setGuestCount}
             />
           </div>
         </div >
@@ -690,6 +724,8 @@ const ServiceDetailPage: React.FC = () => {
         setPaymentMethod={setPaymentMethod}
         showDiscountSection={showDiscountSection}
         setShowDiscountSection={setShowDiscountSection}
+        ticketList={ticketList}
+        setTicketList={setTicketList}
         finalPrice={finalPrice}
         onConfirm={handleConfirmBooking}
       />

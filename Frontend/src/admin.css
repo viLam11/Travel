@@ -134,6 +134,45 @@
   --spacing: 0.25rem;
 }
 
+/* 
+ * Force light theme for a subtree, regardless of the current dark/light mode.
+ * Use this on a wrapper element to "isolate" it from the dark theme.
+ * All child elements will render as if the theme is "light".
+ */
+.isolate-light,
+.dark .isolate-light {
+  color-scheme: light;
+  --background: rgb(255, 255, 255);
+  --foreground: rgb(15, 20, 25);
+  --card: rgb(247, 248, 248);
+  --card-foreground: rgb(15, 20, 25);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(15, 20, 25);
+  --primary: rgb(30, 157, 241);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(15, 20, 25);
+  --secondary-foreground: rgb(255, 255, 255);
+  --muted: rgb(229, 229, 230);
+  --muted-foreground: rgb(15, 20, 25);
+  --accent: rgb(227, 236, 246);
+  --accent-foreground: rgb(30, 157, 241);
+  --destructive: rgb(244, 33, 46);
+  --destructive-foreground: rgb(255, 255, 255);
+  --border: rgb(225, 234, 239);
+  --input: rgb(247, 249, 250);
+  --ring: rgb(29, 161, 242);
+  --sidebar: rgb(247, 248, 248);
+  --sidebar-foreground: rgb(15, 20, 25);
+  --sidebar-primary: rgb(30, 157, 241);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(227, 236, 246);
+  --sidebar-accent-foreground: rgb(30, 157, 241);
+  --sidebar-border: rgb(225, 232, 237);
+  --sidebar-ring: rgb(29, 161, 242);
+  background-color: rgb(255, 255, 255);
+  color: rgb(15, 20, 25);
+}
+
 .admin-theme.dark {
   --background: rgb(0, 0, 0);
   --foreground: rgb(231, 233, 234);
