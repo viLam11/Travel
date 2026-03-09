@@ -14,6 +14,7 @@ import com.travollo.Travel.utils.JWTUtils;
 import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
 import jakarta.mail.MessagingException;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -335,6 +336,21 @@ public class UserService implements UserInterface {
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse(500, "Failed to resend OTP: " + e.getMessage()));
         }
+    }
+
+    /** Verify OTP
+     * @param: email, OTP
+     * */
+    public ResponseEntity<Object> verifyOTP(String email, String OTP) {
+        User user = theUserRepo.findByEmail(email)
+                .orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Invalid Email"));
+        if (!OTP.equals(user.getVerificationCode())) {
+            return ResponseEntity.badRequest().body("Invalid OTP");
+        }
+        user.setEnabled(true);
+        user.setVerificationCode(null);
+        theUserRepo.save(user);
+        return ResponseEntity.ok().body("Verify successfully");
     }
 
 
