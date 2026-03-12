@@ -72,6 +72,10 @@ public class HotelAndRoomService {
         roomRepo.deleteById(roomID);
     }
 
+    public RoomResponseDTO getRoomById(String roomID) {
+        return mapToRoomResponse(roomRepo.findById(roomID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Room not found")));
+    }
+
     public PageResponse<RoomResponseDTO> getAllRooms(int pageNo, int pageSize) {
         Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNo);
         Page<RoomResponseDTO> roomPage = roomRepo.findAll(pageable).map(this::mapToRoomResponse);
@@ -83,13 +87,6 @@ public class HotelAndRoomService {
                 roomPage.getTotalPages(),
                 roomPage.isLast()
         );
-    }
-
-    public List<RoomResponseDTO> getAllRoomsByHotel(String hotelId) {
-        Hotel hotel = hotelRepo.findById(hotelId).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Hotel not found"));
-        return hotel.getRoomList().stream()
-                .map(this::mapToRoomResponse)
-                .toList();
     }
 
     /** Helper functions map Room entity -> Room Response

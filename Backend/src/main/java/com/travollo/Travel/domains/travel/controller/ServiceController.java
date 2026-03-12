@@ -1,5 +1,8 @@
 package com.travollo.Travel.domains.travel.controller;
 
+import com.travollo.Travel.domains.hotel.dto.NewRoomRequest;
+import com.travollo.Travel.domains.hotel.dto.RoomResponseDTO;
+import com.travollo.Travel.domains.hotel.service.HotelAndRoomService;
 import com.travollo.Travel.domains.ticket.dto.TicketCreateRequest;
 import com.travollo.Travel.domains.ticket.service.TicketService;
 import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
@@ -32,6 +35,7 @@ public class ServiceController {
     private final CommentSService commentSService;
     private final Utils utils;
     private final TicketService ticketService;
+    private final HotelAndRoomService hotelAndRoomService;
 
     @GetMapping("/all")
     ResponseEntity<Object> getAllServices() {
@@ -96,12 +100,26 @@ public class ServiceController {
         return travelService.searchServices(searchRequest);
     }
 
-    @PostMapping("/{serviceID}/tickets")
+    @PostMapping("/{ticketVenueID}/tickets")
     ResponseEntity<TicketResponse> createTicket(
-            @PathVariable String serviceID,
+            @PathVariable String ticketVenueID,
             @RequestBody TicketCreateRequest ticketCreateRequest
     ) {
-        return ResponseEntity.ok(ticketService.createTicket(serviceID, ticketCreateRequest));
+        return ResponseEntity.ok(ticketService.createTicket(ticketVenueID, ticketCreateRequest));
+    }
+
+    @GetMapping("{hotelID}/rooms")
+    ResponseEntity<List<RoomResponseDTO>> getAllRoomsByHotel(
+            @PathVariable String hotelID) {
+        return ResponseEntity.ok(hotelAndRoomService.getAllRoomByHotelID(hotelID));
+    }
+
+    @PostMapping("/{hotelID}/rooms")
+    ResponseEntity<RoomResponseDTO> createRoom(
+            @PathVariable String hotelID,
+            @RequestBody NewRoomRequest roomCreateRequest
+            ) {
+        return ResponseEntity.ok(hotelAndRoomService.createRoom(hotelID, roomCreateRequest));
     }
 
 }
