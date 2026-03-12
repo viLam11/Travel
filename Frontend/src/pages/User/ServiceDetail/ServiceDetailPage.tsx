@@ -21,6 +21,7 @@ import ServiceInfoTab from "../../../components/page/serviceDetail/info/ServiceI
 import HotelInfoTab from "../../../components/page/serviceDetail/info/HotelInfoTab";
 import RoomsTab from "../../../components/page/serviceDetail/info/RoomsTab";
 import TicketsTab from "../../../components/page/serviceDetail/info/TicketsTab";
+import type { Discount } from "@/types/serviceDetail.types";
 import type { AppDispatch, RootState } from "../../../store";
 import {
   loadServiceDetail,
@@ -28,8 +29,16 @@ import {
 } from "../../../store/slices/serviceDetailSlice";
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthCheck } from '@/hooks/useAuthCheck';
+import { discountApi } from '@/api/discountApi';
 import toast from 'react-hot-toast';
 import AuthModal from '@/components/common/AuthModal';
+import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
+import apiClient from '@/services/apiClient';
+import PaymentModal from '@/components/common/PaymentModal';
+
+// ─── Toggle mock / real API ───────────────────────────────────────────────────
+const USE_MOCK = false; // set true để dùng mock data, false để gọi API thật
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ServiceDetailPage: React.FC = () => {
   const { region, destination, serviceType, idSlug } = useParams<{
@@ -42,7 +51,7 @@ const ServiceDetailPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Auth hooks
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   const { requireAuth, showAuthModal, authMessage, closeAuthModal } = useAuthCheck();
 
   // Redux state
@@ -51,6 +60,24 @@ const ServiceDetailPage: React.FC = () => {
     loading,
     error,
   } = useSelector((state: RootState) => state.serviceDetail);
+
+  // Helper: extract numeric ID from slug (e.g. "123-ten-dich-vu" → "123")
+  const extractId = (slug: string | undefined): string => {
+    if (!slug) return '';
+    return slug.split('-')[0];
+  };
+
+  const MOCK_ROOMS = [
+    { id: 101, name: 'Room 101', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [{ roomId: 101, checkIn: '2025-10-20', checkOut: '2025-10-22' }] },
+    { id: 102, name: 'Room 102', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [] },
+    { id: 103, name: 'Room 103', type: 'Tiêu chuẩn', price: 120, capacity: 3, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar'], available: true, currentBookings: [] },
+    { id: 201, name: 'Room 201', type: 'Cao cấp', price: 180, capacity: 4, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Bồn tắm'], available: true, currentBookings: [{ roomId: 201, checkIn: '2025-10-25', checkOut: '2025-10-27' }] },
+    { id: 202, name: 'Room 202', type: 'Cao cấp', price: 180, capacity: 4, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Bồn tắm'], available: true, currentBookings: [] },
+    { id: 301, name: 'Room 301', type: 'Suite', price: 300, capacity: 6, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Ban công', 'Bếp nhỏ'], available: true, currentBookings: [] },
+    { id: 302, name: 'Room 302', type: 'Suite', price: 300, capacity: 6, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Ban công', 'Bếp nhỏ'], available: false, currentBookings: [] },
+  ];
+
+  const id = extractId(idSlug);
 
   // Local state
   const [activeTab, setActiveTab] = useState<"info" | "rooms" | "reviews">("info");
@@ -68,11 +95,18 @@ const ServiceDetailPage: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerNote, setCustomerNote] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"wallet" | "cash">(
-    "wallet"
+  const [paymentMethod, setPaymentMethod] = useState<'MOMO' | 'VNPAY'>(
+    'MOMO'
   );
   const [showDiscountSection, setShowDiscountSection] = useState(true);
   const [ticketList, setTicketList] = useState<any[]>([]);
+
+  // Payment states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | number | null>(null);
+  const [pendingOrderAmount, setPendingOrderAmount] = useState<number>(0);
+  const [allRooms, setAllRooms] = useState<any[]>([]);
+
 
   // Room booking modal state - Updated for multiple rooms
   const [showRoomBookingModal, setShowRoomBookingModal] = useState(false);
@@ -88,25 +122,87 @@ const ServiceDetailPage: React.FC = () => {
   const [roomCity, setRoomCity] = useState("");
   const [roomCountry, setRoomCountry] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
-  const [roomPaymentMethod, setRoomPaymentMethod] = useState<"card" | "online">(
-    "card"
+  const [roomPaymentMethod, setRoomPaymentMethod] = useState<'MOMO' | 'VNPAY'>(
+    'MOMO'
   );
 
   // Reviews state
-  const [reviewImages, setReviewImages] = useState<string[]>([]);
+  const [reviewImages, setReviewImages] = useState<File[]>([]);
+  const [reviewImagePreviewUrls, setReviewImagePreviewUrls] = useState<string[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewCost, setReviewCost] = useState("");
   const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [apiReviews, setApiReviews] = useState<any[]>([]); // Data from API
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewTitle, setReviewTitle] = useState("");
+  const [apiDiscounts, setApiDiscounts] = useState<any[]>([]);
 
-  // Extract ID from slug
-  const extractId = (slug: string | undefined): string => {
-    if (!slug) return "";
-    return slug.split("-")[0];
+  // Load rooms/tickets from API when serviceId is available
+  const fetchReviews = async () => {
+    try {
+      if (USE_MOCK) return; // Skip if forcing mock
+      if (!id) return;
+      const response = await apiClient.comments.getByServiceId(Number(id));
+      if (response?.data?.content?.length > 0) {
+        setApiReviews(response.data.content);
+      }
+    } catch (error) {
+      console.error("Failed to fetch reviews", error);
+    }
   };
 
+  const fetchDiscounts = async () => {
+    try {
+      if (USE_MOCK) return;
+      if (!id || !destination) return;
+      const data = await discountApi.getSatisfiedDiscounts(id, destination);
+      if (Array.isArray(data) && data.length > 0) {
+        setApiDiscounts(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch discounts", error);
+    }
+  };
+
+  useEffect(() => {
+    const loadRoomsOrTickets = async () => {
+      if (!id) return;
+
+      if (USE_MOCK) {
+        setAllRooms(MOCK_ROOMS);
+        return;
+      }
+
+      try {
+        const data: any[] = await apiClient.tickets.getByServiceId(Number(id));
+        // Map backend ticket/room response to UI shape
+        const mapped = (Array.isArray(data) ? data : []).map((item: any) => ({
+          id: item.id,
+          name: item.roomName ?? item.name ?? `Room ${item.id}`,
+          type: item.roomType ?? item.ticketType ?? '',
+          price: item.price ?? item.pricePerNight ?? 0,
+          capacity: item.capacity ?? item.maxGuests ?? 2,
+          amenities: item.amenities ?? [],
+          available: item.available ?? item.isAvailable ?? true,
+          currentBookings: item.currentBookings ?? [],
+          // ticket fields
+          description: item.description ?? '',
+          quantity: item.quantity ?? item.remainingQuantity ?? 0,
+        }));
+        setAllRooms(mapped);
+      } catch (err) {
+        console.error('Failed to load rooms/tickets', err);
+        setAllRooms(MOCK_ROOMS); // fallback to mock on error
+      }
+    };
+
+    loadRoomsOrTickets();
+    if (id) {
+        fetchReviews();
+        fetchDiscounts();
+    }
+  }, [idSlug, id, destination]);
 
 
   // Load service detail
@@ -160,20 +256,54 @@ const ServiceDetailPage: React.FC = () => {
     document.body.style.overflow = "unset";
   };
 
-  const handleConfirmBooking = () => {
-    console.log("Booking confirmed:", {
-      date: bookingDate,
-      duration: bookingDuration,
-      name: customerName,
-      phone: customerPhone,
-      email: customerEmail,
-      note: customerNote,
-      paymentMethod,
-      adultCount,
-      childCount,
-    });
-    handleCloseModal();
+  const handleConfirmBooking = async () => {
+    if (!service) return;
+
+    if (USE_MOCK) {
+      // Mock: chỉ log và đóng modal
+      console.log('[MOCK] Booking confirmed:', { bookingDate, customerName, customerPhone, customerNote, adultCount, childCount });
+      toast.success('[Mock] Đặt dịch vụ thành công!');
+      handleCloseModal();
+      return;
+    }
+
+    try {
+      const tickets = (ticketList as any[]).map((t: any) => ({
+        id: Number(t.id),
+        quantity: Number(t.quantity || 1),
+      }));
+
+      const response: any = await apiClient.orders.create({
+        tickets,
+        rooms: [],
+        checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
+        checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
+        guestPhone: customerPhone,
+        note: customerNote || undefined,
+        discountIds: apiDiscounts.filter(d => totalPrice >= (d.minSpend || 0)).map(d => d.id),
+      });
+
+      toast.success('Đặt dịch vụ thành công! Đang chuyển hướng đến trang thanh toán...');
+      handleCloseModal();
+      
+      // Handle the payUrl returned from backend
+      const payUrl = response?.payUrl || response?.order_url || (response as any)?.payUrl;
+      if (payUrl) {
+          window.location.href = payUrl;
+      } else {
+          // Fallback if no payUrl (should not happen with our update)
+          if (response && (response.id || response.orderId)) {
+              setPendingOrderId(response.id || response.orderId);
+              setPendingOrderAmount(finalPrice);
+              setShowPaymentModal(true);
+          }
+      }
+    } catch (err: any) {
+      toast.error('Đặt dịch vụ thất bại. Vui lòng thử lại.');
+      console.error('Order create error:', err);
+    }
   };
+
 
   const handleRoomBookNow = (room?: any) => {
     requireAuth(() => {
@@ -191,39 +321,113 @@ const ServiceDetailPage: React.FC = () => {
     document.body.style.overflow = "unset";
   };
 
-  const handleConfirmRoomBooking = () => {
-    console.log("Room booking confirmed:", {
-      checkIn: checkInDate,
-      checkOut: checkOutDate,
-      guests: guestCount,
-      roomType: roomType,
-      selectedRooms: selectedRooms,
-      customerInfo: {
-        name: roomFirstName,
-        email: roomEmail,
-        phone: roomPhone,
-        address: roomAddress,
-        city: roomCity,
-        country: roomCountry,
-      },
-      specialRequests: specialRequests,
-      paymentMethod: roomPaymentMethod,
-    });
-    handleCloseRoomModal();
+  const handleConfirmRoomBooking = async () => {
+    if (!service) return;
+
+    if (USE_MOCK) {
+      // Mock: chỉ log và đóng modal
+      console.log('[MOCK] Room booking confirmed:', { checkInDate, checkOutDate, selectedRooms, roomPhone, specialRequests });
+      toast.success('[Mock] Đặt phòng thành công!');
+      handleCloseRoomModal();
+      return;
+    }
+
+    try {
+      const rooms = selectedRooms.map((roomId: number) => ({
+        id: roomId,
+        quantity: 1,
+      }));
+
+      const response: any = await apiClient.orders.create({
+        tickets: [],
+        rooms,
+        checkInDate: checkInDate ? `${checkInDate}T14:00:00.000Z` : new Date().toISOString(),
+        checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
+        guestPhone: roomPhone,
+        note: specialRequests || undefined,
+        discountIds: apiDiscounts.filter(d => totalPrice >= (d.minSpend || 0)).map(d => d.id),
+      });
+
+      toast.success('Đặt phòng thành công! Đang chuyển hướng đến trang thanh toán...');
+      handleCloseRoomModal();
+
+      const payUrl = response?.payUrl || response?.order_url || (response as any)?.payUrl;
+      if (payUrl) {
+          window.location.href = payUrl;
+      } else {
+        if (response && (response.id || response.orderId)) {
+          setPendingOrderId(response.id || response.orderId);
+          setPendingOrderAmount(finalPrice);
+          setShowPaymentModal(true);
+        }
+      }
+    } catch (err: any) {
+      toast.error('Đặt phòng thất bại. Vui lòng thử lại.');
+      console.error('Room order create error:', err);
+    }
   };
+
+  const handleSelectPayment = async (method: 'vnpay' | 'zalopay' | 'momo') => {
+    if (!pendingOrderId) return;
+    
+    const loadingToast = toast.loading('Đang khởi tạo thanh toán...');
+    try {
+      let response: any;
+      if (method === 'vnpay') {
+        response = await apiClient.payments.vnpay.createPayment(
+          `Thanh toan don hang ${pendingOrderId}`,
+          'other',
+          pendingOrderAmount,
+          'vn'
+        );
+      } else if (method === 'zalopay') {
+        response = await apiClient.payments.zalopay.createOrder(
+          currentUser?.user?.name || 'User',
+          pendingOrderAmount,
+          Number(pendingOrderId)
+        );
+      } else if (method === 'momo') {
+        response = await apiClient.payments.momo.createOrder(
+          pendingOrderAmount,
+          pendingOrderId.toString()
+        );
+      }
+
+      toast.dismiss(loadingToast);
+      
+      // Redirect to payment URL
+      const paymentUrl = response?.paymentUrl || response?.order_url || response?.payUrl || response;
+      if (typeof paymentUrl === 'string' && paymentUrl.startsWith('http')) {
+        window.location.href = paymentUrl;
+      } else {
+        toast.error('Không tìm thấy link thanh toán. Vui lòng kiểm tra lại đơn hàng.');
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Lỗi khi khởi tạo thanh toán.');
+      console.error('Payment error:', error);
+    }
+  };
+
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map((file) =>
-        URL.createObjectURL(file)
-      );
-      setReviewImages((prev) => [...prev, ...newImages].slice(0, 12));
+      const fileArray = Array.from(files);
+      const newPreviewUrls = fileArray.map((file) => URL.createObjectURL(file));
+      
+      setReviewImages((prev) => [...prev, ...fileArray].slice(0, 12));
+      setReviewImagePreviewUrls((prev) => [...prev, ...newPreviewUrls].slice(0, 12));
     }
   };
 
   const handleRemoveImage = (index: number) => {
     setReviewImages((prev) => prev.filter((_, i) => i !== index));
+    setReviewImagePreviewUrls((prev) => {
+      // Release memory for removed object URL
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmitReview = () => {
@@ -232,27 +436,43 @@ const ServiceDetailPage: React.FC = () => {
       return;
     }
 
-    requireAuth(() => {
-      const newReview = {
-        id: Date.now(),
-        author: "Bạn",
-        date: new Date().toLocaleDateString("vi-VN"),
-        rating: reviewRating,
-        title: reviewTitle,
-        content: reviewText,
-        cost: reviewCost,
-        images: reviewImages,
-        helpful: 0,
-        notHelpful: 0,
-      };
+    requireAuth(async () => {
+      try {
+        if (!USE_MOCK) {
+          // Call actual backend API
+          await apiClient.comments.create(Number(id), reviewText, reviewRating, reviewImages);
+          toast.success('Đánh giá của bạn đã được gửi!');
+          // Refresh reviews
+          fetchReviews();
+        } else {
+          // Mock submission behavior
+          const newReview = {
+            id: Date.now(),
+            author: currentUser?.user?.name || "Bạn", 
+            date: new Date().toLocaleDateString("vi-VN"),
+            rating: reviewRating,
+            title: reviewTitle,
+            content: reviewText,
+            cost: reviewCost,
+            images: reviewImagePreviewUrls,
+            helpful: 0,
+            notHelpful: 0,
+          };
+          setUserReviews((prev) => [newReview, ...prev]);
+          toast.success('Đánh giá của bạn đã được gửi (Mock)!');
+        }
 
-      setUserReviews((prev) => [newReview, ...prev]);
-      setReviewRating(0);
-      setReviewTitle("");
-      setReviewText("");
-      setReviewCost("");
-      setReviewImages([]);
-      toast.success('Đánh giá của bạn đã được gửi!');
+        // Reset form
+        setReviewRating(0);
+        setReviewTitle("");
+        setReviewText("");
+        setReviewCost("");
+        setReviewImages([]);
+        setReviewImagePreviewUrls([]);
+      } catch (error) {
+        console.error("Lỗi khi gửi đánh giá:", error);
+        toast.error("Không thể gửi đánh giá, vui lòng thử lại sau.");
+      }
     }, 'Vui lòng đăng nhập để đánh giá');
   };
 
@@ -333,85 +553,27 @@ const ServiceDetailPage: React.FC = () => {
     },
   ];
 
-  const allReviews = [...userReviews, ...reviews];
+  // If we have real API reviews, use them + user's newly mock-added reviews. 
+  // Otherwise, fallback to the hardcoded `reviews` array + user's local reviews.
+  const hasRealReviews = apiReviews.length > 0;
+  
+  // Format API reviews to match frontend expected structure
+  const formattedApiReviews = apiReviews.map(r => ({
+    id: r.id,
+    author: r.user?.fullname || r.user?.username || "Người dùng",
+    date: new Date(r.createdAt).toLocaleDateString("vi-VN"),
+    rating: r.rating || 5,
+    title: "", // Backend might not have title
+    content: r.content,
+    images: r.images?.map((img: any) => img.url) || [],
+    helpful: r.likeCount || 0,
+    notHelpful: r.dislikeCount || 0,
+    userAvatar: r.user?.avatar,
+  }));
 
-  // Mock rooms data with currentBookings - Updated structure
-  const allRooms = [
-    {
-      id: 101,
-      name: "Room 101",
-      type: "Tiêu chuẩn",
-      price: 120,
-      capacity: 2,
-      amenities: ["WiFi", "Điều hòa", "TV"],
-      available: true,
-      currentBookings: [
-        { roomId: 101, checkIn: "2025-10-20", checkOut: "2025-10-22" },
-      ],
-    },
-    {
-      id: 102,
-      name: "Room 102",
-      type: "Tiêu chuẩn",
-      price: 120,
-      capacity: 2,
-      amenities: ["WiFi", "Điều hòa", "TV"],
-      available: true,
-      currentBookings: [],
-    },
-    {
-      id: 103,
-      name: "Room 103",
-      type: "Tiêu chuẩn",
-      price: 120,
-      capacity: 3,
-      amenities: ["WiFi", "Điều hòa", "TV", "Minibar"],
-      available: true,
-      currentBookings: [],
-    },
-    {
-      id: 201,
-      name: "Room 201",
-      type: "Cao cấp",
-      price: 180,
-      capacity: 4,
-      amenities: ["WiFi", "Điều hòa", "TV", "Minibar", "Bồn tắm"],
-      available: true,
-      currentBookings: [
-        { roomId: 201, checkIn: "2025-10-25", checkOut: "2025-10-27" },
-      ],
-    },
-    {
-      id: 202,
-      name: "Room 202",
-      type: "Cao cấp",
-      price: 180,
-      capacity: 4,
-      amenities: ["WiFi", "Điều hòa", "TV", "Minibar", "Bồn tắm"],
-      available: true,
-      currentBookings: [],
-    },
-    {
-      id: 301,
-      name: "Room 301",
-      type: "Suite",
-      price: 300,
-      capacity: 6,
-      amenities: ["WiFi", "Điều hòa", "TV", "Minibar", "Ban công", "Bếp nhỏ"],
-      available: true,
-      currentBookings: [],
-    },
-    {
-      id: 302,
-      name: "Room 302",
-      type: "Suite",
-      price: 300,
-      capacity: 6,
-      amenities: ["WiFi", "Điều hòa", "TV", "Minibar", "Ban công", "Bếp nhỏ"],
-      available: false,
-      currentBookings: [],
-    },
-  ];
+  const allReviews = hasRealReviews 
+    ? [...userReviews, ...formattedApiReviews] 
+    : [...userReviews, ...reviews];
 
   // Loading state
   if (loading) {
@@ -450,7 +612,7 @@ const ServiceDetailPage: React.FC = () => {
             </p>
             <button
               onClick={() => navigate("/homepage")}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
               Quay lại trang chủ
             </button>
@@ -465,8 +627,41 @@ const ServiceDetailPage: React.FC = () => {
     adultCount * service.priceAdult +
     childCount * service.priceChild +
     service.additionalServices.reduce((sum, s) => sum + s.price, 0);
-  const discount = service.discounts.find((d) => d.applied)?.value || 0;
-  const finalPrice = totalPrice - discount;
+
+  // Map API discounts if present, otherwise use service.discounts (mock)
+  const activeDiscounts: Discount[] = apiDiscounts.length > 0
+    ? apiDiscounts.map(d => ({
+        ...d,
+        id: d.id || d.code || Math.random().toString(),
+        name: d.name || d.code || 'Giảm giá',
+        code: d.code || 'DISCOUNT',
+        description: d.description || `Giảm giá mã ${d.code || ''}`,
+        startDate: d.startDate || '',
+        endDate: d.endDate || '',
+        quantity: d.quantity || 0,
+        minSpend: d.minSpend || 0,
+        fixedPrice: d.discountType === 'Fixed' ? (d.fixedPrice || d.value || 0) : 0,
+        percentage: d.discountType === 'Percentage' ? (d.percentage || d.value || 0) : 0,
+        applied: totalPrice >= (d.minSpend || 0)
+      }))
+    : service.discounts;
+
+  const calculateDAmount = (d: Discount) => {
+    if (d.percentage) {
+      const amount = Math.round(totalPrice * (d.percentage / 100));
+      return d.maxDiscountAmount ? Math.min(amount, d.maxDiscountAmount) : amount;
+    }
+    return d.fixedPrice || 0;
+  };
+
+  const discountAmount = activeDiscounts
+    .filter(d => d.applied)
+    .reduce((sum, d) => sum + calculateDAmount(d), 0);
+    
+  const finalPrice = Math.max(0, totalPrice - discountAmount);
+
+  // Update service object for BookingCard if needed
+  const serviceWithAppliedDiscounts = { ...service, discounts: activeDiscounts };
 
   return (
     <div className="min-h-screen bg-white">
@@ -502,7 +697,7 @@ const ServiceDetailPage: React.FC = () => {
             <div className="flex items-center gap-3 ">
               <button
                 onClick={() => setIsFavorite(!isFavorite)}
-                className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-500 transition-colors"
+                className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-500 transition-colors cursor-pointer"
               >
                 <Heart
                   className={`w-4 h-4 ${isFavorite ? "fill-orange-500 text-orange-500" : ""
@@ -530,7 +725,7 @@ const ServiceDetailPage: React.FC = () => {
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${currentImageIndex === idx
                       ? "border-orange-500 ring-2 ring-orange-200"
                       : "border-gray-200 hover:border-orange-300"
                       }`}
@@ -555,13 +750,13 @@ const ServiceDetailPage: React.FC = () => {
 
                 <button
                   onClick={handlePrevImage}
-                  className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
                 </button>
                 <button
                   onClick={handleNextImage}
-                  className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                 >
                   <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
                 </button>
@@ -583,7 +778,7 @@ const ServiceDetailPage: React.FC = () => {
               <div className="flex gap-6 sm:gap-8">
                 <button
                   onClick={() => setActiveTab("info")}
-                  className={`pb-3 font-semibold transition-colors relative ${activeTab === "info"
+                  className={`pb-3 font-semibold transition-colors relative cursor-pointer ${activeTab === "info"
                     ? "text-gray-900"
                     : "text-gray-500 hover:text-gray-700"
                     }`}
@@ -595,7 +790,7 @@ const ServiceDetailPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab("rooms")}
-                  className={`pb-3 font-semibold transition-colors relative ${activeTab === "rooms"
+                  className={`pb-3 font-semibold transition-colors relative cursor-pointer ${activeTab === "rooms"
                     ? "text-gray-900"
                     : "text-gray-500 hover:text-gray-700"
                     }`}
@@ -607,7 +802,7 @@ const ServiceDetailPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab("reviews")}
-                  className={`pb-3 font-semibold transition-colors relative ${activeTab === "reviews"
+                  className={`pb-3 font-semibold transition-colors relative cursor-pointer ${activeTab === "reviews"
                     ? "text-gray-900"
                     : "text-gray-500 hover:text-gray-700"
                     }`}
@@ -661,7 +856,7 @@ const ServiceDetailPage: React.FC = () => {
                 setReviewText={setReviewText}
                 reviewCost={reviewCost}
                 setReviewCost={setReviewCost}
-                reviewImages={reviewImages}
+                reviewImages={reviewImagePreviewUrls} // Updated: use preview urls
                 handleImageUpload={handleImageUpload}
                 handleRemoveImage={handleRemoveImage}
                 handleSubmitReview={handleSubmitReview}
@@ -676,7 +871,7 @@ const ServiceDetailPage: React.FC = () => {
           {/* Right Sidebar - Booking Card */}
           <div className="lg:col-span-1">
             <BookingCard
-              service={service}
+              service={serviceWithAppliedDiscounts}
               serviceType={serviceType}
               adultCount={adultCount}
               setAdultCount={setAdultCount}
@@ -717,16 +912,13 @@ const ServiceDetailPage: React.FC = () => {
         customerNote={customerNote}
         setCustomerNote={setCustomerNote}
         adultCount={adultCount}
-        setAdultCount={setAdultCount}
         childCount={childCount}
-        setChildCount={setChildCount}
         paymentMethod={paymentMethod}
         setPaymentMethod={setPaymentMethod}
         showDiscountSection={showDiscountSection}
         setShowDiscountSection={setShowDiscountSection}
         ticketList={ticketList}
         setTicketList={setTicketList}
-        finalPrice={finalPrice}
         onConfirm={handleConfirmBooking}
       />
 
@@ -761,6 +953,7 @@ const ServiceDetailPage: React.FC = () => {
         roomPaymentMethod={roomPaymentMethod}
         setRoomPaymentMethod={setRoomPaymentMethod}
         allRooms={allRooms}
+        serviceId={id}
         onConfirm={handleConfirmRoomBooking}
       />
 
@@ -770,6 +963,25 @@ const ServiceDetailPage: React.FC = () => {
         onClose={closeAuthModal}
         message={authMessage}
       />
+
+      {/* Payment Method Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSelectPayment={handleSelectPayment}
+        amount={pendingOrderAmount}
+        orderId={pendingOrderId || ''}
+      />
+
+      {/* Floating Chat Widget */}
+      {service && (
+        <ServiceChatWidget
+          providerId={`provider_${service.id}`} // In reality, get this from service data
+          providerName={`Nhà cung cấp: ${service.name}`} // Just a mock
+          serviceId={service.id.toString()}
+          serviceName={service.name}
+        />
+      )}
     </div >
   );
 };

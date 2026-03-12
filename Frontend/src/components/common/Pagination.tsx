@@ -46,10 +46,10 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 transition-all ${currentPage === 1
+          className={`cursor-pointer w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 transition-all ${currentPage === 1
             ? 'opacity-50 cursor-not-allowed text-gray-300'
             : 'hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200'
-            }`}
+            }`}     
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -64,7 +64,7 @@ const Pagination: React.FC<PaginationProps> = ({
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`
-                w-10 h-10 rounded-lg font-medium transition-all flex items-center justify-center
+                cursor-pointer w-10 h-10 rounded-lg font-medium transition-all flex items-center justify-center
                 ${currentPage === page
                   ? 'bg-orange-500 text-white shadow-md transform scale-105'
                   : 'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200 hover:border-orange-200 hover:text-orange-600'
@@ -80,7 +80,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 transition-all ${currentPage === totalPages
+          className={`cursor-pointer w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 transition-all ${currentPage === totalPages
             ? 'opacity-50 cursor-not-allowed text-gray-300'
             : 'hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200'
             }`}

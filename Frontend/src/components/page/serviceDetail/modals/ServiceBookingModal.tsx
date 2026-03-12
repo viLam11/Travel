@@ -2,22 +2,9 @@
 import React from 'react';
 import { X, Plus, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
 import type { ServiceDetail } from '@/types/serviceDetail.types';
+import { serviceDetailApi } from '../../../../api/serviceDetailApi';
+import type { Discount } from '../../../../types/serviceDetail.types';
 import CustomSelect from '@/components/common/CustomSelect';
-import { set } from 'date-fns';
-
-interface Discount {
-  id: string;
-  code: string;
-  description: string;
-  value: number;
-  type: 'percentage' | 'fixed';
-  condition: {
-    minAdults?: number;
-    minChildren?: number;
-    minTotal?: number;
-  };
-  applied: boolean;
-}
 
 interface ServiceBookingModalProps {
   ticketList: any[];
@@ -38,16 +25,11 @@ interface ServiceBookingModalProps {
   customerNote: string;
   setCustomerNote: (note: string) => void;
   adultCount: number;
-  setAdultCount: (count: number) => void;
   childCount: number;
-  setChildCount: (count: number) => void;
-  // addServicesCount: number;
-  // setAddServicesCount: (count: number) => void;
-  paymentMethod: 'wallet' | 'cash';
-  setPaymentMethod: (method: 'wallet' | 'cash') => void;
+  paymentMethod: 'MOMO' | 'VNPAY';
+  setPaymentMethod: (method: 'MOMO' | 'VNPAY') => void;
   showDiscountSection: boolean;
   setShowDiscountSection: (show: boolean) => void;
-  finalPrice: number;
   onConfirm: () => void;
 }
 
@@ -70,102 +52,58 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   customerNote,
   setCustomerNote,
   adultCount,
-  setAdultCount,
   childCount,
-  setChildCount,
   paymentMethod,
   setPaymentMethod,
   showDiscountSection,
   setShowDiscountSection,
-  finalPrice,
   onConfirm
 }) => {
   if (!isOpen) return null;
 
-  const availableDiscounts: Discount[] = [
-    {
-      id: 'GROUP5',
-      code: 'GROUP5',
-      description: 'Nhóm từ 5 người lớn',
-      value: 15,
-      type: 'percentage',
-      condition: { minAdults: 5 },
-      applied: false
-    },
-    {
-      id: 'GROUP8',
-      code: 'GROUP8',
-      description: 'Nhóm từ 8 người',
-      value: 20,
-      type: 'percentage',
-      condition: { minTotal: 8 },
-      applied: false
-    },
-    {
-      id: 'FAMILY',
-      code: 'FAMILY',
-      description: 'Gia đình (2 người lớn + 2 trẻ em)',
-      value: 50000,
-      type: 'fixed',
-      condition: { minAdults: 2, minChildren: 2 },
-      applied: false
-    },
-    {
-      id: 'WALLET',
-      code: 'WALLET',
-      description: 'Thanh toán qua ví điện tử',
-      value: 10,
-      type: 'percentage',
-      condition: {},
-      applied: false
-    },
-    {
-      id: 'CASH',
-      code: 'CASH',
-      description: 'Thanh toán bằng tiền mặt',
-      value: 5,
-      type: 'percentage',
-      condition: {},
-      applied: false
-    }
-  ];
   const [showCustomerInfo, setShowCustomerInfo] = React.useState(true);
+  const [availableDiscounts, setAvailableDiscounts] = React.useState<Discount[]>([]);
   const [selectedDiscounts, setSelectedDiscounts] = React.useState<string[]>([]);
   const [selectedAdditionalServices, setSelectedAdditionalServices] = React.useState<string[]>(
   service.additionalServices.map(s => s.name) // Mặc định chọn tất cả
   );
 
+  const basePrice = (adultCount * service.priceAdult) + (childCount * service.priceChild) + 
+    service.additionalServices
+    .filter(s => selectedAdditionalServices.includes(s.name))  // Lọc theo đã chọn
+    .reduce((sum, s) => sum + s.price, 0);
+
   const isDiscountEligible = (discount: Discount): boolean => {
-    const totalPeople = adultCount + childCount;
-    
-    if (discount.condition.minAdults && adultCount < discount.condition.minAdults) {
+    if (discount.minSpend && basePrice < discount.minSpend) {
       return false;
     }
-    if (discount.condition.minChildren && childCount < discount.condition.minChildren) {
-      return false;
-    }
-    if (discount.condition.minTotal && totalPeople < discount.condition.minTotal) {
-      return false;
-    }
-    
-    // Check payment method for payment-related discounts
-    if (discount.id === 'WALLET' && paymentMethod !== 'wallet') {
-      return false;
-    }
-    if (discount.id === 'CASH' && paymentMethod !== 'cash') {
-      return false;
-    }
-    
     return true;
   };
 
-  // Auto-select eligible discounts
+  // Fetch real discounts from API
   React.useEffect(() => {
-    const eligibleIds = availableDiscounts
-      .filter(d => isDiscountEligible(d))
-      .map(d => d.id);
-    setSelectedDiscounts(eligibleIds);
-  }, [adultCount, childCount, paymentMethod]);
+    const fetchDiscounts = async () => {
+      try {
+        const data = await serviceDetailApi.getSatisfiedDiscounts(service.id, ''); // placeCode if available
+        setAvailableDiscounts(data);
+      } catch (error) {
+        console.error('Failed to fetch discounts:', error);
+      }
+    };
+    if (isOpen) {
+      fetchDiscounts();
+    }
+  }, [isOpen, service.id]);
+
+  // Auto-select first eligible discount if any
+  React.useEffect(() => {
+    if (availableDiscounts.length > 0) {
+      const eligible = availableDiscounts.filter(d => isDiscountEligible(d));
+      if (eligible.length > 0 && selectedDiscounts.length === 0) {
+        setSelectedDiscounts([eligible[0].id]);
+      }
+    }
+  }, [availableDiscounts, basePrice]);
 
   const toggleDiscount = (discountId: string) => {
     const discount = availableDiscounts.find(d => d.id === discountId);
@@ -186,28 +124,19 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     );
   };  
 
+
   const calculateDiscountAmount = (discount: Discount): number => {
-    const ticketPrice = (adultCount * service.priceAdult) + (childCount * service.priceChild);
-    const additionalServicesPrice = service.additionalServices
-      .filter(s => selectedAdditionalServices.includes(s.name))
-      .reduce((sum, s) => sum + s.price, 0);
-    const basePrice = ticketPrice + additionalServicesPrice;
-    
-    if (discount.type === 'percentage') {
-      return Math.round(basePrice * (discount.value / 100));
+    if (discount.percentage) {
+      const amount = Math.round(basePrice * (discount.percentage / 100));
+      return discount.maxDiscountAmount ? Math.min(amount, discount.maxDiscountAmount) : amount;
     }
-    return discount.value;
+    return discount.fixedPrice || 0;
   };
 
   const totalDiscount = selectedDiscounts.reduce((sum, id) => {
     const discount = availableDiscounts.find(d => d.id === id);
     return discount ? sum + calculateDiscountAmount(discount) : sum;
   }, 0);
-
-  const basePrice = (adultCount * service.priceAdult) + (childCount * service.priceChild) + 
-    service.additionalServices
-    .filter(s => selectedAdditionalServices.includes(s.name))  // Lọc theo đã chọn
-    .reduce((sum, s) => sum + s.price, 0);
    
   const finalPriceWithDiscounts = Math.max(0, basePrice - totalDiscount);
 
@@ -231,8 +160,6 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     );
   };
 
-  const [showDurationDropdown, setShowDurationDropdown] = React.useState(false);
-  const durationRef = React.useRef<HTMLDivElement>(null);
 
   const durationOptions = [
     { value: '1 ngày', label: '1 ngày' },
@@ -257,16 +184,6 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   }
 };
 
-  // Thêm vào useEffect để đóng dropdown khi click bên ngoài
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (durationRef.current && !durationRef.current.contains(event.target as Node)) {
-        setShowDurationDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -274,7 +191,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
           <h2 className="text-xl font-bold text-gray-900">Đơn đặt dịch vụ</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -312,7 +229,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                 
                 <button
                   onClick={() => setShowCustomerInfo(!showCustomerInfo)}
-                  className="flex md:hidden items-center justify-between w-full text-left mb-3"
+                  className="flex md:hidden items-center justify-between w-full text-left mb-3 cursor-pointer"
                 >
                   <h3 className="text-base font-bold text-gray-900">Thông tin khách hàng</h3>
                   <ChevronDown 
@@ -376,7 +293,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
 
                   <button
                       onClick={() => setShowCustomerInfo(false)}
-                      className="md:hidden w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                      className="md:hidden w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ChevronDown className="w-4 h-4 rotate-180" />
                       Thu gọn
@@ -459,14 +376,14 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => updateTicketQuantity(ticket.id, -1)}
-                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors cursor-pointer"
                             >
                               −
                             </button>
                             <span className="w-8 text-center font-semibold">{ticket.count}</span>
                             <button
                               onClick={() => updateTicketQuantity(ticket.id, +1)}
-                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors"
+                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors cursor-pointer"
                             >
                               +
                             </button>
@@ -542,7 +459,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
               <div>
                 <button
                   onClick={() => setShowDiscountSection(!showDiscountSection)}
-                  className="flex items-center justify-between w-full text-left"
+                  className="flex items-center justify-between w-full text-left cursor-pointer"
                 >
                   <h3 className="text-base font-bold text-gray-900">Ưu đãi</h3>
                   <Plus 
@@ -589,14 +506,9 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                               <p className={`text-xs ${isEligible ? 'text-gray-600' : 'text-gray-400'}`}>
                                 {discount.description}
                               </p>
-                              {!isEligible && (
+                              {!isEligible && discount.minSpend && (
                                 <p className="text-xs text-orange-600 mt-1">
-                                  {discount.condition.minAdults && adultCount < discount.condition.minAdults && 
-                                    `Cần thêm ${discount.condition.minAdults - adultCount} người lớn`}
-                                  {discount.condition.minChildren && childCount < discount.condition.minChildren && 
-                                    `Cần thêm ${discount.condition.minChildren - childCount} trẻ em`}
-                                  {discount.condition.minTotal && (adultCount + childCount) < discount.condition.minTotal && 
-                                    `Cần thêm ${discount.condition.minTotal - (adultCount + childCount)} người`}
+                                  Cần chi tiêu tối thiểu {discount.minSpend.toLocaleString()} VNĐ
                                 </p>
                               )}
                             </div>
@@ -604,9 +516,9 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                               <p className={`text-sm font-bold ${
                                 isEligible ? 'text-orange-500' : 'text-gray-400'
                               }`}>
-                                {discount.type === 'percentage' 
-                                  ? `-${discount.value}%`
-                                  : `-${discount.value.toLocaleString()} VNĐ`}
+                                {discount.percentage 
+                                  ? `-${discount.percentage}%`
+                                  : `-${(discount.fixedPrice || 0).toLocaleString()} VNĐ`}
                               </p>
                               {isEligible && isSelected && (
                                 <p className="text-xs text-gray-600 mt-0.5">
@@ -630,33 +542,16 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                     <input
                       type="radio"
                       name="payment"
-                      value="wallet"
-                      checked={paymentMethod === 'wallet'}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'wallet' | 'cash')}
+                      value="MOMO"
+                      checked={paymentMethod === 'MOMO'}
+                      onChange={(e) => setPaymentMethod(e.target.value as 'MOMO' | 'VNPAY')}
                       className="w-4 h-4 text-orange-500 focus:ring-orange-500"
                     />
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                         <span className="text-sm">💳</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">Ví điện tử</span>
-                    </div>
-                  </label>
-
-                  <label className="flex-1 flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-300 transition-colors">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="cash"
-                      checked={paymentMethod === 'cash'}
-                      onChange={(e) => setPaymentMethod(e.target.value as 'wallet' | 'cash')}
-                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm">💵</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">Tiền mặt</span>
+                      <span className="text-sm font-medium text-gray-900">Ví MoMo</span>
                     </div>
                   </label>
                 </div>

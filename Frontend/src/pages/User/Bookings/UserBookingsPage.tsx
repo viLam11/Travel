@@ -1,22 +1,28 @@
 // src/pages/User/Bookings/UserBookingsPage.tsx
-import React, { useState } from 'react';
-import { Calendar, MapPin, Clock, DollarSign, ChevronRight, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, MapPin, Clock, Filter } from 'lucide-react';
+import apiClient from '@/services/apiClient';
 
-interface Booking {
+// ─── Toggle mock / real API ───────────────────────────────────────────────────
+const USE_MOCK = false; // set true để dùng mock data, false để gọi API thật
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface OrderDisplay {
   id: string;
-  type: 'hotel' | 'tour' | 'activity';
+  type: string;
   name: string;
   location: string;
   checkIn: string;
   checkOut: string;
   guests: number;
-  status: 'upcoming' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'pending';
   totalPrice: number;
   image: string;
   bookingCode: string;
 }
 
-const MOCK_BOOKINGS: Booking[] = [
+// Mock data – dùng khi USE_MOCK = true
+const MOCK_ORDERS: OrderDisplay[] = [
   {
     id: '2',
     type: 'tour',
@@ -72,44 +78,98 @@ const MOCK_BOOKINGS: Booking[] = [
 ];
 
 const UserBookingsPage: React.FC = () => {
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'upcoming' | 'completed' | 'cancelled' | 'pending'>('all');
+  const [orders, setOrders] = useState<OrderDisplay[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const filteredBookings = selectedStatus === 'all' 
-    ? MOCK_BOOKINGS 
-    : MOCK_BOOKINGS.filter(b => b.status === selectedStatus);
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (USE_MOCK) {
+        setOrders(MOCK_ORDERS);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const data: any = await apiClient.orders.getAll();
+        const list: any[] = Array.isArray(data) ? data : (data?.content ?? data?.orders ?? []);
+
+        const mapped: OrderDisplay[] = list.map((order: any) => {
+          let status: OrderDisplay['status'] = 'pending';
+          const s = (order.status ?? '').toUpperCase();
+          if (s === 'COMPLETED' || s === 'DONE') status = 'completed';
+          else if (s === 'CANCELLED' || s === 'CANCELED') status = 'cancelled';
+          else if (s === 'CONFIRMED') {
+            const checkIn = order.checkInDate ? new Date(order.checkInDate) : null;
+            status = checkIn && checkIn > new Date() ? 'upcoming' : 'pending';
+          }
+
+          return {
+            id: String(order.id ?? ''),
+            type: (order.serviceType ?? '').toLowerCase() || 'activity',
+            name: order.serviceName ?? order.service?.name ?? 'Dịch vụ',
+            location: order.province ?? order.service?.province?.name ?? '',
+            checkIn: order.checkInDate ? order.checkInDate.split('T')[0] : '',
+            checkOut: order.checkOutDate ? order.checkOutDate.split('T')[0] : '',
+            guests: (order.adults ?? 0) + (order.children ?? 0) || order.guestCount || 1,
+            status,
+            totalPrice: order.totalAmount ?? order.totalPrice ?? 0,
+            image:
+              order.thumbnailUrl ??
+              order.service?.thumbnailUrl ??
+              'https://images.unsplash.com/photo-1528127269322-539801943592?w=400',
+            bookingCode: order.orderCode ?? String(order.id) ?? 'N/A',
+          };
+        });
+
+        setOrders(mapped);
+      } catch (err) {
+        console.error('Failed to load orders', err);
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  const filteredOrders =
+    selectedStatus === 'all' ? orders : orders.filter((b) => b.status === selectedStatus);
+
+  const countByStatus = (s: string) => orders.filter((b) => b.status === s).length;
 
   const getStatusBadge = (status: string) => {
-    const badges = {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
       upcoming: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Sắp tới' },
+      pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Chờ xác nhận' },
       completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Hoàn thành' },
       cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Đã hủy' },
     };
-    return badges[status as keyof typeof badges] || badges.upcoming;
+    return badges[status] ?? badges['pending'];
   };
 
   const getTypeLabel = (type: string) => {
-    const labels = {
+    const labels: Record<string, string> = {
       hotel: 'Khách sạn',
       tour: 'Tour',
       activity: 'Hoạt động',
+      destination: 'Điểm tham quan',
+      ticket_venue: 'Vé tham quan',
     };
-    return labels[type as keyof typeof labels] || type;
+    return labels[type.toLowerCase()] ?? type;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+  const formatDate = (d: string) => {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
     });
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      // style: 'currency',
-      // currency: 'VND',
-    }).format(price);
-  };
+  const formatPrice = (p: number) => new Intl.NumberFormat('vi-VN').format(p);
 
   return (
     <div>
@@ -124,10 +184,11 @@ const UserBookingsPage: React.FC = () => {
       {/* Status Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {[
-          { value: 'all', label: 'Tất cả', count: MOCK_BOOKINGS.length },
-          { value: 'upcoming', label: 'Sắp tới', count: MOCK_BOOKINGS.filter(b => b.status === 'upcoming').length },
-          { value: 'completed', label: 'Hoàn thành', count: MOCK_BOOKINGS.filter(b => b.status === 'completed').length },
-          { value: 'cancelled', label: 'Đã hủy', count: MOCK_BOOKINGS.filter(b => b.status === 'cancelled').length },
+          { value: 'all', label: 'Tất cả', count: orders.length },
+          { value: 'upcoming', label: 'Sắp tới', count: countByStatus('upcoming') },
+          { value: 'pending', label: 'Chờ xác nhận', count: countByStatus('pending') },
+          { value: 'completed', label: 'Hoàn thành', count: countByStatus('completed') },
+          { value: 'cancelled', label: 'Đã hủy', count: countByStatus('cancelled') },
         ].map((tab) => (
           <button
             key={tab.value}
@@ -145,23 +206,26 @@ const UserBookingsPage: React.FC = () => {
 
       {/* Bookings List */}
       <div className="space-y-4">
-        {filteredBookings.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-3" />
+            <p className="text-gray-500">Đang tải đơn đặt...</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có đặt chỗ nào</h3>
             <p className="text-gray-500">Bạn chưa có đặt chỗ nào trong danh mục này</p>
           </div>
         ) : (
-          filteredBookings.map((booking) => {
+          filteredOrders.map((booking) => {
             const statusBadge = getStatusBadge(booking.status);
-            
             return (
               <div
                 key={booking.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex gap-4">
-                  {/* Image */}
                   <div className="flex-shrink-0">
                     <img
                       src={booking.image}
@@ -169,31 +233,25 @@ const UserBookingsPage: React.FC = () => {
                       className="w-32 h-32 object-cover rounded-lg"
                     />
                   </div>
-
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-500 uppercase">
-                            {getTypeLabel(booking.type)}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
-                            {statusBadge.label}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          {booking.name}
-                        </h3>
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <MapPin className="w-4 h-4" />
-                          <span>{booking.location}</span>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-gray-500 uppercase">
+                        {getTypeLabel(booking.type)}
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}
+                      >
+                        {statusBadge.label}
+                      </span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{booking.name}</h3>
+                    {booking.location && (
+                      <div className="flex items-center gap-1 text-sm text-gray-600 mb-3">
+                        <MapPin className="w-4 h-4" />
+                        <span>{booking.location}</span>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center gap-2 text-gray-600">
                         <Calendar className="w-4 h-4" />
                         <span>Check-in: {formatDate(booking.checkIn)}</span>
@@ -203,7 +261,6 @@ const UserBookingsPage: React.FC = () => {
                         <span>Check-out: {formatDate(booking.checkOut)}</span>
                       </div>
                     </div>
-
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
                       <div>
                         <span className="text-xs text-gray-500">Mã đặt chỗ: </span>
@@ -211,9 +268,9 @@ const UserBookingsPage: React.FC = () => {
                           {booking.bookingCode}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-orange-600 font-bold">
-                        <span className="text-lg">{formatPrice(booking.totalPrice)} VND</span>
-                      </div>
+                      <span className="text-lg text-orange-600 font-bold">
+                        {formatPrice(booking.totalPrice)} VNĐ
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -240,7 +240,7 @@ const HotelProviderRegisterPage: React.FC = () => {
                         name="agreeToTerms"
                         checked={formData.agreeToTerms}
                         onChange={handleInputChange}
-                        className="mt-0.5 h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded flex-shrink-0"
+                        className="cursor-pointer mt-0.5 h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded flex-shrink-0"
                     />
                     <label className="text-xs sm:text-sm text-gray-600 leading-tight">
                         Tôi đồng ý với{" "}

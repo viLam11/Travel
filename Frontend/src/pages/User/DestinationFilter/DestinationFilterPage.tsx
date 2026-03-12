@@ -39,13 +39,6 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
   const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
   const provinceCode = destination || searchParams.get('destination') || ''; // Province code from URL (e.g., 'ha-noi')
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
-  const paramStartDate = searchParams.get('startDate');
-  const paramEndDate = searchParams.get('endDate');
-
-  // Active service type tab
-  const [activeServiceType, setActiveServiceType] = useState<'DESTINATION' | 'HOTEL'>(
-    (paramServiceType === 'HOTEL' ? 'HOTEL' : 'DESTINATION') as 'DESTINATION' | 'HOTEL'
-  );
 
   // Fetch API
   const fetchDestinations = async () => {
@@ -60,8 +53,9 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
       // Call API
       const response: any = await apiClient.services.search({
+        provinceCode: provinceCode || undefined, // Add province filter
         keyword: searchKeyword || undefined, // Text search
-        serviceType: paramServiceType, // Use from query params
+        serviceType: paramServiceType || undefined, // Use from query params, avoid empty string
         minPrice: priceRange[0],
         maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined,
         minRating: minRating > 0 ? minRating : undefined, // Only send if rating filter is active
@@ -94,17 +88,6 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [searchKeyword, provinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
 
-  // Sync activeServiceType with URL params
-  React.useEffect(() => {
-    if (paramServiceType === 'HOTEL' || paramServiceType === 'DESTINATION') {
-      setActiveServiceType(paramServiceType as 'DESTINATION' | 'HOTEL');
-    }
-  }, [paramServiceType]);
-
-
-  // Get destination info for UI
-  const destInfo = destination ? getDestinationInfo(destination) : null;
-  const serviceTypeName = serviceType ? getServiceTypeName(serviceType, true) : '';
 
   // Determine page title and breadcrumb
   const getPageTitle = () => {
@@ -124,34 +107,35 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
     return 'Tất cả điểm đến';
   };
 
-  const click_card = (id: string, item: any) => {
+  const click_card = (id: string | number, item: any) => {
     console.log('Navigate to:', id);
     console.log('Item data:', item);
 
     // Determine service type based on item data from API
-    // Enum Backend: HOTEL, RESTAURANT, TICKET_VENUE
+    // Enum Backend: HOTEL, RESTAURANT, TICKET_VENUE, TOUR
     let typeSlug = 'place';
-    if (item.serviceType === 'HOTEL') typeSlug = 'hotel';
-    if (item.serviceType === 'RESTAURANT') typeSlug = 'restaurant';
-    if (item.serviceType === 'TICKET_VENUE') typeSlug = 'ticket';
+    const itemType = (item.serviceType || '').toUpperCase();
+    if (itemType === 'HOTEL') typeSlug = 'hotel';
+    else if (itemType === 'RESTAURANT') typeSlug = 'restaurant';
+    else if (itemType === 'TICKET_VENUE' || itemType === 'TOUR') typeSlug = 'ticket';
 
-    // Create slug: id-title
-    const titleSlug = (item.serviceName || 'service')
+    // Create readable slug: id-title-safe
+    const titleSlug = (item.serviceName || item.title || 'service')
       .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
 
     const idSlug = `${id}-${titleSlug}`;
 
-    // Get province code from item data
-    // If province is null or doesn't have code, use a fallback
-    const provinceCode = item.province?.code || item.province?.provinceCode || 'ha-noi';
-
-    // Construct Path: /destinations/vietnam/ha-noi/hotel/101-grand-hotel
+    // Region fallback
     const targetRegion = region || 'vietnam';
+    
+    // Province fallback logic
+    const provinceCode = item.province?.code || item.provinceCode || destination || 'ha-noi';
 
     const finalUrl = `/destinations/${targetRegion}/${provinceCode}/${typeSlug}/${idSlug}`;
-    console.log('🚀 Navigating to URL:', finalUrl);
+    console.log('Final Navigation URL:', finalUrl);
 
     navigate(finalUrl);
   };
@@ -201,7 +185,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
       />
 
       {/* Main Content: Sidebar + Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
           {/* LEFT: Filter Sidebar */}
           <FilterSidebar
@@ -227,7 +211,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
             <div className="lg:hidden mb-6">
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
-                className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -241,7 +225,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
               {sortBy !== 'popular' && (
                 <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
                   <span>Sắp xếp: {sortBy === 'rating-high' ? 'Đánh giá cao' : sortBy === 'price-low' ? 'Giá thấp' : 'Giá cao'}</span>
-                  <button onClick={() => setSortBy('popular')} className="hover:text-orange-900">
+                  <button onClick={() => setSortBy('popular')} className="hover:text-orange-900 cursor-pointer">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -255,7 +239,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
                 <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
                   <span>Giá: {(priceRange[0] / 1000000).toFixed(1)}tr - {(priceRange[1] / 1000000).toFixed(1)}tr</span>
-                  <button onClick={() => setPriceRange([0, 100000000])} className="hover:text-orange-900">
+                  <button onClick={() => setPriceRange([0, 100000000])} className="hover:text-orange-900 cursor-pointer">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -269,7 +253,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
                 <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
 
                   <span>{minRating}★ trở lên</span>
-                  <button onClick={() => setMinRating(0)} className="hover:text-orange-900">
+                  <button onClick={() => setMinRating(0)} className="hover:text-orange-900 cursor-pointer">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -320,7 +304,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
                       setMinRating(0);
                       setSortBy('popular');
                     }}
-                    className="text-orange-500 hover:text-orange-600 font-medium text-sm hover:underline"
+                    className="text-orange-500 hover:text-orange-600 font-medium text-sm hover:underline cursor-pointer"
                   >
                     Xóa tất cả bộ lọc
                   </button>
@@ -328,25 +312,46 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
               </div>
             ) : (
               <div className="space-y-5">
-                {destinations.map((destination) => (
-                  <DestinationCard
-                    key={destination.id}
-                    destination={{
-                      id: destination.id,
-                      title: destination.serviceName,
-                      location: destination.province?.fullName || destination.address || 'Việt Nam',
-                      rating: destination.rating || '0',
-                      reviews: '0', // API chưa có field này?
-                      description: destination.description,
-                      price: destination.averagePrice?.toLocaleString('vi-VN') + ' ₫',
-                      nights: 'Trong ngày', // Placeholder
-                      image: destination.thumbnailUrl || 'https://via.placeholder.com/400x300',
-                      discount: ''
-                    }}
-                    onBook={handleBooking}
-                    onClick={() => click_card(destination.id, destination)}
-                  />
-                ))}
+                {destinations.map((item, idx) => {
+                  // Use real discounts from backend if available, otherwise no discount
+                  const discounts = item.discounts || [];
+                  const activeDiscount = discounts.length > 0 ? discounts[0] : null;
+
+                  const rawPrice = item.averagePrice ?? 0;
+                  let discountedPrice = rawPrice;
+                  let discountLabel = undefined;
+
+                  if (activeDiscount) {
+                    if (activeDiscount.discountType === 'Percentage') {
+                        discountedPrice = rawPrice * (1 - (activeDiscount.percentage || 0) / 100);
+                        discountLabel = `Giảm ${activeDiscount.percentage}%`;
+                    } else if (activeDiscount.discountType === 'Fixed') {
+                        discountedPrice = Math.max(0, rawPrice - (activeDiscount.fixedPrice || 0));
+                        discountLabel = `Giảm ${(activeDiscount.fixedPrice || 0).toLocaleString()} ₫`;
+                    }
+                  }
+
+                  return (
+                    <DestinationCard
+                      key={item.id}
+                      destination={{
+                        id: item.id?.toString() || '',
+                        title: item.serviceName,
+                        location: item.province?.fullName || item.address || 'Việt Nam',
+                        rating: item.rating?.toString() || '0',
+                        reviews: item.reviewCount?.toString() || '0',
+                        description: item.description,
+                        price: discountedPrice > 0 ? discountedPrice.toLocaleString('vi-VN') + ' ₫' : rawPrice.toLocaleString('vi-VN') + ' ₫',
+                        originalPrice: activeDiscount && rawPrice > 0 ? rawPrice.toLocaleString('vi-VN') + ' ₫' : undefined,
+                        nights: 'Trong ngày',
+                        image: item.thumbnailUrl || 'https://via.placeholder.com/400x300',
+                        discount: discountLabel,
+                      }}
+                      onBook={(id) => handleBooking(id)}
+                      onClick={() => click_card(item.id, item)}
+                    />
+                  );
+                })}
               </div>
             )}
 

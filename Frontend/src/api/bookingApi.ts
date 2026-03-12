@@ -1,8 +1,7 @@
-// src/api/bookingApi.ts
 import type { Booking, BookingDetail, BookingStatus } from '@/types/booking.types';
+import apiClient from '@/services/apiClient';
 
-const API_BASE_URL = 'http://localhost:8080';
-const USE_MOCK = true; // Set to false to use real API
+const USE_MOCK = false; // Set to false to use real API
 
 // Mock Data
 const mockBookings: Booking[] = [
@@ -120,29 +119,7 @@ export const bookingApi = {
         }
 
         try {
-            const queryParams = new URLSearchParams();
-            if (params?.status) queryParams.append('status', params.status);
-            if (params?.serviceId) queryParams.append('serviceId', params.serviceId);
-            if (params?.startDate) queryParams.append('startDate', params.startDate);
-            if (params?.endDate) queryParams.append('endDate', params.endDate);
-            if (params?.page) queryParams.append('page', params.page.toString());
-            if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/bookings?${queryParams.toString()}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get('/api/provider/bookings', { params });
         } catch (error) {
             console.error('Error fetching provider bookings:', error);
             throw error;
@@ -156,21 +133,7 @@ export const bookingApi = {
         }
 
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/bookings/${bookingId}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get(`/api/provider/bookings/${bookingId}`);
         } catch (error) {
             console.error('Error fetching booking detail:', error);
             throw error;
@@ -184,23 +147,7 @@ export const bookingApi = {
         note?: string
     ): Promise<Booking> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/bookings/${bookingId}/status`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ status, note }),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.patch(`/api/provider/bookings/${bookingId}/status`, { status, note });
         } catch (error) {
             console.error('Error updating booking status:', error);
             throw error;
@@ -210,23 +157,7 @@ export const bookingApi = {
     // Hủy booking
     cancelBooking: async (bookingId: string, reason: string): Promise<Booking> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/bookings/${bookingId}/cancel`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ reason }),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.post(`/api/provider/bookings/${bookingId}/cancel`, { reason });
         } catch (error) {
             console.error('Error cancelling booking:', error);
             throw error;
@@ -252,21 +183,7 @@ export const bookingApi = {
         }
 
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/bookings/stats`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get('/api/provider/bookings/stats');
         } catch (error) {
             console.error('Error fetching booking stats:', error);
             throw error;

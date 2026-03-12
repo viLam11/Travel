@@ -31,6 +31,9 @@ export const ROUTES = {
   ADMIN_EDIT_SERVICE: '/admin/services/edit/:id',
   ADMIN_REVIEWS: '/admin/reviews',
   ADMIN_USERS: '/admin/users',
+  ADMIN_APPROVALS: '/admin/approvals',
+  ADMIN_PROMOTIONS: '/admin/promotions',
+  ADMIN_MESSAGES: '/admin/messages',
 
   // ==================== SERVICE PROVIDER ROUTES ====================
   PROVIDER_ROOT: '/provider',
@@ -52,6 +55,9 @@ export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {
   [ROUTES.ADMIN_SERVICES]: { roles: ['admin'] },
   [ROUTES.ADMIN_REVIEWS]: { roles: ['admin'] },
   [ROUTES.ADMIN_USERS]: { roles: ['admin'] },
+  [ROUTES.ADMIN_APPROVALS]: { roles: ['admin'] },
+  [ROUTES.ADMIN_PROMOTIONS]: { roles: ['admin'] },
+  [ROUTES.ADMIN_MESSAGES]: { roles: ['admin'] },
 
   // Provider routes require 'provider' role
   [ROUTES.PROVIDER_DASHBOARD]: { roles: ['provider'] },
@@ -100,6 +106,9 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.ADMIN_SERVICES]: 'Quản lý dịch vụ',
   [ROUTES.ADMIN_REVIEWS]: 'Kiểm duyệt đánh giá',
   [ROUTES.ADMIN_USERS]: 'Quản lý người dùng',
+  [ROUTES.ADMIN_APPROVALS]: 'Duyệt dịch vụ',
+  [ROUTES.ADMIN_PROMOTIONS]: 'Ưu đãi hệ thống',
+  [ROUTES.ADMIN_MESSAGES]: 'Hỗ trợ Chủ dịch vụ',
 
   // Provider routes
   [ROUTES.PROVIDER_DASHBOARD]: 'Tổng quan',

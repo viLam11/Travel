@@ -1,7 +1,15 @@
-// src/components/page/serviceDetail/reviews/ReviewsSection.tsx
 import React, { useState, useMemo } from 'react';
-import { X, Star, ThumbsUp, ThumbsDown, Upload, Image as ImageIcon, Flag } from 'lucide-react';
+import { X, Star, ThumbsUp, ThumbsDown, Upload, Image as ImageIcon, Flag, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/admin/dialog";
+import { Button } from "@/components/ui/admin/button";
 
 interface Review {
   id: number;
@@ -73,6 +81,19 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const [reviewDislikes, setReviewDislikes] = useState<Record<number, boolean>>({});
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [reportedReviews, setReportedReviews] = useState<Set<number>>(new Set());
+  
+  // Report Dialog State
+  const [reportingReviewId, setReportingReviewId] = useState<number | null>(null);
+  const [reportReason, setReportReason] = useState<string>('');
+  const [otherReason, setOtherReason] = useState<string>('');
+
+  const REPORT_REASONS = [
+    "Nội dung rác (Spam) / Quảng cáo",
+    "Ngôn từ gây chú ý, xúc phạm, quấy rối",
+    "Thông tin sai lệch",
+    "Hình ảnh không phù hợp / Phản cảm",
+    "Khác"
+  ];
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -187,13 +208,27 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     }
   };
 
-  const handleReportReview = (reviewId: number) => {
+  const handleReportReviewClick = (reviewId: number) => {
     if (!isLoggedIn) {
       navigate('/login');
       return;
     }
-    setReportedReviews(prev => new Set([...prev, reviewId]));
-    alert('Cảm ơn bạn đã báo cáo review này');
+    setReportingReviewId(reviewId);
+    setReportReason('');
+    setOtherReason('');
+  };
+
+  const submitReport = () => {
+    if (reportingReviewId === null) return;
+    if (!reportReason) {
+        alert("Vui lòng chọn lý do báo cáo");
+        return;
+    }
+    setReportedReviews(prev => new Set([...prev, reportingReviewId]));
+    setReportingReviewId(null);
+    setReportReason('');
+    setOtherReason('');
+    alert('Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét đánh giá này.');
   };
 
   const countAdditionalImages = (total: number) => {
@@ -306,7 +341,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                     <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       onClick={() => handleRemoveImage(idx)}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -352,7 +387,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
               <button
                 onClick={() => setShowImageUploader(false)}
-                className="w-full text-gray-600 hover:text-gray-900 text-sm font-medium mt-3"
+                className="w-full text-gray-600 hover:text-gray-900 text-sm font-medium mt-3 cursor-pointer"
               >
                 Đóng
               </button>
@@ -393,7 +428,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             <button 
               onClick={handleSubmitReview}
               disabled={!isLoggedIn || reviewRating === 0 || !reviewTitle.trim() || !reviewText.trim()}
-              className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Thêm bình luận
             </button>
@@ -523,7 +558,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
                 <button
                   onClick={() => setExpandedImageReview(null)}
-                  className="absolute top-4 right-4 text-white hover:text-gray-300"
+                  className="absolute top-4 right-4 text-white hover:text-gray-300 cursor-pointer"
                 >
                   <X className="w-8 h-8" />
                 </button>
@@ -535,7 +570,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                         prev === 0 ? review.images!.length - 1 : prev - 1
                       )
                     }
-                    className="text-white text-3xl hover:text-gray-300 p-2"
+                    className="text-white text-3xl hover:text-gray-300 p-2 cursor-pointer"
                   >
                     &#10094;
                   </button>
@@ -552,7 +587,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                         prev === review.images!.length - 1 ? 0 : prev + 1
                       )
                     }
-                    className="text-white text-3xl hover:text-gray-300 p-2"
+                    className="text-white text-3xl hover:text-gray-300 p-2 cursor-pointer"
                   >
                     &#10095;
                   </button>
@@ -568,7 +603,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => handleThumbsUp(review.id)}
-                className={`flex items-center gap-2 text-sm transition-colors ${
+                className={`flex items-center gap-2 text-sm transition-colors cursor-pointer ${
                   reviewLikes[review.id]
                     ? 'text-orange-500'
                     : 'text-gray-600 hover:text-orange-500'
@@ -579,7 +614,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               </button>
               <button
                 onClick={() => handleThumbsDown(review.id)}
-                className={`flex items-center gap-2 text-sm transition-colors ${
+                className={`flex items-center gap-2 text-sm transition-colors cursor-pointer ${
                   reviewDislikes[review.id]
                     ? 'text-orange-500'
                     : 'text-gray-600 hover:text-orange-500'
@@ -590,9 +625,9 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               </button>
               <span className="flex-1" />
               <button
-                onClick={() => handleReportReview(review.id)}
+                onClick={() => handleReportReviewClick(review.id)}
                 disabled={reportedReviews.has(review.id)}
-                className={`flex items-center gap-1 text-sm transition-colors ${
+                className={`flex items-center gap-1 text-sm transition-colors cursor-pointer ${
                   reportedReviews.has(review.id)
                     ? 'text-gray-400 cursor-not-allowed'
                     : 'text-gray-600 hover:text-red-500'
@@ -608,12 +643,81 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
         {totalReviews > 2 && (
           <button 
             onClick={() => setShowAllReviews(!showAllReviews)}
-            className="w-full text-orange-500 font-medium text-sm hover:text-orange-600 transition-colors py-3"
+            className="w-full text-orange-500 font-medium text-sm hover:text-orange-600 transition-colors py-3 cursor-pointer"
           >
             {showAllReviews ? 'Thu gọn' : 'Xem thêm đánh giá'}
           </button>
         )}
       </div>
+
+      {/* Report Dialog */}
+      <Dialog open={reportingReviewId !== null} onOpenChange={(open) => !open && setReportingReviewId(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-white text-gray-900 border-gray-200">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Báo cáo vi phạm
+            </DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Vui lòng cho chúng tôi biết lý do bạn báo cáo đánh giá này. Điều này giúp hệ thống giữ một môi trường an toàn và minh bạch.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-3">
+              {REPORT_REASONS.map((reason, idx) => (
+                <label key={idx} className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center mt-0.5">
+                    <input
+                      type="radio"
+                      name="report_reason"
+                      value={reason}
+                      checked={reportReason === reason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-4 h-4 rounded-full border border-gray-300 group-hover:border-orange-500 peer-checked:border-orange-500 transition-colors"></div>
+                    <div className="absolute w-2 h-2 rounded-full bg-orange-500 scale-0 peer-checked:scale-100 transition-transform"></div>
+                  </div>
+                  <span className={`text-sm ${reportReason === reason ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>
+                    {reason}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {reportReason === "Khác" && (
+              <div className="mt-2">
+                <textarea
+                  value={otherReason}
+                  onChange={(e) => setOtherReason(e.target.value)}
+                  placeholder="Vui lòng cung cấp thêm chi tiết..."
+                  className="w-full h-24 p-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReportingReviewId(null)}
+              className="mt-2 sm:mt-0 cursor-pointer"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={submitReport}
+              disabled={!reportReason || (reportReason === "Khác" && !otherReason.trim())}
+              className="bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+            >
+              Báo cáo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

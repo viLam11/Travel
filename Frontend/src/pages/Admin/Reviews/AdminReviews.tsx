@@ -1,8 +1,5 @@
-// src/pages/Admin/Reviews/AdminReviews.tsx
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
-import { Badge } from '@/components/ui/admin/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/admin/avatar';
 import {
     Select,
@@ -11,257 +8,222 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/admin/select';
-import { Check, X, Trash2, MessageSquare, Star } from 'lucide-react';
-import { MOCK_REVIEWS, type MockReview } from '@/mocks/reviews';
+import { Check, X, ShieldAlert, Flag, Trash2, Ban } from 'lucide-react';
+import { MOCK_REPORTS, type MockReport } from '@/mocks/reports';
+import { toast } from 'sonner';
 
 const AdminReviews = () => {
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [typeFilter, setTypeFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<string>('pending');
+    const [reports, setReports] = useState<MockReport[]>(MOCK_REPORTS);
 
-    // Filter reviews
-    const filteredReviews = useMemo(() => {
-        return MOCK_REVIEWS.filter(review => {
-            const matchesStatus = statusFilter === 'all' || review.status === statusFilter;
-            const matchesType = typeFilter === 'all' || review.serviceType === typeFilter;
-            return matchesStatus && matchesType;
+    // Filter reports
+    const filteredReports = useMemo(() => {
+        return reports.filter(report => {
+            return statusFilter === 'all' || report.status === statusFilter;
         });
-    }, [statusFilter, typeFilter]);
+    }, [reports, statusFilter]);
 
     // Stats
     const stats = useMemo(() => ({
-        total: MOCK_REVIEWS.length,
-        pending: MOCK_REVIEWS.filter(r => r.status === 'pending').length,
-        approved: MOCK_REVIEWS.filter(r => r.status === 'approved').length,
-        rejected: MOCK_REVIEWS.filter(r => r.status === 'rejected').length,
-    }), []);
+        total: reports.length,
+        pending: reports.filter(r => r.status === 'pending').length,
+        resolved: reports.filter(r => r.status === 'resolved').length,
+        dismissed: reports.filter(r => r.status === 'dismissed').length,
+    }), [reports]);
 
     const getStatusBadge = (status: string) => {
-        const variants: Record<string, { variant: any; label: string; className?: string }> = {
-            approved: { variant: 'default', label: 'Approved', className: 'bg-green-500' },
-            pending: { variant: 'secondary', label: 'Pending' },
-            rejected: { variant: 'outline', label: 'Rejected', className: 'bg-red-500 text-white' },
+        const variants: Record<string, { bg: string; text: string; label: string }> = {
+            pending: { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-400', label: 'Chờ xử lý' },
+            resolved: { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-400', label: 'Đã xử lý' },
+            dismissed: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600 dark:text-gray-400', label: 'Bỏ qua' },
         };
         const config = variants[status] || variants.pending;
         return (
-            <Badge variant={config.variant} className={config.className}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
                 {config.label}
-            </Badge>
+            </span>
         );
     };
 
-    const getRatingStars = (rating: number) => {
-        return (
-            <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                        key={i}
-                        className={`w-4 h-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                            }`}
-                    />
-                ))}
-                <span className="ml-1 text-sm font-medium">{rating}.0</span>
-            </div>
-        );
-    };
+    const handleAction = (reportId: number, action: 'dismiss' | 'delete' | 'block', reporterName: string, authorName: string) => {
+        setReports(prev => prev.map(r => {
+            if (r.id === reportId) {
+                return { ...r, status: action === 'dismiss' ? 'dismissed' : 'resolved' };
+            }
+            return r;
+        }));
 
-    const handleApprove = (review: MockReview) => {
-        console.log('Approve review:', review.id);
-        alert(`Approved review from ${review.userName}`);
-    };
-
-    const handleReject = (review: MockReview) => {
-        console.log('Reject review:', review.id);
-        alert(`Rejected review from ${review.userName}`);
-    };
-
-    const handleDelete = (review: MockReview) => {
-        if (confirm(`Are you sure you want to delete this review from ${review.userName}?`)) {
-            console.log('Delete review:', review.id);
-            alert(`Deleted review from ${review.userName}`);
+        if (action === 'dismiss') {
+            toast.success(`Đã bỏ qua báo cáo. Hệ thống đã gửi thông báo phản hồi lại cho ${reporterName}.`);
+        } else if (action === 'delete') {
+            toast.success(`Đã gỡ bỏ bình luận vi phạm. Hệ thống đã gửi thông báo cảm ơn đến ${reporterName}.`);
+        } else if (action === 'block') {
+            toast.success(`Đã gỡ bỏ bình luận và KHÓA VĨNH VIỄN tài khoản của ${authorName}. Đã thông báo cho ${reporterName}.`);
         }
     };
 
     return (
-        <div className="space-y-6">
+        <div className="p-6 max-w-[1400px] mx-auto space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Review Moderation</h1>
-                <p className="text-muted-foreground mt-1">
-                    Approve, reject, or delete user reviews
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quản lý Báo cáo & Đánh giá</h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    Xử lý các đánh giá/bình luận bị báo cáo vi phạm tiêu chuẩn cộng đồng
                 </p>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.total}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Approved</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-                    </CardContent>
-                </Card>
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-blue-100 dark:bg-blue-900/40 p-3.5 rounded-full flex-shrink-0">
+                        <Flag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Tổng Báo cáo</span>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mt-1">{stats.total}</div>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-orange-100 dark:bg-orange-900/40 p-3.5 rounded-full flex-shrink-0">
+                        <ShieldAlert className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Chờ xử lý</span>
+                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 leading-tight mt-1">{stats.pending}</div>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-green-100 dark:bg-green-900/40 p-3.5 rounded-full flex-shrink-0">
+                        <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Đã giải quyết</span>
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 leading-tight mt-1">{stats.resolved}</div>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-gray-100 dark:bg-gray-900 p-3.5 rounded-full flex-shrink-0">
+                        <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <div>
+                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Đã bỏ qua</span>
+                        <div className="text-2xl font-bold text-gray-600 dark:text-gray-400 leading-tight mt-1">{stats.dismissed}</div>
+                    </div>
+                </div>
             </div>
 
             {/* Filters */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="flex gap-4">
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="approved">Approved</SelectItem>
-                                <SelectItem value="rejected">Rejected</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={typeFilter} onValueChange={setTypeFilter}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Service Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="hotel">Hotels</SelectItem>
-                                <SelectItem value="tour">Tours</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+                <div className="flex gap-4 items-center">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full md:w-[200px] bg-gray-50 dark:bg-gray-900 border-transparent dark:border-gray-700 cursor-pointer dark:text-white">
+                            <SelectValue placeholder="Trạng thái" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                            <SelectItem value="all" className="cursor-pointer dark:text-gray-200 hover:dark:bg-gray-700">Tất cả báo cáo</SelectItem>
+                            <SelectItem value="pending" className="cursor-pointer text-orange-600 dark:text-orange-400 font-medium hover:dark:bg-gray-700">Đang chờ xử lý</SelectItem>
+                            <SelectItem value="resolved" className="cursor-pointer text-green-600 dark:text-green-400 font-medium hover:dark:bg-gray-700">Đã xử lý (Vi phạm)</SelectItem>
+                            <SelectItem value="dismissed" className="cursor-pointer text-gray-600 dark:text-gray-400 font-medium hover:dark:bg-gray-700">Đã bỏ qua (Không vi phạm)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
 
-            {/* Reviews List */}
+            {/* Reports List */}
             <div className="space-y-4">
-                {filteredReviews.length === 0 ? (
-                    <Card>
-                        <CardContent className="py-12 text-center text-muted-foreground">
-                            No reviews found
-                        </CardContent>
-                    </Card>
+                {filteredReports.length === 0 ? (
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-12 text-center text-gray-500 dark:text-gray-400 shadow-sm">
+                        Không có báo cáo nào trong mục này
+                    </div>
                 ) : (
-                    filteredReviews.map((review) => (
-                        <Card key={review.id}>
-                            <CardContent className="pt-6">
-                                <div className="space-y-4">
-                                    {/* Review Header */}
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start gap-4">
-                                            <Avatar>
-                                                <AvatarImage src={review.userAvatar} />
-                                                <AvatarFallback>{review.userName[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold">{review.userName}</span>
-                                                    {getStatusBadge(review.status)}
-                                                </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {review.serviceName} ({review.serviceType})
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {getRatingStars(review.rating)}
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {new Date(review.createdAt).toLocaleDateString('vi-VN')}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {review.status === 'pending' && (
-                                                <>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="gap-2 text-green-600 hover:text-green-700"
-                                                        onClick={() => handleApprove(review)}
-                                                    >
-                                                        <Check className="w-4 h-4" />
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="gap-2 text-yellow-600 hover:text-yellow-700"
-                                                        onClick={() => handleReject(review)}
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                        Reject
-                                                    </Button>
-                                                </>
-                                            )}
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="gap-2 text-destructive hover:text-destructive"
-                                                onClick={() => handleDelete(review)}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
-                                            </Button>
-                                        </div>
+                    filteredReports.map((report) => (
+                        <div key={report.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 overflow-hidden flex flex-col md:flex-row gap-6">
+                            
+                            {/* Left Column: Report Info */}
+                            <div className="flex-1 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-2 rounded-lg flex items-center gap-2 border border-red-100 dark:border-red-900/50">
+                                        <ShieldAlert className="w-4 h-4" />
+                                        <span className="font-semibold text-sm">Lý do báo cáo: {report.reason}</span>
                                     </div>
-
-                                    {/* Review Comment */}
-                                    <div className="pl-14">
-                                        <p className="text-sm">{review.comment}</p>
-                                    </div>
-
-                                    {/* Provider Replies */}
-                                    {review.replies && review.replies.length > 0 && (
-                                        <div className="pl-14 space-y-3 border-l-2 border-muted ml-6">
-                                            {review.replies.map((reply) => (
-                                                <div key={reply.id} className="pl-4">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <MessageSquare className="w-4 h-4 text-primary" />
-                                                        <span className="font-medium text-sm">{reply.providerName}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {new Date(reply.createdAt).toLocaleDateString('vi-VN')}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground pl-6">{reply.comment}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    {getStatusBadge(report.status)}
                                 </div>
-                            </CardContent>
-                        </Card>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                    <span>Được báo cáo bởi:</span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-200">{report.reporterName}</span>
+                                    <span className="text-gray-400 dark:text-gray-500">({report.reporterType === 'provider' ? 'Chủ dịch vụ' : 'Khách hàng'})</span>
+                                    <span className="text-gray-400 dark:text-gray-500 mx-2">•</span>
+                                    <span>{new Date(report.createdAt).toLocaleString('vi-VN')}</span>
+                                </div>
+
+                                {/* The Context: Original Comment */}
+                                <div className="mt-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Avatar className="w-8 h-8">
+                                            <AvatarImage src={report.review.userAvatar} />
+                                            <AvatarFallback>{report.review.userName[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <div className="font-semibold text-sm text-gray-900 dark:text-white">{report.review.userName}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">Đã bình luận tại: <span className="font-medium text-blue-600 dark:text-blue-400">{report.review.serviceName}</span></div>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 italic border-l-2 border-gray-300 dark:border-gray-600 pl-3 ml-1">
+                                        "{report.review.comment}"
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Right Column: Actions */}
+                            {report.status === 'pending' && (
+                                <div className="md:w-64 flex flex-col gap-2 justify-center border-t md:border-t-0 md:border-l border-gray-100 dark:border-gray-700 pt-4 md:pt-0 md:pl-6">
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Xử lý báo cáo</p>
+                                    
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                        onClick={() => handleAction(report.id, 'dismiss', report.reporterName, report.review.userName)}
+                                    >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Bỏ qua (Giữ nguyên)
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-200 dark:border-orange-900/50 cursor-pointer"
+                                        onClick={() => handleAction(report.id, 'delete', report.reporterName, report.review.userName)}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Gỡ bỏ bình luận
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50 cursor-pointer"
+                                        onClick={() => {
+                                            if(window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
+                                                handleAction(report.id, 'block', report.reporterName, report.review.userName);
+                                            }
+                                        }}
+                                    >
+                                        <Ban className="w-4 h-4 mr-2" />
+                                        Gỡ bỏ & Khóa User
+                                    </Button>
+                                </div>
+                            )}
+
+                        </div>
                     ))
                 )}
             </div>
 
             {/* Results count */}
-            <div className="text-sm text-muted-foreground">
-                Showing {filteredReviews.length} of {MOCK_REVIEWS.length} reviews
+            <div className="text-sm text-gray-500 font-medium">
+                Hiển thị {filteredReports.length} / {reports.length} báo cáo
             </div>
         </div>
     );
 };
 
 export default AdminReviews;
+

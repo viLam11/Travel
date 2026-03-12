@@ -822,7 +822,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     </div>
                     <button
                         onClick={onReset}
-                        className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-orange-500 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors border border-gray-200 shrink-0"
+                        className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-orange-500 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors border border-gray-200 shrink-0 cursor-pointer"
                     >
                         <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span className="hidden sm:inline">Tạo lại</span>
@@ -887,7 +887,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 setSumWidth(40);
                             }
                         }}
-                        className="p-1 rounded text-gray-400 hover:text-orange-500 transition-colors shrink-0"
+                        className="p-1 rounded text-gray-400 hover:text-orange-500 transition-colors shrink-0 cursor-pointer"
                     >
                         {showSummary ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                     </button>
@@ -913,7 +913,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     <button
                         key={tab.id}
                         onClick={() => setMobileTab(tab.id)}
-                        className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-xs font-medium transition-colors ${mobileTab === tab.id
+                        className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-xs font-medium transition-colors cursor-pointer ${mobileTab === tab.id
                             ? 'text-orange-500 border-t-2 border-orange-500 -mt-px'
                             : 'text-gray-400 hover:text-gray-600'
                             }`}
@@ -948,7 +948,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                     <button
                                         key={i}
                                         onClick={() => setPickerDay(i)}
-                                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${pickerDay === i
+                                        className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors cursor-pointer ${pickerDay === i
                                             ? 'bg-orange-500 text-white border-orange-500'
                                             : 'border-gray-200 text-gray-600'
                                             }`}
@@ -965,7 +965,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                     <button
                                         key={s}
                                         onClick={() => setPickerSlot(s)}
-                                        className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${pickerSlot === s
+                                        className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors cursor-pointer ${pickerSlot === s
                                             ? 'bg-orange-500 text-white border-orange-500'
                                             : 'border-gray-200 text-gray-600'
                                             }`}
@@ -977,7 +977,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         </div>
                         <button
                             onClick={handleMobilePick}
-                            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors shadow-md shadow-orange-200"
+                            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors shadow-md shadow-orange-200 cursor-pointer"
                         >
                             Xác nhận
                         </button>

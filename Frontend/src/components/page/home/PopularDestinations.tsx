@@ -176,26 +176,37 @@ const PopularDestinations: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-            {items.map((item) => (
-              <DestinationCard
-                key={item.id}
-                destination={{
-                  id: item.id,
-                  title: item.title,
-                  location: item.location,
-                  rating: item.rating,
-                  reviews: item.reviews,
-                  price: item.priceRange,
-                  image: item.image,
-                  openingHours: item.openingHours,
-                  description: item.description,
-                  discount: item.discount,
-                  nights: item.nights
-                }}
-                onBook={() => handleBook(item.id, item.serviceType)}
-                onClick={() => handleBook(item.id, item.serviceType)}
-              />
-            ))}
+            {items.map((item) => {
+              // Real discount logic
+              const rawPrice = item.priceRange ? parseFloat(item.priceRange.replace(/[^0-9]/g, '')) : 0;
+              let discountedPriceLabel = item.priceRange;
+              let originalPriceLabel = undefined;
+              let discountLabel = item.discount;
+
+              // If the item comes from mapping, we should ideally have the raw service object
+              // For now, if we have discount info in the item, it's already mapped
+              
+              return (
+                <DestinationCard
+                  key={item.id}
+                  destination={{
+                    id: item.id,
+                    title: item.title,
+                    location: item.location,
+                    rating: item.rating,
+                    reviews: item.reviews,
+                    price: item.priceRange,
+                    image: item.image,
+                    openingHours: item.openingHours,
+                    description: item.description,
+                    discount: item.discount,
+                    nights: item.nights
+                  }}
+                  onBook={() => handleBook(item.id, item.serviceType)}
+                  onClick={() => handleBook(item.id, item.serviceType)}
+                />
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,3 +1,4 @@
+import apiClient from '../services/apiClient';
 import type { ApiResponse } from '../types/destination.types';
 import { MOCK_REGION_DATA } from '../mock/destinationData';
 
@@ -6,8 +7,7 @@ import { MOCK_REGION_DATA } from '../mock/destinationData';
  * Đặt useApi = false để dùng mock data
  */
 export const API_CONFIG = {
-  useApi: false, //  Thay đổi thành true khi có API thật
-  baseUrl: 'https://api.example.com', // URL API của bạn
+  useApi: false, // Thay đổi thành true khi có API thật
   timeout: 5000
 };
 
@@ -43,27 +43,10 @@ export const fetchDestinationData = async (
 
   // MODE 2: Sử dụng API thật (Production)
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
-
-    const response = await fetch(
-      `${API_CONFIG.baseUrl}/api/data?destination=${destination}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal
-      }
-    );
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
+    const result = await apiClient.get<any>('/api/data', {
+      params: { destination },
+      timeout: API_CONFIG.timeout
+    });
     
     return {
       success: true,

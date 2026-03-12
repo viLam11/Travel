@@ -84,7 +84,7 @@ function ServicesTable({
             header: ({ column }) => (
                 <button
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="flex items-center gap-2 hover:text-foreground font-semibold"
+                    className="flex items-center gap-2 hover:text-foreground font-semibold cursor-pointer"
                 >
                     Tên dịch vụ
                     <ArrowUpDown className="w-4 h-4" />
@@ -167,21 +167,21 @@ function ServicesTable({
             cell: ({ row }) => (
                 <div className="flex gap-1">
                     <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
+                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                         title="Xem chi tiết"
                         onClick={() => onView(row.original)}
                     >
                         <Eye className="w-4 h-4 text-muted-foreground" />
                     </button>
                     <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
+                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                         title="Sửa dịch vụ"
                         onClick={() => onEdit(row.original)}
                     >
                         <Edit className="w-4 h-4 text-muted-foreground" />
                     </button>
                     <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
+                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                         title={row.original.status === 'active' ? 'Tạm dừng' : 'Kích hoạt'}
                         onClick={() => onToggleStatus(row.original)}
                     >
@@ -192,7 +192,7 @@ function ServicesTable({
                         )}
                     </button>
                     <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
+                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                         title="Xóa dịch vụ"
                         onClick={() => onDelete(row.original)}
                     >

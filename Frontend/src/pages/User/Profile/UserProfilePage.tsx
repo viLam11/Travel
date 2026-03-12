@@ -102,7 +102,7 @@ const UserProfilePage: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900">Thông tin cơ bản</h3>
           <button
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 font-medium"
+            className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 font-medium cursor-pointer"
           >
             <span>Chỉnh sửa thông tin</span>
           </button>
@@ -178,7 +178,7 @@ const UserProfilePage: React.FC = () => {
         <div>
           <h3 className="font-semibold text-gray-900 text-lg">{currentUser?.user?.name}</h3>
           <p className="text-sm text-gray-500 mb-3">{currentUser?.user?.email}</p>
-          <button className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 font-medium">
+          <button className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-700 font-medium cursor-pointer">
             <Camera className="w-4 h-4" />
             <span>Thay đổi ảnh đại diện</span>
           </button>
@@ -322,7 +322,7 @@ const UserProfilePage: React.FC = () => {
             <button
               type="submit"
               disabled={isSaving || isLoading}
-              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <Save className="w-5 h-5" />
               <span>{isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
@@ -331,7 +331,7 @@ const UserProfilePage: React.FC = () => {
               type="button"
               onClick={() => setIsEditing(false)}
               disabled={isSaving}
-              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Hủy
             </button>

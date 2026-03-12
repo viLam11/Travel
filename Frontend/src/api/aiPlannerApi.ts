@@ -1,151 +1,51 @@
-// src/api/aiPlannerApi.ts
-import type { PlanRequest, PlanResponse } from '@/types/aiPlanner.types';
-import { MOCK_PLAN_RESPONSE } from '@/mocks/aiPlanner';
+import type { PlanRequest, PlanResponse, PlanData, ItineraryDay } from '@/types/aiPlanner.types';
+import apiClient from '../services/apiClient';
 
 // ─── Toggle mock vs real API ───────────────────────────────────────────────────
-export const USE_MOCK_AI_PLANNER = true; // ← đổi thành false để gọi API thật
+export const USE_MOCK_AI_PLANNER = false; // ← đổi thành false để gọi API thật
 // ──────────────────────────────────────────────────────────────────────────────
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const MOCK_DELAY_MS = 2000; // Giả lập độ trễ AI
-
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const aiPlannerApi = {
     /**
      * Tạo kế hoạch du lịch từ AI
-     * BE: POST /api/plan-recommend/generate
-     * Body: { place, numberOfDays, additionalInformation }
      */
     generatePlan: async (request: PlanRequest): Promise<PlanResponse> => {
         if (USE_MOCK_AI_PLANNER) {
             await sleep(MOCK_DELAY_MS);
-            return MOCK_PLAN_RESPONSE;
+            // Returns mock data if needed, but we focus on real API
+            throw new Error("Mock not implemented for refactored version");
         }
 
-        const response = await fetch(`${BASE_URL}/api/plan-recommend/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request),
-        });
-
-        if (!response.ok) {
-            throw new Error(`AI planner error: ${response.status}`);
-        }
-
-        return response.json();
+        return apiClient.post<PlanResponse>('/api/plan-recommend/generate', request);
     },
 
     /**
      * Lấy gợi ý địa điểm theo điểm đến
-     * BE: GET /api/plan-recommend/get-preferences?place=xxx
      */
     getPreferences: async (place: string): Promise<unknown[]> => {
-        if (USE_MOCK_AI_PLANNER) {
-            await sleep(500);
-            return []; // mock → dùng MOCK_LIBRARY_ACTIVITIES
-        }
-
-        const response = await fetch(
-            `${BASE_URL}/api/plan-recommend/get-preferences?place=${encodeURIComponent(place)}`
-        );
-
-        if (!response.ok) throw new Error('Failed to fetch preferences');
-        return response.json();
+        return apiClient.get<unknown[]>('/api/plan-recommend/get-preferences', {
+            params: { place }
+        });
     },
 
-    // ─── NEW SHARE PLAN APIs (Match Contract) ──────────────────────
+    // ─── NEW SHARE PLAN APIs ──────────────────────
 
-    savePlan: async (planData: Omit<import('@/types/aiPlanner.types').PlanData, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>): Promise<import('@/types/aiPlanner.types').PlanData> => {
-        if (USE_MOCK_AI_PLANNER) {
-            await sleep(500);
-            return {
-                id: crypto.randomUUID(),
-                ownerId: 1,
-                ...planData,
-                title: planData.title || `Kế hoạch ${planData.destination} ${planData.days} ngày`,
-                isPublic: false,
-                isOwner: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
-        }
-
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${BASE_URL}/api/plans`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify(planData),
-        });
-        if (!response.ok) throw new Error('Failed to save plan');
-        return response.json();
+    savePlan: async (planData: Omit<PlanData, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>): Promise<PlanData> => {
+        return apiClient.post<PlanData>('/api/plans', planData);
     },
 
-    getPlan: async (planId: string): Promise<import('@/types/aiPlanner.types').PlanData> => {
-        if (USE_MOCK_AI_PLANNER) {
-            await sleep(500);
-            // Mock fetching a plan exactly
-            return {
-                id: planId,
-                ownerId: 1,
-                title: 'Ví dụ Kế hoạch AI Mock',
-                destination: 'Hà Nội',
-                days: 3,
-                itinerary: MOCK_PLAN_RESPONSE.itinerary,
-                isPublic: false,
-                isOwner: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
-        }
-
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${BASE_URL}/api/plans/${planId}`, {
-            headers: {
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch plan');
-        return response.json();
+    getPlan: async (planId: string): Promise<PlanData> => {
+        return apiClient.get<PlanData>(`/api/plans/${planId}`);
     },
 
-    updatePlanItinerary: async (planId: string, itinerary: import('@/types/aiPlanner.types').ItineraryDay[]): Promise<void> => {
-        if (USE_MOCK_AI_PLANNER) {
-            await sleep(300);
-            return;
-        }
-
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${BASE_URL}/api/plans/${planId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({ itinerary }),
-        });
-        if (!response.ok) throw new Error('Failed to update plan');
+    updatePlanItinerary: async (planId: string, itinerary: ItineraryDay[]): Promise<void> => {
+        return apiClient.patch(`/api/plans/${planId}`, { itinerary });
     },
 
     toggleShare: async (planId: string, isPublic: boolean): Promise<{ isPublic: boolean; shareUrl?: string }> => {
-        if (USE_MOCK_AI_PLANNER) {
-            await sleep(300);
-            return { isPublic, shareUrl: `${window.location.origin}/ai-planner/${planId}` };
-        }
-
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${BASE_URL}/api/plans/${planId}/share`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({ isPublic }),
-        });
-        if (!response.ok) throw new Error('Failed to toggle share plan');
-        return response.json();
+        return apiClient.patch<{ isPublic: boolean; shareUrl?: string }>(`/api/plans/${planId}/share`, { isPublic });
     }
 };

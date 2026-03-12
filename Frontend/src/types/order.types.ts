@@ -17,5 +17,5 @@ export interface CreateOrderRequest {
   checkOutDate: string; // ISO Format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
   guestPhone: string;
   note?: string;
-  discountIds?: number[];
+  discountIds?: string[];
 }

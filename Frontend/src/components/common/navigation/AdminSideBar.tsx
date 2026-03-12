@@ -10,6 +10,10 @@ import {
     Star,
     LayoutDashboard,
     Bed,
+    MessageCircle,
+    CheckSquare,
+    Tags,
+    Flag,
 } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import { ROUTES } from "@/constants/routes"
@@ -47,16 +51,37 @@ const getNavItems = (currentPath: string, currentUser: any) => {
                 visible: true,
             },
             {
-                title: "Dịch vụ",
+                title: "Duyệt dịch vụ",
+                url: "/admin/approvals",
+                icon: <CheckSquare />,
+                isActive: currentPath.startsWith('/admin/approvals'),
+                visible: true,
+            } as any,
+            {
+                title: "Quản lý dịch vụ",
                 url: ROUTES.ADMIN_SERVICES,
                 icon: <Hotel />,
                 isActive: currentPath.startsWith('/admin/services'),
                 visible: true,
             } as any,
             {
-                title: "Đánh giá",
+                title: "Ưu đãi hệ thống",
+                url: "/admin/promotions",
+                icon: <Tags />,
+                isActive: currentPath.startsWith('/admin/promotions'),
+                visible: true,
+            } as any,
+            {
+                title: "Hỗ trợ (Chat)",
+                url: "/admin/messages",
+                icon: <MessageCircle />,
+                isActive: currentPath.startsWith('/admin/messages'),
+                visible: true,
+            } as any,
+            {
+                title: "Báo cáo & Đánh giá",
                 url: ROUTES.ADMIN_REVIEWS,
-                icon: <Star />,
+                icon: <Flag />,
                 isActive: currentPath === ROUTES.ADMIN_REVIEWS,
                 visible: true,
             } as any,
@@ -71,8 +96,7 @@ const getNavItems = (currentPath: string, currentUser: any) => {
     }
 
     // ==================== PROVIDER NAVIGATION ====================
-    // Allow Admin to access Provider pages for testing purposes
-    if (isProvider || isAdmin) {
+    if (isProvider) {
         navMain.push({
             title: "Tổng quan",
             url: "/provider/dashboard",
@@ -108,6 +132,13 @@ const getNavItems = (currentPath: string, currentUser: any) => {
                 url: "/provider/bookings",
                 icon: <Calendar />,
                 isActive: currentPath === "/provider/bookings",
+                visible: true,
+            } as any,
+            {
+                title: "Tin nhắn",
+                url: "/provider/messages",
+                icon: <MessageCircle />,
+                isActive: currentPath === "/provider/messages",
                 visible: true,
             } as any,
             {
@@ -164,7 +195,7 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link to={dashboardUrl}>
-                                <div className="font-bold text-xl text-[#eb662b]">
+                                <div className="font-bold text-xl text-blue-600">
                                     Travello
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight ml-2">

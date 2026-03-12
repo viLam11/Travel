@@ -395,7 +395,7 @@ const UserTransactionsPage: React.FC = () => {
             <button
               key={tab.value}
               onClick={() => setSelectedStatus(tab.value as any)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
                 selectedStatus === tab.value ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -469,11 +469,11 @@ const UserTransactionsPage: React.FC = () => {
                   
                   <div className="flex items-center gap-2">
                     {group.info.status === 'SUCCESS' && (
-                      <button className="p-2 text-gray-400 hover:text-orange-500 transition-colors" title="Tải vé">
+                      <button className="p-2 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer" title="Tải vé">
                         <Download className="w-5 h-5" />
                       </button>
                     )}
-                    <button className="flex items-center gap-1 text-sm font-bold text-orange-600 hover:underline ml-2">
+                    <button className="flex items-center gap-1 text-sm font-bold text-orange-600 hover:underline ml-2 cursor-pointer">
                       Chi tiết <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>

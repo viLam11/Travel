@@ -20,7 +20,7 @@ const mockData: Record<string, ServiceDetail> = {
       { name: 'Bảo hiểm du lịch', price: 40000 }
     ],
     discounts: [
-      { code: 'HCM_5090FF', value: 90000, applied: true }
+      { id: '1', name: 'HCM OFF', code: 'HCM_5090FF', description: 'Giảm 10% tại TP.HCM', percentage: 10, minSpend: 0, startDate: '', endDate: '', quantity: 100, applied: true }
     ],
     images: [
       '/WinWonder0.jpg', '/VinWonder 3.jpg', '/VinWonder 4.jpg', '/VinWonder 5.jpg', '/VinWonder 6.jpg', '/VinWonder2.jpg', '/VinWonder.jpg',
@@ -157,7 +157,7 @@ const mockData: Record<string, ServiceDetail> = {
     priceChild: 50000,
     additionalServices: [],
     discounts: [
-      { code: 'FOODLOVER', value: 10000, applied: true }
+      { id: '2', name: 'Food Lover', code: 'FOODLOVER', description: 'Ưu đãi cho người yêu ẩm thực', percentage: 15, minSpend: 0, startDate: '', endDate: '', quantity: 100, applied: true }
     ],
     images: [
       'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop',
@@ -270,7 +270,7 @@ const mockData: Record<string, ServiceDetail> = {
       { name: 'Đưa đón sân bay', price: 300000 }
     ],
     discounts: [
-      { code: 'SUMMER2025', value: 300000, applied: true }
+      { id: '3', name: 'Summer 2025', code: 'SUMMER2025', description: 'Chào hè rực rỡ 2025', fixedPrice: 300000, minSpend: 1000000, startDate: '', endDate: '', quantity: 100, applied: true }
     ],
     images: [
       'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop',
@@ -379,6 +379,8 @@ export const mockServiceDetailApi = {
     startDate: string,
     endDate: string
   ): Promise<Record<string, string>> => {
+    // Avoid unused parameter warnings
+    console.log(`Checking availability for ${serviceId} from ${startDate} to ${endDate}`);
     await new Promise(resolve => setTimeout(resolve, 500));
 
     return {
@@ -386,5 +388,14 @@ export const mockServiceDetailApi = {
       '2025-09-02': '100 K',
       '2025-09-03': '100 K'
     };
+  },
+
+  getSatisfiedDiscounts: async (
+    serviceID: string,
+    placeCode: string
+  ): Promise<any[]> => {
+    console.log(`📡 Mock getSatisfiedDiscounts for: ${serviceID}, place: ${placeCode}`);
+    const service = mockData[serviceID];
+    return service ? service.discounts : [];
   }
 };

@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import apiClient from '@/services/apiClient';
 
-// 🧪 MOCK AUTH MODE - Set to true to test with mock users
-const USE_MOCK_AUTH = true; // Change to false to use real backend
+// MOCK AUTH MODE - Set to true to test with mock users
+const USE_MOCK_AUTH = false; // Change to true to test with mock users
+
 
 // Mock Users for Testing
 const MOCK_USERS = {
@@ -54,9 +55,24 @@ const MOCK_USERS = {
             role: 'admin',
             phoneNumber: '0904567890',
             address: 'Hà Nội',
+            status: 'active',
         }
     },
-};
+    pendingProvider: {
+        token: 'mock-token-pending',
+        user: {
+            userID: 5,
+            name: 'Pending Hotel',
+            email: 'pending@hotel.com',
+            role: 'provider',
+            phoneNumber: '0905678901',
+            address: 'Đà Nẵng',
+            providerType: 'hotel',
+            status: 'pending',
+            hasService: false,
+        }
+    }
+} as Record<string, LoginResponse>;
 
 interface User {
     userID: number;
@@ -68,6 +84,7 @@ interface User {
     providerType?: 'hotel' | 'place'; // For providers
     hasService?: boolean; // For providers - whether they have completed service setup
     serviceId?: number; // For providers - their service ID
+    status?: 'active' | 'blocked' | 'pending';
 }
 
 interface LoginResponse {
@@ -180,7 +197,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 let mockResponse: LoginResponse | null = null;
 
-                // Match email to mock user
                 if (email === 'customer@test.com') {
                     mockResponse = MOCK_USERS.customer;
                 } else if (email === 'hotel@test.com') {
@@ -189,8 +205,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     mockResponse = MOCK_USERS.tourProvider;
                 } else if (email === 'admin@test.com') {
                     mockResponse = MOCK_USERS.admin;
+                } else if (email === 'pending@hotel.com') {
+                    mockResponse = MOCK_USERS.pendingProvider;
                 } else {
-                    throw new Error('Email không tồn tại. Sử dụng: customer@test.com, hotel@test.com, tour@test.com hoặc admin@test.com');
+                    throw new Error('Email không tồn tại. Sử dụng: customer@test.com, hotel@test.com, tour@test.com, admin@test.com hoặc pending@hotel.com');
+                }
+
+                if (!mockResponse) {
+                    throw new Error('Mock response could not be loaded');
                 }
 
                 console.log('Mock login successful:', mockResponse);

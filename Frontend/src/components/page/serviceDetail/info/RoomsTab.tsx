@@ -160,7 +160,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                             {(room.price / 1000000).toFixed(1)}M
                                         </p>
                                     </div>
-                                    <button className="text-sm text-orange-500 font-medium hover:text-orange-600">
+                                    <button className="text-sm text-orange-500 font-medium hover:text-orange-600 cursor-pointer">
                                         Xem chi tiết →
                                     </button>
                                 </div>
@@ -181,7 +181,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                             </h3>
                             <button
                                 onClick={handleCloseModal}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -207,13 +207,13 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                             <>
                                                 <button
                                                     onClick={handlePrevImage}
-                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all cursor-pointer"
                                                 >
                                                     <ChevronLeft className="w-6 h-6 text-gray-900" />
                                                 </button>
                                                 <button
                                                     onClick={handleNextImage}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all cursor-pointer"
                                                 >
                                                     <ChevronRight className="w-6 h-6 text-gray-900" />
                                                 </button>
@@ -232,7 +232,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                             <button
                                                 key={idx}
                                                 onClick={() => setCurrentImageIndex(idx)}
-                                                className={`aspect-video rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx
+                                                className={`aspect-video rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${currentImageIndex === idx
                                                     ? 'border-orange-500 ring-2 ring-orange-200'
                                                     : 'border-gray-200 hover:border-orange-300'
                                                     }`}
@@ -299,7 +299,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                     {/* Room Description (if needed) */}
                                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                         <p className="text-sm text-blue-900">
-                                            <span className="font-semibold">💡 Lưu ý:</span> Giá phòng đã bao gồm thuế và phí dịch vụ. Miễn phí hủy trước 24h.
+                                            <span className="font-semibold"> Lưu ý:</span> Giá phòng đã bao gồm thuế và phí dịch vụ. Miễn phí hủy trước 24h.
                                         </p>
                                     </div>
                                 </div>
@@ -317,7 +317,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                 </div>
                                 <button
                                     onClick={handleBookNow}
-                                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg hover:shadow-xl"
+                                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg hover:shadow-xl cursor-pointer"
                                 >
                                     Đặt phòng ngay
                                 </button>

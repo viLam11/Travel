@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight, Plus, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
+import { serviceDetailApi } from '../../../../api/serviceDetailApi';
 
 interface RoomBooking {
   roomId: number;
@@ -22,13 +23,10 @@ interface Discount {
   id: string;
   code: string;
   description: string;
-  value: number;
-  type: 'percentage' | 'fixed';
-  condition: {
-    minRooms?: number;
-    minNights?: number;
-    minTotal?: number;
-  };
+  percentage?: number;
+  fixedPrice?: number;
+  minSpend?: number;
+  maxDiscountAmount?: number;
   applied: boolean;
 }
 
@@ -59,9 +57,10 @@ interface RoomBookingModalProps {
   setRoomCountry: (country: string) => void;
   specialRequests: string;
   setSpecialRequests: (requests: string) => void;
-  roomPaymentMethod: 'card' | 'online';
-  setRoomPaymentMethod: (method: 'card' | 'online') => void;
   allRooms: Room[];
+  serviceId: string;
+  roomPaymentMethod: 'MOMO' | 'VNPAY';
+  setRoomPaymentMethod: (method: 'MOMO' | 'VNPAY') => void;
   onConfirm: () => void;
 }
 
@@ -92,74 +91,18 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
   setRoomCountry,
   specialRequests,
   setSpecialRequests,
+  allRooms,
+  serviceId,
   roomPaymentMethod,
   setRoomPaymentMethod,
-  allRooms,
   onConfirm
 }) => {
+  const ROOMS_PER_PAGE = 3;
   const [currentPage, setCurrentPage] = useState(1);
   const [showDiscountSection, setShowDiscountSection] = useState(false);
+  const [availableDiscounts, setAvailableDiscounts] = useState<Discount[]>([]);
   const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([]);
   const [showGuestInfo, setShowGuestInfo] = useState(true);
-  const ROOMS_PER_PAGE = 3;
-
-  // Danh sách ưu đãi
-  const availableDiscounts: Discount[] = [
-    {
-      id: 'MULTI_ROOM',
-      code: 'MULTI_ROOM',
-      description: 'Đặt từ 2 phòng trở lên',
-      value: 10,
-      type: 'percentage',
-      condition: { minRooms: 2 },
-      applied: false
-    },
-    {
-      id: 'LONG_STAY',
-      code: 'LONG_STAY',
-      description: 'Lưu trú từ 5 đêm trở lên',
-      value: 15,
-      type: 'percentage',
-      condition: { minNights: 5 },
-      applied: false
-    },
-    {
-      id: 'WEEK_STAY',
-      code: 'WEEK_STAY',
-      description: 'Lưu trú từ 7 đêm trở lên',
-      value: 20,
-      type: 'percentage',
-      condition: { minNights: 7 },
-      applied: false
-    },
-    {
-      id: 'EARLY_BIRD',
-      code: 'EARLY_BIRD',
-      description: 'Đặt trước 30 ngày',
-      value: 50000,
-      type: 'fixed',
-      condition: {},
-      applied: false
-    },
-    {
-      id: 'WALLET_PAY',
-      code: 'WALLET_PAY',
-      description: 'Thanh toán qua ví điện tử',
-      value: 10,
-      type: 'percentage',
-      condition: {},
-      applied: false
-    },
-    {
-      id: 'CASH_PAY',
-      code: 'CASH_PAY',
-      description: 'Thanh toán bằng tiền mặt',
-      value: 5,
-      type: 'percentage',
-      condition: {},
-      applied: false
-    }
-  ];
 
   const datesOverlap = (start1: string, end1: string, start2: string, end2: string) => {
     return start1 < end2 && start2 < end1;
@@ -223,35 +166,36 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
 
   // Kiểm tra điều kiện ưu đãi
   const isDiscountEligible = (discount: Discount): boolean => {
-    if (discount.condition.minRooms && selectedRooms.length < discount.condition.minRooms) {
+    if (discount.minSpend && subtotal < discount.minSpend) {
       return false;
-    }
-    if (discount.condition.minNights && nights < discount.condition.minNights) {
-      return false;
-    }
-    if (discount.id === 'WALLET_PAY' && roomPaymentMethod !== 'card') {
-      return false;
-    }
-    if (discount.id === 'CASH_PAY' && roomPaymentMethod !== 'online') {
-      return false;
-    }
-    if (discount.id === 'EARLY_BIRD') {
-      if (!checkInDate) return false;
-      const daysUntilCheckIn = Math.ceil(
-        (new Date(checkInDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return daysUntilCheckIn >= 30;
     }
     return true;
   };
 
+  // Fetch real discounts
+  React.useEffect(() => {
+    const fetchDiscounts = async () => {
+      try {
+        const data = await serviceDetailApi.getSatisfiedDiscounts(serviceId, ''); // placeCode if available
+        setAvailableDiscounts(data);
+      } catch (error) {
+        console.error('Failed to fetch room discounts:', error);
+      }
+    };
+    if (isOpen && serviceId) {
+      fetchDiscounts();
+    }
+  }, [isOpen, serviceId]);
+
   // Tự động chọn ưu đãi phù hợp
   React.useEffect(() => {
-    const eligibleIds = availableDiscounts
-      .filter(d => isDiscountEligible(d))
-      .map(d => d.id);
-    setSelectedDiscounts(eligibleIds);
-  }, [selectedRooms.length, nights, roomPaymentMethod, checkInDate]);
+    if (availableDiscounts.length > 0) {
+      const eligible = availableDiscounts.filter(d => isDiscountEligible(d));
+      if (eligible.length > 0 && selectedDiscounts.length === 0) {
+        setSelectedDiscounts([eligible[0].id]);
+      }
+    }
+  }, [availableDiscounts, subtotal]);
 
   const toggleDiscount = (discountId: string) => {
     const discount = availableDiscounts.find(d => d.id === discountId);
@@ -265,11 +209,11 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
   };
 
   const calculateDiscountAmount = (discount: Discount): number => {
-    const basePrice = subtotal;
-    if (discount.type === 'percentage') {
-      return Math.round(basePrice * (discount.value / 100));
+    if (discount.percentage) {
+      const amount = Math.round(subtotal * (discount.percentage / 100));
+      return discount.maxDiscountAmount ? Math.min(amount, discount.maxDiscountAmount) : amount;
     }
-    return discount.value;
+    return discount.fixedPrice || 0;
   };
 
   const totalDiscount = selectedDiscounts.reduce((sum, id) => {
@@ -649,24 +593,21 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                               <p className={`text-xs ${isEligible ? 'text-gray-600' : 'text-gray-400'}`}>
                                 {discount.description}
                               </p>
-                              {!isEligible && (
-                                <p className="text-xs text-orange-600 mt-1">
-                                  {discount.condition.minRooms && selectedRooms.length < discount.condition.minRooms && 
-                                    `Cần thêm ${discount.condition.minRooms - selectedRooms.length} phòng`}
-                                  {discount.condition.minNights && nights < discount.condition.minNights && 
-                                    `Cần thêm ${discount.condition.minNights - nights} đêm`}
-                                  {discount.id === 'EARLY_BIRD' && 
-                                    `Chỉ áp dụng khi đặt trước 30 ngày`}
-                                </p>
-                              )}
+                                {!isEligible && (
+                                  <div className="text-xs text-orange-600 mt-1">
+                                    {discount.minSpend && subtotal < discount.minSpend && (
+                                      <p>Cần chi tiêu tối thiểu {discount.minSpend.toLocaleString()} VNĐ</p>
+                                    )}
+                                  </div>
+                                )}
                             </div>
                             <div className="text-right">
                               <p className={`text-sm font-bold ${
                                 isEligible ? 'text-orange-500' : 'text-gray-400'
                               }`}>
-                                {discount.type === 'percentage' 
-                                  ? `-${discount.value}%`
-                                  : `-${discount.value.toLocaleString()} VNĐ`}
+                                {discount.percentage 
+                                  ? `-${discount.percentage}%`
+                                  : `-${(discount.fixedPrice || 0).toLocaleString()} VNĐ`}
                               </p>
                               {isEligible && isSelected && (
                                 <p className="text-xs text-gray-600 mt-0.5">
@@ -690,35 +631,19 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                     <input
                       type="radio"
                       name="roomPayment"
-                      value="card"
-                      checked={roomPaymentMethod === 'card'}
-                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'card' | 'online')}
+                      value="MOMO"
+                      checked={roomPaymentMethod === 'MOMO'}
+                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'MOMO' | 'VNPAY')}
                       className="w-4 h-4 text-orange-500 focus:ring-orange-500"
                     />
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                         <span className="text-sm">💳</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">Ví điện tử</span>
+                      <span className="text-sm font-medium text-gray-900">Ví MoMo</span>
                     </div>
                   </label>
 
-                  <label className="flex-1 flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-300 transition-colors">
-                    <input
-                      type="radio"
-                      name="roomPayment"
-                      value="online"
-                      checked={roomPaymentMethod === 'online'}
-                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'card' | 'online')}
-                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm">💵</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">Tiền mặt</span>
-                    </div>
-                  </label>
                 </div>
               </div>
 

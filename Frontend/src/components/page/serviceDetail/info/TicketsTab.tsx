@@ -68,7 +68,7 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [] }) => {
                                             {ticket.price.toLocaleString()} đ
                                         </p>
                                     </div>
-                                    <button className="mt-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto">
+                                    <button className="mt-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto cursor-pointer">
                                         Đặt ngay
                                     </button>
                                 </div>

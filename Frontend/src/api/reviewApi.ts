@@ -1,8 +1,7 @@
-// src/api/reviewApi.ts
 import type { Review, ReviewStats, ReviewStatus } from '@/types/review.types';
+import apiClient from '@/services/apiClient';
 
-const API_BASE_URL = 'http://localhost:8080';
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 // Mock Data
 const mockReviews: Review[] = [
@@ -71,28 +70,7 @@ export const reviewApi = {
         }
 
         try {
-            const queryParams = new URLSearchParams();
-            if (params?.serviceId) queryParams.append('serviceId', params.serviceId);
-            if (params?.status) queryParams.append('status', params.status);
-            if (params?.rating) queryParams.append('rating', params.rating.toString());
-            if (params?.page) queryParams.append('page', params.page.toString());
-            if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/reviews?${queryParams.toString()}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get('/api/provider/reviews', { params });
         } catch (error) {
             console.error('Error fetching provider reviews:', error);
             throw error;
@@ -102,23 +80,7 @@ export const reviewApi = {
     // Reply to review
     replyToReview: async (reviewId: string, reply: string): Promise<Review> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/reviews/${reviewId}/reply`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ reply }),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.post(`/api/provider/reviews/${reviewId}/reply`, { reply });
         } catch (error) {
             console.error('Error replying to review:', error);
             throw error;
@@ -128,23 +90,7 @@ export const reviewApi = {
     // Update review status (approve/reject)
     updateReviewStatus: async (reviewId: string, status: ReviewStatus): Promise<Review> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/reviews/${reviewId}/status`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ status }),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.patch(`/api/provider/reviews/${reviewId}/status`, { status });
         } catch (error) {
             console.error('Error updating review status:', error);
             throw error;
@@ -154,20 +100,7 @@ export const reviewApi = {
     // Delete review
     deleteReview: async (reviewId: string): Promise<void> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/reviews/${reviewId}`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            await apiClient.delete(`/api/provider/reviews/${reviewId}`);
         } catch (error) {
             console.error('Error deleting review:', error);
             throw error;
@@ -182,21 +115,7 @@ export const reviewApi = {
         }
 
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/reviews/stats`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get('/api/provider/reviews/stats');
         } catch (error) {
             console.error('Error fetching review stats:', error);
             throw error;

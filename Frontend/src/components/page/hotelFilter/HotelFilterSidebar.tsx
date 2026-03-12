@@ -449,15 +449,20 @@ const HotelFilterSidebar: React.FC<HotelFilterSidebarProps> = ({
             <div
                 className={`
           fixed lg:sticky top-0 left-0 h-screen lg:h-auto
-          w-80 bg-white shadow-xl lg:shadow-none
+          w-80 lg:w-72 xl:w-80
           z-50 lg:z-0
           transform transition-transform duration-300 ease-in-out
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          overflow-y-auto
-          p-6
+          overflow-y-auto lg:overflow-visible
+          bg-white lg:bg-transparent
+          shadow-xl lg:shadow-none
+          p-6 lg:p-0
+          lg:top-6
         `}
             >
-                {sidebarContent}
+                <div className="lg:bg-white lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-100 lg:p-6 lg:sticky lg:top-6">
+                    {sidebarContent}
+                </div>
             </div>
         </>
     );

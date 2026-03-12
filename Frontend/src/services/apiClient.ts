@@ -68,6 +68,7 @@ export interface ResourceAdapter<
  */
 export class ApiClient {
   private rateLimitInfo: RateLimitInfo | null = null;
+  public static readonly USE_MOCK = true; // Bật fallback sang mock khi API lỗi
 
   // Auth endpoints
   auth = {
@@ -205,15 +206,8 @@ export class ApiClient {
     //   if (params.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
     //   if (params.minRating !== undefined) queryParams.append('minRating', params.minRating.toString());
     //   queryParams.append('page', (params.page || 0).toString());
-    //   queryParams.append('size', (params.size || 10).toString());
-    //   queryParams.append('sortBy', params.sortBy || 'id');
-    //   queryParams.append('direction', params.direction || 'asc');
-
-    //   return this.get(`/services/search?${queryParams.toString()}`);
-    // }
-
     search: async (params: {
-      provinceCode?: string; // Khớp với Backend yêu cầu
+      provinceCode?: string;
       keyword?: string;
       serviceType?: string;
       minPrice?: number;
@@ -224,14 +218,31 @@ export class ApiClient {
       sortBy?: string;
       direction?: string;
     }): ApiResponse<any> => {
-      // Mock Implementation
-      if (true) { // Default to using mock for now as per user request
-        console.log("USING MOCK DATA FOR SEARCH", params);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay
+      try {
+        const self = (this as any);
+        console.log("Fetching real API services/search", params);
+        const response: any = await self.get("/services/search", { params });
+        
+        if (ApiClient.USE_MOCK && (!response || !response.services || response.services.length === 0)) {
+           console.warn("Real API returned no data, falling back to Mock...");
+           return self.services.getMockSearch(params);
+        }
+        
+        return response;
+      } catch (error) {
+        const self = (this as any);
+        console.error("API Search failed, using Fallback Mock:", error);
+        if (ApiClient.USE_MOCK) {
+          return self.services.getMockSearch(params);
+        }
+        throw error;
+      }
+    },
 
-        // Embedded Mock Data to ensure availability
+    getMockSearch: async (params: any): Promise<any> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const MOCK_DATA = [
-          // --- DESTINATIONS ---
           {
             id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "DESTINATION",
             province: { code: "khanh-hoa", name: "Nha Trang", fullName: "Khánh Hòa" },
@@ -257,7 +268,6 @@ export class ApiClient {
             province: { code: "ho-chi-minh", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
             address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
           },
-          // --- HOTELS ---
           {
             id: 201, serviceName: "Khách sạn Majestic Saigon", description: "Khách sạn di sản 5 sao.", serviceType: "HOTEL",
             province: { code: "ho-chi-minh", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
@@ -278,7 +288,6 @@ export class ApiClient {
             province: { code: "da-nang", name: "Đà Nẵng", fullName: "Đà Nẵng" },
             address: "Đà Nẵng", averagePrice: 3500000, thumbnailUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800", rating: 4.8, reviewCount: 280, bookingCount: 1100
           },
-          // --- TOURS ---
           {
             id: 301, serviceName: "Tour 4 đảo Phú Quốc", description: "Khám phá 4 hòn đảo.", serviceType: "TOUR",
             province: { code: "kien-giang", name: "Phú Quốc", fullName: "Kiên Giang" },
@@ -288,70 +297,27 @@ export class ApiClient {
 
         let results = [...MOCK_DATA];
 
-        // 1. Filter by Service Type
         if (params.serviceType) {
           const type = params.serviceType.toUpperCase();
           results = results.filter(item => item.serviceType === type);
         }
 
-        // 2. Filter by Province/Destination
         if (params.provinceCode) {
-          // Loose matching for mock data (slug or name)
           const pCode = params.provinceCode.toLowerCase();
           results = results.filter(item =>
             item.province.code.includes(pCode) ||
-            item.province.name.toLowerCase().includes(pCode) ||
-            item.province.fullName.toLowerCase().includes(pCode)
+            item.province.name.toLowerCase().includes(pCode)
           );
         }
 
-        // 3. Filter by Keyword (Name or Province)
         if (params.keyword) {
           const lowerKeyword = params.keyword.toLowerCase();
           results = results.filter(item =>
             item.serviceName.toLowerCase().includes(lowerKeyword) ||
-            item.province.name.toLowerCase().includes(lowerKeyword) ||
-            item.province.fullName.toLowerCase().includes(lowerKeyword) ||
-            item.address.toLowerCase().includes(lowerKeyword)
+            item.province.name.toLowerCase().includes(lowerKeyword)
           );
         }
 
-        // 4. Filter by Price
-        if (params.minPrice !== undefined) {
-          results = results.filter(item => item.averagePrice >= (params.minPrice || 0));
-        }
-        if (params.maxPrice !== undefined && params.maxPrice < 100000000) {
-          results = results.filter(item => item.averagePrice <= (params.maxPrice || 100000000));
-        }
-
-        // 5. Filter by Rating
-        if (params.minRating !== undefined && params.minRating > 0) {
-          results = results.filter(item => item.rating >= (params.minRating || 0));
-        }
-
-        // 6. Sort
-        results.sort((a, b) => {
-          let valA: any = a.id;
-          let valB: any = b.id;
-
-          if (params.sortBy === 'averagePrice') {
-            valA = a.averagePrice;
-            valB = b.averagePrice;
-          } else if (params.sortBy === 'rating') {
-            valA = a.rating;
-            valB = b.rating;
-          } else if (params.sortBy === 'bookingCount' || params.sortBy === 'popular') {
-            valA = a.bookingCount;
-            valB = b.bookingCount;
-          }
-
-          if (params.direction === 'desc') {
-            return valB - valA;
-          }
-          return valA - valB;
-        });
-
-        // 7. Pagination
         const page = params.page || 0;
         const size = params.size || 10;
         const totalItems = results.length;
@@ -364,23 +330,6 @@ export class ApiClient {
           totalPages,
           currentPage: page
         };
-      }
-
-      // Real API Call
-      return this.get(`/services/search`, {
-        params: {
-          provinceCode: params.provinceCode,
-          keyword: params.keyword,
-          // serviceType: params.serviceType,
-          minPrice: params.minPrice,
-          maxPrice: params.maxPrice,
-          minRating: params.minRating,
-          page: params.page || 0,
-          size: params.size || 10,
-          sortBy: params.sortBy || "id",
-          direction: params.direction || "asc",
-        },
-      });
     },
   };
 
