@@ -12,7 +12,7 @@ import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.OrderedTicketRepo;
-import com.travollo.Travel.repo.RoomRepo;
+import com.travollo.Travel.domains.hotel.repo.RoomRepo;
 import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.service.impl.MomoServiceImp;
 import jakarta.transaction.Transactional;
