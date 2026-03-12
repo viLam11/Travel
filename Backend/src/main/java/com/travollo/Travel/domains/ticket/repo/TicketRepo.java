@@ -1,4 +1,4 @@
-package com.travollo.Travel.repo;
+package com.travollo.Travel.domains.ticket.repo;
 
 import com.travollo.Travel.entity.Ticket;
 import com.travollo.Travel.entity.TicketVenue;

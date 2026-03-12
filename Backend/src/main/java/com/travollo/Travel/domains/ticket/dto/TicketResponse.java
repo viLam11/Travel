@@ -1,9 +1,8 @@
-package com.travollo.Travel.domains.travel.dto;
+package com.travollo.Travel.domains.ticket.dto;
 
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 
 @Data
 public class TicketResponse {
@@ -11,8 +10,6 @@ public class TicketResponse {
     private String name;
     private String term;
     private BigDecimal price;
-    private Timestamp validFrom;
-    private Timestamp validTo;
 
     private String serviceID;
     private String serviceName;

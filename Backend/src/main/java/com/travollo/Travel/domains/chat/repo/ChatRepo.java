@@ -14,12 +14,6 @@ import java.util.List;
 @Repository
 public interface ChatRepo extends JpaRepository<ChatMessage, String> {
 
-//    @Query("SELECT m FROM ChatMessage m WHERE " +
-//            "(m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
-//            "(m.sender.id = :user2Id AND m.receiver.id = :user1Id) " +
-//            "ORDER BY m.createdAt ASC") // Đảm bảo bạn có trường thời gian tạo (createdAt)
-//    List<ChatMessage> findChatHistory(@Param("user1Id") String user1Id, @Param("user2Id") String user2Id);
-
     @Query("SELECT m FROM ChatMessage m WHERE " +
             "(m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR " +
             "(m.sender.id = :user2Id AND m.receiver.id = :user1Id) " +
@@ -40,9 +34,9 @@ public interface ChatRepo extends JpaRepository<ChatMessage, String> {
         SELECT MAX(m2.createdAt)
         FROM ChatMessage m2
         WHERE m2.sender.id = :userId OR m2.receiver.id = :userId
-        GROUP BY CASE 
-            WHEN m2.sender.id = :userId THEN m2.receiver.id 
-            ELSE m2.sender.id 
+        GROUP BY CASE
+            WHEN m2.sender.id = :userId THEN m2.receiver.id
+            ELSE m2.sender.id
         END
     )
     ORDER BY m.createdAt DESC

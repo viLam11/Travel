@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
         componentModel = "spring",
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
 )
-public abstract class    DiscountMapper {
+public abstract class DiscountMapper {
     @Autowired
     protected ServiceRepo  tServiceRepo;
     @Autowired
@@ -51,7 +51,6 @@ public abstract class    DiscountMapper {
     }
 
     // XỬ LÝ CLASS CON KHI TRẢ VỀ RESPONSE
-
     @AfterMapping
     protected void mapRequestToSubclass(DiscountRequest request, @MappingTarget Discount discount) {
         if (discount instanceof FixedPriceDiscount fixedDiscount && request.getFixedPrice() != null) {

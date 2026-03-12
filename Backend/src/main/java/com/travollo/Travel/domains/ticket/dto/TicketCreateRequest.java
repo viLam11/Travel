@@ -1,18 +1,14 @@
-package com.travollo.Travel.domains.travel.dto;
+package com.travollo.Travel.domains.ticket.dto;
 
-import com.travollo.Travel.entity.TicketVenue;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import lombok.Builder;
+import lombok.Data;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 
+@Builder
+@Data
 public class TicketCreateRequest {
-    private String id;
     private String name;
     private String term;
     private BigDecimal price;
-    private Timestamp validFrom;
-    private Timestamp validTo;
 }
