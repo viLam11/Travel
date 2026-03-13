@@ -1,4 +1,4 @@
-package com.travollo.Travel.service.impl;
+package com.travollo.Travel.domains.user.service;
 
 import com.travollo.Travel.dto.ErrorResponse;
 import com.travollo.Travel.dto.LoginResponseDTO;

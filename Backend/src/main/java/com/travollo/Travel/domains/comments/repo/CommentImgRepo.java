@@ -1,5 +1,6 @@
-package com.travollo.Travel.repo;
+package com.travollo.Travel.domains.comments.repo;
 
+import com.travollo.Travel.entity.Comment;
 import com.travollo.Travel.entity.CommentImg;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,6 @@ public interface CommentImgRepo extends JpaRepository<CommentImg, String> {
     @Transactional
     @Query(value = "DELETE FROM comments WHERE service_id := ?1", nativeQuery = true)
     int deleteAllImgByServiceID(String serviceID);
+
+    void deleteAllByComment(Comment comment);
 }

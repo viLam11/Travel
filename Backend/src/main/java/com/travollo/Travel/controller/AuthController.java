@@ -2,11 +2,10 @@ package com.travollo.Travel.controller;
 
 
 import com.travollo.Travel.dto.LoginRequest;
-import com.travollo.Travel.dto.LoginResponseDTO;
 import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.repo.UserRepo;
-import com.travollo.Travel.service.impl.UserService;
+import com.travollo.Travel.domains.user.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;

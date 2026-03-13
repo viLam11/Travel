@@ -11,14 +11,13 @@ import com.travollo.Travel.domains.ticket.dto.TicketResponse;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;
-import com.travollo.Travel.service.impl.CommentSService;
+import com.travollo.Travel.domains.comments.service.CommentSService;
 import com.travollo.Travel.domains.travel.service.TravelService;
 import com.travollo.Travel.utils.CurrentUser;
 import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -59,9 +58,9 @@ public class ServiceController {
         return travelService.getServiceById(serviceID);
     }
 
-    @PostMapping(value = "/newService", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/newService")
     ResponseEntity<Object> createNewService(
-            @RequestBody NewServiceRequest newServiceRequest,
+            @ModelAttribute NewServiceRequest newServiceRequest,
             @CurrentUser User currentUser
     ) {
         if (currentUser  == null) {
@@ -71,7 +70,7 @@ public class ServiceController {
                 return ResponseEntity.status(403).body("User is not a provider");
             }
         }
-        return travelService.createService(newServiceRequest);
+        return travelService.createService(newServiceRequest, currentUser);
     }
 
     @PatchMapping("/upload/img/{id}")
@@ -117,7 +116,7 @@ public class ServiceController {
     @PostMapping("/{hotelID}/rooms")
     ResponseEntity<RoomResponseDTO> createRoom(
             @PathVariable String hotelID,
-            @RequestBody NewRoomRequest roomCreateRequest
+            @ModelAttribute NewRoomRequest roomCreateRequest
             ) {
         return ResponseEntity.ok(hotelAndRoomService.createRoom(hotelID, roomCreateRequest));
     }

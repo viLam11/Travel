@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -16,9 +18,10 @@ import java.util.List;
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id"
 )
-public class CommentService {
+@Builder
+public class Comment {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String content;
     private Long rating;
@@ -36,5 +39,5 @@ public class CommentService {
     private TService tService;
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CommentImg> imageList;
+    private List<CommentImg> imageList = new ArrayList<>();
 }

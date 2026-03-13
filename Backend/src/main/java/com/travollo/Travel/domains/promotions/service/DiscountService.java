@@ -89,9 +89,6 @@ public class DiscountService {
     public DiscountResponse patchDiscount(String id, DiscountRequest request) {
         Discount existingDiscount = discountRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Discount với id: " + id));
-
-        // 2. MapStruct sẽ tự động đè các field cơ bản (name, description...) và các List từ Request vào Entity
-        // Các field null trong Request sẽ bị bỏ qua, giữ nguyên data hiện tại.
         discountMapper.patchRequest(request, existingDiscount);
 
         // 4. BẮT BUỘC CHO JPA: Map ngược lại quan hệ 2 chiều (Bidirectional)
@@ -192,7 +189,8 @@ public class DiscountService {
             .startDate(entity.getStartDate())
             .endDate(entity.getEndDate())
             .quantity(entity.getQuantity())
-            .minSpend(entity.getMinSpend());
+            .minSpend(entity.getMinSpend())
+            .isSystem(entity.getIsSystem());
         return builder.build();
     }
 }

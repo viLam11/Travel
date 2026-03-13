@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.*;
 import com.travollo.Travel.utils.ServiceType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -63,5 +62,5 @@ public class TService {
 
     @OneToMany(mappedBy = "tService", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnore
-    private List<CommentService> commentList;
+    private List<Comment> commentList;
 }

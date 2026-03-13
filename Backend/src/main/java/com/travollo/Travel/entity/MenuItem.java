@@ -8,8 +8,8 @@ import lombok.Data;
 @Table(name = "menu_items")
 public class MenuItem {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long menuItemID;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String menuItemID;
 
     private String name;
     private String description;

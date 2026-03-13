@@ -13,7 +13,7 @@ public class CommentLike {
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "comment_id")
-    private CommentService comment;
+    private Comment comment;
 
     @OneToOne
     @JoinColumn(name = "user_id")

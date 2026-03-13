@@ -18,7 +18,7 @@ public class RoomController {
     @PatchMapping("/{roomID}")
     ResponseEntity<RoomResponseDTO> updateRoom(
             @PathVariable String roomID,
-            @RequestBody NewRoomRequest updateRoomRequest
+            @ModelAttribute NewRoomRequest updateRoomRequest
     ) {
         return ResponseEntity.ok(hotelAndRoomService.updateRoom(roomID, updateRoomRequest));
     }

@@ -47,12 +47,14 @@ public interface ServiceRepo extends JpaRepository<TService, String> {
             "  LOWER(s.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "  LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))" +
             ") " +
+            "AND (:provinceCode IS NULL OR :provinceCode = '' OR p.code = :provinceCode) " +
             "AND (:serviceType IS NULL OR s.serviceType = :serviceType) " +
             "AND (:minPrice IS NULL OR s.averagePrice >= :minPrice) " +
             "AND (:maxPrice IS NULL OR s.averagePrice <= :maxPrice) " +
             "AND (:minRating IS NULL OR s.rating >= :minRating)")
     Page<TService> searchServices(
             @Param("keyword") String keyword,
+            @Param("provinceCode") String provinceCode,
             @Param("serviceType") ServiceType serviceType,
             @Param("minPrice") Long minPrice,
             @Param("maxPrice") Long maxPrice,

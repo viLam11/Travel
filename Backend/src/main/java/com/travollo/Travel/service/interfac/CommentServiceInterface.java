@@ -1,6 +1,6 @@
 package com.travollo.Travel.service.interfac;
 
-import com.travollo.Travel.dto.comment.CreateCommentDTO;
+import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
 import com.travollo.Travel.entity.User;
 import org.springframework.http.ResponseEntity;
 

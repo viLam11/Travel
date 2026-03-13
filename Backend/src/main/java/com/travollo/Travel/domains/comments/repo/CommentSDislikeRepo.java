@@ -1,7 +1,7 @@
-package com.travollo.Travel.repo;
+package com.travollo.Travel.domains.comments.repo;
 
 import com.travollo.Travel.entity.CommentDislike;
-import com.travollo.Travel.entity.CommentService;
+import com.travollo.Travel.entity.Comment;
 import com.travollo.Travel.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,12 +15,12 @@ public interface CommentSDislikeRepo extends JpaRepository<CommentDislike, Strin
     @Query("""
             SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
             FROM CommentDislike c
-            WHERE c.user =: user AND c.comment =: comment
+            WHERE c.user =:user AND c.comment =:comment
     """)
-    boolean existByUserAndComment(@Param("user")User user, @Param("comment")CommentService comment);
+    boolean existByUserAndComment(@Param("user")User user, @Param("comment") Comment comment);
 
 
-    Optional<CommentDislike> findByUserAndComment(User user, CommentService comment);
-    long deleteByUserAndComment(User user, CommentService comment);
+    Optional<CommentDislike> findByUserAndComment(User user, Comment comment);
+    long deleteByUserAndComment(User user, Comment comment);
 
 }
