@@ -198,7 +198,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
               e.stopPropagation();
               onBook(id);
             }}
-            className="bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
+            className="cursor-pointer bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
           >
             ĐẶT NGAY
           </button>

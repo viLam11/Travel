@@ -50,7 +50,7 @@ const PopularDestinations: React.FC = () => {
 
   const mapServiceToDestination = (service: any): Destination => {
     const regionSlug = 'vietnam';
-    const destinationSlug = service.province?.code || 'general';
+    const destinationSlug = (service.province?.codeName || service.province?.code || 'general').replace(/_/g, '-');
 
     let typeSlug = 'place';
     if (service.serviceType === 'HOTEL') typeSlug = 'hotel';
@@ -126,7 +126,7 @@ const PopularDestinations: React.FC = () => {
     fetchHotels();
   }, []);
 
-  const handleBook = (id: string, serviceType: string): void => {
+  const handleBook = (id: string, _serviceType: string): void => {
     const allItems = [...destinations, ...hotels];
     const item = allItems.find(d => d.id === id);
     if (!item) return;
@@ -136,7 +136,7 @@ const PopularDestinations: React.FC = () => {
   };
 
   const handleViewAllDestinations = () => {
-    navigate('/destinations?serviceType=DESTINATION');
+    navigate('/destinations?serviceType=TICKET_VENUE');
   };
 
   const handleViewAllHotels = () => {
@@ -178,13 +178,7 @@ const PopularDestinations: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
             {items.map((item) => {
               // Real discount logic
-              const rawPrice = item.priceRange ? parseFloat(item.priceRange.replace(/[^0-9]/g, '')) : 0;
-              let discountedPriceLabel = item.priceRange;
-              let originalPriceLabel = undefined;
-              let discountLabel = item.discount;
-
-              // If the item comes from mapping, we should ideally have the raw service object
-              // For now, if we have discount info in the item, it's already mapped
+              // Mapping already handles basic fields
               
               return (
                 <DestinationCard

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight, Plus, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
 import { serviceDetailApi } from '../../../../api/serviceDetailApi';
+import type { Discount } from '../../../../types/serviceDetail.types';
 
 interface RoomBooking {
   roomId: number;
@@ -19,16 +20,7 @@ interface Room {
   currentBookings?: RoomBooking[];
 }
 
-interface Discount {
-  id: string;
-  code: string;
-  description: string;
-  percentage?: number;
-  fixedPrice?: number;
-  minSpend?: number;
-  maxDiscountAmount?: number;
-  applied: boolean;
-}
+// interface Discount removed, now using centralized type
 
 interface RoomBookingModalProps {
   isOpen: boolean;
@@ -59,9 +51,13 @@ interface RoomBookingModalProps {
   setSpecialRequests: (requests: string) => void;
   allRooms: Room[];
   serviceId: string;
-  roomPaymentMethod: 'MOMO' | 'VNPAY';
-  setRoomPaymentMethod: (method: 'MOMO' | 'VNPAY') => void;
-  onConfirm: () => void;
+  provinceCode: string; // Add this
+  roomPaymentMethod: 'MOMO' | 'VNPAY' | 'ZALOPAY';
+  setRoomPaymentMethod: (method: 'MOMO' | 'VNPAY' | 'ZALOPAY') => void;
+  showDiscountSection: boolean;
+  setShowDiscountSection: (show: boolean) => void;
+  availableDiscounts?: Discount[]; // Add this
+  onConfirm: (discountIds: string[]) => void;
 }
 
 const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
@@ -93,15 +89,18 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
   setSpecialRequests,
   allRooms,
   serviceId,
+  provinceCode, // Add this
   roomPaymentMethod,
   setRoomPaymentMethod,
+  showDiscountSection,
+  setShowDiscountSection,
+  availableDiscounts: propDiscounts,
   onConfirm
 }) => {
   const ROOMS_PER_PAGE = 3;
   const [currentPage, setCurrentPage] = useState(1);
-  const [showDiscountSection, setShowDiscountSection] = useState(false);
-  const [availableDiscounts, setAvailableDiscounts] = useState<Discount[]>([]);
-  const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([]);
+  const [availableDiscounts, setAvailableDiscounts] = React.useState<Discount[]>(propDiscounts || []);
+  const [selectedDiscounts, setSelectedDiscounts] = React.useState<string[]>([]);
   const [showGuestInfo, setShowGuestInfo] = useState(true);
 
   const datesOverlap = (start1: string, end1: string, start2: string, end2: string) => {
@@ -172,20 +171,30 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     return true;
   };
 
+  // Sync available discounts from props
+  React.useEffect(() => {
+    if (propDiscounts) {
+      setAvailableDiscounts(propDiscounts);
+    }
+  }, [propDiscounts]);
+
   // Fetch real discounts
   React.useEffect(() => {
-    const fetchDiscounts = async () => {
+    const fetchDiscountsFromAPI = async () => {
+      // Skip if discounts are provided via props
+      if (propDiscounts && propDiscounts.length > 0) return;
+      
       try {
-        const data = await serviceDetailApi.getSatisfiedDiscounts(serviceId, ''); // placeCode if available
+        const data = await serviceDetailApi.getSatisfiedDiscounts(serviceId, provinceCode || '');
         setAvailableDiscounts(data);
       } catch (error) {
         console.error('Failed to fetch room discounts:', error);
       }
     };
     if (isOpen && serviceId) {
-      fetchDiscounts();
+      fetchDiscountsFromAPI();
     }
-  }, [isOpen, serviceId]);
+  }, [isOpen, serviceId, provinceCode, propDiscounts]); 
 
   // Tự động chọn ưu đãi phù hợp
   React.useEffect(() => {
@@ -195,7 +204,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
         setSelectedDiscounts([eligible[0].id]);
       }
     }
-  }, [availableDiscounts, subtotal]);
+  }, [availableDiscounts, subtotal, selectedDiscounts.length]); // Added selectedDiscounts.length to dependencies
 
   const toggleDiscount = (discountId: string) => {
     const discount = availableDiscounts.find(d => d.id === discountId);
@@ -247,23 +256,24 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between z-10">
+      <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] overflow-hidden flex flex-col shadow-2xl transition-all duration-300">
+        {/* Header - More premium styling */}
+        <div className="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-lg md:text-xl font-bold text-gray-900">Đơn đặt phòng</h2>
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Xác nhận đặt phòng</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
               {filteredRooms.length} phòng có sẵn • {selectedRooms.length} phòng đã chọn
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-full transition-all duration-200 cursor-pointer group"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 group-hover:text-gray-900" />
           </button>
         </div>
 
-        <div className="p-4 md:p-6">
+        <div className="overflow-y-auto p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column - Form */}
             <div className="space-y-5">
@@ -557,68 +567,74 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
 
                 {showDiscountSection && (
                   <div className="mt-3 space-y-2 max-h-[265px] overflow-y-auto pr-2">
-                    {sortedDiscounts.map((discount) => {
-                      const isEligible = isDiscountEligible(discount);
-                      const isSelected = selectedDiscounts.includes(discount.id);
-                      
-                      return (
-                        <button
-                          key={discount.id}
-                          onClick={() => toggleDiscount(discount.id)}
-                          disabled={!isEligible}
-                          className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                            isSelected && isEligible
-                              ? 'border-orange-500 bg-orange-50'
-                              : isEligible
-                              ? 'border-gray-200 hover:border-orange-300 bg-white'
-                              : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                {isSelected && isEligible ? (
-                                  <CheckCircle className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                                ) : !isEligible ? (
-                                  <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                ) : (
-                                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                                )}
-                                <span className={`text-sm font-semibold ${
-                                  isEligible ? 'text-gray-900' : 'text-gray-400'
-                                }`}>
-                                  {discount.code}
-                                </span>
-                              </div>
-                              <p className={`text-xs ${isEligible ? 'text-gray-600' : 'text-gray-400'}`}>
-                                {discount.description}
-                              </p>
+                    {sortedDiscounts.length > 0 ? (
+                      sortedDiscounts.map((discount) => {
+                        const isEligible = isDiscountEligible(discount);
+                        const isSelected = selectedDiscounts.includes(discount.id);
+                        
+                        return (
+                          <button
+                            key={discount.id}
+                            onClick={() => toggleDiscount(discount.id)}
+                            disabled={!isEligible}
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                              isSelected && isEligible
+                                ? 'border-orange-500 bg-orange-50'
+                                : isEligible
+                                ? 'border-gray-200 hover:border-orange-300 bg-white'
+                                : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {isSelected && isEligible ? (
+                                    <CheckCircle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                                  ) : !isEligible ? (
+                                    <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                                  )}
+                                  <span className={`text-sm font-semibold ${
+                                    isEligible ? 'text-gray-900' : 'text-gray-400'
+                                  }`}>
+                                    {discount.code}
+                                  </span>
+                                </div>
+                                <p className={`text-xs ${isEligible ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  {discount.description}
+                                </p>
                                 {!isEligible && (
                                   <div className="text-xs text-orange-600 mt-1">
                                     {discount.minSpend && subtotal < discount.minSpend && (
-                                      <p>Cần chi tiêu tối thiểu {discount.minSpend.toLocaleString()} VNĐ</p>
+                                      <p>Cần chi tiêu tối thiểu {(discount.minSpend || 0).toLocaleString()} VNĐ</p>
                                     )}
                                   </div>
                                 )}
-                            </div>
-                            <div className="text-right">
-                              <p className={`text-sm font-bold ${
-                                isEligible ? 'text-orange-500' : 'text-gray-400'
-                              }`}>
-                                {discount.percentage 
-                                  ? `-${discount.percentage}%`
-                                  : `-${(discount.fixedPrice || 0).toLocaleString()} VNĐ`}
-                              </p>
-                              {isEligible && isSelected && (
-                                <p className="text-xs text-gray-600 mt-0.5">
-                                  -{calculateDiscountAmount(discount).toLocaleString()} đ
+                              </div>
+                              <div className="text-right">
+                                <p className={`text-sm font-bold ${
+                                  isEligible ? 'text-orange-500' : 'text-gray-400'
+                                }`}>
+                                  {discount.percentage 
+                                    ? `-${discount.percentage}%`
+                                    : `-${(discount.fixedPrice || 0).toLocaleString()} VNĐ`}
                                 </p>
-                              )}
+                                {isEligible && isSelected && (
+                                  <p className="text-xs text-gray-600 mt-0.5">
+                                    -{calculateDiscountAmount(discount).toLocaleString()} VNĐ
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="py-4 text-center text-gray-500 border border-dashed border-gray-200 rounded-lg">
+                        <p className="text-sm italic">Hiện không có ưu đãi khả dụng</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -626,24 +642,78 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
               {/* Payment Method */}
               <div>
                 <h3 className="text-base font-bold text-gray-900 mb-3">Hình thức thanh toán</h3>
-                <div className="flex gap-3">
-                  <label className="flex-1 flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-300 transition-colors">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* MoMo */}
+                  <label className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    roomPaymentMethod === 'MOMO' 
+                      ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20' 
+                      : 'border-gray-100 bg-gray-50 hover:border-pink-300 hover:bg-white'
+                  }`}>
                     <input
                       type="radio"
                       name="roomPayment"
                       value="MOMO"
                       checked={roomPaymentMethod === 'MOMO'}
-                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'MOMO' | 'VNPAY')}
-                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'MOMO' | 'VNPAY' | 'ZALOPAY')}
+                      className="w-4 h-4 text-pink-600 focus:ring-pink-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm">💳</span>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        roomPaymentMethod === 'MOMO' ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-600'
+                      }`}>
+                        <span className="text-xs font-bold font-sans">M</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">Ví MoMo</span>
+                      <span className="text-xs font-bold text-gray-800">MoMo</span>
                     </div>
                   </label>
 
+                  {/* VNPAY */}
+                  <label className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    roomPaymentMethod === 'VNPAY' 
+                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' 
+                      : 'border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="roomPayment"
+                      value="VNPAY"
+                      checked={roomPaymentMethod === 'VNPAY'}
+                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'MOMO' | 'VNPAY' | 'ZALOPAY')}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        roomPaymentMethod === 'VNPAY' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        <span className="text-xs font-bold font-sans">V</span>
+                      </div>
+                      <span className="text-xs font-bold text-gray-800">VNPAY</span>
+                    </div>
+                  </label>
+
+                  {/* ZaloPay */}
+                  <label className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    roomPaymentMethod === 'ZALOPAY' 
+                      ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500/20' 
+                      : 'border-gray-100 bg-gray-50 hover:border-teal-300 hover:bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="roomPayment"
+                      value="ZALOPAY"
+                      checked={roomPaymentMethod === 'ZALOPAY'}
+                      onChange={(e) => setRoomPaymentMethod(e.target.value as 'MOMO' | 'VNPAY' | 'ZALOPAY')}
+                      className="w-4 h-4 text-teal-600 focus:ring-teal-500 border-gray-300"
+                    />
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        roomPaymentMethod === 'ZALOPAY' ? 'bg-teal-500 text-white' : 'bg-teal-100 text-teal-600'
+                      }`}>
+                        <span className="text-xs font-bold font-sans">Z</span>
+                      </div>
+                      <span className="text-xs font-bold text-gray-800">ZaloPay</span>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -691,7 +761,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
-                  onClick={onConfirm}
+                  onClick={() => onConfirm(selectedDiscounts)}
                   disabled={selectedRooms.length === 0 || !checkInDate || !checkOutDate}
                   className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-lg font-bold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >

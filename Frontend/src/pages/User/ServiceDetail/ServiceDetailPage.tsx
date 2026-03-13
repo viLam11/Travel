@@ -22,6 +22,7 @@ import HotelInfoTab from "../../../components/page/serviceDetail/info/HotelInfoT
 import RoomsTab from "../../../components/page/serviceDetail/info/RoomsTab";
 import TicketsTab from "../../../components/page/serviceDetail/info/TicketsTab";
 import type { Discount } from "@/types/serviceDetail.types";
+import { getDestinationInfo } from "../../../constants/regions";
 import type { AppDispatch, RootState } from "../../../store";
 import {
   loadServiceDetail,
@@ -34,7 +35,6 @@ import toast from 'react-hot-toast';
 import AuthModal from '@/components/common/AuthModal';
 import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
 import apiClient from '@/services/apiClient';
-import PaymentModal from '@/components/common/PaymentModal';
 
 // ─── Toggle mock / real API ───────────────────────────────────────────────────
 const USE_MOCK = false; // set true để dùng mock data, false để gọi API thật
@@ -49,6 +49,10 @@ const ServiceDetailPage: React.FC = () => {
   }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+
+  // Resolve numeric provinceCode for API calls (e.g., "ha-noi" -> "01")
+  const destInfo = destination ? getDestinationInfo(destination) : null;
+  const resolvedProvinceID = destInfo?.id || destination || '';
 
   // Auth hooks
   const { isAuthenticated, currentUser } = useAuth();
@@ -95,16 +99,12 @@ const ServiceDetailPage: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerNote, setCustomerNote] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<'MOMO' | 'VNPAY'>(
+  const [paymentMethod, setPaymentMethod] = useState<'MOMO' | 'VNPAY' | 'ZALOPAY'>(
     'MOMO'
   );
   const [showDiscountSection, setShowDiscountSection] = useState(true);
   const [ticketList, setTicketList] = useState<any[]>([]);
 
-  // Payment states
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [pendingOrderId, setPendingOrderId] = useState<string | number | null>(null);
-  const [pendingOrderAmount, setPendingOrderAmount] = useState<number>(0);
   const [allRooms, setAllRooms] = useState<any[]>([]);
 
 
@@ -122,7 +122,7 @@ const ServiceDetailPage: React.FC = () => {
   const [roomCity, setRoomCity] = useState("");
   const [roomCountry, setRoomCountry] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
-  const [roomPaymentMethod, setRoomPaymentMethod] = useState<'MOMO' | 'VNPAY'>(
+  const [roomPaymentMethod, setRoomPaymentMethod] = useState<'MOMO' | 'VNPAY' | 'ZALOPAY'>(
     'MOMO'
   );
 
@@ -155,8 +155,8 @@ const ServiceDetailPage: React.FC = () => {
   const fetchDiscounts = async () => {
     try {
       if (USE_MOCK) return;
-      if (!id || !destination) return;
-      const data = await discountApi.getSatisfiedDiscounts(id, destination);
+      if (!id || !resolvedProvinceID) return;
+      const data = await discountApi.getSatisfiedDiscounts(id, resolvedProvinceID);
       if (Array.isArray(data) && data.length > 0) {
         setApiDiscounts(data);
       }
@@ -186,14 +186,24 @@ const ServiceDetailPage: React.FC = () => {
           amenities: item.amenities ?? [],
           available: item.available ?? item.isAvailable ?? true,
           currentBookings: item.currentBookings ?? [],
-          // ticket fields
           description: item.description ?? '',
           quantity: item.quantity ?? item.remainingQuantity ?? 0,
+          count: 0 // Initialize count for UI
         }));
-        setAllRooms(mapped);
+
+        if (serviceType === 'hotel') {
+          setAllRooms(mapped);
+        } else {
+          setTicketList(mapped);
+          setAllRooms([]);
+        }
       } catch (err) {
         console.error('Failed to load rooms/tickets', err);
-        setAllRooms(MOCK_ROOMS); // fallback to mock on error
+        if (serviceType === 'hotel') {
+          setAllRooms(MOCK_ROOMS);
+        } else {
+          setTicketList([]);
+        }
       }
     };
 
@@ -256,7 +266,7 @@ const ServiceDetailPage: React.FC = () => {
     document.body.style.overflow = "unset";
   };
 
-  const handleConfirmBooking = async () => {
+  const handleConfirmBooking = async (selectedDiscountIds: string[]) => {
     if (!service) return;
 
     if (USE_MOCK) {
@@ -268,10 +278,12 @@ const ServiceDetailPage: React.FC = () => {
     }
 
     try {
-      const tickets = (ticketList as any[]).map((t: any) => ({
-        id: Number(t.id),
-        quantity: Number(t.quantity || 1),
-      }));
+      const tickets = ticketList
+        .filter((t: any) => t.count > 0)
+        .map((t: any) => ({
+          id: Number(t.id),
+          quantity: Number(t.count),
+        }));
 
       const response: any = await apiClient.orders.create({
         tickets,
@@ -280,7 +292,7 @@ const ServiceDetailPage: React.FC = () => {
         checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
         guestPhone: customerPhone,
         note: customerNote || undefined,
-        discountIds: apiDiscounts.filter(d => totalPrice >= (d.minSpend || 0)).map(d => d.id),
+        discountIds: selectedDiscountIds,
       });
 
       toast.success('Đặt dịch vụ thành công! Đang chuyển hướng đến trang thanh toán...');
@@ -289,14 +301,13 @@ const ServiceDetailPage: React.FC = () => {
       // Handle the payUrl returned from backend
       const payUrl = response?.payUrl || response?.order_url || (response as any)?.payUrl;
       if (payUrl) {
-          window.location.href = payUrl;
+        window.location.href = payUrl;
       } else {
-          // Fallback if no payUrl (should not happen with our update)
-          if (response && (response.id || response.orderId)) {
-              setPendingOrderId(response.id || response.orderId);
-              setPendingOrderAmount(finalPrice);
-              setShowPaymentModal(true);
-          }
+        if (response && (response.id || response.orderId)) {
+          const orderId = response.id || response.orderId;
+          const finalPrice = response.totalPrice || 0;
+          handleSelectPayment(paymentMethod.toLowerCase() as 'momo' | 'vnpay' | 'zalopay', orderId, finalPrice);
+        }
       }
     } catch (err: any) {
       toast.error('Đặt dịch vụ thất bại. Vui lòng thử lại.');
@@ -321,7 +332,7 @@ const ServiceDetailPage: React.FC = () => {
     document.body.style.overflow = "unset";
   };
 
-  const handleConfirmRoomBooking = async () => {
+  const handleConfirmRoomBooking = async (selectedDiscountIds: string[]) => {
     if (!service) return;
 
     if (USE_MOCK) {
@@ -345,7 +356,7 @@ const ServiceDetailPage: React.FC = () => {
         checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
         guestPhone: roomPhone,
         note: specialRequests || undefined,
-        discountIds: apiDiscounts.filter(d => totalPrice >= (d.minSpend || 0)).map(d => d.id),
+        discountIds: selectedDiscountIds,
       });
 
       toast.success('Đặt phòng thành công! Đang chuyển hướng đến trang thanh toán...');
@@ -356,9 +367,10 @@ const ServiceDetailPage: React.FC = () => {
           window.location.href = payUrl;
       } else {
         if (response && (response.id || response.orderId)) {
-          setPendingOrderId(response.id || response.orderId);
-          setPendingOrderAmount(finalPrice);
-          setShowPaymentModal(true);
+          const orderId = response.id || response.orderId;
+          const finalPrice = response.totalPrice || 0;
+          
+          handleSelectPayment(roomPaymentMethod.toLowerCase() as 'momo' | 'vnpay' | 'zalopay', orderId, finalPrice);
         }
       }
     } catch (err: any) {
@@ -367,29 +379,32 @@ const ServiceDetailPage: React.FC = () => {
     }
   };
 
-  const handleSelectPayment = async (method: 'vnpay' | 'zalopay' | 'momo') => {
-    if (!pendingOrderId) return;
+  const handleSelectPayment = async (method: 'vnpay' | 'zalopay' | 'momo', orderId: string | number, amount: number) => {
+    const id = orderId;
+    const finalAmount = amount;
+
+    if (!id) return;
     
     const loadingToast = toast.loading('Đang khởi tạo thanh toán...');
     try {
       let response: any;
       if (method === 'vnpay') {
         response = await apiClient.payments.vnpay.createPayment(
-          `Thanh toan don hang ${pendingOrderId}`,
+          `Thanh toan don hang ${id}`,
           'other',
-          pendingOrderAmount,
+          finalAmount,
           'vn'
         );
       } else if (method === 'zalopay') {
         response = await apiClient.payments.zalopay.createOrder(
           currentUser?.user?.name || 'User',
-          pendingOrderAmount,
-          Number(pendingOrderId)
+          finalAmount,
+          Number(id)
         );
       } else if (method === 'momo') {
         response = await apiClient.payments.momo.createOrder(
-          pendingOrderAmount,
-          pendingOrderId.toString()
+          finalAmount,
+          id.toString()
         );
       }
 
@@ -623,10 +638,10 @@ const ServiceDetailPage: React.FC = () => {
   }
 
   // Calculate totals
-  const totalPrice =
-    adultCount * service.priceAdult +
-    childCount * service.priceChild +
-    service.additionalServices.reduce((sum, s) => sum + s.price, 0);
+  const totalPrice = serviceType === 'hotel'
+    ? (service.priceAdult + service.priceChild) // Fallback for hotel sidebar if rooms not selected
+    : ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0) +
+      service.additionalServices.reduce((sum, s) => sum + s.price, 0);
 
   // Map API discounts if present, otherwise use service.discounts (mock)
   const activeDiscounts: Discount[] = apiDiscounts.length > 0
@@ -899,6 +914,8 @@ const ServiceDetailPage: React.FC = () => {
         isOpen={showServiceBookingModal}
         onClose={handleCloseModal}
         service={service}
+        provinceCode={resolvedProvinceID}
+        availableDiscounts={activeDiscounts} 
         bookingDate={bookingDate}
         setBookingDate={setBookingDate}
         bookingDuration={bookingDuration}
@@ -926,6 +943,10 @@ const ServiceDetailPage: React.FC = () => {
       <RoomBookingModal
         isOpen={showRoomBookingModal}
         onClose={handleCloseRoomModal}
+        provinceCode={resolvedProvinceID}
+        availableDiscounts={activeDiscounts}
+        showDiscountSection={showDiscountSection}
+        setShowDiscountSection={setShowDiscountSection}
         checkInDate={checkInDate}
         setCheckInDate={setCheckInDate}
         checkOutDate={checkOutDate}
@@ -964,14 +985,6 @@ const ServiceDetailPage: React.FC = () => {
         message={authMessage}
       />
 
-      {/* Payment Method Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        onSelectPayment={handleSelectPayment}
-        amount={pendingOrderAmount}
-        orderId={pendingOrderId || ''}
-      />
 
       {/* Floating Chat Widget */}
       {service && (

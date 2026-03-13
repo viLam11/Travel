@@ -170,7 +170,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook, 
                 e.stopPropagation();
                 onBook(destination.id);
               }}
-              className="mt-4 w-full bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
+              className="cursor-pointer mt-4 w-full bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
             >
               Đặt ngay
             </button>

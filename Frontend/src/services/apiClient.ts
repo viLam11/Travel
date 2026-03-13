@@ -217,6 +217,7 @@ export class ApiClient {
       size?: number;
       sortBy?: string;
       direction?: string;
+      signal?: AbortSignal;
     }): ApiResponse<any> => {
       try {
         const self = (this as any);
@@ -245,12 +246,12 @@ export class ApiClient {
         const MOCK_DATA = [
           {
             id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "DESTINATION",
-            province: { code: "khanh-hoa", name: "Nha Trang", fullName: "Khánh Hòa" },
+            province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
             address: "Nha Trang, Khánh Hòa", averagePrice: 880000, thumbnailUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", rating: 4.8, reviewCount: 240, bookingCount: 1500
           },
           {
             id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "DESTINATION",
-            province: { code: "da-nang", name: "Đà Nẵng", fullName: "Đà Nẵng" },
+            province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
             address: "Đà Nẵng", averagePrice: 850000, thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800", rating: 4.9, reviewCount: 1200, bookingCount: 5000
           },
           {
@@ -260,37 +261,37 @@ export class ApiClient {
           },
           {
             id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "DESTINATION",
-            province: { code: "quang-ninh", name: "Hạ Long", fullName: "Quảng Ninh" },
+            province: { code: "22", name: "Hạ Long", fullName: "Quảng Ninh" },
             address: "Hạ Long, Quảng Ninh", averagePrice: 290000, thumbnailUrl: "https://images.unsplash.com/photo-1506606401543-2e73709cebb4?w=800", rating: 4.7, reviewCount: 450, bookingCount: 2000
           },
           {
             id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "DESTINATION",
-            province: { code: "ho-chi-minh", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
+            province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
             address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
           },
           {
             id: 201, serviceName: "Khách sạn Majestic Saigon", description: "Khách sạn di sản 5 sao.", serviceType: "HOTEL",
-            province: { code: "ho-chi-minh", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
+            province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
             address: "Quận 1, Hồ Chí Minh", averagePrice: 2500000, thumbnailUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800", rating: 4.7, reviewCount: 180, bookingCount: 850
           },
           {
             id: 202, serviceName: "InterContinental Hanoi Westlake", description: "Khách sạn sang trọng Hồ Tây.", serviceType: "HOTEL",
-            province: { code: "ha-noi", name: "Hà Nội", fullName: "Hà Nội" },
+            province: { code: "01", name: "Hà Nội", fullName: "Hà Nội" },
             address: "Tây Hồ, Hà Nội", averagePrice: 3200000, thumbnailUrl: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800", rating: 4.9, reviewCount: 210, bookingCount: 920
           },
           {
             id: 203, serviceName: "Vinpearl Resort Nha Trang", description: "Khu nghỉ dưỡng biển.", serviceType: "HOTEL",
-            province: { code: "khanh-hoa", name: "Nha Trang", fullName: "Khánh Hòa" },
+            province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
             address: "Nha Trang, Khánh Hòa", averagePrice: 2800000, thumbnailUrl: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800", rating: 4.8, reviewCount: 350, bookingCount: 1400
           },
           {
             id: 205, serviceName: "Pullman Danang Beach Resort", description: "Khu nghỉ dưỡng 5 sao.", serviceType: "HOTEL",
-            province: { code: "da-nang", name: "Đà Nẵng", fullName: "Đà Nẵng" },
+            province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
             address: "Đà Nẵng", averagePrice: 3500000, thumbnailUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800", rating: 4.8, reviewCount: 280, bookingCount: 1100
           },
           {
             id: 301, serviceName: "Tour 4 đảo Phú Quốc", description: "Khám phá 4 hòn đảo.", serviceType: "TOUR",
-            province: { code: "kien-giang", name: "Phú Quốc", fullName: "Kiên Giang" },
+            province: { code: "91", name: "Phú Quốc", fullName: "Kiên Giang" },
             address: "Phú Quốc", averagePrice: 950000, thumbnailUrl: "https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=800", rating: 4.7, reviewCount: 150, bookingCount: 800
           }
         ];
@@ -528,8 +529,31 @@ export class ApiClient {
       return this.get(`/provinces/region/${region}`);
     },
 
-    getAll: (): ApiResponse<any[]> => {
-      return this.get("/provinces/all");
+    getMockProvinces: async (): Promise<any[]> => {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      return [
+        { code: "01", name: "Hà Nội", fullName: "Thành phố Hà Nội" },
+        { code: "79", name: "Hồ Chí Minh", fullName: "Thành phố Hồ Chí Minh" },
+        { code: "48", name: "Đà Nẵng", fullName: "Thành phố Đà Nẵng" },
+        { code: "56", name: "Khánh Hòa", fullName: "Tỉnh Khánh Hòa" },
+        { code: "68", name: "Lâm Đồng", fullName: "Tỉnh Lâm Đồng" },
+        { code: "22", name: "Quảng Ninh", fullName: "Tỉnh Quảng Ninh" },
+        { code: "51", name: "Quảng Nam", fullName: "Tỉnh Quảng Nam" },
+        { code: "91", name: "Kiên Giang", fullName: "Tỉnh Kiên Giang" },
+        { code: "92", name: "Cần Thơ", fullName: "Thành phố Cần Thơ" }
+      ];
+    },
+
+    getAll: async (): Promise<any[]> => {
+      try {
+        const response = await this.get<any[]>("/provinces/all");
+        return response;
+      } catch (error) {
+        if (ApiClient.USE_MOCK) {
+          return this.provinces.getMockProvinces();
+        }
+        throw error;
+      }
     },
   };
 

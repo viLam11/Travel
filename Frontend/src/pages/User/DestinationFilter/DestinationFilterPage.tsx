@@ -7,14 +7,13 @@ import DestinationCard from '../../../components/page/destinationFilter/Destinat
 import apiClient from '@/services/apiClient';
 import Pagination from '../../../components/common/Pagination';
 import LocationSelector from '@/components/common/LocationSelector';
-import type { BreadcrumbItem } from '../../../components/common/Breadcrumb';
-import { getDestinationInfo, getServiceTypeName, type SortValue } from '@/constants/regions';
+import { getDestinationInfo, type SortValue } from '@/constants/regions';
 import BreadcrumbSection from '../../../components/common/BreadcrumbSection';
 interface DestinationsPageProps {
   onNavigateToHome?: () => void;
 }
 
-const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome }) => {
+const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -37,8 +36,12 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   // Get query params
   const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
-  const provinceCode = destination || searchParams.get('destination') || ''; // Province code from URL (e.g., 'ha-noi')
+  const urlDestination = destination || searchParams.get('destination') || ''; 
+  const provinceCode = urlDestination === 'undefined' ? '' : urlDestination;
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
+
+  // Resolve slug/code to numeric ID for backend filter
+  const resolvedProvinceID = getDestinationInfo(provinceCode || '')?.id || provinceCode;
 
   // Fetch API
   const fetchDestinations = async () => {
@@ -51,18 +54,21 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
       if (sortBy === 'price-high') { apiSortBy = 'averagePrice'; apiDirection = 'desc'; }
       if (sortBy === 'rating-high') { apiSortBy = 'rating'; apiDirection = 'desc'; }
 
+      const abortController = new AbortController();
+
       // Call API
       const response: any = await apiClient.services.search({
-        provinceCode: provinceCode || undefined, // Add province filter
-        keyword: searchKeyword || undefined, // Text search
-        serviceType: paramServiceType || undefined, // Use from query params, avoid empty string
+        provinceCode: resolvedProvinceID || undefined,
+        keyword: searchKeyword || undefined,
+        serviceType: paramServiceType || 'TICKET_VENUE',
         minPrice: priceRange[0],
         maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined,
-        minRating: minRating > 0 ? minRating : undefined, // Only send if rating filter is active
+        minRating: minRating > 0 ? minRating : undefined,
         page: currentPage - 1,
         size: 5,
         sortBy: apiSortBy,
-        direction: apiDirection
+        direction: apiDirection,
+        signal: abortController.signal // Pass signal
       });
 
       // Handle response
@@ -84,24 +90,33 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
 
   // Effect to fetch data
   React.useEffect(() => {
-    fetchDestinations();
+    const fetchWithCleanup = async () => {
+      await fetchDestinations();
+    };
+    
+    fetchWithCleanup();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [searchKeyword, provinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); // Re-fetch dependencies
+    
+    // Cleanup is handled inside fetchDestinations if we use a ref or similar,
+    // but for simplicity in this structure, we'll just ensure the API handles the signal.
+  }, [searchKeyword, provinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); 
 
 
   // Determine page title and breadcrumb
   const getPageTitle = () => {
     if (searchKeyword) return `Kết quả tìm kiếm cho "${searchKeyword}"`;
     if (provinceCode) {
+      // 1. Try local hardcoded list (slug or code)
       const destInfo = getDestinationInfo(provinceCode);
       if (destInfo) return destInfo.name;
 
-      // If not in hardcoded list, try to get from first service result
+      // 2. Try to get from first service result from API
       if (destinations.length > 0 && destinations[0].province) {
-        return destinations[0].province.fullName || destinations[0].province.name || provinceCode;
+        const p = destinations[0].province;
+        return p.fullName || p.name || provinceCode;
       }
 
-      // Fallback: decode and capitalize provinceCode
+      // 3. Last fallback: decode and capitalize provinceCode
       return decodeURIComponent(provinceCode).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
     return 'Tất cả điểm đến';
@@ -140,21 +155,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
     navigate(finalUrl);
   };
 
-  // Breadcrumb items
-  const breadcrumbItems: BreadcrumbItem[] = [
-    {
-      label: 'Trang chủ',
-      onClick: onNavigateToHome
-    },
-    {
-      label: 'Miền Bắc',
-      onClick: () => console.log('Navigate to Miền Bắc')
-    },
-    {
-      label: 'Địa điểm',
-      isActive: true
-    }
-  ];
+  // handleBooking moved up
 
   const handleBooking = (id: string, event?: React.MouseEvent) => {
     // Prevent event bubbling to parent onClick
@@ -191,9 +192,10 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
           <FilterSidebar
             isMobileOpen={isMobileSidebarOpen}
             onClose={() => setIsMobileSidebarOpen(false)}
-            onLocationChange={(code, name) => {
-              // Update URL with location name as keyword to trigger search
-              navigate(`/destinations?keyword=${encodeURIComponent(name)}`);
+            selectedLocation={resolvedProvinceID}
+            onLocationChange={(code) => {
+              // Update URL with location code as destination
+              navigate(`/destinations?destination=${code}&serviceType=${paramServiceType}`);
             }}
             priceRange={priceRange}
             onPriceChange={setPriceRange}
@@ -289,11 +291,11 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
                   <div className="bg-gray-50 p-4 rounded-xl">
                     <p className="text-sm font-medium text-gray-700 mb-3 block text-left">Thử tìm ở địa điểm khác:</p>
                     <LocationSelector
-                      onSelect={(code, name) => {
+                    onSelect={(_code, name) => {
                         const slug = name;
                         // Simple navigation to trigger refresh with new location
                         navigate(`/destinations/vietnam/${slug}/all`);
-                      }}
+                    }}
                       placeholder="Chọn tỉnh/thành phố..."
                     />
                   </div>
@@ -303,6 +305,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
                       setPriceRange([0, 100000000]);
                       setMinRating(0);
                       setSortBy('popular');
+                      // Note: We keep provinceCode (location) as per UX discussion
                     }}
                     className="text-orange-500 hover:text-orange-600 font-medium text-sm hover:underline cursor-pointer"
                   >
@@ -312,7 +315,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = ({ onNavigateToHome })
               </div>
             ) : (
               <div className="space-y-5">
-                {destinations.map((item, idx) => {
+                {destinations.map((item) => {
                   // Use real discounts from backend if available, otherwise no discount
                   const discounts = item.discounts || [];
                   const activeDiscount = discounts.length > 0 ? discounts[0] : null;

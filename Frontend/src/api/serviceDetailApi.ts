@@ -92,9 +92,10 @@ const realApi = {
     placeCode: string
   ): Promise<any[]> => {
     try {
-      return await apiClient.get('/discounts/apply', {
+      const data: any = await apiClient.get('/api/discounts/apply', { // Added /api
         params: { serviceID, placeCode }
       });
+      return Array.isArray(data) ? data : []; // Ensure it's an array
     } catch (error) {
       console.error('Error fetching satisfied discounts:', error);
       return [];

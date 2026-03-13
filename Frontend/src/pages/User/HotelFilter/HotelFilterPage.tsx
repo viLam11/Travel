@@ -8,6 +8,8 @@ import Pagination from '../../../components/common/Pagination';
 import HotelFilterSidebar from '../../../components/page/hotelFilter/HotelFilterSidebar';
 import HotelListCard, { type HotelListItem } from '../../../components/page/hotelFilter/HotelListCard';
 import { MOCK_DISCOUNTS } from '@/mocks/discounts';
+import apiClient from '@/services/apiClient';
+import { getDestinationInfo } from '@/constants/regions';
 
 const HotelFilterPage: React.FC = () => {
     const navigate = useNavigate();
@@ -22,6 +24,13 @@ const HotelFilterPage: React.FC = () => {
     const [sortBy, setSortBy] = useState<string>('popular');
 
     const destination = searchParams.get('destination') || '';
+
+    // Resolve slug/code to numeric ID for backend filter
+    const resolvedProvinceID = getDestinationInfo(destination || '')?.id || destination;
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [apiHotels, setApiHotels] = useState<HotelListItem[]>([]);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     const mockHotels: HotelListItem[] = [
         {
@@ -86,31 +95,86 @@ const HotelFilterPage: React.FC = () => {
         },
     ];
 
-    const [hotels] = useState(mockHotels);
+    const mapServiceToHotel = (service: any): HotelListItem => {
+        const rawPrice = service.averagePrice ?? 0;
+        const stars = service.rating ? Math.floor(service.rating) : 0; // Fallback star estimation if not provided
 
-    // ── Apply filters + sort ──────────────────────────────────────────
-    const filteredHotels = React.useMemo(() => {
-        let result = hotels.filter(h => {
-            // Price range
-            if (h.price < priceRange[0] || h.price > priceRange[1]) return false;
-            // Stars
-            if (selectedStars.length > 0 && !selectedStars.includes(h.stars)) return false;
-            // Amenities (hotel must have ALL selected amenities)
-            if (selectedAmenities.length > 0 && !selectedAmenities.every(a => h.amenities.includes(a))) return false;
-            return true;
-        });
+        return {
+            id: service.id.toString(),
+            name: service.serviceName,
+            location: service.province?.fullName || service.address || 'Việt Nam',
+            rating: service.rating || 0,
+            reviews: service.reviewCount || 0,
+            price: rawPrice,
+            stars: stars > 0 ? stars : 4, // Default to 4 if unknown
+            image: service.thumbnailUrl || 'https://via.placeholder.com/600x400',
+            amenities: ['wifi', 'parking'], // Basic amenities if not from backend
+            discount: service.discounts?.[0]
+        };
+    };
 
-        // Sort
-        if (sortBy === 'price-low') result = [...result].sort((a, b) => a.price - b.price);
-        else if (sortBy === 'price-high') result = [...result].sort((a, b) => b.price - a.price);
-        else if (sortBy === 'rating') result = [...result].sort((a, b) => b.rating - a.rating);
+    const fetchHotels = async (signal?: AbortSignal) => {
+        setIsLoading(true);
+        try {
+            const response: any = await apiClient.services.search({
+                provinceCode: resolvedProvinceID || undefined,
+                serviceType: 'HOTEL',
+                minPrice: priceRange[0],
+                maxPrice: priceRange[1] < 10000000 ? priceRange[1] : undefined,
+                minRating: selectedStars.length > 0 ? Math.min(...selectedStars) : undefined,
+                page: currentPage - 1,
+                size: 5,
+                sortBy: sortBy === 'price-low' ? 'averagePrice' : sortBy === 'price-high' ? 'averagePrice' : 'rating',
+                direction: sortBy === 'price-low' ? 'asc' : 'desc',
+                signal
+            });
 
-        return result;
-    }, [hotels, priceRange, selectedStars, selectedAmenities, sortBy]);
+            if (response && response.services && response.services.length > 0) {
+                const mapped = response.services.map(mapServiceToHotel);
+                setApiHotels(mapped);
+                setTotalPages(response.totalPages);
+                setTotalItems(response.totalItems);
+            } else {
+                setApiHotels([]);
+                setTotalItems(0);
+                setTotalPages(1);
+            }
+        } catch (error: any) {
+            if (error.name !== 'AbortError') {
+                console.error("Failed to fetch hotels:", error);
+                setApiHotels([]);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    const itemsPerPage = 5;
-    const totalPages = Math.ceil(filteredHotels.length / itemsPerPage);
-    const pagedHotels = filteredHotels.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    React.useEffect(() => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            fetchHotels(controller.signal);
+        }, 300); // Debounce
+
+        return () => {
+            controller.abort();
+            clearTimeout(timeoutId);
+        };
+    }, [destination, priceRange, selectedStars, sortBy, currentPage]);
+
+    // Final hotels list: use API if results found, otherwise mock (as requested)
+    const hotelsToShow = apiHotels.length > 0 ? apiHotels : mockHotels.filter(h => {
+        if (destination && !h.location.toLowerCase().includes(destination.toLowerCase())) return false;
+        if (h.price < priceRange[0] || h.price > priceRange[1]) return false;
+        if (selectedStars.length > 0 && !selectedStars.includes(h.stars)) return false;
+        return true;
+    });
+
+    const effectiveHotelsCount = apiHotels.length > 0 ? totalItems : hotelsToShow.length;
+    const pagedHotels = apiHotels.length > 0 ? apiHotels : hotelsToShow.slice((currentPage - 1) * 5, currentPage * 5);
 
     const handleHotelClick = (hotel: HotelListItem) => {
         // ID slug
@@ -128,7 +192,7 @@ const HotelFilterPage: React.FC = () => {
             <BreadcrumbSection
                 auto
                 title={destination || 'Tất cả khách sạn'}
-                subtitle={`Tìm thấy ${filteredHotels.length} / ${hotels.length} khách sạn`}
+                subtitle={`Tìm thấy ${effectiveHotelsCount} khách sạn`}
             />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -170,7 +234,11 @@ const HotelFilterPage: React.FC = () => {
                         )}
 
                         <div className="space-y-4">
-                            {pagedHotels.length === 0 ? (
+                            {isLoading ? (
+                                <div className="flex justify-center py-20">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+                                </div>
+                            ) : pagedHotels.length === 0 ? (
                                 <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
                                     <p className="text-gray-500 text-lg font-medium mb-2">Không tìm thấy khách sạn phù hợp</p>
                                     <p className="text-gray-400 text-sm">Thử điều chỉnh bộ lọc để xem thêm kết quả</p>

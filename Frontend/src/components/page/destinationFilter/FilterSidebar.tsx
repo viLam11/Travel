@@ -352,6 +352,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
           onRatingChange(0);
           setMinInput(minPrice.toString());
           setMaxInput(maxPrice.toString());
+          // Note: We intentionally DO NOT reset the location here per UX discussion
         }}
         className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
       >

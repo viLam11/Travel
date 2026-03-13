@@ -3,41 +3,16 @@ import React, { useState } from 'react';
 import { MapPin, Calendar, Clock, CheckCircle, ChevronDown, Users } from 'lucide-react';
 import type { ServiceDetail } from '@/types/serviceDetail.types';
 
-interface BookingCardProps {
-  service: ServiceDetail;
-  serviceType?: string; // 'hotel' or 'place'
-  adultCount: number;
-  setAdultCount: (count: number) => void;
-  childCount: number;
-  setChildCount: (count: number) => void;
-  finalPrice: number;
-  onBookNow: () => void;
-  onRoomBookNow?: () => void;
-  // Hotel specific props
-  checkInDate?: string;
-  setCheckInDate?: (date: string) => void;
-  checkOutDate?: string;
-  setCheckOutDate?: (date: string) => void;
   guestCount?: number;
   setGuestCount?: (count: number) => void;
+  ticketList: any[];
+  setTicketList: (tickets: any[]) => void;
 }
 
-const BookingCard: React.FC<BookingCardProps> = ({
-  service,
-  serviceType = 'place',
-  adultCount,
-  setAdultCount,
-  childCount,
-  setChildCount,
-  finalPrice,
-  onBookNow,
-  onRoomBookNow,
-  checkInDate,
-  setCheckInDate,
-  checkOutDate,
-  setCheckOutDate,
   guestCount,
-  setGuestCount
+  setGuestCount,
+  ticketList,
+  setTicketList
 }) => {
   const isHotel = serviceType === 'hotel';
   const [showAllServices, setShowAllServices] = useState(false);
@@ -124,53 +99,93 @@ const BookingCard: React.FC<BookingCardProps> = ({
             </div>
           </div>
         ) : (
-          // Standard Interface: Adult & Child Count
+          // Standard Interface: Dynamic Ticket List
           <>
             <h4 className="font-semibold text-gray-900 text-sm">Số lượng</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900">Người lớn (18+):</p>
-                  <p className="text-xs font-bold text-orange-500">{service.priceAdult.toLocaleString()} đ</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setAdultCount(Math.max(0, adultCount - 1))}
-                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center font-semibold text-sm">{adultCount}</span>
-                  <button
-                    onClick={() => setAdultCount(adultCount + 1)}
-                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900">Trẻ em ({'<'}6 tuổi):</p>
-                  <p className="text-xs font-bold text-orange-500">{service.priceChild.toLocaleString()} đ</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setChildCount(Math.max(0, childCount - 1))}
-                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center font-semibold text-sm">{childCount}</span>
-                  <button
-                    onClick={() => setChildCount(childCount + 1)}
-                    className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+            <div className="space-y-3">
+              {ticketList.length > 0 ? (
+                ticketList.map((ticket, idx) => (
+                  <div key={ticket.id || idx} className="flex items-center justify-between gap-2 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-gray-900 truncate">
+                        {ticket.name}:
+                      </p>
+                      <p className="text-xs font-bold text-orange-500">
+                        {(ticket.price || 0).toLocaleString()} đ
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const newList = [...ticketList];
+                          newList[idx] = { ...newList[idx], count: Math.max(0, (newList[idx].count || 0) - 1) };
+                          setTicketList(newList);
+                        }}
+                        className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center font-semibold text-sm">{ticket.count || 0}</span>
+                      <button
+                        onClick={() => {
+                          const newList = [...ticketList];
+                          newList[idx] = { ...newList[idx], count: (newList[idx].count || 0) + 1 };
+                          setTicketList(newList);
+                        }}
+                        className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                 <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900">Người lớn (18+):</p>
+                        <p className="text-xs font-bold text-orange-500">{(service.priceAdult || 0).toLocaleString()} đ</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setAdultCount(Math.max(0, adultCount - 1))}
+                          className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center font-semibold text-sm">{adultCount}</span>
+                        <button
+                          onClick={() => setAdultCount(adultCount + 1)}
+                          className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+      
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900">Trẻ em ({'<'}6 tuổi):</p>
+                        <p className="text-xs font-bold text-orange-500">{(service.priceChild || 0).toLocaleString()} đ</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setChildCount(Math.max(0, childCount - 1))}
+                          className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center font-semibold text-sm">{childCount}</span>
+                        <button
+                          onClick={() => setChildCount(childCount + 1)}
+                          className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors text-base"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+              )}
             </div>
           </>
         )}
@@ -194,7 +209,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
               .map((s, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
                   <span className="text-gray-700">{s.name}</span>
-                  <span className="font-semibold text-gray-900">{s.price.toLocaleString()} đ</span>
+                  <span className="font-semibold text-gray-900">{(s.price || 0).toLocaleString()} đ</span>
                 </div>
               ))}
             {!showAllServices && service.additionalServices.length > 1 && (
@@ -220,15 +235,18 @@ const BookingCard: React.FC<BookingCardProps> = ({
             {service.discounts
               .filter(d => d.applied)
               .slice(0, showAllDiscounts ? undefined : 1)
-              .map((d, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-orange-50 p-2 rounded-lg">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle className="w-4 h-4 text-orange-500" />
-                    <span className="font-medium text-gray-900 text-xs">{d.code}</span>
+              .map((d, idx) => {
+                const discountVal = d.fixedPrice || (d.percentage ? Math.round(service.priceAdult * (d.percentage / 100)) : 0);
+                return (
+                  <div key={idx} className="flex items-center justify-between bg-orange-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-orange-500" />
+                      <span className="font-medium text-gray-900 text-xs">{d.code}</span>
+                    </div>
+                    <span className="font-semibold text-orange-600 text-xs">-{discountVal.toLocaleString()} đ</span>
                   </div>
-                  <span className="font-semibold text-orange-600 text-xs">-{d.value.toLocaleString()} đ</span>
-                </div>
-              ))}
+                );
+              })}
             {!showAllDiscounts && service.discounts.filter(d => d.applied).length > 1 && (
               <p className="text-xs text-gray-500 italic">+{service.discounts.filter(d => d.applied).length - 1} mã khác</p>
             )}
@@ -239,13 +257,13 @@ const BookingCard: React.FC<BookingCardProps> = ({
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-gray-900 text-sm">Thành tiền:</span>
-          <span className="font-bold text-orange-500 text-lg">{finalPrice.toLocaleString()} VNĐ</span>
+          <span className="font-bold text-orange-500 text-lg">{(finalPrice || 0).toLocaleString()} VNĐ</span>
         </div>
       </div>
 
       <button
         onClick={isHotel ? () => onRoomBookNow?.() : onBookNow}
-        className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-2.5 rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
+        className="cursor-pointer w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-2.5 rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
       >
         {isHotel ? 'ĐẶT PHÒNG' : 'ĐẶT NGAY'}
       </button>
