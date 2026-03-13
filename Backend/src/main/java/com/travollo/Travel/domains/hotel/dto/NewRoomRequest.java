@@ -1,0 +1,23 @@
+package com.travollo.Travel.domains.hotel.dto;
+
+import com.travollo.Travel.utils.RoomType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.math.BigDecimal;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class NewRoomRequest {
+    private RoomType type;
+    private BigDecimal price;
+    private int quantity;
+    private String name;
+    private String description;
+    private MultipartFile roomImage;
+}

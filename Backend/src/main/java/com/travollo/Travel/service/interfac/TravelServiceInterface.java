@@ -1,5 +1,6 @@
 package com.travollo.Travel.service.interfac;
 
+import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
 import com.travollo.Travel.entity.TService;
 import com.travollo.Travel.entity.User;
 import org.springframework.http.ResponseEntity;
@@ -19,5 +20,11 @@ public interface TravelServiceInterface {
                                          );
     ResponseEntity<Object> updateService(String serviceID, TService updatedTService);
     ResponseEntity<Object> deleteService(String serviceID);
-    ResponseEntity<Object> searchServices(String keyword, String serviceType, Long minPrice, Long maxPrice, Long minRating, int page, int size, String sortBy, String direction);
+    ResponseEntity<Object> searchServices(ServiceSearchRequest searchRequest);
+
+//    ResponseEntity<TicketResponse> createTickets(String serviceID, TicketCreateRequest ticketCreateRequest);
+//    ResponseEntity<List<TicketResponse>> getTicketsByServiceID(String serviceID);
+//    ResponseEntity<TicketResponse> getTicketById(String ticketID);
+//    ResponseEntity<TicketResponse> updateTicket(String ticketID, TicketCreateRequest ticketCreateRequest);
+//    ResponseEntity<Object> deleteTicket(String ticketID);
 }

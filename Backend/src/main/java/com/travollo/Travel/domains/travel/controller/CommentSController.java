@@ -4,6 +4,7 @@ import com.travollo.Travel.dto.comment.CreateCommentDTO;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.service.impl.CommentSService;
+import com.travollo.Travel.utils.CurrentUser;
 import com.travollo.Travel.utils.Utils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,56 +21,45 @@ public class CommentSController {
     @Autowired
     CommentSService commentSService;
 
-    @PostMapping(
-            value = "/{serviceID}",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
+    @PostMapping("")
     ResponseEntity<Object> postComment(
             @PathVariable Long serviceID,
             @ModelAttribute CreateCommentDTO comment,
-            HttpServletRequest request
+            @CurrentUser User currentUser
     ) {
-        Optional<User> customer = Utils.findUserByRequest(request);
-        if (customer.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not found");
-        }
-        return commentSService.addComment(comment, customer.get());
+        return commentSService.addComment(comment, currentUser);
     }
 
     @PostMapping("/like/{commentID}")
     ResponseEntity<Object> likeComment(
-            HttpServletRequest request,
-            @PathVariable String commentID
+            @PathVariable String commentID,
+            @CurrentUser User currentUser
     ) {
-        User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
-        return commentSService.likeComment(user, commentID);
+        return commentSService.likeComment(currentUser, commentID);
     }
 
     @PostMapping("/unlike/{commentID}")
     ResponseEntity<Object> unlikeComment(
-            HttpServletRequest request,
-            @PathVariable String commentID
+            @PathVariable String commentID,
+            @CurrentUser User currentUser
     ) {
-        User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
-        return commentSService.unlikeComment(user, commentID);
+        return commentSService.unlikeComment(currentUser, commentID);
     }
 
     @PostMapping("/dislike/{commentID}")
     ResponseEntity<Object> dislikeComment(
-            HttpServletRequest request,
-            @PathVariable String commentID
+            @PathVariable String commentID,
+            @CurrentUser User currentUser
     ) {
-        User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
-        return commentSService.dislikeComment(user, commentID);
+        return commentSService.dislikeComment(currentUser, commentID);
     }
 
     @PostMapping("/undoDislike/{commentID}")
     ResponseEntity<Object> undoDislike(
-            HttpServletRequest request,
-            @PathVariable String commentID
+            @PathVariable String commentID,
+            @CurrentUser User currentUser
     ) {
-        User user = Utils.findUserByRequest(request).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "Not found user"));
-        return commentSService.undoDislikeComment(user, commentID);
+        return commentSService.undoDislikeComment(currentUser, commentID);
     }
 
     @PatchMapping(
@@ -90,13 +80,6 @@ public class CommentSController {
     ) {
         return commentSService.getCommentsByServiceID(serviceID,page,size,sortBy,direction);
     }
-
-//    @GetMapping("/{commentID}")
-//    ResponseEntity<Object> getCommentById(
-//        @PathVariable Long commentID
-//    ){
-//        return null;
-//    }
 
     @DeleteMapping("/{commentID}")
     ResponseEntity<Object> deleteComment() {

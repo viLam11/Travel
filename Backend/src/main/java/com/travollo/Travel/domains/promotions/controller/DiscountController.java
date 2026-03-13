@@ -44,6 +44,15 @@ public class DiscountController {
         return ResponseEntity.ok(discountService.getDiscountById(id));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<DiscountResponse> updateDiscountPartial(
+            @PathVariable("id") String id,
+            @RequestBody DiscountRequest request) {
+        DiscountResponse updatedDiscount = discountService.patchDiscount(id, request);
+        System.out.println("Updated Discount: " + updatedDiscount);
+        return ResponseEntity.ok(updatedDiscount);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<DiscountResponse> update(@PathVariable String id, @RequestBody DiscountRequest request) {
         return ResponseEntity.ok(discountService.updateDiscount(id, request));

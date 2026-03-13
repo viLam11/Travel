@@ -1,6 +1,8 @@
-package com.travollo.Travel.service.impl;
+package com.travollo.Travel.domains.travel.service;
 
+import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
+import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.*;
@@ -97,7 +99,7 @@ public class TravelService implements TravelServiceInterface {
             for (String url : urls) {
                 ImageService img = new ImageService();
                 img.setImageUrl(url);
-                img.setDescription("Ảnh dịch vụ " + url);
+                img.setDescription("Description: " + url);
                 img.setTService(service);
                 imageEntities.add(img);
             }
@@ -119,7 +121,7 @@ public class TravelService implements TravelServiceInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-    };
+    }
 
     public ResponseEntity<Object> createService(MultipartFile thumbnail, String serviceName, String description, String provinceCode,
                                                 String address, String contactNumber, Long averagePrice,
@@ -176,7 +178,7 @@ public class TravelService implements TravelServiceInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-    };
+    }
 
     public ResponseEntity<Object> updateService(String serviceID, TService updatedTService){
         try {
@@ -204,7 +206,7 @@ public class TravelService implements TravelServiceInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while updating the service");
         }
-    };
+    }
 
     public ResponseEntity<Object> deleteService(String serviceID){
         try {
@@ -217,45 +219,31 @@ public class TravelService implements TravelServiceInterface {
         } catch (Exception e) {
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while deleting the service");
         }
-    };
+    }
 
     public ResponseEntity<Object> searchServices(
-            String keyword,
-            String serviceType,
-            Long minPrice,
-            Long maxPrice,
-            Long minRating,
-            int page,
-            int size,
-            String sortBy,
-            String direction
+            ServiceSearchRequest searchRequest
     ) {
         try {
-            Sort sort = direction.equalsIgnoreCase("desc") ?
-                    Sort.by(sortBy).descending() :
-                    Sort.by(sortBy).ascending();
+            Sort sort = searchRequest.getDirection().equalsIgnoreCase("desc") ?
+                    Sort.by(searchRequest.getSortBy()).descending() :
+                    Sort.by(searchRequest.getSortBy()).ascending();
 
-            Pageable pageable = PageRequest.of(page, size, sort);
+            Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), sort);
 
-            ServiceType serviceTypeEnum = null;
-            if (serviceType != null && !serviceType.trim().isEmpty() && !serviceType.equalsIgnoreCase("ALL")) {
-                try {
-                    serviceTypeEnum = ServiceType.valueOf(serviceType.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    serviceTypeEnum = null;
-                }
-            }
+            ServiceType serviceTypeEnum = searchRequest.getServiceType() != null ? ServiceType.valueOf(searchRequest.getServiceType().toUpperCase()) : null;
 
-            String searchKeyword = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
-            Long searchMinPrice = (minPrice == null) ? 0L : minPrice;
-            Long searchMaxPrice = (maxPrice == null) ? Long.MAX_VALUE : maxPrice;
+            String searchKeyword = (searchRequest.getKeyword() == null || searchRequest.getKeyword().trim().isEmpty()) ? null :
+            searchRequest.getKeyword().trim();
+            Long searchMinPrice = (searchRequest.getMinPrice() == null) ? 0L :searchRequest.getMinPrice();
+            Long searchMaxPrice = (searchRequest.getMaxPrice() == null) ? Long.MAX_VALUE : searchRequest.getMaxPrice();
 
             Page<TService> servicesPage = serviceRepo.searchServices(
-                    keyword,
+                    searchKeyword,
                     serviceTypeEnum,
-                    minPrice,
-                    maxPrice,
-                    minRating,
+                    searchMinPrice,
+                    searchMaxPrice,
+                    searchRequest.getMinRating(),
                     pageable
             );
 
@@ -265,8 +253,8 @@ public class TravelService implements TravelServiceInterface {
             response.put("totalItems", servicesPage.getTotalElements());
             response.put("totalPages", servicesPage.getTotalPages());
             response.put("pageSize", servicesPage.getSize());
-            response.put("sortBy", sortBy);
-            response.put("direction", direction);
+            response.put("sortBy", searchRequest.getSortBy());
+            response.put("direction", searchRequest.getDirection());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -274,14 +262,6 @@ public class TravelService implements TravelServiceInterface {
         }
     }
 
-    public ResponseEntity<Object> getTicketsByServiceId(String serviceID) {
-        try {
-            TicketVenue ticketVenue = (TicketVenue) serviceRepo.findById(serviceID)
-                    .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Ticket venue not found"));
 
-            return ResponseEntity.ok(ticketVenue.getTicketList());
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving top-rated services");
-        }
-    }
+
 }

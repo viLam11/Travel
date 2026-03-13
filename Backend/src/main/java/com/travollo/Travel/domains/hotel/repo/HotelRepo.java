@@ -1,4 +1,4 @@
-package com.travollo.Travel.repo;
+package com.travollo.Travel.domains.hotel.repo;
 
 import com.travollo.Travel.entity.Hotel;
 import org.springframework.data.jpa.repository.JpaRepository;
