@@ -4,7 +4,7 @@ import com.travollo.Travel.dto.ErrorResponse;
 import com.travollo.Travel.dto.LoginResponseDTO;
 import com.travollo.Travel.dto.UserDTO;
 import com.travollo.Travel.dto.VerifyDTO;
-import com.travollo.Travel.entity.Order;
+import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;

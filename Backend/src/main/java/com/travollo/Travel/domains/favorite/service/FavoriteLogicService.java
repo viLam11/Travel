@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class FavoriteLogicService {
-
     private final FavoriteServiceRepository favoriteRepository;
     private final ServiceRepo serviceRepo;
 

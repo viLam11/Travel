@@ -4,7 +4,11 @@ import com.travollo.Travel.domains.hotel.repo.RoomRepo;
 import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
 import com.travollo.Travel.domains.notifications.service.NotificationService;
-import com.travollo.Travel.domains.orders.dto.OrderRequest;
+import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
+import com.travollo.Travel.domains.orders.entity.Order;
+import com.travollo.Travel.domains.orders.entity.OrderStatus;
+import com.travollo.Travel.domains.orders.entity.OrderedRoom;
+import com.travollo.Travel.domains.orders.entity.OrderedTicket;
 import com.travollo.Travel.domains.promotions.dto.DiscountResponse;
 import com.travollo.Travel.domains.promotions.entity.Discount;
 import com.travollo.Travel.domains.promotions.entity.FixedPriceDiscount;
@@ -71,53 +75,53 @@ public class OrderService {
      *
      */
     @Transactional
-    public ResponseEntity<Object> createOrder(OrderRequest orderRequest, User user) {
+    public ResponseEntity<Object> createOrder(OrderCreateRequest orderCreateRequest, User user) {
         try {
             // 0. Validate constraints: max 2 discounts
-            if (orderRequest.getDiscountIds().size() > 2) {
+            if (orderCreateRequest.getDiscountIds().size() > 2) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Chỉ được áp dụng tối đa 2 mã giảm giá!");
             }
-            for (String discountId : orderRequest.getDiscountIds()) {
+            for (String discountId : orderCreateRequest.getDiscountIds()) {
                 if (!discountRepo.existsById(discountId)) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Mã giảm giá không tồn tại: " + discountId);
                 }
             }
-            if (orderRequest.getDiscountIds().size() == 2) {
-                List<Discount> discounts = orderRequest.getDiscountIds().stream()
+            if (orderCreateRequest.getDiscountIds().size() == 2) {
+                List<Discount> discounts = orderCreateRequest.getDiscountIds().stream()
                         .map(id -> discountRepo.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy Discount ID: " + id)))
                         .toList();
                 if (discounts.get(0).getIsSystem() == discounts.get(1).getIsSystem()) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Hai mã giảm giá không được áp dụng cùng loại (1 của hệ thống, 1 của doanh nghiệp)!");
                 }
             }
-            if (orderRequest.getCheckInDate().isAfter(orderRequest.getCheckOutDate())) {
+            if (orderCreateRequest.getCheckInDate().isAfter(orderCreateRequest.getCheckOutDate())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày check-in phải trước ngày check-out!");
             }
-            if (orderRequest.getTickets().isEmpty() && orderRequest.getRooms().isEmpty()) {
+            if (orderCreateRequest.getTickets().isEmpty() && orderCreateRequest.getRooms().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn hàng phải có ít nhất một vé hoặc một phòng!");
             }
             // 1. Khởi tạo đối tượng Order
             Order newOrder = new Order();
             newOrder.setCreatedAt(LocalDateTime.now());
-            newOrder.setStatus("PENDING");
-            newOrder.setGuestPhone(orderRequest.getGuestPhone());
-            newOrder.setNote(orderRequest.getNote());
+            newOrder.setStatus(OrderStatus.PENDING);
+            newOrder.setGuestPhone(orderCreateRequest.getGuestPhone());
+            newOrder.setNote(orderCreateRequest.getNote());
             newOrder.setUser(user);
 
             List<OrderedTicket> orderedTickets = new ArrayList<>();
             List<OrderedRoom> orderedRooms = new ArrayList<>();
             // 2. Chuyển đổi và thiết lập danh sách OrderedTicket
             // QUAN TRỌNG: Phải setOrder(newOrder) cho từng ticket
-            if (orderRequest.getTickets().size() > 0) {
-                orderedTickets = orderRequest.getTickets().stream().map(ticketItem -> {
+            if (orderCreateRequest.getTickets().size() > 0) {
+                orderedTickets = orderCreateRequest.getTickets().stream().map(ticketItem -> {
                     Ticket ticketEntity = ticketRepo.findById(ticketItem.getId())
                             .orElseThrow(() -> new RuntimeException("Không tìm thấy Ticket ID: " + ticketItem.getId()));
                     OrderedTicket ot = new OrderedTicket();
                     ot.setTicket(ticketEntity);
                     ot.setAmount(ticketItem.getQuantity());
                     ot.setPrice(ticketEntity.getPrice().multiply(BigDecimal.valueOf(ticketItem.getQuantity())));
-                    ot.setValidStart(orderRequest.getCheckInDate());
-                    ot.setValidEnd(orderRequest.getCheckOutDate());
+                    ot.setValidStart(orderCreateRequest.getCheckInDate());
+                    ot.setValidEnd(orderCreateRequest.getCheckOutDate());
                     ot.setCreatedAt(LocalDateTime.now());
                     // DÒNG NÀY QUYẾT ĐỊNH VIỆC CÓ LƯU ĐƯỢC LIÊN KẾT HAY KHÔNG
                     ot.setOrder(newOrder);
@@ -125,17 +129,17 @@ public class OrderService {
                 }).collect(Collectors.toList());
             }
 
-            if (orderRequest.getRooms().size() == 0) {
+            if (orderCreateRequest.getRooms().size() == 0) {
                 // 3. Chuyển đổi và thiết lập danh sách OrderedRoom (Tương tự Ticket)
-                orderedRooms = orderRequest.getRooms().stream().map(roomItem -> {
+                orderedRooms = orderCreateRequest.getRooms().stream().map(roomItem -> {
                     Room roomEntity = roomRepo.findById(roomItem.getId())
                             .orElseThrow(() -> new RuntimeException("Không tìm thấy Room ID: " + roomItem.getId()));
                     OrderedRoom or = new OrderedRoom();
                     or.setRoom(roomEntity);
                     or.setAmount(roomItem.getQuantity());
                     or.setPrice(roomEntity.getPrice().multiply(BigDecimal.valueOf(roomItem.getQuantity())));
-                    or.setStartDate(orderRequest.getCheckInDate());
-                    or.setEndDate(orderRequest.getCheckOutDate());
+                    or.setStartDate(orderCreateRequest.getCheckInDate());
+                    or.setEndDate(orderCreateRequest.getCheckOutDate());
                     or.setCreatedAt(LocalDateTime.now());
                     // THIẾT LẬP LIÊN KẾT
                     or.setOrder(newOrder);
@@ -166,7 +170,7 @@ public class OrderService {
             log.info("Bắt đầu tính toán đơn hàng. Giá gốc: {}", totalPrice);
 
             // Lấy danh sách discount từ DB (Sử dụng findById để tránh Lazy loading proxy nếu cần tính toán ngay)
-            List<Discount> discountList = orderRequest.getDiscountIds().stream()
+            List<Discount> discountList = orderCreateRequest.getDiscountIds().stream()
                     .map(id -> discountRepo.findById(id)
                             .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Không tìm thấy mã giảm giá: " + id)))
                     .collect(Collectors.toList());
@@ -207,7 +211,7 @@ public class OrderService {
             // 6. LƯU ORDER (Nhờ CascadeType.ALL trong Order.java, Ticket và Room sẽ tự được lưu)
             Order savedOrder = orderRepo.save(newOrder);
 
-            handleNotifyOwnersAfterOrdering(user, orderRequest, savedOrder);
+            handleNotifyOwnersAfterOrdering(user, orderCreateRequest, savedOrder);
             // 7. Tạo link thanh toán MoMo
             Map<String, Object> result = momoService.createPayment(newOrder.getOrderID(), newOrder.getTotalPrice().longValue());
             return new ResponseEntity<>(result, HttpStatus.OK);
@@ -217,7 +221,7 @@ public class OrderService {
     }
 
     @Transactional
-    public void handleNotifyOwnersAfterOrdering(User customer, OrderRequest request, Order savedOrder) {
+    public void handleNotifyOwnersAfterOrdering(User customer, OrderCreateRequest request, Order savedOrder) {
         // 1. Khai báo 1 Set để chứa các chủ dịch vụ (dùng Set để tự động lọc trùng)
         Set<User> providersToNotify = new HashSet<>();
 
@@ -340,46 +344,20 @@ public class OrderService {
 //        }
 //    }
 //
-    public ResponseEntity<Object> updateOrderStatus(String orderID, String status) {
+    public Order updateOrderStatus(String orderID, OrderStatus status) {
         System.out.println("ORDER ID: " + orderID);
         Order order = orderRepo.findById(orderID)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not exist"));
-        String normalizedStatus = status.toUpperCase();
-
-        if (!normalizedStatus.equals("SUCCESS") && !normalizedStatus.equals("FAILED")) {
-            throw new CustomException(HttpStatus.BAD_REQUEST,
-                    "Dữ liệu không hợp lệ! Status chỉ được phép là 'SUCCESS' hoặc 'FAILED'.");
-        }
-        if (!"PENDING".equalsIgnoreCase(order.getStatus())) {
-            throw new CustomException(HttpStatus.BAD_REQUEST,
-                    "Không thể cập nhật! Đơn hàng đã kết thúc với trạng thái: " + order.getStatus());
-        }
-        order.setStatus(normalizedStatus);
+        order.setStatus(status);
         orderRepo.save(order);
-        return ResponseEntity.ok(new SuccessResponse(status + "order"));
+        return orderRepo.save(order);
     }
 
-    public ResponseEntity<Object> getAllOrderByUser(User user, int page, int size) {
-        try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            Page<Order> orders = orderRepo.findByUser(user, pageable);
+    public Page<Order> getAllOrderByUser(User user, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Order> ordersPage = orderRepo.findByUser(user, pageable);
 
-            // 3. Khởi tạo danh sách kết quả (Tránh NullPointerException)
-            List<OrderedTicket> allTickets = new ArrayList<>();
-
-            // 4. Duyệt qua từng đơn hàng và gom nhóm vé
-            for (Order order : orders) {
-                System.out.println("Order ID: " + order.getOrderID() + ", Created At: " + order.getCreatedAt());
-
-                List<OrderedTicket> ticketsOfOrder = orderedTicketRepo.findByOrder(order);
-                allTickets.addAll(ticketsOfOrder);
-            }
-
-            return ResponseEntity.ok(allTickets);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return ordersPage;
     }
-
 
 }

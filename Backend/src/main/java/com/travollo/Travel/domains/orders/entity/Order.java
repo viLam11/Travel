@@ -1,7 +1,8 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.orders.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.travollo.Travel.domains.promotions.entity.Discount;
+import com.travollo.Travel.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
@@ -20,7 +21,8 @@ public class Order {
     private String orderID;
 
     private LocalDateTime createdAt;
-    private String status; // e.g., "PENDING", "CONFIRMED", "CANCELLED"
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status = OrderStatus.PENDING;
 
     private BigDecimal totalPrice;
     private BigDecimal discountPrice;

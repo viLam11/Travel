@@ -1,11 +1,14 @@
 package com.travollo.Travel.domains.orders.controller;
 
-import com.travollo.Travel.domains.orders.dto.OrderRequest;
+import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
+import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.domains.orders.service.OrderService;
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.repo.UserRepo;
+import com.travollo.Travel.utils.CurrentUser;
 import com.travollo.Travel.utils.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,7 +34,7 @@ public class OrderController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Object> createOrder(@RequestBody OrderRequest createOrder) {
+    public ResponseEntity<Object> createOrder(@RequestBody OrderCreateRequest createOrder) {
         User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
@@ -45,20 +48,12 @@ public class OrderController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Object> getOrdersByUser(
+    public Page<Order> getOrdersByUser(
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @CurrentUser User currentUser
     ) {
-        User user = getCurrentUser();
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        }
-
-        if (user.getRole() != Role.USER) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Must be USER to view orders");
-        }
-
-        return orderService.getAllOrderByUser(user, page, size);
+        return orderService.getAllOrderByUser(currentUser, page, size);
     }
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
