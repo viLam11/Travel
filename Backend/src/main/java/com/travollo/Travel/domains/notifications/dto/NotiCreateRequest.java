@@ -1,8 +1,6 @@
 package com.travollo.Travel.domains.notifications.dto;
 
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
-import com.travollo.Travel.entity.Order;
-import com.travollo.Travel.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

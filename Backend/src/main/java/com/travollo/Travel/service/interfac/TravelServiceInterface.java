@@ -2,7 +2,7 @@ package com.travollo.Travel.service.interfac;
 
 import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
 import com.travollo.Travel.entity.TService;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 

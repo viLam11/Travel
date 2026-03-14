@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -19,7 +21,8 @@ public class RoomResponseDTO {
     private int quantity;
     private String name;
     private String description;
-    private String imageUrl;
+    private String roomImgUrl;
+    private List<String> images = new ArrayList<>();
     private String hotelId;
     private String hotelName;
 }

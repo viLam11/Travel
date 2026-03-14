@@ -3,7 +3,7 @@ import com.travollo.Travel.common.PageResponse;
 import com.travollo.Travel.domains.chat.dto.ChatMessageResponseDTO;
 import com.travollo.Travel.domains.chat.service.ChatService;
 
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.utils.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

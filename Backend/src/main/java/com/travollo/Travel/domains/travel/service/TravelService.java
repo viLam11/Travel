@@ -1,9 +1,11 @@
 package com.travollo.Travel.domains.travel.service;
 
 import com.travollo.Travel.domains.comments.repo.CommentServiceRepo;
+import com.travollo.Travel.domains.hotel.entity.Hotel;
 import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
 import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.*;
@@ -128,7 +130,7 @@ public class TravelService {
 
         if (ServiceType.HOTEL == serviceType) {
             newTService = new Hotel();
-        } else if ("TICKET_VENUE".equals(serviceType)) {
+        } else if (serviceType == ServiceType.TICKET_VENUE) {
             TicketVenue ticketVenue = new TicketVenue();
             if (request.getStart_time() != null && !request.getStart_time().isEmpty()) {
                 ticketVenue.setStartTime(java.sql.Time.valueOf(request.getStart_time()));

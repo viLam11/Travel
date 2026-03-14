@@ -1,7 +1,5 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.user.entity;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.travollo.Travel.utils.AuthType;
 import com.travollo.Travel.utils.Role;
 import jakarta.persistence.*;
@@ -41,7 +39,7 @@ public class User {
     private String city;
     private String country;
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('USER', 'ADMIN', 'PROVIDER')")
+    @Column(columnDefinition = "ENUM('USER', 'ADMIN', 'PROVIDER_HOTEL', 'PROVIDER_VENUE')")
     private Role role;
 
     @Column(name = "verification_code")

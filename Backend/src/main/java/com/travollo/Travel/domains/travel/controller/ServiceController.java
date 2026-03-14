@@ -8,7 +8,7 @@ import com.travollo.Travel.domains.ticket.service.TicketService;
 import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
 import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
 import com.travollo.Travel.domains.ticket.dto.TicketResponse;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.domains.comments.service.CommentSService;
@@ -66,7 +66,7 @@ public class ServiceController {
         if (currentUser  == null) {
             return ResponseEntity.status(404).body("User not found");
         } else {
-            if (currentUser.getRole() != Role.PROVIDER) {
+            if (currentUser.getRole() != Role.PROVIDER_HOTEL && currentUser.getRole() != Role.PROVIDER_VENUE) {
                 return ResponseEntity.status(403).body("User is not a provider");
             }
         }

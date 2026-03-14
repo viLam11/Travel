@@ -3,5 +3,6 @@ package com.travollo.Travel.utils;
 public enum Role {
     USER,
     ADMIN,
-    PROVIDER
+    PROVIDER_HOTEL,
+    PROVIDER_VENUE
 }
