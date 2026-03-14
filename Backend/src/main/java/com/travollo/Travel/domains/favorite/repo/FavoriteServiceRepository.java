@@ -2,7 +2,7 @@ package com.travollo.Travel.domains.favorite.repo;
 
 import com.travollo.Travel.domains.favorite.entity.FavoriteService;
 import com.travollo.Travel.entity.TService;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;

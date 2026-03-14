@@ -5,7 +5,7 @@ import com.travollo.Travel.domains.favorite.dto.FavoriteResponseDTO;
 import com.travollo.Travel.domains.favorite.entity.FavoriteService;
 import com.travollo.Travel.domains.favorite.repo.FavoriteServiceRepository;
 import com.travollo.Travel.entity.TService;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.repo.ServiceRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class FavoriteLogicService {
-
     private final FavoriteServiceRepository favoriteRepository;
     private final ServiceRepo serviceRepo;
 

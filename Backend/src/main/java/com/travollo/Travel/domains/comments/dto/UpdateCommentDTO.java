@@ -1,10 +1,5 @@
 package com.travollo.Travel.domains.comments.dto;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.travollo.Travel.entity.CommentImg;
-import com.travollo.Travel.entity.TService;
-import com.travollo.Travel.entity.User;
-import jakarta.persistence.*;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 

@@ -1,6 +1,6 @@
 package com.travollo.Travel.service;
 
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.utils.Utils;

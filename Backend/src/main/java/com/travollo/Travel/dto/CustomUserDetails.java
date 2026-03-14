@@ -1,8 +1,6 @@
 package com.travollo.Travel.dto;
 
-import com.travollo.Travel.entity.User;
-import com.travollo.Travel.utils.Role;
-import lombok.Data;
+import com.travollo.Travel.domains.user.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

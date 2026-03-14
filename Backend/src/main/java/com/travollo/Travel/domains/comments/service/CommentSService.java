@@ -8,6 +8,7 @@ import com.travollo.Travel.domains.comments.repo.CommentSDislikeRepo;
 import com.travollo.Travel.domains.comments.repo.CommentSLikeRepo;
 import com.travollo.Travel.domains.comments.repo.CommentServiceRepo;
 import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.*;

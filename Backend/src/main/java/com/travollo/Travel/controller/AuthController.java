@@ -3,7 +3,7 @@ package com.travollo.Travel.controller;
 
 import com.travollo.Travel.dto.LoginRequest;
 import com.travollo.Travel.dto.VerifyDTO;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.domains.user.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;

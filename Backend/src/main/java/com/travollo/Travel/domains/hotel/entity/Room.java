@@ -1,4 +1,4 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.hotel.entity;
 
 import com.travollo.Travel.utils.RoomType;
 import jakarta.persistence.*;
@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Currency;
 import java.util.List;
 
 @Data
@@ -37,4 +36,7 @@ public class Room {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hotel_id")
     private Hotel hotel;
+
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<RoomImage> images = new ArrayList<>();
 }

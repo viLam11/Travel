@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.travollo.Travel.config.MomoConfig;
+import com.travollo.Travel.domains.orders.entity.OrderStatus;
 import com.travollo.Travel.dto.momo.MomoCallbackDTO;
 import com.travollo.Travel.domains.orders.service.OrderService;
 import com.travollo.Travel.utils.MomoEncoderUtils;
@@ -167,10 +168,10 @@ public class MomoPayController {
         System.out.println("Momo Callback for Order: " + orderId + " | ResultCode: " + resultCode);
 
         if (resultCode == 0) {
-            orderService.updateOrderStatus(orderId, "SUCCESS");
+            orderService.updateOrderStatus(orderId, OrderStatus.SUCCESS);
             response.sendRedirect("http://localhost:3000/user/transactions");
         } else {
-            orderService.updateOrderStatus(orderId, "FAILED");
+            orderService.updateOrderStatus(orderId, OrderStatus.FAILED);
             response.sendRedirect("http://localhost:3000/user/transactions");
         }
     }

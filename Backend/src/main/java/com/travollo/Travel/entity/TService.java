@@ -1,6 +1,7 @@
 package com.travollo.Travel.entity;
 
 import com.fasterxml.jackson.annotation.*;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.utils.ServiceType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

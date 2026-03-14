@@ -68,7 +68,7 @@ export interface ResourceAdapter<
  */
 export class ApiClient {
   private rateLimitInfo: RateLimitInfo | null = null;
-  public static readonly USE_MOCK = true; // Bật fallback sang mock khi API lỗi
+  public static readonly USE_MOCK = false; // Bật fallback sang mock khi API lỗi
 
   // Auth endpoints
   auth = {

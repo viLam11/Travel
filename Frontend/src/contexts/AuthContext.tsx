@@ -187,6 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const login = async (email: string, password: string) => {
         setIsLoading(true);
 
+        console.log(`LOGIN DATA: ${email}, ${password}`)
         try {
             //  MOCK MODE: Test with predefined users
             if (USE_MOCK_AUTH) {

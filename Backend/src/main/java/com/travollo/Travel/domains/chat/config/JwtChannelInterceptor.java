@@ -1,7 +1,6 @@
 package com.travollo.Travel.domains.chat.config;
 
-import com.travollo.Travel.config.JWTAuthFilter;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.utils.JWTUtils;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 @Component

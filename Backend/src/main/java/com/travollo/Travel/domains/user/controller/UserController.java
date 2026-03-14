@@ -1,6 +1,6 @@
 package com.travollo.Travel.domains.user.controller;
 
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.domains.user.service.UserService;
 import com.travollo.Travel.utils.CurrentUser;
@@ -36,7 +36,7 @@ public class UserController {
     public ResponseEntity<?> getMyProfile() {
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         String principal = authentication.getName();
-        java.util.Optional<com.travollo.Travel.entity.User> userOpt;
+        java.util.Optional<User> userOpt;
         
         if (principal.contains("@")) {
             userOpt = userRepo.findByEmail(principal);

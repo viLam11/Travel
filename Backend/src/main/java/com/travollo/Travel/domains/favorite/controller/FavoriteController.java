@@ -2,7 +2,7 @@ package com.travollo.Travel.domains.favorite.controller;
 
 import com.travollo.Travel.domains.favorite.dto.FavoriteResponseDTO;
 import com.travollo.Travel.domains.favorite.service.FavoriteLogicService;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.utils.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

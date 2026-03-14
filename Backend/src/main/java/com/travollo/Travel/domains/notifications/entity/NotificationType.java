@@ -1,7 +1,9 @@
 package com.travollo.Travel.domains.notifications.entity;
 
 public enum NotificationType {
-    ORDER_STATUS,
+    ORDER_ACCEPTED,
+    ORDER_CREATED,
+    ORDER_CANCELED,
     NEW_ORDER,
     REPORT_RESOLVED,
     SYSTEM

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -20,4 +21,5 @@ public class NewRoomRequest {
     private String name;
     private String description;
     private MultipartFile roomImage;
+    private List<MultipartFile> images;
 }

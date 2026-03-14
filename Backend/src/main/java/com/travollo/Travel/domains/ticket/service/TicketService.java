@@ -6,7 +6,7 @@ import com.travollo.Travel.domains.ticket.dto.TicketResponse;
 import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.entity.Ticket;
 import com.travollo.Travel.entity.TicketVenue;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.ServiceRepo;
 import com.travollo.Travel.utils.Role;
