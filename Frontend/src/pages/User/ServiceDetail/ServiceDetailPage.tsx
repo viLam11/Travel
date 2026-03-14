@@ -298,13 +298,14 @@ const ServiceDetailPage: React.FC = () => {
           // Standardize ID as string to match UUID expectations
           id: t.id.toString(),
           quantity: Number(t.count),
+          // Backend now expects dates per item
+          checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
+          checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
         }));
 
       const payload = {
         tickets,
         rooms: [],
-        checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
-        checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
         guestPhone: customerPhone,
         note: customerNote || undefined,
         discountIds: selectedDiscountIds?.map(id => id.toString()) || [],
@@ -391,13 +392,14 @@ const ServiceDetailPage: React.FC = () => {
       const rooms = selectedRooms.map((roomId: string | number) => ({
         id: roomId,
         quantity: 1,
+        // Backend now expects dates per item
+        checkInDate: checkInDate ? `${checkInDate}T14:00:00.000Z` : new Date().toISOString(),
+        checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
       }));
 
       const response: any = await apiClient.orders.create({
         tickets: [],
         rooms,
-        checkInDate: checkInDate ? `${checkInDate}T14:00:00.000Z` : new Date().toISOString(),
-        checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
         guestPhone: roomPhone,
         note: specialRequests || undefined,
         discountIds: selectedDiscountIds,

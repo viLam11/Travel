@@ -32,11 +32,18 @@ import { useAuth } from "@/hooks/useAuth"
 
 const getNavItems = (currentPath: string, currentUser: any) => {
     // Get user role and provider type
-    const userRole = currentUser?.user?.role?.toLowerCase() || 'provider';
-    const providerType: 'hotel' | 'place' = currentUser?.user?.providerType || 'hotel';
+    const userRole = currentUser?.user?.role?.toLowerCase() || '';
+    
+    // Normalize provider type based on specific role or providerType field
+    let providerType: 'hotel' | 'place' = 'hotel';
+    if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place') {
+        providerType = 'place';
+    } else if (userRole === 'provider_hotel' || currentUser?.user?.providerType === 'hotel') {
+        providerType = 'hotel';
+    }
 
     const isAdmin = userRole === 'admin';
-    const isProvider = userRole === 'provider';
+    const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
 
     const navMain = [];
 
@@ -118,9 +125,20 @@ const getNavItems = (currentPath: string, currentUser: any) => {
         if (providerType === 'hotel') {
             navMain.push({
                 title: "Quản lý phòng",
-                url: "/provider/hotels/rooms",
+                url: ROUTES.PROVIDER_ROOMS,
                 icon: <Bed />,
-                isActive: currentPath === "/provider/hotels/rooms",
+                isActive: currentPath === ROUTES.PROVIDER_ROOMS,
+                visible: true,
+            } as any);
+        }
+
+        // Venue Provider - Ticket Management
+        if (providerType === 'place') {
+            navMain.push({
+                title: "Quản lý vé",
+                url: ROUTES.PROVIDER_TICKETS,
+                icon: <Tags />,
+                isActive: currentPath === ROUTES.PROVIDER_TICKETS,
                 visible: true,
             } as any);
         }
