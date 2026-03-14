@@ -31,6 +31,9 @@ public class Discount {
     private Long quantity;
     private BigDecimal minSpend;
 
+    @Column(name = "is_system", columnDefinition = "boolean default true")
+    private Boolean isSystem = false;
+
     @Enumerated(EnumType.STRING)
     private DiscountApplyType applyType; // SERVICE, CATEGORY, PROVINCE
 

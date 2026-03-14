@@ -1,6 +1,5 @@
 package com.travollo.Travel.domains.promotions.dto;
 
-import com.travollo.Travel.utils.DiscountApplyType;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -16,6 +15,7 @@ public class DiscountResponse {
     private LocalDateTime endDate;
     private Long quantity;
     private BigDecimal minSpend;
+    private Boolean isSystem;
 
     // discount type: Fixed, Percentage
     private DiscountType discountType;

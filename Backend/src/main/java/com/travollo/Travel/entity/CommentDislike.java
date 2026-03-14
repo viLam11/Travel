@@ -13,7 +13,7 @@ public class CommentDislike {
 
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "comment_id")
-    private CommentService comment;
+    private Comment comment;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

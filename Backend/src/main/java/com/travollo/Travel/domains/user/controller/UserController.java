@@ -2,7 +2,7 @@ package com.travollo.Travel.domains.user.controller;
 
 import com.travollo.Travel.entity.User;
 import com.travollo.Travel.repo.UserRepo;
-import com.travollo.Travel.service.impl.UserService;
+import com.travollo.Travel.domains.user.service.UserService;
 import com.travollo.Travel.utils.CurrentUser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

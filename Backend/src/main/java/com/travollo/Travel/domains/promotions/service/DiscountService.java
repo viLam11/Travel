@@ -31,6 +31,7 @@ public class DiscountService {
     private final ProvinceRepo provinceRepo;
     @PersistenceContext
     private EntityManager entityManager;
+    private final DiscountMapper discountMapper;
 
     @Transactional
     public DiscountResponse createDiscount(DiscountRequest request) {
@@ -82,6 +83,30 @@ public class DiscountService {
         Discount discount = discountRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Discount not found"));
         return mapToResponse(discount);
+    }
+
+    @Transactional
+    public DiscountResponse patchDiscount(String id, DiscountRequest request) {
+        Discount existingDiscount = discountRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Discount với id: " + id));
+        discountMapper.patchRequest(request, existingDiscount);
+
+        // 4. BẮT BUỘC CHO JPA: Map ngược lại quan hệ 2 chiều (Bidirectional)
+        // Khi MapStruct tạo ra các DiscountServiceRe mới, nó chưa biết cha của nó (Discount) là ai.
+        if (existingDiscount.getServiceList() != null) {
+            existingDiscount.getServiceList().forEach(item -> item.setDiscount(existingDiscount));
+        }
+        if (existingDiscount.getProvinceList() != null) {
+            existingDiscount.getProvinceList().forEach(item -> item.setDiscount(existingDiscount));
+        }
+
+        // 5. Lưu vào Database (Dirty checking của @Transactional sẽ tự động update, nhưng gọi save() cho chắc chắn)
+        System.out.println("Existing Discount after patching: " + existingDiscount);
+        Discount updatedDiscount = discountRepo.save(existingDiscount);
+        System.out.println("Updated Discount after saving: " + updatedDiscount);
+
+        // 6. Trả về Response
+        return discountMapper.toResponse(updatedDiscount);
     }
 
     @Transactional
@@ -164,7 +189,8 @@ public class DiscountService {
             .startDate(entity.getStartDate())
             .endDate(entity.getEndDate())
             .quantity(entity.getQuantity())
-            .minSpend(entity.getMinSpend());
+            .minSpend(entity.getMinSpend())
+            .isSystem(entity.getIsSystem());
         return builder.build();
     }
 }

@@ -12,8 +12,8 @@ import lombok.Data;
 @Table(name = "imageservices")
 public class ImageService {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long imageID;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String imageID;
 
     @NotBlank(message = "Image URL is required")
     private String imageUrl;

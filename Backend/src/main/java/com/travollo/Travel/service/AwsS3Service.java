@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AwsS3Service {
@@ -29,7 +30,16 @@ public class AwsS3Service {
     public String saveImageToS3(MultipartFile photo) {
         String s3LocationImg;
         try {
-            String S3Filename = photo.getOriginalFilename();
+            String originalFilename = photo.getOriginalFilename();
+            String sanitizedFilename = "unnamed_file";
+            if (originalFilename != null && !originalFilename.trim().isEmpty()) {
+                sanitizedFilename = originalFilename
+                        .replaceAll("\\s+", "_")
+                        .replaceAll("[^a-zA-Z0-9.\\-_]", "");
+            }
+
+            String uniquePrefix = UUID.randomUUID().toString();
+            String S3Filename = uniquePrefix + "_" + sanitizedFilename;
             BasicAWSCredentials awsCredentials = new BasicAWSCredentials(awsS3AccessKey, awsS3ASecretKey);
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                     .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
