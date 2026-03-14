@@ -640,8 +640,10 @@ const ServiceDetailPage: React.FC = () => {
   // Calculate totals
   const totalPrice = serviceType === 'hotel'
     ? (service.priceAdult + service.priceChild) // Fallback for hotel sidebar if rooms not selected
-    : ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0) +
-      service.additionalServices.reduce((sum, s) => sum + s.price, 0);
+    : (ticketList.length > 0 
+        ? ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0)
+        : (adultCount * (service.priceAdult || 0) + childCount * (service.priceChild || 0))
+      ) + service.additionalServices.reduce((sum, s) => sum + s.price, 0);
 
   // Map API discounts if present, otherwise use service.discounts (mock)
   const activeDiscounts: Discount[] = apiDiscounts.length > 0
@@ -902,6 +904,8 @@ const ServiceDetailPage: React.FC = () => {
               setCheckOutDate={setCheckOutDate}
               guestCount={guestCount}
               setGuestCount={setGuestCount}
+              ticketList={ticketList}
+              setTicketList={setTicketList}
             />
           </div>
         </div >
@@ -928,8 +932,6 @@ const ServiceDetailPage: React.FC = () => {
         setCustomerEmail={setCustomerEmail}
         customerNote={customerNote}
         setCustomerNote={setCustomerNote}
-        adultCount={adultCount}
-        childCount={childCount}
         paymentMethod={paymentMethod}
         setPaymentMethod={setPaymentMethod}
         showDiscountSection={showDiscountSection}

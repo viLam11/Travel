@@ -25,8 +25,6 @@ interface ServiceBookingModalProps {
   setCustomerEmail: (email: string) => void;
   customerNote: string;
   setCustomerNote: (note: string) => void;
-  adultCount: number;
-  childCount: number;
   paymentMethod: 'MOMO' | 'VNPAY' | 'ZALOPAY';
   setPaymentMethod: (method: 'MOMO' | 'VNPAY' | 'ZALOPAY') => void;
   showDiscountSection: boolean;
@@ -54,8 +52,6 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   setCustomerEmail,
   customerNote,
   setCustomerNote,
-  adultCount,
-  childCount,
   paymentMethod,
   setPaymentMethod,
   showDiscountSection,
@@ -72,9 +68,9 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   service.additionalServices.map(s => s.name) // Mặc định chọn tất cả
   );
 
-  const basePrice = (adultCount * service.priceAdult) + (childCount * service.priceChild) + 
+  const basePrice = ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0) + 
     service.additionalServices
-    .filter(s => selectedAdditionalServices.includes(s.name))  // Lọc theo đã chọn
+    .filter(s => selectedAdditionalServices.includes(s.name))
     .reduce((sum, s) => sum + s.price, 0);
 
   const isDiscountEligible = (discount: Discount): boolean => {
@@ -170,7 +166,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
       customerName.trim() !== '' &&
       customerPhone.trim() !== '' &&
       customerEmail.trim() !== '' &&
-      (adultCount > 0 || childCount > 0) // Ít nhất 1 vé
+      ticketList.some(t => (t.count || 0) > 0) // Ít nhất 1 vé
     );
   };
 
@@ -641,22 +637,14 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                 <h3 className="text-sm font-bold text-gray-900 mb-3">Tổng chi phí</h3>
 
                 <div className="space-y-2 text-sm">
-                  {adultCount > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-700">Vé người trưởng thành x {adultCount}</span>
-                    <span className="font-semibold">
-                      {(adultCount * (service.priceAdult || 0)).toLocaleString()} VNĐ
-                    </span>
-                  </div>)}
-
-                  {childCount > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700">Vé trẻ em x {childCount}</span>
+                  {ticketList.filter(t => (t.count || 0) > 0).map((ticket) => (
+                    <div key={ticket.id} className="flex items-center justify-between">
+                      <span className="text-gray-700">{ticket.name} x {ticket.count}</span>
                       <span className="font-semibold">
-                        {(childCount * (service.priceChild || 0)).toLocaleString()} VNĐ
+                        {(ticket.count * (ticket.price || 0)).toLocaleString()} VNĐ
                       </span>
                     </div>
-                  )}
+                  ))}
                   {service.additionalServices
                     .filter(s => selectedAdditionalServices.includes(s.name))
                     .map((addService) => (

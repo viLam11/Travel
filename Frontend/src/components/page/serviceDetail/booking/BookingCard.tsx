@@ -3,12 +3,41 @@ import React, { useState } from 'react';
 import { MapPin, Calendar, Clock, CheckCircle, ChevronDown, Users } from 'lucide-react';
 import type { ServiceDetail } from '@/types/serviceDetail.types';
 
+interface BookingCardProps {
+  service: ServiceDetail;
+  serviceType?: string; // 'hotel' or 'place'
+  adultCount: number;
+  setAdultCount: (count: number) => void;
+  childCount: number;
+  setChildCount: (count: number) => void;
+  finalPrice: number;
+  onBookNow: () => void;
+  onRoomBookNow?: () => void;
+  // Hotel specific props
+  checkInDate?: string;
+  setCheckInDate?: (date: string) => void;
+  checkOutDate?: string;
+  setCheckOutDate?: (date: string) => void;
   guestCount?: number;
   setGuestCount?: (count: number) => void;
   ticketList: any[];
   setTicketList: (tickets: any[]) => void;
 }
 
+const BookingCard: React.FC<BookingCardProps> = ({
+  service,
+  serviceType = 'place',
+  adultCount,
+  setAdultCount,
+  childCount,
+  setChildCount,
+  finalPrice,
+  onBookNow,
+  onRoomBookNow,
+  checkInDate,
+  setCheckInDate,
+  checkOutDate,
+  setCheckOutDate,
   guestCount,
   setGuestCount,
   ticketList,
@@ -267,16 +296,6 @@ import type { ServiceDetail } from '@/types/serviceDetail.types';
       >
         {isHotel ? 'ĐẶT PHÒNG' : 'ĐẶT NGAY'}
       </button>
-
-      {/* Test Room Booking Button */}
-      {/* {onRoomBookNow && (
-        <button 
-          onClick={onRoomBookNow}
-          className="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-lg font-bold text-sm transition-all"
-        >
-          ĐẶT PHÒNG (TEST)
-        </button>
-      )} */}
     </div>
   );
 };
