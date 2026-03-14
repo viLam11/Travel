@@ -515,6 +515,41 @@ export class ApiClient {
     getByServiceId: (serviceId: string | number): ApiResponse<any[]> => {
       return this.get(`/services/${serviceId}/tickets`);
     },
+    create: (serviceId: string | number, data: any): ApiResponse<any> => {
+      return this.post(`/services/${serviceId}/tickets`, data);
+    },
+    update: (ticketId: string | number, data: any): ApiResponse<any> => {
+      return this.patch(`/tickets/${ticketId}`, data);
+    },
+    delete: (ticketId: string | number): ApiResponse<any> => {
+      return this.delete(`/tickets/${ticketId}`);
+    },
+  };
+
+  rooms = {
+    getByHotelId: (hotelId: string | number): ApiResponse<any[]> => {
+      return this.get(`/services/${hotelId}/rooms`);
+    },
+    create: (hotelId: string | number, data: any): ApiResponse<any> => {
+      // Create room uses multipart/form-data according to Controller
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key === 'photos' && Array.isArray(data[key])) {
+          data[key].forEach((photo: File) => formData.append('photos', photo));
+        } else {
+          formData.append(key, data[key]);
+        }
+      });
+      return this.post(`/services/${hotelId}/rooms`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    update: (roomId: string | number, data: any): ApiResponse<any> => {
+      return this.patch(`/rooms/${roomId}`, data);
+    },
+    delete: (roomId: string | number): ApiResponse<any> => {
+      return this.delete(`/rooms/${roomId}`);
+    },
   };
 
   // Province endpoints

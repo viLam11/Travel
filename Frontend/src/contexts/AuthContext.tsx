@@ -133,14 +133,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userResponse = await apiClient.users.getProfile();
             console.log('User Profile Fetched:', userResponse);
 
-            // Map backend DTO to frontend User interface
+            // Mapping backend DTO to frontend User interface
+            const rawRole = userResponse.role?.toUpperCase() || 'USER';
+            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+            
             const user: User = {
                 userID: userResponse.userID ?? 0,
                 name: userResponse.fullname || userResponse.username || 'User',
                 email: userResponse.email,
-                role: userResponse.role?.toLowerCase() || 'user',
+                role: normalizedRole,
                 phoneNumber: userResponse.phone,
-                address: userResponse.address
+                address: userResponse.address,
+                // Derive providerType from specific provider role
+                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' : 
+                              rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                // Add the original specific role for component-level checks if needed
+                status: userResponse.status || 'active'
             };
 
             const authData: LoginResponse = { token, user };
@@ -235,15 +243,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }) as unknown as LoginResponse;
             console.log("Đăng nhập thành công:", response);
 
-            // Map fullname to name if needed (if backend returns fullname in login response too)
-            // But usually login response matches DTO. Let's ensure name is set.
+            // Map fullname to name if needed
             if ((response.user as any).fullname && !response.user.name) {
                 response.user.name = (response.user as any).fullname;
             }
 
-            // Normalize role to lowercase
-            if (response.user.role) {
-                response.user.role = response.user.role.toLowerCase();
+            // Normalize role and set providerType
+            const rawRole = (response.user.role as string)?.toUpperCase() || 'USER';
+            if (rawRole.startsWith('PROVIDER_')) {
+                response.user.role = 'provider';
+                response.user.providerType = rawRole === 'PROVIDER_HOTEL' ? 'hotel' : 'place';
+            } else {
+                response.user.role = rawRole.toLowerCase();
             }
 
             // Save JWT token and user data
