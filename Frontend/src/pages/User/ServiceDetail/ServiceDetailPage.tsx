@@ -35,6 +35,8 @@ import toast from 'react-hot-toast';
 import AuthModal from '@/components/common/AuthModal';
 import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
 import apiClient from '@/services/apiClient';
+import apiServiceClient from "@/services/apiServiceClient";
+import  {type Service2, SERVICETYPE} from "@/types";
 
 // ─── Toggle mock / real API ───────────────────────────────────────────────────
 const USE_MOCK = false; // set true để dùng mock data, false để gọi API thật
@@ -71,15 +73,15 @@ const ServiceDetailPage: React.FC = () => {
     return slug.split('-')[0];
   };
 
-  const MOCK_ROOMS = [
-    { id: 101, name: 'Room 101', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [{ roomId: 101, checkIn: '2025-10-20', checkOut: '2025-10-22' }] },
-    { id: 102, name: 'Room 102', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [] },
-    { id: 103, name: 'Room 103', type: 'Tiêu chuẩn', price: 120, capacity: 3, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar'], available: true, currentBookings: [] },
-    { id: 201, name: 'Room 201', type: 'Cao cấp', price: 180, capacity: 4, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Bồn tắm'], available: true, currentBookings: [{ roomId: 201, checkIn: '2025-10-25', checkOut: '2025-10-27' }] },
-    { id: 202, name: 'Room 202', type: 'Cao cấp', price: 180, capacity: 4, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Bồn tắm'], available: true, currentBookings: [] },
-    { id: 301, name: 'Room 301', type: 'Suite', price: 300, capacity: 6, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Ban công', 'Bếp nhỏ'], available: true, currentBookings: [] },
-    { id: 302, name: 'Room 302', type: 'Suite', price: 300, capacity: 6, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Ban công', 'Bếp nhỏ'], available: false, currentBookings: [] },
-  ];
+  // const MOCK_ROOMS = [
+  //   { id: 101, name: 'Room 101', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [{ roomId: 101, checkIn: '2025-10-20', checkOut: '2025-10-22' }] },
+  //   { id: 102, name: 'Room 102', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [] },
+  //   { id: 103, name: 'Room 103', type: 'Tiêu chuẩn', price: 120, capacity: 3, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar'], available: true, currentBookings: [] },
+  //   { id: 201, name: 'Room 201', type: 'Cao cấp', price: 180, capacity: 4, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Bồn tắm'], available: true, currentBookings: [{ roomId: 201, checkIn: '2025-10-25', checkOut: '2025-10-27' }] },
+  //   { id: 202, name: 'Room 202', type: 'Cao cấp', price: 180, capacity: 4, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Bồn tắm'], available: true, currentBookings: [] },
+  //   { id: 301, name: 'Room 301', type: 'Suite', price: 300, capacity: 6, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Ban công', 'Bếp nhỏ'], available: true, currentBookings: [] },
+  //   { id: 302, name: 'Room 302', type: 'Suite', price: 300, capacity: 6, amenities: ['WiFi', 'Điều hòa', 'TV', 'Minibar', 'Ban công', 'Bếp nhỏ'], available: false, currentBookings: [] },
+  // ];
 
   const id = extractId(idSlug);
 
@@ -143,7 +145,6 @@ const ServiceDetailPage: React.FC = () => {
   // Load rooms/tickets from API when serviceId is available
   const fetchReviews = async () => {
     try {
-      if (USE_MOCK) return; // Skip if forcing mock
       if (!id) return;
       const response = await apiClient.comments.getByServiceId(id);
       if (response?.data?.content?.length > 0) {
@@ -156,7 +157,6 @@ const ServiceDetailPage: React.FC = () => {
 
   const fetchDiscounts = async () => {
     try {
-      if (USE_MOCK) return;
       if (!id || !resolvedProvinceID) return;
       const data = await discountApi.getSatisfiedDiscounts(id, resolvedProvinceID);
       if (Array.isArray(data) && data.length > 0) {
@@ -170,42 +170,10 @@ const ServiceDetailPage: React.FC = () => {
   useEffect(() => {
     const loadRoomsOrTickets = async () => {
       if (!id) return;
-
-      if (USE_MOCK) {
-        setAllRooms(MOCK_ROOMS);
-        return;
-      }
-
-      try {
-        const data: any[] = await apiClient.tickets.getByServiceId(id);
-        // Map backend ticket/room response to UI shape
-        const mapped = (Array.isArray(data) ? data : []).map((item: any) => ({
-          id: item.roomID || item.id, // Fallback to roomID for hotels
-          name: item.roomName ?? item.name ?? `Room ${item.roomID || item.id}`,
-          type: item.roomType ?? item.ticketType ?? '',
-          price: item.price ?? item.pricePerNight ?? 0,
-          capacity: item.capacity ?? item.maxGuests ?? 2,
-          amenities: item.amenities ?? [],
-          available: item.available ?? item.isAvailable ?? true,
-          currentBookings: item.currentBookings ?? [],
-          description: item.description ?? '',
-          quantity: item.quantity ?? item.remainingQuantity ?? 0,
-          count: 0 // Initialize count for UI
-        }));
-
-        if (serviceType === 'hotel') {
-          setAllRooms(mapped);
-        } else {
-          setTicketList(mapped);
-          setAllRooms([]);
-        }
-      } catch (err) {
-        console.error('Failed to load rooms/tickets', err);
-        if (serviceType === 'hotel') {
-          setAllRooms(MOCK_ROOMS);
-        } else {
-          setTicketList([]);
-        }
+      const serviceData : Service2 = await apiServiceClient.services.getById(id);
+      console.log(serviceData);
+      if (serviceData.serviceType == SERVICETYPE.HOTEL) {
+        // const roomData = await apiServiceClient.
       }
     };
 
@@ -364,14 +332,6 @@ const ServiceDetailPage: React.FC = () => {
   const handleConfirmRoomBooking = async (selectedDiscountIds: string[]) => {
     if (selectedRooms.length === 0) {
       toast.error('Vui lòng chọn ít nhất một phòng');
-      return;
-    }
-
-    if (USE_MOCK) {
-      // Mock: chỉ log và đóng modal
-      console.log('[MOCK] Room booking confirmed:', { checkInDate, checkOutDate, selectedRooms, roomPhone, specialRequests });
-      toast.success('[Mock] Đặt phòng thành công!');
-      handleCloseRoomModal();
       return;
     }
 
@@ -572,41 +532,6 @@ const ServiceDetailPage: React.FC = () => {
     return icons[iconName] || <Info className="w-6 h-6 text-orange-500" />;
   };
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: 1,
-      author: "Ali Tufan",
-      date: "April 2023",
-      rating: 5,
-      title: "Take this tour! Its fantastic!",
-      content:
-        "Great for 4-5 hours to explore. Really a lot to see and tons of photo spots. Even have a passport for you to collect all the stamps as a souvenir. Must see for a Harry Potter fan.",
-      images: [
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400",
-        "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=400",
-        "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400",
-      ],
-      helpful: 0,
-      notHelpful: 0,
-    },
-    {
-      id: 2,
-      author: "Ali Tufan",
-      date: "April 2023",
-      rating: 5,
-      title: "Take this tour! Its fantastic!",
-      content:
-        "Great for 4-5 hours to explore. Really a lot to see and tons of photo spots. Even have a passport for you to collect all the stamps as a souvenir. Must see for a Harry Potter fan.",
-      images: [
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400",
-        "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=400",
-        "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400",
-      ],
-      helpful: 0,
-      notHelpful: 0,
-    },
-  ];
 
   // If we have real API reviews, use them + user's newly mock-added reviews. 
   // Otherwise, fallback to the hardcoded `reviews` array + user's local reviews.
@@ -628,7 +553,7 @@ const ServiceDetailPage: React.FC = () => {
 
   const allReviews = hasRealReviews 
     ? [...userReviews, ...formattedApiReviews] 
-    : [...userReviews, ...reviews];
+    : [...userReviews];
 
   // Loading state
   if (loading) {
@@ -886,9 +811,6 @@ const ServiceDetailPage: React.FC = () => {
                 />
               )
             )}
-
-
-
 
             {activeTab === "rooms" && (
               serviceType === 'hotel' ? (
