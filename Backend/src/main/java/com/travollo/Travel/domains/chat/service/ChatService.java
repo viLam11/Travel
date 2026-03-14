@@ -6,7 +6,7 @@ import com.travollo.Travel.domains.chat.dto.ChatMessageResponseDTO;
 import com.travollo.Travel.domains.chat.dto.UserChatDTO;
 import com.travollo.Travel.domains.chat.entity.ChatMessage;
 import com.travollo.Travel.domains.chat.repo.ChatRepo;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.UserRepo;
 import jakarta.transaction.Transactional;

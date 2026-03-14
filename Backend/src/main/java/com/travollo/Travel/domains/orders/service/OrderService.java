@@ -1,5 +1,6 @@
 package com.travollo.Travel.domains.orders.service;
 
+import com.travollo.Travel.domains.hotel.entity.Room;
 import com.travollo.Travel.domains.hotel.repo.RoomRepo;
 import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
@@ -16,7 +17,7 @@ import com.travollo.Travel.domains.promotions.entity.PercentageDiscount;
 import com.travollo.Travel.domains.promotions.repo.DiscountRepo;
 import com.travollo.Travel.domains.promotions.service.DiscountService;
 import com.travollo.Travel.domains.ticket.repo.TicketRepo;
-import com.travollo.Travel.dto.SuccessResponse;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.OrderRepo;
@@ -94,9 +95,9 @@ public class OrderService {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Hai mã giảm giá không được áp dụng cùng loại (1 của hệ thống, 1 của doanh nghiệp)!");
                 }
             }
-            if (orderCreateRequest.getCheckInDate().isAfter(orderCreateRequest.getCheckOutDate())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày check-in phải trước ngày check-out!");
-            }
+//            if (orderCreateRequest.getCheckInDate().isAfter(orderCreateRequest.getCheckOutDate())) {
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày check-in phải trước ngày check-out!");
+//            }
             if (orderCreateRequest.getTickets().isEmpty() && orderCreateRequest.getRooms().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn hàng phải có ít nhất một vé hoặc một phòng!");
             }
@@ -112,7 +113,7 @@ public class OrderService {
             List<OrderedRoom> orderedRooms = new ArrayList<>();
             // 2. Chuyển đổi và thiết lập danh sách OrderedTicket
             // QUAN TRỌNG: Phải setOrder(newOrder) cho từng ticket
-            if (orderCreateRequest.getTickets().size() > 0) {
+            if (!orderCreateRequest.getTickets().isEmpty()) {
                 orderedTickets = orderCreateRequest.getTickets().stream().map(ticketItem -> {
                     Ticket ticketEntity = ticketRepo.findById(ticketItem.getId())
                             .orElseThrow(() -> new RuntimeException("Không tìm thấy Ticket ID: " + ticketItem.getId()));
@@ -120,8 +121,8 @@ public class OrderService {
                     ot.setTicket(ticketEntity);
                     ot.setAmount(ticketItem.getQuantity());
                     ot.setPrice(ticketEntity.getPrice().multiply(BigDecimal.valueOf(ticketItem.getQuantity())));
-                    ot.setValidStart(orderCreateRequest.getCheckInDate());
-                    ot.setValidEnd(orderCreateRequest.getCheckOutDate());
+                    ot.setValidStart(ticketItem.getCheckInDate());
+                    ot.setValidEnd(ticketItem.getCheckOutDate());
                     ot.setCreatedAt(LocalDateTime.now());
                     // DÒNG NÀY QUYẾT ĐỊNH VIỆC CÓ LƯU ĐƯỢC LIÊN KẾT HAY KHÔNG
                     ot.setOrder(newOrder);
@@ -129,7 +130,7 @@ public class OrderService {
                 }).collect(Collectors.toList());
             }
 
-            if (orderCreateRequest.getRooms().size() == 0) {
+            if (!orderCreateRequest.getRooms().isEmpty()) {
                 // 3. Chuyển đổi và thiết lập danh sách OrderedRoom (Tương tự Ticket)
                 orderedRooms = orderCreateRequest.getRooms().stream().map(roomItem -> {
                     Room roomEntity = roomRepo.findById(roomItem.getId())
@@ -138,8 +139,8 @@ public class OrderService {
                     or.setRoom(roomEntity);
                     or.setAmount(roomItem.getQuantity());
                     or.setPrice(roomEntity.getPrice().multiply(BigDecimal.valueOf(roomItem.getQuantity())));
-                    or.setStartDate(orderCreateRequest.getCheckInDate());
-                    or.setEndDate(orderCreateRequest.getCheckOutDate());
+                    or.setStartDate(roomItem.getCheckInDate());
+                    or.setEndDate(roomItem.getCheckOutDate());
                     or.setCreatedAt(LocalDateTime.now());
                     // THIẾT LẬP LIÊN KẾT
                     or.setOrder(newOrder);
@@ -235,7 +236,7 @@ public class OrderService {
             }
 
             return roomEntity;
-        }).collect(Collectors.toList());
+        }).toList();
 
 
         // 3. Xử lý danh sách Ticket
@@ -248,7 +249,7 @@ public class OrderService {
             }
 
             return ticketEntity;
-        }).collect(Collectors.toList());
+        }).toList();
 
         // 4. Bắn thông báo cho các chủ dịch vụ sau khi đơn hàng đã được tạo thành công
         for (User provider : providersToNotify) {
@@ -355,9 +356,8 @@ public class OrderService {
 
     public Page<Order> getAllOrderByUser(User user, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Order> ordersPage = orderRepo.findByUser(user, pageable);
 
-        return ordersPage;
+        return orderRepo.findByUser(user, pageable);
     }
 
 }

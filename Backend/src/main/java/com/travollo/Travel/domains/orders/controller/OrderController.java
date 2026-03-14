@@ -3,7 +3,7 @@ package com.travollo.Travel.domains.orders.controller;
 import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
 import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.domains.orders.service.OrderService;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.utils.CurrentUser;
 import com.travollo.Travel.utils.Role;

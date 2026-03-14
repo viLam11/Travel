@@ -1,7 +1,7 @@
 package com.travollo.Travel.domains.orders.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.travollo.Travel.entity.Room;
+import com.travollo.Travel.domains.hotel.entity.Room;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;

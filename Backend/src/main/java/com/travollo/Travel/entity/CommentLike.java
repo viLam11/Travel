@@ -1,5 +1,6 @@
 package com.travollo.Travel.entity;
 
+import com.travollo.Travel.domains.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 

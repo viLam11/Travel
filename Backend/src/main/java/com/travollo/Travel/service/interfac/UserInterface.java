@@ -3,7 +3,7 @@ package com.travollo.Travel.service.interfac;
 import com.travollo.Travel.dto.UserDTO;
 import com.travollo.Travel.dto.VerifyDTO;
 import com.travollo.Travel.domains.orders.entity.Order;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 //import org.hibernate.mapping.Any;
 import org.springframework.http.ResponseEntity;
 //import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;

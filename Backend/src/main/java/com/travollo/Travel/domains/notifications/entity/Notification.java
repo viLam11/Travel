@@ -1,7 +1,7 @@
 package com.travollo.Travel.domains.notifications.entity;
 
 import com.travollo.Travel.domains.orders.entity.Order;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

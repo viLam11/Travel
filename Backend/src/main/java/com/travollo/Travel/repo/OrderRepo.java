@@ -1,7 +1,7 @@
 package com.travollo.Travel.repo;
 
 import com.travollo.Travel.domains.orders.entity.Order;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

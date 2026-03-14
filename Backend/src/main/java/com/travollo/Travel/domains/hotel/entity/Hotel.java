@@ -1,14 +1,12 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.hotel.entity;
 
+import com.travollo.Travel.entity.TService;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;

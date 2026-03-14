@@ -4,13 +4,11 @@ import com.travollo.Travel.common.PageResponse;
 import com.travollo.Travel.domains.ticket.dto.TicketCreateRequest;
 import com.travollo.Travel.domains.ticket.dto.TicketResponse;
 import com.travollo.Travel.domains.ticket.service.TicketService;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.utils.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/tickets")

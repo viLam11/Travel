@@ -2,12 +2,11 @@ package com.travollo.Travel.utils;
 
 import com.travollo.Travel.dto.CustomUserDetails;
 import com.travollo.Travel.dto.UserDTO;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.repo.UserRepo;
 import jakarta.persistence.Id;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;

@@ -4,7 +4,7 @@ import com.travollo.Travel.common.PageResponse;
 import com.travollo.Travel.domains.comments.dto.CommentResponseDTO;
 import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
 import com.travollo.Travel.domains.comments.dto.UpdateCommentDTO;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.domains.comments.service.CommentSService;
 import com.travollo.Travel.utils.CurrentUser;
 import lombok.RequiredArgsConstructor;

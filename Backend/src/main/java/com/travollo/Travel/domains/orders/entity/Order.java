@@ -2,7 +2,7 @@ package com.travollo.Travel.domains.orders.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.travollo.Travel.domains.promotions.entity.Discount;
-import com.travollo.Travel.entity.User;
+import com.travollo.Travel.domains.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UuidGenerator;
