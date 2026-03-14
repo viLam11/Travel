@@ -1,5 +1,7 @@
 package com.travollo.Travel.domains.hotel.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,5 +24,6 @@ public class RoomImage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @OneToMany(mappedBy = "room_id", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private Room room;
 }

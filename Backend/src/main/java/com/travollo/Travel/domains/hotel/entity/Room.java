@@ -1,5 +1,6 @@
 package com.travollo.Travel.domains.hotel.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.travollo.Travel.utils.RoomType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -38,5 +39,6 @@ public class Room {
     private Hotel hotel;
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
     private List<RoomImage> images = new ArrayList<>();
 }
