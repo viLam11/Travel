@@ -225,7 +225,6 @@ const DestinationDetailPage: React.FC = () => {
                 <DestinationCard
                   key={item.id}
                   destination={item}
-                  {...item}
                   onBook={(id) => handleBook(id, { ...item, category: 'place' })}
                 />
               ))}
@@ -253,7 +252,7 @@ const DestinationDetailPage: React.FC = () => {
               {displayedFood.map((item) => (
                 <DestinationCard
                   key={item.id}
-                  {...item}
+                  destination={item}
                   onBook={(id) => handleBook(id, { ...item, category: 'food' })}
                 />
               ))}
@@ -281,7 +280,7 @@ const DestinationDetailPage: React.FC = () => {
               {displayedHotels.map((item) => (
                 <DestinationCard
                   key={item.id}
-                  {...item}
+                  destination={item}
                   onBook={(id) => handleBook(id, { ...item, category: 'hotel' })}
                 />
               ))}

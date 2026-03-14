@@ -47,6 +47,7 @@ interface ReviewsSectionProps {
   totalReviews: number;
   isLoggedIn: boolean;
   isSubmitting?: boolean;
+  isLoading?: boolean;
 }
 
 type SortOption = 'newest' | 'helpful' | 'rating-high' | 'rating-low';
@@ -70,7 +71,8 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   setShowAllReviews,
   totalReviews,
   isLoggedIn,
-  isSubmitting = false
+  isSubmitting = false,
+  isLoading = false
 }) => {
   const navigate = useNavigate();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -497,165 +499,184 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
       {/* Reviews List */}
       <div className="space-y-6 mt-8">
-        {sortedReviews.map((review) => (
-          <div key={review.id} className="bg-white border border-gray-200 rounded-xl p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-semibold text-gray-900">{review.author}</h4>
-                  {review.verified && (
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                      Đã xác minh
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">{review.date}</p>
-              </div>
-              <div className="flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${
-                      i < review.rating
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 bg-white border border-gray-200 rounded-xl">
+            <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-medium">Đang tải đánh giá...</p>
+          </div>
+        ) : sortedReviews.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 bg-white border border-gray-100 rounded-xl text-center px-4">
+            <div className="bg-orange-50 p-4 rounded-full mb-4">
+              <Star className="w-8 h-8 text-orange-200" />
             </div>
-
-            <h5 className="font-semibold text-gray-900 mb-2">{review.title}</h5>
-            <p className="text-sm text-gray-700 leading-relaxed mb-4">{review.content}</p>
-            {review.cost && (
-              <p className="text-sm text-orange-600 font-medium mb-4">Chi phí: {review.cost}</p>
-            )}
-
-            {/* Review Images */}
-            {review.images && review.images.length > 0 && (
-              <div className="mb-4">
-                <div className="grid grid-cols-3 gap-3">
-                  {review.images.slice(0, 3).map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="aspect-square rounded-lg overflow-hidden cursor-pointer relative group"
-                      onClick={() => {
-                        setExpandedImageReview(review.id);
-                        setExpandedImageIndex(idx);
-                      }}
-                    >
-                      <img
-                        src={img}
-                        alt={`Review ${idx + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      {idx === 2 && review.images!.length > 3 && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="text-white font-bold text-lg">
-                            {countAdditionalImages(review.images!.length)}
-                          </span>
-                        </div>
+            <h4 className="text-gray-900 font-semibold mb-1">Chưa có đánh giá nào</h4>
+            <p className="text-gray-500 text-sm max-w-xs">
+              Hãy là người đầu tiên chia sẻ trải nghiệm về dịch vụ này nhé!
+            </p>
+          </div>
+        ) : (
+          <>
+            {sortedReviews.map((review) => (
+              <div key={review.id} className="bg-white border border-gray-200 rounded-xl p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-gray-900">{review.author}</h4>
+                      {review.verified && (
+                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                          Đã xác minh
+                        </span>
                       )}
                     </div>
-                  ))}
+                    <p className="text-sm text-gray-500">{review.date}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < review.rating
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <h5 className="font-semibold text-gray-900 mb-2">{review.title}</h5>
+                <p className="text-sm text-gray-700 leading-relaxed mb-4">{review.content}</p>
+                {review.cost && (
+                  <p className="text-sm text-orange-600 font-medium mb-4">Chi phí: {review.cost}</p>
+                )}
+
+                {/* Review Images */}
+                {review.images && review.images.length > 0 && (
+                  <div className="mb-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      {review.images.slice(0, 3).map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="aspect-square rounded-lg overflow-hidden cursor-pointer relative group"
+                          onClick={() => {
+                            setExpandedImageReview(review.id);
+                            setExpandedImageIndex(idx);
+                          }}
+                        >
+                          <img
+                            src={img}
+                            alt={`Review ${idx + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          {idx === 2 && review.images!.length > 3 && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <span className="text-white font-bold text-lg">
+                                {countAdditionalImages(review.images!.length)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Image Lightbox */}
+                {expandedImageReview === review.id && review.images && (
+                  <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+                    <button
+                      onClick={() => setExpandedImageReview(null)}
+                      className="absolute top-4 right-4 text-white hover:text-gray-300 cursor-pointer"
+                    >
+                      <X className="w-8 h-8" />
+                    </button>
+
+                    <div className="flex items-center justify-between w-full max-w-4xl">
+                      <button
+                        onClick={() =>
+                          setExpandedImageIndex((prev) =>
+                            prev === 0 ? review.images!.length - 1 : prev - 1
+                          )
+                        }
+                        className="text-white text-3xl hover:text-gray-300 p-2 cursor-pointer"
+                      >
+                        &#10094;
+                      </button>
+
+                      <img
+                        src={review.images[expandedImageIndex]}
+                        alt={`Expanded ${expandedImageIndex + 1}`}
+                        className="max-w-3xl max-h-[80vh] object-contain"
+                      />
+
+                      <button
+                        onClick={() =>
+                          setExpandedImageIndex((prev) =>
+                            prev === review.images!.length - 1 ? 0 : prev + 1
+                          )
+                        }
+                        className="text-white text-3xl hover:text-gray-300 p-2 cursor-pointer"
+                      >
+                        &#10095;
+                      </button>
+                    </div>
+
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+                      {expandedImageIndex + 1} / {review.images.length}
+                    </div>
+                  </div>
+                )}
+
+                {/* Helpful Buttons + Report */}
+                <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handleThumbsUp(review.id)}
+                    className={`flex items-center gap-2 text-sm transition-colors cursor-pointer ${
+                      reviewLikes[review.id]
+                        ? 'text-orange-500'
+                        : 'text-gray-600 hover:text-orange-500'
+                    }`}
+                  >
+                    <ThumbsUp className={`w-4 h-4 ${reviewLikes[review.id] ? 'fill-orange-500' : ''}`} />
+                    <span>{(review.helpful || 0) + (reviewLikes[review.id] ? 1 : 0)}</span>
+                  </button>
+                  <button
+                    onClick={() => handleThumbsDown(review.id)}
+                    className={`flex items-center gap-2 text-sm transition-colors cursor-pointer ${
+                      reviewDislikes[review.id]
+                        ? 'text-orange-500'
+                        : 'text-gray-600 hover:text-orange-500'
+                    }`}
+                  >
+                    <ThumbsDown className={`w-4 h-4 ${reviewDislikes[review.id] ? 'fill-orange-500' : ''}`} />
+                    <span>{(review.notHelpful || 0) + (reviewDislikes[review.id] ? 1 : 0)}</span>
+                  </button>
+                  <span className="flex-1" />
+                  <button
+                    onClick={() => handleReportReviewClick(review.id)}
+                    disabled={reportedReviews.has(review.id)}
+                    className={`flex items-center gap-1 text-sm transition-colors cursor-pointer ${
+                      reportedReviews.has(review.id)
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-600 hover:text-red-500'
+                    }`}
+                  >
+                    <Flag className="w-4 h-4" />
+                    <span>{reportedReviews.has(review.id) ? 'Đã báo cáo' : 'Báo cáo'}</span>
+                  </button>
                 </div>
               </div>
+            ))}
+
+            {totalReviews > reviewsToDisplay.length && (
+              <button 
+                onClick={() => setShowAllReviews(!showAllReviews)}
+                className="w-full text-orange-500 font-medium text-sm hover:text-orange-600 transition-colors py-3 cursor-pointer"
+              >
+                {showAllReviews ? 'Thu gọn' : 'Xem thêm đánh giá'}
+              </button>
             )}
-
-            {/* Image Lightbox */}
-            {expandedImageReview === review.id && review.images && (
-              <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-                <button
-                  onClick={() => setExpandedImageReview(null)}
-                  className="absolute top-4 right-4 text-white hover:text-gray-300 cursor-pointer"
-                >
-                  <X className="w-8 h-8" />
-                </button>
-
-                <div className="flex items-center justify-between w-full max-w-4xl">
-                  <button
-                    onClick={() =>
-                      setExpandedImageIndex((prev) =>
-                        prev === 0 ? review.images!.length - 1 : prev - 1
-                      )
-                    }
-                    className="text-white text-3xl hover:text-gray-300 p-2 cursor-pointer"
-                  >
-                    &#10094;
-                  </button>
-
-                  <img
-                    src={review.images[expandedImageIndex]}
-                    alt={`Expanded ${expandedImageIndex + 1}`}
-                    className="max-w-3xl max-h-[80vh] object-contain"
-                  />
-
-                  <button
-                    onClick={() =>
-                      setExpandedImageIndex((prev) =>
-                        prev === review.images!.length - 1 ? 0 : prev + 1
-                      )
-                    }
-                    className="text-white text-3xl hover:text-gray-300 p-2 cursor-pointer"
-                  >
-                    &#10095;
-                  </button>
-                </div>
-
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
-                  {expandedImageIndex + 1} / {review.images.length}
-                </div>
-              </div>
-            )}
-
-            {/* Helpful Buttons + Report */}
-            <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => handleThumbsUp(review.id)}
-                className={`flex items-center gap-2 text-sm transition-colors cursor-pointer ${
-                  reviewLikes[review.id]
-                    ? 'text-orange-500'
-                    : 'text-gray-600 hover:text-orange-500'
-                }`}
-              >
-                <ThumbsUp className={`w-4 h-4 ${reviewLikes[review.id] ? 'fill-orange-500' : ''}`} />
-                <span>{(review.helpful || 0) + (reviewLikes[review.id] ? 1 : 0)}</span>
-              </button>
-              <button
-                onClick={() => handleThumbsDown(review.id)}
-                className={`flex items-center gap-2 text-sm transition-colors cursor-pointer ${
-                  reviewDislikes[review.id]
-                    ? 'text-orange-500'
-                    : 'text-gray-600 hover:text-orange-500'
-                }`}
-              >
-                <ThumbsDown className={`w-4 h-4 ${reviewDislikes[review.id] ? 'fill-orange-500' : ''}`} />
-                <span>{(review.notHelpful || 0) + (reviewDislikes[review.id] ? 1 : 0)}</span>
-              </button>
-              <span className="flex-1" />
-              <button
-                onClick={() => handleReportReviewClick(review.id)}
-                disabled={reportedReviews.has(review.id)}
-                className={`flex items-center gap-1 text-sm transition-colors cursor-pointer ${
-                  reportedReviews.has(review.id)
-                    ? 'text-gray-400 cursor-not-allowed'
-                    : 'text-gray-600 hover:text-red-500'
-                }`}
-              >
-                <Flag className="w-4 h-4" />
-                <span>{reportedReviews.has(review.id) ? 'Đã báo cáo' : 'Báo cáo'}</span>
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {totalReviews > 2 && (
-          <button 
-            onClick={() => setShowAllReviews(!showAllReviews)}
-            className="w-full text-orange-500 font-medium text-sm hover:text-orange-600 transition-colors py-3 cursor-pointer"
-          >
-            {showAllReviews ? 'Thu gọn' : 'Xem thêm đánh giá'}
-          </button>
+          </>
         )}
       </div>
 

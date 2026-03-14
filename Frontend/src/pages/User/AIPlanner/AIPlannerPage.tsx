@@ -14,11 +14,17 @@ import { MOCK_LIBRARY_ACTIVITIES } from '@/mocks/aiPlanner';
 import type { ItineraryDay, Activity, TimeSlot, PlanData } from '@/types/aiPlanner.types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
 let idCounter = 0;
 const uid = () => `act-${++idCounter}-${Math.random().toString(36).slice(2, 6)}`;
 
-// removed injectIds 
+const injectIds = (itin: ItineraryDay[]) => {
+    return itin.map(day => ({
+        ...day,
+        morning_activities: day.morning_activities.map(a => ({ ...a, id: a.id || uid() })),
+        afternoon_activities: day.afternoon_activities.map(a => ({ ...a, id: a.id || uid() })),
+        evening_activities: day.evening_activities.map(a => ({ ...a, id: a.id || uid() })),
+    }));
+};
 
 const SLOT_META: Record<TimeSlot, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
     morning_activities: { label: 'Buổi sáng', icon: <Sun className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -178,11 +184,14 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
     const handleSubmit = async () => {
         if (!place.trim()) return;
         setLoading(true);
+        // Normalize: capitalize first letter of each word to help restricted BE search
+        const formattedPlace = place.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        
         const additionalInfo = [
             interests.length ? `Sở thích: ${interests.join(', ')}` : '',
             notes.trim() ? `Ghi chú: ${notes}` : '',
         ].filter(Boolean).join('. ');
-        await onGenerate(place.trim(), days, additionalInfo);
+        await onGenerate(formattedPlace, days, additionalInfo);
         setLoading(false);
     };
 
@@ -248,7 +257,7 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
                                     <button
                                         key={tag.label}
                                         onClick={() => toggleInterest(tag.label)}
-                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all duration-150 font-medium ${interests.includes(tag.label)
+                                        className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all duration-150 font-medium ${interests.includes(tag.label)
                                             ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
                                             : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50'
                                             }`}
@@ -449,6 +458,28 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const draggingLeft = useRef(false);
     const draggingRight = useRef(false);
 
+    const [libraryActivities, setLibraryActivities] = useState<Activity[]>([]);
+    const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+
+    useEffect(() => {
+        // Fetch real preferences based on destination
+        if (place) {
+            setIsLoadingLibrary(true);
+            aiPlannerApi.getPreferences(place)
+                .then(res => {
+                    // Inject IDs for drag and drop
+                    const withIds = res.map(a => ({ ...a, id: a.id || uid() }));
+                    setLibraryActivities(withIds);
+                })
+                .catch(err => {
+                    console.error("Fetch preferences error:", err);
+                })
+                .finally(() => {
+                    setIsLoadingLibrary(false);
+                });
+        }
+    }, [place]);
+
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
             if (draggingLeft.current) {
@@ -519,7 +550,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             }));
             let activity: Activity;
             if (p.fromDayIdx === null) {
-                const lib = MOCK_LIBRARY_ACTIVITIES.find(a => a.id === p.activityId);
+                const lib = libraryActivities.find(a => a.id === p.activityId);
                 if (!lib) return prev;
                 activity = { ...lib, id: uid() };
             } else {
@@ -579,7 +610,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 const [act] = fromArr.splice(idx, 1);
                 next[pickerDay][pickerSlot].push(act);
             } else if (mobilePicker.type === 'add' && mobilePicker.libId) {
-                const lib = MOCK_LIBRARY_ACTIVITIES.find(a => a.id === mobilePicker.libId);
+                const lib = libraryActivities.find(a => a.id === mobilePicker.libId);
                 if (!lib) return prev;
                 next[pickerDay][pickerSlot].push({ ...lib, id: uid() });
             }
@@ -592,40 +623,52 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
 
     const LibraryContent = () => (
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-            {MOCK_LIBRARY_ACTIVITIES.map(lib => (
-                <div
-                    key={lib.id}
-                    draggable
-                    onDragStart={e => {
-                        dragPayload.current = { activityId: lib.id, fromDayIdx: null, fromSlot: null };
-                        e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    className="bg-white border border-gray-200 rounded-xl p-3 hover:border-orange-300 hover:shadow-sm transition-all group"
-                >
-                    <div className="flex items-start gap-2">
-                        <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
-                        <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-sm text-gray-800">{lib.name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{lib.description}</p>
-                            <div className="flex gap-2 mt-1.5">
-                                <span className="text-xs text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
-                                <span className="text-xs text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
-                            </div>
-                        </div>
-                        {/* Mobile: add button */}
-                        <button
-                            onClick={() => {
-                                setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                setPickerDay(0);
-                                setPickerSlot('morning_activities');
-                            }}
-                            className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
+            {isLoadingLibrary ? (
+                <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                    <p className="text-xs">Đang tải gợi ý...</p>
                 </div>
-            ))}
+            ) : libraryActivities.length > 0 ? (
+                libraryActivities.map(lib => (
+                    <div
+                        key={lib.id}
+                        draggable
+                        onDragStart={e => {
+                            dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
+                            e.dataTransfer.effectAllowed = 'copy';
+                        }}
+                        className="bg-white border border-gray-200 rounded-xl p-3 hover:border-orange-300 hover:shadow-sm transition-all group"
+                    >
+                        <div className="flex items-start gap-2">
+                            <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
+                            <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-sm text-gray-800">{lib.name}</p>
+                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{lib.description}</p>
+                                <div className="flex gap-2 mt-1.5">
+                                    <span className="text-xs text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
+                                    <span className="text-xs text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
+                                </div>
+                            </div>
+                            {/* Mobile: add button */}
+                            <button
+                                onClick={() => {
+                                    setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
+                                    setPickerDay(0);
+                                    setPickerSlot('morning_activities');
+                                }}
+                                className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="py-10 text-center px-4">
+                    <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                    <p className="text-xs text-gray-400">Không tìm thấy địa điểm gợi ý cho "{place}"</p>
+                </div>
+            )}
         </div>
     );
 
@@ -1007,6 +1050,7 @@ export default function AIPlannerPage() {
         if (planId) {
             setStep('plan');
             setLoadingPlan(true);
+
             aiPlannerApi.getPlan(planId)
                 .then(data => {
                     setPlanData(data);
@@ -1030,17 +1074,17 @@ export default function AIPlannerPage() {
             // Bước 1: Gọi ChatGPT/Gemini sinh lịch trình
             const result = await aiPlannerApi.generatePlan({ place: p, numberOfDays: days, additionalInformation: info });
 
-            // Bước 2: Lưu thẳng xuống backend & lấy UUID
-            const savedData = await aiPlannerApi.savePlan({
+            // Bước 2: Bơm ID cho các hoạt động & Lưu vào cache
+            const saveResult = await aiPlannerApi.savePlan({
                 title: `Kế hoạch ${p} ${days} ngày`,
                 destination: p,
                 days: days,
-                itinerary: result.itinerary,
+                itinerary: injectIds(result.itinerary),
                 isPublic: false
             });
 
-            // Bước 3: Redirect sang URL của Plan
-            navigate(`/ai-planner/${savedData.id}`);
+            // Bước 3: Chuyển sang URL của Plan
+            navigate(`/ai-planner/${saveResult.id}`);
         } catch (error) {
             console.error(error);
             alert('Tạo plan thất bại, vui lòng thử lại.');

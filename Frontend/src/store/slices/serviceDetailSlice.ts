@@ -18,10 +18,10 @@ const initialState: ServiceDetailState = {
 // Async thunk to load service detail
 export const loadServiceDetail = createAsyncThunk(
   'serviceDetail/load',
-  async (params: { destination: string; serviceType: string; id: string }) => {
+  async (params: { destination?: string; serviceType?: string; id: string }) => {
     const response = await serviceDetailApi.getServiceDetail(
-      params.destination,
-      params.serviceType,
+      params.destination as any,
+      params.serviceType as any,
       params.id
     );
     return response;

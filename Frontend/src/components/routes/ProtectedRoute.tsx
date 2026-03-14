@@ -35,7 +35,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({
     if (requiredRole && currentUser?.user?.role) {
         const userRole = currentUser.user.role.toLowerCase();
 
-        console.log('🔒 ProtectedRoute Check:', {
+        console.log('ProtectedRoute Check:', {
             requiredRole,
             userRole,
             currentUser: currentUser.user,
@@ -44,7 +44,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({
 
         // If specific role required, check exact match
         if (userRole !== requiredRole.toLowerCase()) {
-            console.log('❌ Role mismatch - Redirecting...');
+            console.log('Role mismatch - Redirecting...');
             // Redirect based on user role
             let redirectPath = '/homepage';
             if (userRole === 'admin') {
