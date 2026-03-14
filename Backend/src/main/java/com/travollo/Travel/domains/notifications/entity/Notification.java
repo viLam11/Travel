@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notifications", indexes = {
-        @Index(name = "idx_noti_user_id", columnList = "user_id"),
+        @Index(name = "idx_noti_receiver_id", columnList = "receiver_id"),
         @Index(name = "idx_noti_created_at", columnList = "created_at")
 })
 @Data
@@ -27,8 +27,12 @@ public class Notification {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "receiver_id", nullable = true)
+    private User receiver;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id", nullable = false)
+    private User creator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reference_order_id")

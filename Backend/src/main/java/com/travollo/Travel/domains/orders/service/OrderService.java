@@ -1,19 +1,22 @@
 package com.travollo.Travel.domains.orders.service;
 
+import com.travollo.Travel.domains.hotel.repo.RoomRepo;
+import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
+import com.travollo.Travel.domains.notifications.entity.NotificationType;
+import com.travollo.Travel.domains.notifications.service.NotificationService;
+import com.travollo.Travel.domains.orders.dto.OrderRequest;
 import com.travollo.Travel.domains.promotions.dto.DiscountResponse;
 import com.travollo.Travel.domains.promotions.entity.Discount;
 import com.travollo.Travel.domains.promotions.entity.FixedPriceDiscount;
 import com.travollo.Travel.domains.promotions.entity.PercentageDiscount;
 import com.travollo.Travel.domains.promotions.repo.DiscountRepo;
 import com.travollo.Travel.domains.promotions.service.DiscountService;
+import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.dto.SuccessResponse;
-import com.travollo.Travel.domains.orders.dto.OrderRequest;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.OrderedTicketRepo;
-import com.travollo.Travel.domains.hotel.repo.RoomRepo;
-import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.service.impl.MomoServiceImp;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,7 @@ public class OrderService {
     private final OrderedTicketRepo orderedTicketRepo;
     private final DiscountRepo discountRepo;
     private final DiscountService discountService;
+    private final NotificationService notiService;
 
     public ResponseEntity<Object> getOrderById(String id) {
         Optional<Order> foundOrder = orderRepo.findById(id);
@@ -201,13 +205,59 @@ public class OrderService {
             log.info("Hoàn tất tính toán. Tổng giảm giá: {}. Giá cuối cùng: {}", totalDiscountAmount, totalPrice);
 
             // 6. LƯU ORDER (Nhờ CascadeType.ALL trong Order.java, Ticket và Room sẽ tự được lưu)
-            orderRepo.save(newOrder);
+            Order savedOrder = orderRepo.save(newOrder);
 
+            handleNotifyOwnersAfterOrdering(user, orderRequest, savedOrder);
             // 7. Tạo link thanh toán MoMo
             Map<String, Object> result = momoService.createPayment(newOrder.getOrderID(), newOrder.getTotalPrice().longValue());
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi tạo đơn hàng: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void handleNotifyOwnersAfterOrdering(User customer, OrderRequest request, Order savedOrder) {
+        // 1. Khai báo 1 Set để chứa các chủ dịch vụ (dùng Set để tự động lọc trùng)
+        Set<User> providersToNotify = new HashSet<>();
+
+        // 2. Xử lý danh sách Room
+        List<Room> orderedRooms = request.getRooms().stream().map(roomItem -> {
+            Room roomEntity = roomRepo.findById(roomItem.getId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy Room ID: " + roomItem.getId()));
+
+            if (roomEntity.getHotel() != null && roomEntity.getHotel().getProvider() != null) {
+                providersToNotify.add(roomEntity.getHotel().getProvider());
+            }
+
+            return roomEntity;
+        }).collect(Collectors.toList());
+
+
+        // 3. Xử lý danh sách Ticket
+        List<Ticket> orderedTickets = request.getTickets().stream().map(ticketItem -> {
+            Ticket ticketEntity = ticketRepo.findById(ticketItem.getId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy Ticket ID: " + ticketItem.getId()));
+
+            if (ticketEntity.getTicketVenue() != null && ticketEntity.getTicketVenue().getProvider() != null) {
+                providersToNotify.add(ticketEntity.getTicketVenue().getProvider());
+            }
+
+            return ticketEntity;
+        }).collect(Collectors.toList());
+
+        // 4. Bắn thông báo cho các chủ dịch vụ sau khi đơn hàng đã được tạo thành công
+        for (User provider : providersToNotify) {
+            NotiCreateRequest notiReq = NotiCreateRequest.builder()
+                    .receiverID(provider.getUserID())
+                    .type(NotificationType.NEW_ORDER)
+                    .title("Có đơn đặt dịch vụ mới!")
+                    .content("Khách hàng vừa đặt dịch vụ trên hệ thống. Mã đơn: " + savedOrder.getOrderID())
+                    .referenceOrderID(savedOrder.getOrderID())
+                    .build();
+
+            // Gọi NotificationService để lưu thông báo
+            notiService.createNotification(customer, notiReq);
         }
     }
 

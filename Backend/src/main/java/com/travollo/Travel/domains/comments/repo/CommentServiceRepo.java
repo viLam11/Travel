@@ -14,8 +14,8 @@ import java.util.List;
 
 @Repository
 public interface CommentServiceRepo extends JpaRepository<Comment, String> {
-    Page<Comment> findAllByTService(TService tService, Pageable pageable);
+    Page<Comment> findAllByTravelService(TService travelService, Pageable pageable);
 
-    @Query("SELECT c FROM Comment c WHERE c.tService.id = :serviceId")
+    @Query("SELECT c FROM Comment c WHERE c.travelService.id = :serviceId")
     List<Comment> findAllByServiceId(@Param("serviceId") String serviceId);
 }

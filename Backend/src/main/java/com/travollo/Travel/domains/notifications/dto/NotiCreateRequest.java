@@ -16,9 +16,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class NotiCreateRequest {
     private NotificationType type;
+    private String receiverID;
     private String title;
     private String content;
-    private Order referenceOrder = null;
-    private boolean isRead = false;
+    private String referenceOrderID = null;
     private LocalDateTime createdAt;
 }

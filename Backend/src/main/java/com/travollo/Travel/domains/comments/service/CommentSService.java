@@ -56,7 +56,7 @@ public class CommentSService {
                 .content(newCmtDTO.getContent())
                 .rating(newCmtDTO.getRating())
                 .user(user)
-                .tService(service)
+                .travelService(service)
                 .createdAt(LocalDateTime.now())
                 .imageList(new ArrayList<>())
                 .build();
@@ -120,7 +120,7 @@ public class CommentSService {
                 Sort.by(finalSortBy).ascending();
 
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        Page<Comment> pageData = commentServiceRepo.findAllByTService(service, pageable);
+        Page<Comment> pageData = commentServiceRepo.findAllByTravelService(service, pageable);
 
         return PageResponse.<CommentResponseDTO>builder()
                 .content(pageData.getContent().stream().map(this::mapToCommentResponse).toList())
@@ -219,8 +219,8 @@ public class CommentSService {
                 .content(comment.getContent())
                 .rating(comment.getRating())
                 .createdAt(comment.getCreatedAt())
-                .serviceName(comment.getTService().getServiceName())
-                .serviceID(comment.getTService().getServiceName())
+                .serviceName(comment.getTravelService().getServiceName())
+                .serviceID(comment.getTravelService().getServiceName())
                 .userID(comment.getUser().getUserID())
                 .username(comment.getUser().getUsername())
                 .imageList(comment.getImageList().stream()

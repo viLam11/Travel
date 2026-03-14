@@ -60,7 +60,7 @@ public class TService {
     @JsonIncludeProperties({"imageUrl", "description"})
     private List<ImageService> imageList;
 
-    @OneToMany(mappedBy = "tService", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "travelService", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Comment> commentList;
 }
