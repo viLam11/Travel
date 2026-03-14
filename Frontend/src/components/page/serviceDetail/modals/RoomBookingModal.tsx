@@ -4,13 +4,13 @@ import { serviceDetailApi } from '../../../../api/serviceDetailApi';
 import type { Discount } from '../../../../types/serviceDetail.types';
 
 interface RoomBooking {
-  roomId: number;
+  roomId: string | number;
   checkIn: string;
   checkOut: string;
 }
 
 interface Room {
-  id: number;
+  id: string | number;
   name: string;
   type: string;
   price: number;
@@ -33,8 +33,8 @@ interface RoomBookingModalProps {
   setGuestCount: (count: number) => void;
   roomType: string;
   setRoomType: (type: string) => void;
-  selectedRooms: number[];
-  setSelectedRooms: (ids: number[]) => void;
+  selectedRooms: (string | number)[];
+  setSelectedRooms: (ids: (string | number)[]) => void;
   roomFirstName: string;
   setRoomFirstName: (name: string) => void;
   roomEmail: string;
@@ -58,6 +58,7 @@ interface RoomBookingModalProps {
   setShowDiscountSection: (show: boolean) => void;
   availableDiscounts?: Discount[]; // Add this
   onConfirm: (discountIds: string[]) => void;
+  isSubmitting?: boolean;
 }
 
 const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
@@ -95,7 +96,8 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
   showDiscountSection,
   setShowDiscountSection,
   availableDiscounts: propDiscounts,
-  onConfirm
+  onConfirm,
+  isSubmitting = false
 }) => {
   const ROOMS_PER_PAGE = 3;
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,7 +137,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     setCurrentPage(1);
   }, [roomType, guestCount, checkInDate, checkOutDate]);
 
-  const toggleRoomSelection = (roomId: number) => {
+  const toggleRoomSelection = (roomId: string | number) => {
     if (selectedRooms.includes(roomId)) {
       setSelectedRooms(selectedRooms.filter(id => id !== roomId));
     } else {
@@ -150,7 +152,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
       (new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24)
     );
     
-    const subtotal = selectedRooms.reduce((sum, id) => {
+    const subtotal = selectedRooms.reduce((sum: number, id) => {
       const room = allRooms.find(r => r.id === id);
       return sum + (room ? room.price * nights : 0);
     }, 0);
@@ -196,25 +198,48 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     }
   }, [isOpen, serviceId, provinceCode, propDiscounts]); 
 
-  // Tự động chọn ưu đãi phù hợp
+  // Auto-select best eligible discounts (1 system + 1 service)
   React.useEffect(() => {
-    if (availableDiscounts.length > 0) {
+    if (availableDiscounts.length > 0 && selectedDiscounts.length === 0) {
       const eligible = availableDiscounts.filter(d => isDiscountEligible(d));
-      if (eligible.length > 0 && selectedDiscounts.length === 0) {
-        setSelectedDiscounts([eligible[0].id]);
+      if (eligible.length > 0) {
+        const bestSystem = eligible
+          .filter(d => d.isSystem)
+          .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
+        
+        const bestService = eligible
+          .filter(d => !d.isSystem)
+          .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
+        
+        const autoSelected = [];
+        if (bestSystem) autoSelected.push(bestSystem.id);
+        if (bestService) autoSelected.push(bestService.id);
+        
+        if (autoSelected.length > 0) {
+          setSelectedDiscounts(autoSelected);
+        }
       }
     }
-  }, [availableDiscounts, subtotal, selectedDiscounts.length]); // Added selectedDiscounts.length to dependencies
+  }, [availableDiscounts, subtotal, selectedDiscounts.length]);
 
   const toggleDiscount = (discountId: string) => {
     const discount = availableDiscounts.find(d => d.id === discountId);
     if (!discount || !isDiscountEligible(discount)) return;
 
-    setSelectedDiscounts(prev => 
-      prev.includes(discountId)
-        ? prev.filter(id => id !== discountId)
-        : [...prev, discountId]
-    );
+    setSelectedDiscounts(prev => {
+      const isSelected = prev.includes(discountId);
+      if (isSelected) {
+        return prev.filter(id => id !== discountId);
+      } else {
+        // Enforce limit: 1 system + 1 service
+        // Filter out any existing discount of the same "type" (system vs service)
+        const otherTypeDiscounts = prev.filter(id => {
+          const d = availableDiscounts.find(x => x.id === id);
+          return d && d.isSystem !== discount.isSystem;
+        });
+        return [...otherTypeDiscounts, discountId];
+      }
+    });
   };
 
   const calculateDiscountAmount = (discount: Discount): number => {
@@ -225,7 +250,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     return discount.fixedPrice || 0;
   };
 
-  const totalDiscount = selectedDiscounts.reduce((sum, id) => {
+  const totalDiscount = selectedDiscounts.reduce((sum: number, id) => {
     const discount = availableDiscounts.find(d => d.id === id);
     return discount ? sum + calculateDiscountAmount(discount) : sum;
   }, 0);
@@ -600,6 +625,12 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                                   }`}>
                                     {discount.code}
                                   </span>
+                                  {discount.isSystem && (
+                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold rounded-full uppercase tracking-tight shadow-sm">
+                                      <span className="w-1 h-1 bg-indigo-400 rounded-full animate-pulse" />
+                                      Hệ thống
+                                    </span>
+                                  )}
                                 </div>
                                 <p className={`text-xs ${isEligible ? 'text-gray-600' : 'text-gray-400'}`}>
                                   {discount.description}
@@ -762,10 +793,17 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
               <div className="flex gap-3">
                 <button
                   onClick={() => onConfirm(selectedDiscounts)}
-                  disabled={selectedRooms.length === 0 || !checkInDate || !checkOutDate}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-lg font-bold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={selectedRooms.length === 0 || !checkInDate || !checkOutDate || isSubmitting}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-lg font-bold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Xác nhận đặt phòng
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>ĐANG XỬ LÝ...</span>
+                    </>
+                  ) : (
+                    'Xác nhận đặt phòng'
+                  )}
                 </button>
               </div>
             </div>

@@ -12,11 +12,11 @@ const realApi = {
     id: string
   ): Promise<ServiceDetail> => {
     try {
-      console.log(`📡 Fetching real service detail for ID: ${id}`);
+      console.log(`Fetching real service detail for ID: ${id}`);
       // Fetch real data using centralized apiClient
       const backendData: any = await apiClient.get(`/services/${id}`);
       
-      console.log('✅ Backend data received:', backendData);
+      console.log('Backend data received:', backendData);
 
       // Get mock data for this service to fill missing fields
       const mockData = await mockServiceDetailApi.getServiceDetail(destination, serviceType, id);

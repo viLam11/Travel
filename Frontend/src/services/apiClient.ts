@@ -337,7 +337,7 @@ export class ApiClient {
   // Comment endpoints
   comments = {
     getByServiceId: (
-      serviceID: number,
+      serviceID: string | number,
       page?: number,
       size?: number,
       sortBy?: string,
@@ -349,7 +349,7 @@ export class ApiClient {
     },
 
     create: (
-      serviceID: number,
+      serviceID: string | number,
       content: string,
       rating: number,
       photos?: File[]
@@ -367,27 +367,27 @@ export class ApiClient {
       });
     },
 
-    getById: (commentID: number): ApiResponse<any> => {
+    getById: (commentID: string | number): ApiResponse<any> => {
       return this.get(`/comment/${commentID}`);
     },
 
-    delete: (commentID: number): ApiResponse<any> => {
+    delete: (commentID: string | number): ApiResponse<any> => {
       return this.delete(`/comment/${commentID}`);
     },
 
-    like: (commentID: number): ApiResponse<any> => {
+    like: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/like/${commentID}`, {});
     },
 
-    dislike: (commentID: number): ApiResponse<any> => {
+    dislike: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/dislike/${commentID}`, {});
     },
 
-    unlike: (commentID: number): ApiResponse<any> => {
+    unlike: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/unlike/${commentID}`, {});
     },
 
-    undoDislike: (commentID: number): ApiResponse<any> => {
+    undoDislike: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/undoDislike/${commentID}`, {});
     },
   };
@@ -398,7 +398,7 @@ export class ApiClient {
       createOrder: (
         appuser: string,
         amount: number,
-        order_id: number
+        order_id: string | number
       ): ApiResponse<any> => {
         return this.post(
           "/api/zalopay/create-order",
@@ -512,7 +512,7 @@ export class ApiClient {
   };
 
   tickets = {
-    getByServiceId: (serviceId: number): ApiResponse<any[]> => {
+    getByServiceId: (serviceId: string | number): ApiResponse<any[]> => {
       return this.get(`/services/${serviceId}/tickets`);
     },
   };

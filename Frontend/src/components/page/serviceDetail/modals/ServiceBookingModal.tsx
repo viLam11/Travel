@@ -31,6 +31,7 @@ interface ServiceBookingModalProps {
   setShowDiscountSection: (show: boolean) => void;
   availableDiscounts?: Discount[]; // Add this as optional prop
   onConfirm: (discountIds: string[]) => void;
+  isSubmitting?: boolean;
 }
 
 const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
@@ -57,7 +58,8 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   showDiscountSection,
   setShowDiscountSection,
   availableDiscounts: propDiscounts, // Get from props
-  onConfirm
+  onConfirm,
+  isSubmitting = false
 }) => {
   if (!isOpen) return null;
 
@@ -105,25 +107,48 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     }
   }, [isOpen, service.id, provinceCode, propDiscounts]); 
 
-  // Auto-select first eligible discount if any
+  // Auto-select best eligible discounts (1 system + 1 service)
   React.useEffect(() => {
-    if (availableDiscounts.length > 0) {
+    if (availableDiscounts.length > 0 && selectedDiscounts.length === 0) {
       const eligible = availableDiscounts.filter(d => isDiscountEligible(d));
-      if (eligible.length > 0 && selectedDiscounts.length === 0) {
-        setSelectedDiscounts([eligible[0].id]);
+      if (eligible.length > 0) {
+        const bestSystem = eligible
+          .filter(d => d.isSystem)
+          .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
+        
+        const bestService = eligible
+          .filter(d => !d.isSystem)
+          .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
+        
+        const autoSelected = [];
+        if (bestSystem) autoSelected.push(bestSystem.id);
+        if (bestService) autoSelected.push(bestService.id);
+        
+        if (autoSelected.length > 0) {
+          setSelectedDiscounts(autoSelected);
+        }
       }
     }
-  }, [availableDiscounts, basePrice]);
+  }, [availableDiscounts, basePrice, selectedDiscounts.length]);
 
   const toggleDiscount = (discountId: string) => {
     const discount = availableDiscounts.find(d => d.id === discountId);
     if (!discount || !isDiscountEligible(discount)) return;
 
-    setSelectedDiscounts(prev => 
-      prev.includes(discountId)
-        ? prev.filter(id => id !== discountId)
-        : [...prev, discountId]
-    );
+    setSelectedDiscounts(prev => {
+      const isSelected = prev.includes(discountId);
+      if (isSelected) {
+        return prev.filter(id => id !== discountId);
+      } else {
+        // Enforce limit: 1 system + 1 service
+        // Filter out any existing discount of the same "type" (system vs service)
+        const otherTypeDiscounts = prev.filter(id => {
+          const d = availableDiscounts.find(x => x.id === id);
+          return d && d.isSystem !== discount.isSystem;
+        });
+        return [...otherTypeDiscounts, discountId];
+      }
+    });
   };
 
   const toggleAdditionalService = (serviceName: string) => {
@@ -166,7 +191,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
       customerName.trim() !== '' &&
       customerPhone.trim() !== '' &&
       customerEmail.trim() !== '' &&
-      ticketList.some(t => (t.count || 0) > 0) // Ít nhất 1 vé
+      (ticketList.length === 0 || ticketList.some(t => (t.count || 0) > 0))
     );
   };
 
@@ -179,20 +204,19 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   ];
 
 
-  const updateTicketQuantity = (id: number, delta: number) => {
-  const newList = [...ticketList]; 
+  const updateTicketQuantity = (id: string | number, delta: number) => {
+    const newList = [...ticketList];
     const index = newList.findIndex(t => t.id === id);
-  
-  if (index !== -1) {
-    // Chỉ thay đổi đúng phần tử tại vị trí đó
-    const currentCount = newList[index].count || 0;
-    newList[index] = {
-      ...newList[index],
-      count: Math.max(0, currentCount + delta)
-    };
-    setTicketList(newList);
-  }
-};
+
+    if (index !== -1) {
+      const currentCount = newList[index].count || 0;
+      newList[index] = {
+        ...newList[index],
+        count: Math.max(0, currentCount + delta)
+      };
+      setTicketList(newList);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -313,10 +337,11 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                       Thu gọn
                   </button>
                 </div>
-
-                  {/* Ticket Types */}
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900 mb-3">Các loại vé:</h3>
+ 
+                   {/* Ticket Types */}
+                   {ticketList.length > 0 && (
+                     <div className="mt-6">
+                       <h3 className="text-base font-bold text-gray-900 mb-3 text-left">Các loại vé:</h3>
                     {/* <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -405,10 +430,9 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                         </div>
                       </div>
                       </div>
-                    ))}
-
-
-                  </div>
+                     ))}
+                   </div>
+                   )}
             
                   {service.additionalServices && service.additionalServices.length > 0 && (
                     <div>
@@ -517,6 +541,12 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                                   }`}>
                                     {discount.code}
                                   </span>
+                                   {discount.isSystem && (
+                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold rounded-full uppercase tracking-tight shadow-sm">
+                                      <span className="w-1 h-1 bg-indigo-400 rounded-full animate-pulse" />
+                                      Hệ thống
+                                    </span>
+                                  )}
                                 </div>
                                 <p className={`text-xs ${isEligible ? 'text-gray-600' : 'text-gray-400'}`}>
                                   {discount.description}
@@ -678,14 +708,21 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
               {}
               <button
                 onClick={() => onConfirm(selectedDiscounts)}
-                disabled={!isFormValid()}
-                className={`w-full py-3.5 rounded-lg font-bold text-base transition-all ${
-                  isFormValid()
+                disabled={!isFormValid() || isSubmitting}
+                className={`w-full py-3.5 rounded-lg font-bold text-base transition-all flex items-center justify-center gap-2 ${
+                  isFormValid() && !isSubmitting
                     ? 'bg-orange-500 hover:bg-orange-600 text-white cursor-pointer'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {isFormValid() ? 'XÁC NHẬN' : 'VUI LÒNG ĐIỀN ĐẦY ĐỦ THÔNG TIN'}
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>ĐANG XỬ LÝ...</span>
+                  </>
+                ) : (
+                  isFormValid() ? 'XÁC NHẬN' : 'VUI LÒNG ĐIỀN ĐẦY ĐỦ THÔNG TIN'
+                )}
               </button>
             </div>
           </div>

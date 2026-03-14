@@ -31,6 +31,7 @@ export interface DiscountResponse {
     percentage: number;
     maxDiscountAmount: number;
     applyType: 'ALL' | 'CATEGORY' | 'SERVICE' | 'PROVINCE';
+    isSystem?: boolean;
 }
 
 export const discountApi = {

@@ -76,6 +76,15 @@ export function translateErrorMessage(message: string): string {
     }
 
     // Return original if no translation found
+    // Feature: Specific backend data inconsistency handling
+    if (message.includes('No enum constant') || message.includes('PROVIDER_HOTEL')) {
+      return 'Dịch vụ này tạm thời không thể đặt do lỗi dữ liệu từ Nhà cung cấp. Vui lòng thử lại sau hoặc chọn dịch vụ khác.';
+    }
+
+    if (message.includes('Unable to find') && message.includes('User')) {
+      return 'Không tìm thấy thông tin tài khoản Nhà cung cấp. Vui lòng liên hệ hỗ trợ.';
+    }
+
     return message;
 }
 
@@ -95,17 +104,35 @@ export function isAxiosError(error: unknown): error is AxiosError {
  */
 export function transformAxiosError(error: AxiosError): StandardError {
     const responseData = error.response?.data;
+    const status = error.response?.status || ERROR_CODES.SERVER_ERROR;
+
+    if (responseData && typeof responseData === 'string') {
+        return {
+            status_code: status,
+            message: translateErrorMessage(responseData),
+        };
+    }
 
     if (isStandardError(responseData)) {
-        // Normalize: Backend may return 'status' instead of 'status_code'
         const originalMessage = responseData.message;
         return {
-            status_code: (responseData as any).status_code || (responseData as any).status,
+            status_code: (responseData as any).status_code || (responseData as any).status || status,
             message: translateErrorMessage(originalMessage),
         };
     }
 
-    return createStandardError(ERROR_CODES.SERVER_ERROR);
+    // If it's an object but doesn't match standard structure, try to extract message
+    if (responseData && typeof responseData === 'object') {
+        const msg = (responseData as any).message || (responseData as any).error || (responseData as any).msg;
+        if (msg) {
+            return {
+                status_code: (responseData as any).status_code || (responseData as any).status || status,
+                message: translateErrorMessage(msg),
+            };
+        }
+    }
+
+    return createStandardError(status);
 }
 
 /**

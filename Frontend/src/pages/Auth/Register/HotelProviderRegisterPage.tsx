@@ -110,7 +110,7 @@ const HotelProviderRegisterPage: React.FC = () => {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                role: 'ROLE_PROVIDER',
+                role: 'PROVIDER',
                 providerType: 'hotel', // Hotel provider
             });
 

@@ -110,7 +110,7 @@ const TourProviderRegisterPage: React.FC = () => {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                role: 'ROLE_PROVIDER',
+                role: 'PROVIDER',
                 providerType: 'place', // Tour/Place provider
             });
 

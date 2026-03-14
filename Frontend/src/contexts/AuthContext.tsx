@@ -99,7 +99,7 @@ interface RegisterData {
     password: string;
     phone?: string;
     address?: string;
-    role?: string; // ROLE_USER, ROLE_PROVIDER, etc.
+    role?: string; // USER, PROVIDER, etc.
     providerType?: 'hotel' | 'place'; // For providers only
 }
 

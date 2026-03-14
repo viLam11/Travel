@@ -46,6 +46,7 @@ interface ReviewsSectionProps {
   setShowAllReviews: (show: boolean) => void;
   totalReviews: number;
   isLoggedIn: boolean;
+  isSubmitting?: boolean;
 }
 
 type SortOption = 'newest' | 'helpful' | 'rating-high' | 'rating-low';
@@ -68,7 +69,8 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   showAllReviews,
   setShowAllReviews,
   totalReviews,
-  isLoggedIn
+  isLoggedIn,
+  isSubmitting = false
 }) => {
   const navigate = useNavigate();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -427,10 +429,17 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             )}
             <button 
               onClick={handleSubmitReview}
-              disabled={!isLoggedIn || reviewRating === 0 || !reviewTitle.trim() || !reviewText.trim()}
-              className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              disabled={!isLoggedIn || reviewRating === 0 || !reviewTitle.trim() || !reviewText.trim() || isSubmitting}
+              className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
             >
-              Thêm bình luận
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>ĐANG GỬI...</span>
+                </>
+              ) : (
+                'Thêm bình luận'
+              )}
             </button>
           </div>
 

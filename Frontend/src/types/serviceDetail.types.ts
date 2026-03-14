@@ -46,6 +46,7 @@ export interface Discount {
   percentage?: number;
   maxDiscountAmount?: number;
   applied?: boolean;
+  isSystem?: boolean;
 }
 
 export interface Feature {

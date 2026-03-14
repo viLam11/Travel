@@ -2,7 +2,7 @@
  * Interface cho từng item trong order (vé hoặc phòng)
  */
 export interface OrderItem {
-  id: number;
+  id: string | number;
   quantity: number;
   price?: number; // Tùy chọn nếu backend cần
 }

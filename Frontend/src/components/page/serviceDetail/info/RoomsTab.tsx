@@ -15,16 +15,16 @@ interface Room {
 }
 
 interface RoomsTabProps {
-    service: any;
-    onRoomBookNow?: (room: Room) => void; // Callback when user clicks "Đặt phòng ngay"
+    rooms?: Room[];
+    onRoomBookNow?: (room: Room) => void;
 }
 
-const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
+const RoomsTab: React.FC<RoomsTabProps> = ({ rooms: propRooms = [], onRoomBookNow }) => {
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    // Mock room data - will be replaced with API data
-    const rooms: Room[] = [
+    // Mock data for fallback
+    const MOCK_ROOMS: Room[] = [
         {
             id: '1',
             title: 'Phòng Deluxe Ocean View',
@@ -55,22 +55,9 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
             ],
             amenities: ['WiFi miễn phí', 'TV màn hình phẳng', 'Minibar', 'Phòng khách riêng', 'Bồn tắm']
         },
-        {
-            id: '3',
-            title: 'Phòng Presidential',
-            desc: '6 người • 120m² • Phòng khách riêng',
-            price: 5000000,
-            capacity: 6,
-            size: 120,
-            bedType: '2 Giường King + Sofa bed',
-            images: [
-                'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&h=600&fit=crop',
-                'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop',
-                'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&h=600&fit=crop',
-            ],
-            amenities: ['WiFi miễn phí', 'TV màn hình phẳng', 'Minibar', 'Phòng khách riêng', 'Bồn tắm Jacuzzi', 'Ban công lớn']
-        },
     ];
+
+    const displayRooms = propRooms.length > 0 ? propRooms : MOCK_ROOMS;
 
     const handleRoomClick = (room: Room) => {
         setSelectedRoom(room);
@@ -116,7 +103,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {rooms.map((room) => (
+                    {displayRooms.map((room: Room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomClick(room)}

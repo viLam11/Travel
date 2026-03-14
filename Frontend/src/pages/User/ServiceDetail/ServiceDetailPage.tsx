@@ -114,7 +114,7 @@ const ServiceDetailPage: React.FC = () => {
   const [checkOutDate, setCheckOutDate] = useState("");
   const [guestCount, setGuestCount] = useState(1);
   const [roomType, setRoomType] = useState("Bất kỳ phòng trống");
-  const [selectedRooms, setSelectedRooms] = useState<number[]>([]); // Changed from selectedRoom to selectedRooms
+  const [selectedRooms, setSelectedRooms] = useState<(string | number)[]>([]); // Changed to (string | number)[] to support both legacy and UUID
   const [roomFirstName, setRoomFirstName] = useState("");
   const [roomEmail, setRoomEmail] = useState("");
   const [roomPhone, setRoomPhone] = useState("");
@@ -137,13 +137,15 @@ const ServiceDetailPage: React.FC = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewTitle, setReviewTitle] = useState("");
   const [apiDiscounts, setApiDiscounts] = useState<any[]>([]);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
 
   // Load rooms/tickets from API when serviceId is available
   const fetchReviews = async () => {
     try {
       if (USE_MOCK) return; // Skip if forcing mock
       if (!id) return;
-      const response = await apiClient.comments.getByServiceId(Number(id));
+      const response = await apiClient.comments.getByServiceId(id);
       if (response?.data?.content?.length > 0) {
         setApiReviews(response.data.content);
       }
@@ -175,11 +177,11 @@ const ServiceDetailPage: React.FC = () => {
       }
 
       try {
-        const data: any[] = await apiClient.tickets.getByServiceId(Number(id));
+        const data: any[] = await apiClient.tickets.getByServiceId(id);
         // Map backend ticket/room response to UI shape
         const mapped = (Array.isArray(data) ? data : []).map((item: any) => ({
-          id: item.id,
-          name: item.roomName ?? item.name ?? `Room ${item.id}`,
+          id: item.roomID || item.id, // Fallback to roomID for hotels
+          name: item.roomName ?? item.name ?? `Room ${item.roomID || item.id}`,
           type: item.roomType ?? item.ticketType ?? '',
           price: item.price ?? item.pricePerNight ?? 0,
           capacity: item.capacity ?? item.maxGuests ?? 2,
@@ -212,7 +214,7 @@ const ServiceDetailPage: React.FC = () => {
         fetchReviews();
         fetchDiscounts();
     }
-  }, [idSlug, id, destination]);
+  }, [id, serviceType, resolvedProvinceID]); // Stabilize dependency array
 
 
   // Load service detail
@@ -277,44 +279,71 @@ const ServiceDetailPage: React.FC = () => {
       return;
     }
 
+    if (isBooking) return;
+    setIsBooking(true);
+
     try {
       const tickets = ticketList
         .filter((t: any) => t.count > 0)
         .map((t: any) => ({
-          id: Number(t.id),
+          // Standardize ID as string to match UUID expectations
+          id: t.id.toString(),
           quantity: Number(t.count),
         }));
 
-      const response: any = await apiClient.orders.create({
+      const payload = {
         tickets,
         rooms: [],
         checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
         checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
         guestPhone: customerPhone,
         note: customerNote || undefined,
-        discountIds: selectedDiscountIds,
-      });
+        discountIds: selectedDiscountIds?.map(id => id.toString()) || [],
+      };
 
-      toast.success('Đặt dịch vụ thành công! Đang chuyển hướng đến trang thanh toán...');
+      console.log('[DEBUG] Order Payload:', payload);
+
+      const response: any = await apiClient.orders.create(payload);
+
+      toast.success('Đặt dịch vụ thành công!');
       handleCloseModal();
       
-      // Handle the payUrl returned from backend
-      const payUrl = response?.payUrl || response?.order_url || (response as any)?.payUrl;
-      if (payUrl) {
+      const payUrl = response?.payUrl || response?.order_url || response?.shortLink;
+      const orderId = response?.id || response?.orderId || response?.orderID;
+      const finalPrice = response?.totalPrice || response?.amount || 0;
+
+      // Only redirect to backend-provided payUrl if MOMO is selected
+      if (paymentMethod === 'MOMO' && payUrl) {
         window.location.href = payUrl;
-      } else {
-        if (response && (response.id || response.orderId)) {
-          const orderId = response.id || response.orderId;
-          const finalPrice = response.totalPrice || 0;
-          handleSelectPayment(paymentMethod.toLowerCase() as 'momo' | 'vnpay' | 'zalopay', orderId, finalPrice);
-        }
+      } else if (orderId) {
+        // For VNPAY or ZALOPAY, or if no MOMO link, trigger manual payment flow
+        handleSelectPayment(paymentMethod.toLowerCase() as any, orderId.toString(), finalPrice);
       }
     } catch (err: any) {
-      toast.error('Đặt dịch vụ thất bại. Vui lòng thử lại.');
-      console.error('Order create error:', err);
+      console.error('Order creation error details:', err?.response?.data || err);
+      
+      const rawMessage = err?.response?.data?.message || err?.response?.data || err?.message || '';
+      
+      // Feature: Friendly error translation for backend data issues
+      const errorMessage = translateError(rawMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsBooking(false);
     }
   };
 
+  /**
+   * Helper to translate technical backend errors to user-friendly messages
+   */
+  const translateError = (message: string) => {
+    if (message.includes('No enum constant') || message.includes('PROVIDER_HOTEL')) {
+      return 'Dịch vụ này tạm thời không thể đặt do lỗi dữ liệu từ Nhà cung cấp (PROVIDER_HOTEL). Vui lòng chọn dịch vụ khác.';
+    }
+    if (message.includes('Unable to find com.travollo.Travel.entity.User with id 5')) {
+      return 'Lỗi hệ thống: Không tìm thấy thông tin Nhà cung cấp (ID: 5). Vui lòng báo cáo lỗi này.';
+    }
+    return message || 'Đặt dịch vụ thất bại. Vui lòng thử lại sau.';
+  };
 
   const handleRoomBookNow = (room?: any) => {
     requireAuth(() => {
@@ -333,7 +362,10 @@ const ServiceDetailPage: React.FC = () => {
   };
 
   const handleConfirmRoomBooking = async (selectedDiscountIds: string[]) => {
-    if (!service) return;
+    if (selectedRooms.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một phòng');
+      return;
+    }
 
     if (USE_MOCK) {
       // Mock: chỉ log và đóng modal
@@ -343,8 +375,11 @@ const ServiceDetailPage: React.FC = () => {
       return;
     }
 
+    if (isBooking) return;
+    setIsBooking(true);
+
     try {
-      const rooms = selectedRooms.map((roomId: number) => ({
+      const rooms = selectedRooms.map((roomId: string | number) => ({
         id: roomId,
         quantity: 1,
       }));
@@ -359,23 +394,23 @@ const ServiceDetailPage: React.FC = () => {
         discountIds: selectedDiscountIds,
       });
 
-      toast.success('Đặt phòng thành công! Đang chuyển hướng đến trang thanh toán...');
-      handleCloseRoomModal();
+      const payUrl = response?.payUrl || response?.order_url || response?.shortLink;
+      const orderId = response?.id || response?.orderId || response?.orderID;
+      const finalPrice = response?.totalPrice || response?.amount || 0;
 
-      const payUrl = response?.payUrl || response?.order_url || (response as any)?.payUrl;
-      if (payUrl) {
-          window.location.href = payUrl;
-      } else {
-        if (response && (response.id || response.orderId)) {
-          const orderId = response.id || response.orderId;
-          const finalPrice = response.totalPrice || 0;
-          
-          handleSelectPayment(roomPaymentMethod.toLowerCase() as 'momo' | 'vnpay' | 'zalopay', orderId, finalPrice);
-        }
+      // Only redirect to backend-provided payUrl if MOMO is selected
+      if (roomPaymentMethod === 'MOMO' && payUrl) {
+        window.location.href = payUrl;
+      } else if (orderId) {
+        // For VNPAY or ZALOPAY, trigger manual payment flow
+        handleSelectPayment(roomPaymentMethod.toLowerCase() as any, orderId.toString(), finalPrice);
       }
     } catch (err: any) {
-      toast.error('Đặt phòng thất bại. Vui lòng thử lại.');
       console.error('Room order create error:', err);
+      const errorMessage = err?.response?.data?.message || err?.message || 'Đặt phòng thất bại. Vui lòng thử lại.';
+      toast.error(errorMessage);
+    } finally {
+      setIsBooking(false);
     }
   };
 
@@ -451,11 +486,14 @@ const ServiceDetailPage: React.FC = () => {
       return;
     }
 
+    if (isSubmittingReview) return;
+    setIsSubmittingReview(true);
+    
     requireAuth(async () => {
       try {
         if (!USE_MOCK) {
           // Call actual backend API
-          await apiClient.comments.create(Number(id), reviewText, reviewRating, reviewImages);
+          await apiClient.comments.create(id, reviewText, reviewRating, reviewImages);
           toast.success('Đánh giá của bạn đã được gửi!');
           // Refresh reviews
           fetchReviews();
@@ -487,6 +525,8 @@ const ServiceDetailPage: React.FC = () => {
       } catch (error) {
         console.error("Lỗi khi gửi đánh giá:", error);
         toast.error("Không thể gửi đánh giá, vui lòng thử lại sau.");
+      } finally {
+        setIsSubmittingReview(false);
       }
     }, 'Vui lòng đăng nhập để đánh giá');
   };
@@ -853,11 +893,30 @@ const ServiceDetailPage: React.FC = () => {
             {activeTab === "rooms" && (
               serviceType === 'hotel' ? (
                 <RoomsTab
-                  service={service}
+                  rooms={allRooms.map(r => ({
+                    id: r.id.toString(),
+                    title: r.name,
+                    desc: r.description || `${r.capacity} khách • ${r.type}`,
+                    price: r.price,
+                    images: r.images && r.images.length > 0 ? r.images : [service.images[0]],
+                    capacity: r.capacity,
+                    size: 25, 
+                    bedType: r.type,
+                    amenities: r.amenities
+                  }))}
                   onRoomBookNow={handleRoomBookNow}
                 />
               ) : (
-                <TicketsTab tickets={service.ticketTypes || []} />
+                <TicketsTab 
+                  tickets={ticketList.map(t => ({
+                    id: t.id.toString(),
+                    title: t.name,
+                    description: t.description,
+                    price: t.price,
+                    inclusions: t.amenities || []
+                  }))} 
+                  onTicketBookNow={handleBookNow}
+                />
               )
             )}
 
@@ -881,6 +940,7 @@ const ServiceDetailPage: React.FC = () => {
                 showAllReviews={showAllReviews}
                 setShowAllReviews={setShowAllReviews}
                 totalReviews={allReviews.length}
+                isSubmitting={isSubmittingReview}
               />
             )}
           </div>
@@ -914,45 +974,49 @@ const ServiceDetailPage: React.FC = () => {
       <Footer />
 
       {/* Booking Modal */}
-      <ServiceBookingModal
-        isOpen={showServiceBookingModal}
-        onClose={handleCloseModal}
-        service={service}
-        provinceCode={resolvedProvinceID}
-        availableDiscounts={activeDiscounts} 
-        bookingDate={bookingDate}
-        setBookingDate={setBookingDate}
-        bookingDuration={bookingDuration}
-        setBookingDuration={setBookingDuration}
-        customerName={customerName}
-        setCustomerName={setCustomerName}
-        customerPhone={customerPhone}
-        setCustomerPhone={setCustomerPhone}
-        customerEmail={customerEmail}
-        setCustomerEmail={setCustomerEmail}
-        customerNote={customerNote}
-        setCustomerNote={setCustomerNote}
-        paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
-        showDiscountSection={showDiscountSection}
-        setShowDiscountSection={setShowDiscountSection}
-        ticketList={ticketList}
-        setTicketList={setTicketList}
-        onConfirm={handleConfirmBooking}
-      />
+      {showServiceBookingModal && service && (
+        <ServiceBookingModal
+          isOpen={showServiceBookingModal}
+          onClose={handleCloseModal}
+          service={service}
+          provinceCode={resolvedProvinceID}
+          availableDiscounts={activeDiscounts} 
+          bookingDate={bookingDate}
+          setBookingDate={setBookingDate}
+          bookingDuration={bookingDuration}
+          setBookingDuration={setBookingDuration}
+          customerName={customerName}
+          setCustomerName={setCustomerName}
+          customerPhone={customerPhone}
+          setCustomerPhone={setCustomerPhone}
+          customerEmail={customerEmail}
+          setCustomerEmail={setCustomerEmail}
+          customerNote={customerNote}
+          setCustomerNote={setCustomerNote}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+          showDiscountSection={showDiscountSection}
+          setShowDiscountSection={setShowDiscountSection}
+          ticketList={ticketList}
+          setTicketList={setTicketList}
+          onConfirm={handleConfirmBooking}
+          isSubmitting={isBooking}
+        />
+      )}
 
       {/* Room Booking Modal */}
-      <RoomBookingModal
-        isOpen={showRoomBookingModal}
-        onClose={handleCloseRoomModal}
-        provinceCode={resolvedProvinceID}
-        availableDiscounts={activeDiscounts}
-        showDiscountSection={showDiscountSection}
-        setShowDiscountSection={setShowDiscountSection}
-        checkInDate={checkInDate}
-        setCheckInDate={setCheckInDate}
-        checkOutDate={checkOutDate}
-        setCheckOutDate={setCheckOutDate}
+      {showRoomBookingModal && (
+        <RoomBookingModal
+          isOpen={showRoomBookingModal}
+          onClose={handleCloseRoomModal}
+          provinceCode={resolvedProvinceID}
+          availableDiscounts={activeDiscounts}
+          showDiscountSection={showDiscountSection}
+          setShowDiscountSection={setShowDiscountSection}
+          checkInDate={checkInDate}
+          setCheckInDate={setCheckInDate}
+          checkOutDate={checkOutDate}
+          setCheckOutDate={setCheckOutDate}
         guestCount={guestCount}
         setGuestCount={setGuestCount}
         roomType={roomType}
@@ -978,7 +1042,9 @@ const ServiceDetailPage: React.FC = () => {
         allRooms={allRooms}
         serviceId={id}
         onConfirm={handleConfirmRoomBooking}
+        isSubmitting={isBooking}
       />
+      )}
 
       {/* Auth Modal */}
       <AuthModal
