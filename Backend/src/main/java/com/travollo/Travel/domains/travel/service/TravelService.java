@@ -4,127 +4,97 @@ import com.travollo.Travel.domains.comments.repo.CommentServiceRepo;
 import com.travollo.Travel.domains.hotel.entity.Hotel;
 import com.travollo.Travel.domains.ticket.repo.TicketRepo;
 import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
+import com.travollo.Travel.domains.travel.dto.ServiceFilterDTO;
 import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
+import com.travollo.Travel.domains.travel.dto.UpdatedServiceRequest;
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
+import com.travollo.Travel.domains.travel.repo.ServiceSpecifications;
 import com.travollo.Travel.domains.user.entity.User;
-import com.travollo.Travel.entity.*;
+import com.travollo.Travel.entity.ImageService;
+import com.travollo.Travel.entity.Province;
+import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.entity.TicketVenue;
 import com.travollo.Travel.exception.CustomException;
-import com.travollo.Travel.repo.*;
+import com.travollo.Travel.repo.ImageServiceRepo;
+import com.travollo.Travel.repo.ProvinceRepo;
 import com.travollo.Travel.service.AwsS3Service;
 import com.travollo.Travel.utils.ServiceType;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class TravelService {
-    @Autowired
-    private ServiceRepo serviceRepo;
-    @Autowired
-    private AwsS3Service awsS3Service;
-    @Autowired
-    private ProvinceRepo provinceRepo;
-    @Autowired
-    private ImageServiceRepo imgServiceRepo;
-    @Autowired
-    private CommentServiceRepo commentRepo;
-    @Autowired
-    private TicketRepo ticketRepo;
-    @Autowired
-    private ModelMapper modelMapper;
+    private final ServiceRepo serviceRepo;
+    private final AwsS3Service awsS3Service;
+    private final ProvinceRepo provinceRepo;
+    private final ImageServiceRepo imgServiceRepo;
+    private final CommentServiceRepo commentRepo;
+    private final TicketRepo ticketRepo;
+    private final TravelServiceMapper travelServiceMapper;
+//    private final ServiceSpecifications serviceSpecifications;
 
-
-    public ResponseEntity<Object> getAllServices(){
-        try {
-            List<TService> TServices = serviceRepo.findAll();
-            return ResponseEntity.ok(TServices);
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving services");
-        }
+    public List<TService> getAllServices() {
+        return serviceRepo.findAll();
     }
 
-    public ResponseEntity<Object> getServiceById(String serviceID){
-        try {
-            Optional<TService> optionalTService = serviceRepo.findById(serviceID);
-            if (optionalTService.isPresent()) {
-                List<Comment> commentList = optionalTService.get().getCommentList();
-            }
-            return optionalTService.<ResponseEntity<Object>>map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving the service");
-        }
+    public TService getServiceById(String serviceID) {
+        return serviceRepo.findById(serviceID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found service"));
     }
-
-    public ResponseEntity<Object> getServices(int page, int size, String sortBy, String direction) {
-        try {
-            Sort sort = direction.equalsIgnoreCase("desc") ?
-                    Sort.by(sortBy).descending() :
-                    Sort.by(sortBy).ascending();
-
-            Pageable pageable = PageRequest.of(page, size, sort);
-            Page<TService> servicesPage;
-            servicesPage = serviceRepo.findAll(pageable);
-            System.out.println("Services Page: " + servicesPage);
-            Map<String, Object> response = new HashMap<>();
-            response.put("services", servicesPage.getContent());
-            response.put("currentPage", servicesPage.getNumber());
-            response.put("totalItems", servicesPage.getTotalElements());
-            response.put("totalPages", servicesPage.getTotalPages());
-            response.put("pageSize", servicesPage.getSize());
-            response.put("sortBy", sortBy);
-            response.put("direction", direction);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while retrieving paginated services: " + e.getMessage());
-        }
-    }
-
-    public ResponseEntity<Object> uploadImages(String id, List<MultipartFile> photos) {
-        try {
-            List<String> urls = awsS3Service.saveImagesToS3(photos);
-            TService service = serviceRepo.findById(id).orElse(null);
-            if (service == null) {
-                return ResponseEntity.notFound().build();
-            }
-
-            List<ImageService> imageEntities = new ArrayList<>();
-
-            for (String url : urls) {
-                ImageService img = new ImageService();
-                img.setImageUrl(url);
-                img.setDescription("Description: " + url);
-                img.setTService(service);
-                imageEntities.add(img);
-            }
-
-            imgServiceRepo.saveAll(imageEntities);
-
-            return ResponseEntity.ok().body("Re-up images");
-        } catch (Exception e){
-            throw new CustomException(HttpStatus.BAD_REQUEST, e.getMessage());
-        }
-    }
-
-//    public ResponseEntity<Object> createService(NewServiceRequest request)
-//    {
+//
+//    public ResponseEntity<Object> getServices(int page, int size, String sortBy, String direction) {
 //        try {
-//            TService newTService = modelMapper.map(request, TService.class);
-//            newTService.setThumbnailUrl(awsS3Service.saveImageToS3(request.getThumbnail()));
-//            return ResponseEntity.status(HttpStatus.CREATED).body(serviceRepo.save(newTService));
+//            Sort sort = direction.equalsIgnoreCase("desc") ?
+//                    Sort.by(sortBy).descending() :
+//                    Sort.by(sortBy).ascending();
+//
+//            Pageable pageable = PageRequest.of(page, size, sort);
+//            Page<TService> servicesPage;
+//            servicesPage = serviceRepo.findAll(pageable);
+//            System.out.println("Services Page: " + servicesPage);
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("services", servicesPage.getContent());
+//            response.put("currentPage", servicesPage.getNumber());
+//            response.put("totalItems", servicesPage.getTotalElements());
+//            response.put("totalPages", servicesPage.getTotalPages());
+//            response.put("pageSize", servicesPage.getSize());
+//            response.put("sortBy", sortBy);
+//            response.put("direction", direction);
+//            return ResponseEntity.ok(response);
 //        } catch (Exception e) {
-//            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+//            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while retrieving paginated services: " + e.getMessage());
 //        }
 //    }
 
-    public ResponseEntity<Object> createService(NewServiceRequest request, User provider) {
+    public String uploadImages(String id, List<MultipartFile> photos) {
+        List<String> urls = awsS3Service.saveImagesToS3(photos);
+        TService service = serviceRepo.findById(id).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found service"));
+        List<ImageService> imageEntities = new ArrayList<>();
+
+        for (String url : urls) {
+            ImageService img = new ImageService();
+            img.setImageUrl(url);
+            img.setDescription("Description: " + url);
+            img.setTService(service);
+            imageEntities.add(img);
+        }
+
+        imgServiceRepo.saveAll(imageEntities);
+        return "Upload successfully";
+    }
+
+    public TService createService(NewServiceRequest request, User provider) {
         TService newTService;
         ServiceType serviceType = request.getServiceType();
 
@@ -173,142 +143,132 @@ public class TravelService {
                     .orElseThrow(() -> new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Không tìm thấy Service sau khi lưu"));
         }
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedService);
+        return savedService;
     }
 
-//    public ResponseEntity<Object> createService(MultipartFile thumbnail, String serviceName, String description, String provinceCode,
-//                                                String address, String contactNumber, Long averagePrice,
-//                                                String tags, ServiceType serviceType, User provider,
-//                                                List<MultipartFile> photos,
-//                                                Time start_time, Time end_time, Time open_time, Time close_time, String working_days
-//    )
-//    {
-//        try {
-//            TService newTService;
-//            String thumbnailUrl = null;
-//            if (thumbnail != null && !thumbnail.isEmpty()) {
-//                thumbnailUrl = awsS3Service.saveImageToS3(thumbnail);
-//            }
-//            Province province = provinceRepo.findById(provinceCode).orElse(null);
+//    public TService updateService(String serviceID, TService updatedTService) {
+//        TService existingTService = serviceRepo.findById(serviceID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found service"));
+//        // Update fields
+//        existingTService.setServiceName(updatedTService.getServiceName());
+//        existingTService.setDescription(updatedTService.getDescription());
+//        existingTService.setProvince(updatedTService.getProvince());
+//        existingTService.setAddress(updatedTService.getAddress());
+//        existingTService.setContactNumber(updatedTService.getContactNumber());
+//        existingTService.setRating(updatedTService.getRating());
+//        existingTService.setTags(updatedTService.getTags());
+//        existingTService.setAveragePrice(updatedTService.getAveragePrice());
+//        existingTService.setServiceType(updatedTService.getServiceType());
+//        existingTService.setProvider(updatedTService.getProvider());
+//        existingTService.setImageList(updatedTService.getImageList());
 //
-//            if (ServiceType.HOTEL == serviceType) {
-//                Hotel hotel = new Hotel();
-//                newTService = hotel;
-//            }  else  {
-//                TicketVenue ticketVenue = new TicketVenue();
-//                ticketVenue.setStartTime(start_time);
-//                ticketVenue.setEndTime(end_time);
-//                newTService = ticketVenue;
-//            }
-//            newTService.setServiceName(serviceName);
-//            newTService.setDescription(description);
-//            newTService.setProvince(province);
-//            newTService.setAddress(address);
-//            newTService.setContactNumber(contactNumber);
-//            newTService.setAveragePrice(averagePrice);
-//            newTService.setTags(tags);
-//            newTService.setServiceType(serviceType);
-//            newTService.setProvider(provider);
-//            newTService.setThumbnailUrl(thumbnailUrl);
-//
-//            System.out.println("New Service: " + newTService);
-//
-//            TService savedService =  serviceRepo.save(newTService);
-//            if (photos != null && !photos.isEmpty()) {
-//                uploadImages(savedService.getId(), photos);
-//                savedService = serviceRepo.findById(savedService.getId())
-//                        .orElseThrow(() -> new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Service not found after saving"));
-//
-//            }
-//            return ResponseEntity.status(HttpStatus.CREATED).body(savedService);
-//        } catch (Exception e) {
-//            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-//        }
+//        return serviceRepo.save(existingTService);
 //    }
 
-    public ResponseEntity<Object> updateService(String serviceID, TService updatedTService){
-        try {
-            Optional<TService> optionalTService = serviceRepo.findById(serviceID);
-            if (optionalTService.isPresent()) {
-                TService existingTService = optionalTService.get();
-                // Update fields
-                existingTService.setServiceName(updatedTService.getServiceName());
-                existingTService.setDescription(updatedTService.getDescription());
-                existingTService.setProvince(updatedTService.getProvince());
-                existingTService.setAddress(updatedTService.getAddress());
-                existingTService.setContactNumber(updatedTService.getContactNumber());
-                existingTService.setRating(updatedTService.getRating());
-                existingTService.setTags(updatedTService.getTags());
-                existingTService.setAveragePrice(updatedTService.getAveragePrice());
-                existingTService.setServiceType(updatedTService.getServiceType());
-                existingTService.setProvider(updatedTService.getProvider());
-                existingTService.setImageList(updatedTService.getImageList());
+    @Transactional
+    public TService updateService(String serviceId, UpdatedServiceRequest request, User currentUser) {
+        TService existingService = serviceRepo.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ với ID: " + serviceId));
 
-                TService savedTService = serviceRepo.save(existingTService);
-                return ResponseEntity.ok(savedTService);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while updating the service");
+        if (!existingService.getProvider().getUserID().equals(currentUser.getUserID())) {
+            throw new RuntimeException("Bạn không có quyền chỉnh sửa dịch vụ này!");
         }
+
+        travelServiceMapper.patchRequest(request, existingService);
+
+        // 4. Xử lý các logic đặc thù (nếu có)
+        if (request.getThumbnailImg() != null) {
+            String newThumbnailUrl = awsS3Service.saveImageToS3(request.getThumbnailImg());
+            existingService.setThumbnailUrl(newThumbnailUrl);
+        }
+
+        // 2. Xử lý danh sách ảnh chi tiết mới (Upload nhiều file)
+        if (request.getImageList() != null && !request.getImageList().isEmpty()) {
+            if (existingService.getImageList() == null) {
+                existingService.setImageList(new ArrayList<>());
+            }
+
+            // thì mở comment dòng dưới. Còn nếu muốn "THÊM VÀO" thì giữ nguyên.
+            // existingService.getImageList().clear();
+
+            List<String> s3ImageUrls = awsS3Service.saveImagesToS3(request.getImageList());
+
+            for (String s3ImageUrl : s3ImageUrls) {
+                ImageService newImage = new ImageService();
+                newImage.setImageUrl(s3ImageUrl);
+                newImage.setDescription("description...");
+                newImage.setTService(existingService);
+                existingService.getImageList().add(newImage);
+            }
+        }
+
+        return serviceRepo.save(existingService);
     }
 
-    public ResponseEntity<Object> deleteService(String serviceID){
-        try {
-            if (serviceRepo.existsById(serviceID)) {
-                serviceRepo.deleteById(serviceID);
-                return ResponseEntity.noContent().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while deleting the service");
-        }
+    public void deleteService(String serviceID) {
+        serviceRepo.deleteById(serviceID);
     }
 
-    public ResponseEntity<Object> searchServices(
+    public Page<TService> searchServices(
             ServiceSearchRequest searchRequest
     ) {
-        try {
-            Sort sort = searchRequest.getDirection().equalsIgnoreCase("desc") ?
-                    Sort.by(searchRequest.getSortBy()).descending() :
-                    Sort.by(searchRequest.getSortBy()).ascending();
+        Sort sort = searchRequest.getDirection().equalsIgnoreCase("desc") ?
+                Sort.by(searchRequest.getSortBy()).descending() :
+                Sort.by(searchRequest.getSortBy()).ascending();
 
-            Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), sort);
+        Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), sort);
 
-            ServiceType serviceTypeEnum = searchRequest.getServiceType() != null ? ServiceType.valueOf(searchRequest.getServiceType().toUpperCase()) : null;
+        ServiceType serviceTypeEnum = searchRequest.getServiceType() != null ? ServiceType.valueOf(searchRequest.getServiceType().toUpperCase()) : null;
 
-            String searchKeyword = (searchRequest.getKeyword() == null || searchRequest.getKeyword().trim().isEmpty()) ? null :
-            searchRequest.getKeyword().trim();
-            Long searchMinPrice = (searchRequest.getMinPrice() == null) ? 0L :searchRequest.getMinPrice();
-            Long searchMaxPrice = (searchRequest.getMaxPrice() == null) ? Long.MAX_VALUE : searchRequest.getMaxPrice();
+        String searchKeyword = (searchRequest.getKeyword() == null || searchRequest.getKeyword().trim().isEmpty()) ? null :
+                searchRequest.getKeyword().trim();
+        Long searchMinPrice = (searchRequest.getMinPrice() == null) ? 0L : searchRequest.getMinPrice();
+        Long searchMaxPrice = (searchRequest.getMaxPrice() == null) ? Long.MAX_VALUE : searchRequest.getMaxPrice();
 
-            Page<TService> servicesPage = serviceRepo.searchServices(
-                    searchKeyword,
-                    searchRequest.getProvinceCode(),
-                    serviceTypeEnum,
-                    searchMinPrice,
-                    searchMaxPrice,
-                    searchRequest.getMinRating(),
-                    pageable
-            );
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("services", servicesPage.getContent());
-            response.put("currentPage", servicesPage.getNumber());
-            response.put("totalItems", servicesPage.getTotalElements());
-            response.put("totalPages", servicesPage.getTotalPages());
-            response.put("pageSize", servicesPage.getSize());
-            response.put("sortBy", searchRequest.getSortBy());
-            response.put("direction", searchRequest.getDirection());
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while searching services: " + e.getMessage());
-        }
+        return serviceRepo.searchServices(
+                searchKeyword,
+                searchRequest.getProvinceCode(),
+                serviceTypeEnum,
+                searchMinPrice,
+                searchMaxPrice,
+                searchRequest.getMinRating(),
+                pageable
+        );
     }
 
+    public Page<TService> filterServices(ServiceFilterDTO filter) {
+        List<Specification<TService>> specs = new ArrayList<>();
+        // Thêm các điều kiện vào List
+        if (filter.getName() != null && !filter.getName().isBlank()) {
+            specs.add(ServiceSpecifications.nameContains(filter.getName()));
+        }
+        if (filter.getType() != null) {
+            specs.add(ServiceSpecifications.hasServiceType(filter.getType()));
+        }
+        if (filter.getMinPrice() != null || filter.getMaxPrice() != null) {
+            specs.add(ServiceSpecifications.priceBetween(filter.getMinPrice(), filter.getMaxPrice()));
+        }
+        if (filter.getProvinceCode() != null) {
+            specs.add(ServiceSpecifications.hasProvince(filter.getProvinceCode()));
+        }
+        if (filter.getMinRating() != null) {
+            specs.add(ServiceSpecifications.ratingGreaterThanOrEqual(filter.getMinRating()));
+        }
+        if (filter.getTag() != null) {
+            specs.add(ServiceSpecifications.tagsContain(filter.getTag()));
+        }
+        if (filter.isOnlyWithImages()) {
+            specs.add(ServiceSpecifications.hasImages());
+        }
 
+
+        Specification<TService> finalSpec = Specification.allOf(specs);
+        // Xử lý phân trang
+        Sort sort = filter.getDirection().equalsIgnoreCase("DESC")
+                ? Sort.by(filter.getSortBy()).descending()
+                : Sort.by(filter.getSortBy()).ascending();
+        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+
+        return serviceRepo.findAll(finalSpec, pageable);
+    }
 
 }

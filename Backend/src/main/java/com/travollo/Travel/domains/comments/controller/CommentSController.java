@@ -19,6 +19,7 @@ import java.util.List;
 public class CommentSController {
     private final CommentSService commentSService;
 
+    /** Post a new comment for a specific service */
     @PostMapping("/{serviceID}")
     public ResponseEntity<CommentResponseDTO> postComment(
             @PathVariable String serviceID,
@@ -28,6 +29,7 @@ public class CommentSController {
         return ResponseEntity.ok(commentSService.addComment(serviceID, comment, currentUser));
     }
 
+    /** Retrieve all comments of a specific service with PAGINATION */
     @GetMapping("/{serviceID}")
     public ResponseEntity<PageResponse<CommentResponseDTO>> getCommentsByServiceID(
             @PathVariable String serviceID,
@@ -38,12 +40,13 @@ public class CommentSController {
     ) {
         return ResponseEntity.ok(commentSService.getCommentsByServiceID(serviceID, page, size, sortBy, direction));
     }
-
+    /** Retrieve all comments of a specific service */
     @GetMapping("/{serviceID}/all")
     public ResponseEntity<List<CommentResponseDTO>> getAllComments(@PathVariable String serviceID) {
         return ResponseEntity.ok(commentSService.getAllCommentsByService(serviceID));
     }
 
+    /** Update a specific comment */
     @PatchMapping("/{commentID}")
     public ResponseEntity<CommentResponseDTO> updateComment(
             @PathVariable String commentID,
@@ -53,6 +56,9 @@ public class CommentSController {
         return ResponseEntity.ok(commentSService.updateComment(commentID, updateCommentDTO, currentUser));
     }
 
+    /* Delete a comment
+    * Validate user permission to delete
+    * */
     @DeleteMapping("/{commentID}")
     public ResponseEntity<String> deleteComment(
             @PathVariable String commentID,
@@ -61,6 +67,9 @@ public class CommentSController {
         return ResponseEntity.ok("Delete successfully");
     }
 
+    /* Like a specific comment
+     * User token to identify the user
+     *  */
     @PostMapping("/like/{commentID}")
     ResponseEntity<Object> likeComment(
             @PathVariable String commentID,
@@ -69,6 +78,7 @@ public class CommentSController {
         return  ResponseEntity.ok(commentSService.likeComment(currentUser, commentID));
     }
 
+    /** Unlike a specific comment */
     @PostMapping("/unlike/{commentID}")
     ResponseEntity<Object> unlikeComment(
             @PathVariable String commentID,
@@ -77,6 +87,7 @@ public class CommentSController {
         return ResponseEntity.ok( commentSService.unlikeComment(currentUser, commentID));
     }
 
+    /** Dislike a specific comment */
     @PostMapping("/dislike/{commentID}")
     ResponseEntity<Object> dislikeComment(
             @PathVariable String commentID,
@@ -84,36 +95,4 @@ public class CommentSController {
     ) {
         return  ResponseEntity.ok(commentSService.dislikeComment(currentUser, commentID));
     }
-//
-//    @PostMapping("/undoDislike/{commentID}")
-//    ResponseEntity<Object> undoDislike(
-//            @PathVariable String commentID,
-//            @CurrentUser User currentUser
-//    ) {
-//        return commentSService.undoDislikeComment(currentUser, commentID);
-//    }
-//
-//    @PatchMapping(
-//            value = "/{serviceID}",
-//            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-//    )
-//    ResponseEntity<Object> updateComment() {
-//        return null;
-//    }
-
-//    @GetMapping("/{serviceID}")
-//    ResponseEntity<List<CommentResponseDTO>> getAllComments(@PathVariable String serviceID) {
-//
-//    }
-
-//    @GetMapping("/{serviceID}")
-//    ResponseEntity<Object> getAllCommentByServiceID(
-//            @PathVariable String serviceID,
-//            @RequestParam(name = "page", required = false) Integer page,
-//            @RequestParam(name = "size", required = false) Integer size,
-//            @RequestParam(name = "sortBy", required = false, defaultValue = "createdAt") String sortBy,
-//            @RequestParam(name = "direction", defaultValue = "desc") String direction
-//    ) {
-//        return commentSService.getCommentsByServiceID(serviceID,page,size,sortBy,direction);
-//    }
 }

@@ -6,7 +6,7 @@ import com.travollo.Travel.domains.favorite.entity.FavoriteService;
 import com.travollo.Travel.domains.favorite.repo.FavoriteServiceRepository;
 import com.travollo.Travel.entity.TService;
 import com.travollo.Travel.domains.user.entity.User;
-import com.travollo.Travel.repo.ServiceRepo;
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

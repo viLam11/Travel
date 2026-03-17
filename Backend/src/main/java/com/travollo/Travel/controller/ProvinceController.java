@@ -1,5 +1,6 @@
 package com.travollo.Travel.controller;
 
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.repo.ProvinceRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,7 @@ public class ProvinceController {
     private ProvinceRepo provinceRepo;
 
     @Autowired
-    private com.travollo.Travel.repo.ServiceRepo serviceRepo;
+    private ServiceRepo serviceRepo;
 
     @GetMapping("/search")
     public ResponseEntity<List<Province>> searchProvinces(@RequestParam("query") String query) {

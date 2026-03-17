@@ -1,4 +1,4 @@
-package com.travollo.Travel.repo;
+package com.travollo.Travel.domains.travel.repo;
 
 import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.entity.TService;
@@ -7,12 +7,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface ServiceRepo extends JpaRepository<TService, String> {
+public interface ServiceRepo extends JpaRepository<TService, String>, JpaSpecificationExecutor<TService> {
     @Query(value = "SELECT * FROM services s WHERE s.province_code = ?1 AND s.thumbnail_url IS NOT NULL LIMIT 1", nativeQuery = true)
     TService findFirstByProvinceCodeAndThumbnailUrlNotNull(String provinceCode);
 

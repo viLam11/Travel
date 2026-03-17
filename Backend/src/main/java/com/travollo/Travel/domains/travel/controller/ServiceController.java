@@ -6,10 +6,11 @@ import com.travollo.Travel.domains.hotel.service.HotelAndRoomService;
 import com.travollo.Travel.domains.ticket.dto.TicketCreateRequest;
 import com.travollo.Travel.domains.ticket.service.TicketService;
 import com.travollo.Travel.domains.travel.dto.NewServiceRequest;
+import com.travollo.Travel.domains.travel.dto.ServiceFilterDTO;
 import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
 import com.travollo.Travel.domains.ticket.dto.TicketResponse;
 import com.travollo.Travel.domains.user.entity.User;
-import com.travollo.Travel.exception.CustomException;
+import com.travollo.Travel.entity.TService;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.domains.comments.service.CommentSService;
 import com.travollo.Travel.domains.travel.service.TravelService;
@@ -17,6 +18,7 @@ import com.travollo.Travel.utils.CurrentUser;
 import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,25 +39,21 @@ public class ServiceController {
     private final HotelAndRoomService hotelAndRoomService;
 
     @GetMapping("/all")
-    ResponseEntity<Object> getAllServices() {
-        return travelService.getAllServices();
+    ResponseEntity<List<TService>> getAllServices() {
+        return ResponseEntity.status(HttpStatus.OK).body(travelService.getAllServices());
     }
 
-    @GetMapping("/data")
-    ResponseEntity<Object> getServices(
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size
-    ) {
-        try {
-            return travelService.getServices(page, size, "id", "asc");
-        } catch (Exception e) {
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while retrieving services with pagination");
-        }
-    }
+//    @GetMapping("/data")
+//    ResponseEntity<Object> getServices(
+//            @RequestParam(name = "page", defaultValue = "0") int page,
+//            @RequestParam(name = "size", defaultValue = "10") int size
+//    ) {
+//            return travelService.getServices(page, size, "id", "asc");
+//    }
 
     @GetMapping("/{serviceID}")
-    ResponseEntity<Object> getServiceById(@PathVariable String serviceID) {
-        return travelService.getServiceById(serviceID);
+    ResponseEntity<TService> getServiceById(@PathVariable String serviceID) {
+        return ResponseEntity.status(HttpStatus.OK).body(travelService.getServiceById(serviceID));
     }
 
     @PostMapping(value = "/newService")
@@ -70,7 +68,7 @@ public class ServiceController {
                 return ResponseEntity.status(403).body("User is not a provider");
             }
         }
-        return travelService.createService(newServiceRequest, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(travelService.createService(newServiceRequest, currentUser));
     }
 
     @PatchMapping("/upload/img/{id}")
@@ -78,13 +76,12 @@ public class ServiceController {
             @PathVariable String id,
             @RequestBody List<MultipartFile> photos
     ) {
-        return travelService.uploadImages(id, photos);
+        return ResponseEntity.status(HttpStatus.OK).body(travelService.uploadImages(id, photos));
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<Object> deleteService(@PathVariable String id) {
-        System.out.println("Received request to delete service with ID: " + id);
-        return travelService.deleteService(id);
+    ResponseEntity<String> deleteService(@PathVariable String id) {
+        return ResponseEntity.status(HttpStatus.OK).body("Delete successfully");
     }
 
     @GetMapping("/{id}/tickets")
@@ -93,10 +90,17 @@ public class ServiceController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Object> searchServicesInProvince(
+    public ResponseEntity<Page<TService>> searchServicesInProvince(
             @ModelAttribute ServiceSearchRequest searchRequest
             ) {
-        return travelService.searchServices(searchRequest);
+        return ResponseEntity.status(HttpStatus.OK).body(travelService.searchServices(searchRequest));
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<Page<TService>> filterServices(
+            @RequestParam ServiceFilterDTO filterDTO
+            ) {
+        return ResponseEntity.status(HttpStatus.OK).body(travelService.filterServices(filterDTO));
     }
 
     @PostMapping("/{ticketVenueID}/tickets")

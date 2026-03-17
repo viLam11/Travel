@@ -8,6 +8,7 @@ import com.travollo.Travel.domains.comments.repo.CommentSDislikeRepo;
 import com.travollo.Travel.domains.comments.repo.CommentSLikeRepo;
 import com.travollo.Travel.domains.comments.repo.CommentServiceRepo;
 import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.entity.*;
 import com.travollo.Travel.exception.CustomException;
@@ -42,6 +43,10 @@ public class CommentSService {
 
     private final AwsS3Service awsS3Service;
 
+    /** Trieve all comments of a specific service
+     * @param serviceID: service ID
+     * @return List<CommentResponseDTO>: all comments
+     * */
     public List<CommentResponseDTO> getAllCommentsByService(
             String serviceID
     ) {
@@ -49,6 +54,19 @@ public class CommentSService {
                 .map(this::mapToCommentResponse)
                 .toList();
     }
+
+    /**
+     * Adds a new comment to a specific service and handles image uploads.
+     * <p>
+     * This method creates a comment entity, links it to an existing service,
+     * and processes any attached photos by saving them to AWS S3.
+     *
+     * @param serviceID the unique identifier of the service being commented on
+     * @param newCmtDTO the data containing comment content, rating, and optional photos
+     * @param user       the user who is creating the comment
+     * @return the saved comment details mapped to a response DTO
+     * @throws CustomException if the service does not exist (BAD_REQUEST)
+     */
     @Transactional
     public CommentResponseDTO addComment(String serviceID, CreateCommentDTO newCmtDTO, User user) {
         TService service = serviceRepo.findById(serviceID)
@@ -81,6 +99,13 @@ public class CommentSService {
         return mapToCommentResponse(savedCmt);
     }
 
+    /** Update comments, can change: content, rating, images, time => Re-uploads images, validate the user's permission
+     * @param commentID     the unique ID of comment
+     * @param updateCommentDTO  the updated comment
+     * @param currentUser   the requesting user
+     * @return saved comment
+     * @throws CustomException BAD_REQUEST, FORBIDDEN,...
+     * */
     @Transactional
     public CommentResponseDTO updateComment(
             String commentID,
@@ -106,6 +131,13 @@ public class CommentSService {
         return mapToCommentResponse(commentServiceRepo.save(existingCmt));
     }
 
+    /** Retrieve all comments of a specific service with pagination
+     * @param serviceID the unique ID of service
+     * @param page  the page number
+     * @param size  the number of comment of each page
+     * @param sortBy the sort category
+     * @param direction the direction
+     * */
     public PageResponse<CommentResponseDTO> getCommentsByServiceID(String serviceID, Integer page, Integer size, String sortBy, String direction) {
         TService service = serviceRepo.findById(serviceID)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found Service"));
@@ -133,11 +165,19 @@ public class CommentSService {
                 .build();
     }
 
+    /** Retrieve a specific comment
+     * @param commentID the ID of comment
+     * @return the found comment
+     * */
     public CommentResponseDTO getCommentById(String commentID) {
         return mapToCommentResponse(commentServiceRepo.findById(commentID)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Không tìm thấy bình luận")));
     }
 
+    /** Delete a specific comment
+     * @param commentID the unique ID
+     * @param requestingUser    Check user's permission
+     * */
     @Transactional
     public void deleteComment(String commentID, User requestingUser) {
         Comment existingComment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found comment"));
@@ -148,6 +188,8 @@ public class CommentSService {
     }
 
 
+    /** Like a comment
+     * */
     @Transactional
     public CommentResponseDTO likeComment(User user, String commentID){
         Comment comment = commentServiceRepo.findById(commentID)

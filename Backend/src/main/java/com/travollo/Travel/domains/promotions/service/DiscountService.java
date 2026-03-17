@@ -8,7 +8,7 @@ import com.travollo.Travel.domains.promotions.entity.*;
 import com.travollo.Travel.domains.promotions.repo.DiscountRepo;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.ProvinceRepo;
-import com.travollo.Travel.repo.ServiceRepo;
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.utils.DiscountApplyType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -63,10 +63,9 @@ public class DiscountService {
     }
 
     public List<DiscountResponse> getSatisfiedDiscount(String serviceID, String placeCode) {
-        List<Discount> result = new ArrayList<>();
         // discount applied for all
         List<Discount> globalDiscounts = discountRepo.findByApplyType(DiscountApplyType.ALL);
-        result.addAll(globalDiscounts);
+        List<Discount> result = new ArrayList<>(globalDiscounts);
         // discount for serviceID
         if (serviceID != null) {
             List<Discount> specificDiscounts = discountRepo.findByServiceList_TService_Id(serviceID);
@@ -76,7 +75,7 @@ public class DiscountService {
             List<Discount> discountOfProvince = discountRepo.findByProvinceList_Province_Code(placeCode);
             result.addAll(discountOfProvince);
         }
-        return result.isEmpty() ? null : result.stream().map((discount) -> mapToResponse(discount)).collect(Collectors.toList());
+        return result.isEmpty() ? null : result.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public DiscountResponse getDiscountById(String id) {

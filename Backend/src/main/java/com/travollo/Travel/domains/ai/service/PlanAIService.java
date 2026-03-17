@@ -8,7 +8,7 @@ import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.entity.TService;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.ProvinceRepo;
-import com.travollo.Travel.repo.ServiceRepo;
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Sort;
@@ -108,5 +108,5 @@ public class PlanAIService {
 
                 String aiResponse = geminiService.getAnwser(prompt, numberOfDayTrips, new ArrayList<>());
                 return formatPlan(aiResponse);
-            };
+            }
         }

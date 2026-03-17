@@ -8,7 +8,7 @@ import com.travollo.Travel.entity.Ticket;
 import com.travollo.Travel.entity.TicketVenue;
 import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
-import com.travollo.Travel.repo.ServiceRepo;
+import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.utils.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
