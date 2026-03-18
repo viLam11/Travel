@@ -2,6 +2,7 @@ package com.travollo.Travel.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travollo.Travel.config.MomoConfig;
+import com.travollo.Travel.domains.orders.dto.PaymentMomoResponse;
 import com.travollo.Travel.service.interfac.MomoServiceInterface;
 import com.travollo.Travel.utils.MomoEncoderUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,14 +27,14 @@ public class MomoServiceImp implements MomoServiceInterface {
     MomoConfig momoConfig;
 
     @Override
-    public Map<String, Object> createPayment(String orderId, Long amount) throws Exception {
+    public PaymentMomoResponse createPayment(String orderId, Long amount) throws Exception {
         JSONObject json = new JSONObject();
         String partnerCode = momoConfig.PARTNER_CODE;
         String accessKey = momoConfig.ACCESS_KEY;
         String secretKey = momoConfig.SECRET_KEY;
         String returnUrl = momoConfig.REDIRECT_URL;
         String notifyUrl = momoConfig.NOTIFY_URL;
-        String requestId = String.valueOf(System.currentTimeMillis());
+        String requestId = orderId + "-" + System.currentTimeMillis();
         String orderInfo = "Thanh toan don hang " + orderId;
 
         json.put("partnerCode", partnerCode);
@@ -58,11 +60,11 @@ public class MomoServiceImp implements MomoServiceInterface {
         String hashData = MomoEncoderUtils.signHmacSHA256(data, secretKey);
         json.put("signature", hashData);
 
-        return sendMomoRequest(json, momoConfig.CREATE_ORDER_URL);
+        return sendMomoRequest(json, momoConfig.CREATE_ORDER_URL, PaymentMomoResponse.class);
     }
 
     @Override
-    public Map<String, Object> transactionStatus(String orderId, String requestId) throws Exception {
+    public PaymentMomoResponse transactionStatus(String orderId, String requestId) throws Exception {
         JSONObject json = new JSONObject();
         String partnerCode = momoConfig.PARTNER_CODE;
         String accessKey = momoConfig.ACCESS_KEY;
@@ -83,27 +85,52 @@ public class MomoServiceImp implements MomoServiceInterface {
         String hashData = MomoEncoderUtils.signHmacSHA256(data, secretKey);
         json.put("signature", hashData);
 
-        return sendMomoRequest(json, momoConfig.CREATE_ORDER_URL);
+        return sendMomoRequest(json, momoConfig.CREATE_ORDER_URL, PaymentMomoResponse.class);
     }
 
-    private Map<String, Object> sendMomoRequest(JSONObject json, String url) throws Exception {
-        CloseableHttpClient client = HttpClients.createDefault();
-        HttpPost post = new HttpPost(url);
-        StringEntity stringEntity = new StringEntity(json.toString());
-        post.setHeader("content-type", "application/json");
-        post.setEntity(stringEntity);
+//    private Map<String, Object> sendMomoRequest(JSONObject json, String url) throws Exception {
+//        CloseableHttpClient client = HttpClients.createDefault();
+//        HttpPost post = new HttpPost(url);
+//        StringEntity stringEntity = new StringEntity(json.toString());
+//        post.setHeader("content-type", "application/json");
+//        post.setEntity(stringEntity);
+//
+//        CloseableHttpResponse res = client.execute(post);
+//        BufferedReader rd = new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
+//        StringBuilder resultJsonStr = new StringBuilder();
+//        String line;
+//        while ((line = rd.readLine()) != null) {
+//            resultJsonStr.append(line);
+//        }
+//
+//        ObjectMapper mapper = new ObjectMapper();
+//        Map<String, Object> map = mapper.readValue(resultJsonStr.toString(), Map.class);
+//
+//        return map;
+//    }
 
-        CloseableHttpResponse res = client.execute(post);
-        BufferedReader rd = new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
-        StringBuilder resultJsonStr = new StringBuilder();
-        String line;
-        while ((line = rd.readLine()) != null) {
-            resultJsonStr.append(line);
+    private <T> T sendMomoRequest(JSONObject json, String url, Class<T> responseType) throws Exception {
+        // Sử dụng try-with-resources để tự động đóng kết nối client/stream, chống tràn RAM
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            HttpPost post = new HttpPost(url);
+            // Set UTF-8 để không bị lỗi font tiếng Việt nếu có
+            StringEntity stringEntity = new StringEntity(json.toString(), StandardCharsets.UTF_8);
+            post.setHeader("content-type", "application/json");
+            post.setEntity(stringEntity);
+
+            try (CloseableHttpResponse res = client.execute(post);
+                 BufferedReader rd = new BufferedReader(new InputStreamReader(res.getEntity().getContent(), StandardCharsets.UTF_8))) {
+
+                StringBuilder resultJsonStr = new StringBuilder();
+                String line;
+                while ((line = rd.readLine()) != null) {
+                    resultJsonStr.append(line);
+                }
+
+                // ObjectMapper tự động chuyển chuỗi JSON thành Object DTO bạn truyền vào
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readValue(resultJsonStr.toString(), responseType);
+            }
         }
-
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> map = mapper.readValue(resultJsonStr.toString(), Map.class);
-
-        return map;
     }
 }

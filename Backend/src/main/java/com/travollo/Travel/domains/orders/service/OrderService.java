@@ -6,6 +6,9 @@ import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
 import com.travollo.Travel.domains.notifications.service.NotificationService;
 import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
+import com.travollo.Travel.domains.orders.dto.PaymentOrderResponse;
+import com.travollo.Travel.domains.orders.dto.PaymentMethod;
+import com.travollo.Travel.domains.orders.dto.PaymentMomoResponse;
 import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.domains.orders.entity.OrderStatus;
 import com.travollo.Travel.domains.orders.entity.OrderedRoom;
@@ -22,6 +25,7 @@ import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.OrderedTicketRepo;
+import com.travollo.Travel.service.VNPayService;
 import com.travollo.Travel.service.impl.MomoServiceImp;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +56,8 @@ public class OrderService {
     private final DiscountRepo discountRepo;
     private final DiscountService discountService;
     private final NotificationService notiService;
+    private final VNPayService vnPayService;
+    private final OrderMapper orderMapper;
 
     public ResponseEntity<Object> getOrderById(String id) {
         Optional<Order> foundOrder = orderRepo.findById(id);
@@ -95,9 +101,6 @@ public class OrderService {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Hai mã giảm giá không được áp dụng cùng loại (1 của hệ thống, 1 của doanh nghiệp)!");
                 }
             }
-//            if (orderCreateRequest.getCheckInDate().isAfter(orderCreateRequest.getCheckOutDate())) {
-//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ngày check-in phải trước ngày check-out!");
-//            }
             if (orderCreateRequest.getTickets().isEmpty() && orderCreateRequest.getRooms().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn hàng phải có ít nhất một vé hoặc một phòng!");
             }
@@ -178,7 +181,7 @@ public class OrderService {
             newOrder.setDiscountList(discountList);
             if (!discountList.isEmpty()) {
                 // Sắp xếp: Ưu tiên mã Hệ thống (isSystem = true) lên đầu để tính trước
-                discountList.sort((d1, d2) -> Boolean.compare(d2.getIsSystem(), d1.getIsSystem()));
+                discountList.sort(Comparator.comparing(Discount::getIsSystem));
 
                 for (Discount discount : discountList) {
                     BigDecimal currentDiscountVal = BigDecimal.ZERO;
@@ -214,8 +217,17 @@ public class OrderService {
 
             handleNotifyOwnersAfterOrdering(user, orderCreateRequest, savedOrder);
             // 7. Tạo link thanh toán MoMo
-            Map<String, Object> result = momoService.createPayment(newOrder.getOrderID(), newOrder.getTotalPrice().longValue());
-            return new ResponseEntity<>(result, HttpStatus.OK);
+            PaymentOrderResponse paymentResponse = new PaymentOrderResponse();
+            if (orderCreateRequest.getPaymentMethod() == PaymentMethod.VNPAY) {
+                String vnPayServicePaymentUrl = vnPayService.createPaymentUrl(newOrder.getTotalPrice().intValue(), null, null);
+                paymentResponse.setPayUrl(vnPayServicePaymentUrl);
+            } else {
+                System.out.println("HERE");
+                PaymentMomoResponse result = momoService.createPayment(newOrder.getOrderID(), newOrder.getTotalPrice().longValue());
+                paymentResponse.setPayUrl(result.getPayUrl());
+            }
+            paymentResponse.setOrder(orderMapper.toOrderResponse(savedOrder));
+            return new ResponseEntity<>(paymentResponse, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi tạo đơn hàng: " + e.getMessage());
         }
@@ -251,8 +263,12 @@ public class OrderService {
             return ticketEntity;
         }).toList();
 
+
+
         // 4. Bắn thông báo cho các chủ dịch vụ sau khi đơn hàng đã được tạo thành công
         for (User provider : providersToNotify) {
+            if (provider == null || provider.getUserID() == null) continue;
+            System.out.println("######  PROVIDER: " + provider);
             NotiCreateRequest notiReq = NotiCreateRequest.builder()
                     .receiverID(provider.getUserID())
                     .type(NotificationType.NEW_ORDER)

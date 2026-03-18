@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderResponse {
+public class PaymentOrderResponse {
     private String payUrl;
-    private Order order;
+    private OrderResponse order;
 }

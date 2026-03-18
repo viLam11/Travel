@@ -4,7 +4,6 @@ import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
 import com.travollo.Travel.domains.notifications.service.NotificationService;
 import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
-import com.travollo.Travel.domains.orders.dto.OrderResponse;
 import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.domains.orders.entity.OrderStatus;
 import com.travollo.Travel.domains.orders.service.OrderService;

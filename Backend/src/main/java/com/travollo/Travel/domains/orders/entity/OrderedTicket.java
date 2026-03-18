@@ -33,5 +33,6 @@ public class OrderedTicket {
     @ManyToOne
     @JoinColumn(name = "order_id")
     @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonBackReference
     private Order order;
 }

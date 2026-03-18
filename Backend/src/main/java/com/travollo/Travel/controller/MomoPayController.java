@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.travollo.Travel.config.MomoConfig;
+import com.travollo.Travel.domains.orders.dto.PaymentMomoResponse;
 import com.travollo.Travel.domains.orders.entity.OrderStatus;
 import com.travollo.Travel.dto.momo.MomoCallbackDTO;
 import com.travollo.Travel.domains.orders.service.OrderService;
@@ -44,7 +45,7 @@ public class MomoPayController {
 
     // tạo thanh toán, response trả về pay url
     @PostMapping(value = "/create-order")
-    public Map<String, Object> createPayment(HttpServletRequest request, @RequestParam Long amount,
+    public PaymentMomoResponse createPayment(HttpServletRequest request, @RequestParam Long amount,
                                              @RequestParam String order_id)
             throws InvalidKeyException, NoSuchAlgorithmException, ClientProtocolException, IOException, JSONException {
         JSONObject json = new JSONObject();
@@ -83,32 +84,52 @@ public class MomoPayController {
 
         CloseableHttpResponse res = client.execute(post);
         BufferedReader rd = new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
+//        StringBuilder resultJsonStr = new StringBuilder();
+//        String line;
+//        while ((line = rd.readLine()) != null) {
+//            resultJsonStr.append(line);
+//        }
+//        JSONObject result = new JSONObject(resultJsonStr.toString());
+//        Map<String, Object> kq = new HashMap<>();
+//        if (result.get("errorCode").toString().equalsIgnoreCase("0")) {
+//            kq.put("requestType", result.get("requestType"));
+//            kq.put("orderId", result.get("orderId"));
+//            kq.put("payUrl", result.get("payUrl"));
+//            kq.put("signature", result.get("signature"));
+//            kq.put("requestId", result.get("requestId"));
+//            kq.put("errorCode", result.get("errorCode"));
+//            kq.put("message", result.get("message"));
+//            kq.put("localMessage", result.get("localMessage"));
+//        } else {
+//            kq.put("requestType", result.get("requestType"));
+//            kq.put("orderId", result.get("orderId"));
+//            kq.put("signature", result.get("signature"));
+//            kq.put("requestId", result.get("requestId"));
+//            kq.put("errorCode", result.get("errorCode"));
+//            kq.put("message", result.get("message"));
+//            kq.put("localMessage", result.get("localMessage"));
+//        }
+//        return kq;
+
         StringBuilder resultJsonStr = new StringBuilder();
         String line;
         while ((line = rd.readLine()) != null) {
             resultJsonStr.append(line);
         }
+
         JSONObject result = new JSONObject(resultJsonStr.toString());
-        Map<String, Object> kq = new HashMap<>();
-        if (result.get("errorCode").toString().equalsIgnoreCase("0")) {
-            kq.put("requestType", result.get("requestType"));
-            kq.put("orderId", result.get("orderId"));
-            kq.put("payUrl", result.get("payUrl"));
-            kq.put("signature", result.get("signature"));
-            kq.put("requestId", result.get("requestId"));
-            kq.put("errorCode", result.get("errorCode"));
-            kq.put("message", result.get("message"));
-            kq.put("localMessage", result.get("localMessage"));
-        } else {
-            kq.put("requestType", result.get("requestType"));
-            kq.put("orderId", result.get("orderId"));
-            kq.put("signature", result.get("signature"));
-            kq.put("requestId", result.get("requestId"));
-            kq.put("errorCode", result.get("errorCode"));
-            kq.put("message", result.get("message"));
-            kq.put("localMessage", result.get("localMessage"));
-        }
-        return kq;
+
+        return PaymentMomoResponse.builder()
+                .requestType(result.optString("requestType"))
+                .orderId(result.optString("orderId"))
+                .requestId(result.optString("requestId"))
+                .signature(result.optString("signature"))
+                .errorCode(result.optInt("errorCode"))
+                .message(result.optString("message"))
+                .localMessage(result.optString("localMessage"))
+                // Nếu có payUrl thì lấy, không có (khi lỗi) thì gán null
+                .payUrl(result.has("payUrl") ? result.getString("payUrl") : null)
+                .build();
     }
 
     // truy vấn lại trạng thái thanh toán
