@@ -13,5 +13,6 @@ public class OrderCreateRequest {
     List<OrderItem> rooms = new ArrayList<>();
     String guestPhone;
     String note;
-    List<String> discountIds = new ArrayList<>();;
+    List<String> discountIds = new ArrayList<>();
+    PaymentMethod paymentMethod;
 }

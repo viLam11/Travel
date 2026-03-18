@@ -13,9 +13,9 @@ import java.util.Optional;
 @Repository
 public interface CommentSLikeRepo extends JpaRepository<CommentLike, String> {
     @Query("""
-            SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END 
-            FROM CommentLike c 
-            WHERE c.user =:user AND c.comment =:comment """)
+            SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
+            FROM CommentLike c
+            WHERE c.user =:user AND c.comment =:comment""")
     boolean existLike(@Param("user") User user, @Param("comment") Comment comment);
 
 

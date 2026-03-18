@@ -1,22 +1,20 @@
 package com.travollo.Travel.domains.comments.service;
 
 import com.travollo.Travel.common.PageResponse;
+import com.travollo.Travel.domains.comments.dto.CommentFilterDTO;
 import com.travollo.Travel.domains.comments.dto.CommentResponseDTO;
+import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
 import com.travollo.Travel.domains.comments.dto.UpdateCommentDTO;
 import com.travollo.Travel.domains.comments.entity.Comment;
 import com.travollo.Travel.domains.comments.entity.CommentDislike;
 import com.travollo.Travel.domains.comments.entity.CommentImg;
 import com.travollo.Travel.domains.comments.entity.CommentLike;
-import com.travollo.Travel.domains.comments.repo.CommentImgRepo;
-import com.travollo.Travel.domains.comments.repo.CommentSDislikeRepo;
-import com.travollo.Travel.domains.comments.repo.CommentSLikeRepo;
-import com.travollo.Travel.domains.comments.repo.CommentServiceRepo;
-import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
+import com.travollo.Travel.domains.comments.repo.*;
 import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.exception.CustomException;
-import com.travollo.Travel.repo.*;
+import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.service.AwsS3Service;
 import com.travollo.Travel.utils.Role;
 import com.travollo.Travel.utils.Utils;
@@ -25,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,10 +46,13 @@ public class CommentSService {
 
     private final AwsS3Service awsS3Service;
 
-    /** Trieve all comments of a specific service
+    /**
+     * Get all comments of a specific service
+     *
      * @param serviceID: service ID
      * @return List<CommentResponseDTO>: all comments
-     * */
+     *
+     */
     public List<CommentResponseDTO> getAllCommentsByService(
             String serviceID
     ) {
@@ -67,7 +69,7 @@ public class CommentSService {
      *
      * @param serviceID the unique identifier of the service being commented on
      * @param newCmtDTO the data containing comment content, rating, and optional photos
-     * @param user       the user who is creating the comment
+     * @param user      the user who is creating the comment
      * @return the saved comment details mapped to a response DTO
      * @throws CustomException if the service does not exist (BAD_REQUEST)
      */
@@ -103,13 +105,16 @@ public class CommentSService {
         return mapToCommentResponse(savedCmt);
     }
 
-    /** Update comments, can change: content, rating, images, time => Re-uploads images, validate the user's permission
-     * @param commentID     the unique ID of comment
-     * @param updateCommentDTO  the updated comment
-     * @param currentUser   the requesting user
+    /**
+     * Update comments, can change: content, rating, images, time => Re-uploads images, validate the user's permission
+     *
+     * @param commentID        the unique ID of comment
+     * @param updateCommentDTO the updated comment
+     * @param currentUser      the requesting user
      * @return saved comment
      * @throws CustomException BAD_REQUEST, FORBIDDEN,...
-     * */
+     *
+     */
     @Transactional
     public CommentResponseDTO updateComment(
             String commentID,
@@ -135,29 +140,47 @@ public class CommentSService {
         return mapToCommentResponse(commentServiceRepo.save(existingCmt));
     }
 
-    /** Retrieve all comments of a specific service with pagination
-     * @param serviceID the unique ID of service
-     * @param page  the page number
-     * @param size  the number of comment of each page
-     * @param sortBy the sort category
-     * @param direction the direction
-     * */
-    public PageResponse<CommentResponseDTO> getCommentsByServiceID(String serviceID, Integer page, Integer size, String sortBy, String direction) {
-        TService service = serviceRepo.findById(serviceID)
+    /**
+     * Retrieve all comments of a specific service with pagination
+     *
+     * @param filter the unique ID of service
+     *
+     */
+    public PageResponse<CommentResponseDTO> getCommentsByFilter(CommentFilterDTO filter) {
+        TService service = serviceRepo.findById(filter.getServiceID())
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found Service"));
 
-        int pageNo = (page != null && page >= 0) ? page : 0;
-        int pageSize = (size != null && size > 0) ? size : 10;
-
         Set<String> validFields = Utils.getEntityFields(Comment.class);
-        String finalSortBy = (sortBy != null && validFields.contains(sortBy)) ? sortBy : Utils.getIdFieldName(Comment.class);
+        String finalSortBy = (filter.getSortBy() != null && validFields.contains(filter.getSortBy()))
+                ? filter.getSortBy()
+                : "createdAt";
 
-        Sort sort = "desc".equalsIgnoreCase(direction) ?
+        Sort sort = "desc".equalsIgnoreCase(filter.getDirection()) ?
                 Sort.by(finalSortBy).descending() :
                 Sort.by(finalSortBy).ascending();
 
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        Page<Comment> pageData = commentServiceRepo.findAllByTravelService(service, pageable);
+        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+
+        List<Specification<Comment>> specs = new ArrayList<>();
+
+        if (filter.getServiceID() != null && !filter.getServiceID().trim().isEmpty()) {
+            specs.add(CommentSpecifications.hasServiceId(filter.getServiceID()));
+        }
+        if (filter.getRating() != null) {
+            specs.add(CommentSpecifications.hasRating(filter.getRating()));
+        }
+        if (Boolean.TRUE.equals(filter.getHasImages())) {
+            specs.add(CommentSpecifications.hasImages());
+        }
+        if (filter.getKeyword() != null && !filter.getKeyword().trim().isEmpty()) {
+            specs.add(CommentSpecifications.contentContains(filter.getKeyword()));
+        }
+
+        specs.add(CommentSpecifications.fetchAssociations());
+
+        Specification<Comment> finalSpec = Specification.allOf(specs);
+
+        Page<Comment> pageData = commentServiceRepo.findAll(finalSpec, pageable);
 
         return PageResponse.<CommentResponseDTO>builder()
                 .content(pageData.getContent().stream().map(this::mapToCommentResponse).toList())
@@ -169,19 +192,23 @@ public class CommentSService {
                 .build();
     }
 
-    /** Retrieve a specific comment
+    /**
+     * Retrieve a specific comment
      * @param commentID the ID of comment
      * @return the found comment
-     * */
+     */
     public CommentResponseDTO getCommentById(String commentID) {
         return mapToCommentResponse(commentServiceRepo.findById(commentID)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Không tìm thấy bình luận")));
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "NOT FOUND COMMENT")));
     }
 
-    /** Delete a specific comment
-     * @param commentID the unique ID
-     * @param requestingUser    Check user's permission
-     * */
+    /**
+     * Delete a specific comment
+     *
+     * @param commentID      the unique ID
+     * @param requestingUser Check user's permission
+     *
+     */
     @Transactional
     public void deleteComment(String commentID, User requestingUser) {
         Comment existingComment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found comment"));
@@ -192,10 +219,11 @@ public class CommentSService {
     }
 
 
-    /** Like a comment
-     * */
+    /**
+     * Like a comment
+     */
     @Transactional
-    public CommentResponseDTO likeComment(User user, String commentID){
+    public CommentResponseDTO likeComment(User user, String commentID) {
         Comment comment = commentServiceRepo.findById(commentID)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found comment"));
         boolean existLike = commentSLikeRepo.existLike(user, comment);
@@ -219,7 +247,7 @@ public class CommentSService {
         CommentLike commentLike = commentSLikeRepo.findByUserAndComment(user, comment)
                 .orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "User hasn't liked this comment yet"));
         commentSLikeRepo.delete(commentLike);
-        int currentLikes = comment.getLikes() ;
+        int currentLikes = comment.getLikes();
         comment.setLikes(Math.max(0, currentLikes - 1));
         commentServiceRepo.save(comment);
         return mapToCommentResponse(comment);
@@ -237,7 +265,7 @@ public class CommentSService {
         newRecord.setComment(comment);
         newRecord.setUser(user);
         commentSDislikeRepo.save(newRecord);
-        int currentDislikes =comment.getDislikes();
+        int currentDislikes = comment.getDislikes();
         comment.setDislikes(currentDislikes + 1);
         commentServiceRepo.save(comment);
         return mapToCommentResponse(comment);
@@ -256,8 +284,9 @@ public class CommentSService {
         return mapToCommentResponse(comment);
     }
 
-    /** Helper functions map CommentService entity -> CommentResponseDTO
-     * */
+    /**
+     * Helper functions map CommentService entity -> CommentResponseDTO
+     */
     private CommentResponseDTO mapToCommentResponse(Comment comment) {
         return CommentResponseDTO.builder()
                 .id(comment.getId())
@@ -275,71 +304,4 @@ public class CommentSService {
                         .toList())
                 .build();
     }
-
-//    public ResponseEntity<Object> updateComment(UpdateCommentDTO updatedCmt, User user) {
-//        if (updatedCmt.getId() == null) {
-//            throw new CustomException(HttpStatus.BAD_REQUEST, "commentID is required");
-//        }
-//        CommentService comment = commentServiceRepo.findById(updatedCmt.getId())
-//                .orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST ,"Not found comment"));
-//        if (!comment.getUser().getUserID().equals(user.getUserID())) {
-//            throw new CustomException(HttpStatus.BAD_REQUEST, "User has no authorization to delete comment.");
-//        }
-//        if (updatedCmt.getContent() != null){
-//            comment.setContent(updatedCmt.getContent());
-//        }
-//        if (updatedCmt.getRating() != null) {
-//            comment.setRating(updatedCmt.getRating());
-//        }
-//        // xóa hết ảnh cũ, đổi lại ảnh mới
-//        if (updatedCmt.getPhotos() != null && !updatedCmt.getPhotos().isEmpty()) {
-//            // delete imgs by serviceID
-//            commentImgRepo.deleteAllImgByServiceID(comment.getTService().getId());
-//
-//            //  save new images
-//            List<CommentImg> imgList = new ArrayList<>();
-//            List<String> imageList = awsS3Service.saveImagesToS3(updatedCmt.getPhotos());
-//            for (String url: imageList) {
-//                CommentImg newImg = new CommentImg();
-//                newImg.setImageUrl(url);
-//                newImg.setDescription("Image " + url + " of service " + comment.getTService().getServiceName());
-//            }
-//            commentImgRepo.saveAll(imgList);
-//        }
-//
-//        return null;
-//    }
-//
-//    public ResponseEntity<Object> getCommentsByServiceID(String serviceID, Integer page, Integer size, String sortBy, String direction) {
-//        TService service = serviceRepo.findById(serviceID)
-//                .orElseThrow(() -> new RuntimeException("Service not found"));
-//        if (page == null) page = 0;
-//        if (size == null) size = 10;
-//        if (page == null || size == null) {
-//            int totalComments = commentServiceRepo.countByServiceID(serviceID);
-//            Pageable pageable = PageRequest.of(0, totalComments);
-//
-//            Page<CommentService> pageData = commentServiceRepo.findAllByTService(service, pageable);
-//            return ResponseEntity.ok(pageData);
-//        }
-//        Set<String> validFields = Utils.getEntityFields(CommentService.class);
-//
-//        if (!validFields.contains(sortBy)) {
-//            sortBy = Utils.getIdFieldName(CommentService.class);
-//        }
-//        Sort sort = direction.equalsIgnoreCase("desc") ?
-//                Sort.by(sortBy).descending() :
-//                Sort.by(sortBy).ascending();
-//        Pageable pageable = PageRequest.of(page, size, sort);
-//
-//        Page<CommentService> pageData = commentServiceRepo.findAllByTService(service, pageable);
-//        return ResponseEntity.ok(pageData);
-//    }
-//
-//    public ResponseEntity<Object> getCommentById(String commentID){
-//        CommentService comment = commentServiceRepo.findById(commentID).orElseThrow(() -> new CustomException(HttpStatus.BAD_REQUEST, "COMMENT NOT FOUND"));
-//        return ResponseEntity.ok(comment);
-//    }
-
-
 }

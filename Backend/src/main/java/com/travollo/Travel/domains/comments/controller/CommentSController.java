@@ -1,6 +1,7 @@
 package com.travollo.Travel.domains.comments.controller;
 
 import com.travollo.Travel.common.PageResponse;
+import com.travollo.Travel.domains.comments.dto.CommentFilterDTO;
 import com.travollo.Travel.domains.comments.dto.CommentResponseDTO;
 import com.travollo.Travel.domains.comments.dto.CreateCommentDTO;
 import com.travollo.Travel.domains.comments.dto.UpdateCommentDTO;
@@ -8,6 +9,7 @@ import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.domains.comments.service.CommentSService;
 import com.travollo.Travel.utils.CurrentUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CommentSController {
     private final CommentSService commentSService;
+
+    @GetMapping("")
+    public ResponseEntity<PageResponse<CommentResponseDTO>> filterComment(
+            @ModelAttribute CommentFilterDTO filterDTO
+    ) {
+        return ResponseEntity.ok(commentSService.getCommentsByFilter(filterDTO));
+    }
 
     /** Post a new comment for a specific service */
     @PostMapping("/{serviceID}")
@@ -38,8 +47,25 @@ public class CommentSController {
             @RequestParam(name = "sortBy", required = false, defaultValue = "createdAt") String sortBy,
             @RequestParam(name = "direction", defaultValue = "desc") String direction
     ) {
-        return ResponseEntity.ok(commentSService.getCommentsByServiceID(serviceID, page, size, sortBy, direction));
+        CommentFilterDTO commentFilterDTO = CommentFilterDTO.builder()
+                .serviceID(serviceID)
+                .page(page)
+                .size(size)
+                .direction(direction)
+                .sortBy(sortBy)
+                .build();
+        return ResponseEntity.ok(commentSService.getCommentsByFilter(commentFilterDTO));
     }
+
+    @GetMapping("/{serviceID}/filter")
+    public ResponseEntity<PageResponse<CommentResponseDTO>> filterComment(
+            @PathVariable String serviceID,
+            @ModelAttribute CommentFilterDTO filterDTO
+    ) {
+        filterDTO.setServiceID(serviceID);
+        return ResponseEntity.status(HttpStatus.OK).body(commentSService.getCommentsByFilter(filterDTO));
+    }
+
     /** Retrieve all comments of a specific service */
     @GetMapping("/{serviceID}/all")
     public ResponseEntity<List<CommentResponseDTO>> getAllComments(@PathVariable String serviceID) {
