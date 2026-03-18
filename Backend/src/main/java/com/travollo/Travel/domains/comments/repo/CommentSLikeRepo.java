@@ -1,7 +1,7 @@
 package com.travollo.Travel.domains.comments.repo;
 
-import com.travollo.Travel.entity.Comment;
-import com.travollo.Travel.entity.CommentLike;
+import com.travollo.Travel.domains.comments.entity.Comment;
+import com.travollo.Travel.domains.comments.entity.CommentLike;
 import com.travollo.Travel.domains.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

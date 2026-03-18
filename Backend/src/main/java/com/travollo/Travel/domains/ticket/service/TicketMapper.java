@@ -1,7 +1,7 @@
 package com.travollo.Travel.domains.ticket.service;
 
 import com.travollo.Travel.domains.ticket.dto.TicketCreateRequest;
-import com.travollo.Travel.entity.Ticket;
+import com.travollo.Travel.domains.ticket.entity.Ticket;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 

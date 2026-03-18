@@ -10,7 +10,7 @@ import com.travollo.Travel.domains.travel.dto.ServiceFilterDTO;
 import com.travollo.Travel.domains.travel.dto.ServiceSearchRequest;
 import com.travollo.Travel.domains.ticket.dto.TicketResponse;
 import com.travollo.Travel.domains.user.entity.User;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.domains.comments.service.CommentSService;
 import com.travollo.Travel.domains.travel.service.TravelService;
@@ -98,7 +98,7 @@ public class ServiceController {
 
     @GetMapping("/filter")
     public ResponseEntity<Page<TService>> filterServices(
-            @RequestParam ServiceFilterDTO filterDTO
+            @ModelAttribute ServiceFilterDTO filterDTO
             ) {
         return ResponseEntity.status(HttpStatus.OK).body(travelService.filterServices(filterDTO));
     }

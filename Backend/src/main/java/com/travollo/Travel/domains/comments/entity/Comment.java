@@ -1,8 +1,9 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.comments.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.domains.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -1,5 +1,6 @@
 package com.travollo.Travel.controller;
 
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.repo.ProvinceRepo;
@@ -34,7 +35,7 @@ public class ProvinceController {
         // Populate images for each province from available services
         for (Province p : provinces) {
             try {
-                com.travollo.Travel.entity.TService service = serviceRepo.findFirstByProvinceCodeAndThumbnailUrlNotNull(p.getCode());
+                TService service = serviceRepo.findFirstByProvinceCodeAndThumbnailUrlNotNull(p.getCode());
                 if (service != null && service.getThumbnailUrl() != null) {
                     p.setImageUrl(service.getThumbnailUrl());
                 } else {

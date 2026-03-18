@@ -1,5 +1,6 @@
 package com.travollo.Travel.entity;
 
+import com.travollo.Travel.domains.travel.entity.TService;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

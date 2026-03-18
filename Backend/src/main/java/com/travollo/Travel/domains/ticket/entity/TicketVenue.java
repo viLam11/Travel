@@ -1,5 +1,6 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.ticket.entity;
 
+import com.travollo.Travel.domains.travel.entity.TService;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;

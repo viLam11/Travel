@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 public class ServiceFilterDTO {
+    private String keyword;
     private String name;
     private ServiceType type;
     private Long minPrice;

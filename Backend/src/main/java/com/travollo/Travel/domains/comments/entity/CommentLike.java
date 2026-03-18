@@ -1,22 +1,22 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.comments.entity;
 
 import com.travollo.Travel.domains.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "comment_service_dislike")
+@Table(name="comment_service_like")
 @Data
-public class CommentDislike {
+public class CommentLike {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "comment_id")
     private Comment comment;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "user_id")
     private User user;
 }

@@ -5,7 +5,7 @@ import com.travollo.Travel.domains.promotions.dto.DiscountRequest;
 import com.travollo.Travel.domains.promotions.dto.DiscountResponse;
 import com.travollo.Travel.domains.promotions.dto.DiscountType;
 import com.travollo.Travel.entity.Province;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.repo.ProvinceRepo;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import org.mapstruct.AfterMapping;

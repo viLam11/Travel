@@ -10,12 +10,12 @@ import com.travollo.Travel.domains.travel.dto.UpdatedServiceRequest;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import com.travollo.Travel.domains.travel.repo.ServiceSpecifications;
 import com.travollo.Travel.domains.user.entity.User;
-import com.travollo.Travel.entity.ImageService;
+import com.travollo.Travel.domains.travel.entity.ImageService;
 import com.travollo.Travel.entity.Province;
-import com.travollo.Travel.entity.TService;
-import com.travollo.Travel.entity.TicketVenue;
+import com.travollo.Travel.domains.travel.entity.TService;
+import com.travollo.Travel.domains.ticket.entity.TicketVenue;
 import com.travollo.Travel.exception.CustomException;
-import com.travollo.Travel.repo.ImageServiceRepo;
+import com.travollo.Travel.domains.travel.repo.ImageServiceRepo;
 import com.travollo.Travel.repo.ProvinceRepo;
 import com.travollo.Travel.service.AwsS3Service;
 import com.travollo.Travel.utils.ServiceType;
@@ -238,6 +238,9 @@ public class TravelService {
     public Page<TService> filterServices(ServiceFilterDTO filter) {
         List<Specification<TService>> specs = new ArrayList<>();
         // Thêm các điều kiện vào List
+        if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
+            specs.add(ServiceSpecifications.keywordContains(filter.getKeyword()));
+        }
         if (filter.getName() != null && !filter.getName().isBlank()) {
             specs.add(ServiceSpecifications.nameContains(filter.getName()));
         }
@@ -260,9 +263,7 @@ public class TravelService {
             specs.add(ServiceSpecifications.hasImages());
         }
 
-
         Specification<TService> finalSpec = Specification.allOf(specs);
-        // Xử lý phân trang
         Sort sort = filter.getDirection().equalsIgnoreCase("DESC")
                 ? Sort.by(filter.getSortBy()).descending()
                 : Sort.by(filter.getSortBy()).ascending();

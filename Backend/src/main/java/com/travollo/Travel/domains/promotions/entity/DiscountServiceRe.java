@@ -1,6 +1,6 @@
 package com.travollo.Travel.domains.promotions.entity;
 
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import jakarta.persistence.*;
 import lombok.Data;
 

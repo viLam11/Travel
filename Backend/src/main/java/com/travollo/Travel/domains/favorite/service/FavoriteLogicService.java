@@ -4,7 +4,7 @@ package com.travollo.Travel.domains.favorite.service;
 import com.travollo.Travel.domains.favorite.dto.FavoriteResponseDTO;
 import com.travollo.Travel.domains.favorite.entity.FavoriteService;
 import com.travollo.Travel.domains.favorite.repo.FavoriteServiceRepository;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;
 import lombok.RequiredArgsConstructor;

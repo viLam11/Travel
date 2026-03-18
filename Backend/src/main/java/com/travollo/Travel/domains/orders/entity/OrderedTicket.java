@@ -1,7 +1,7 @@
 package com.travollo.Travel.domains.orders.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.travollo.Travel.entity.Ticket;
+import com.travollo.Travel.domains.ticket.entity.Ticket;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.OnDelete;

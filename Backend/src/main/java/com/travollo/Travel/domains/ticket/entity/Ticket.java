@@ -1,4 +1,4 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.ticket.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,21 +6,23 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
-@Table(name = "comment_imgs")
+@Table(name = "tickets")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CommentImg {
+public class Ticket {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
-
-    private String imageUrl;
-    private String description;
+    private String name;
+    private String term;
+    private BigDecimal price;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "comment_id")
-    private Comment comment;
+    @JoinColumn(name = "ticket_venue_id")
+    private TicketVenue ticketVenue;
 }

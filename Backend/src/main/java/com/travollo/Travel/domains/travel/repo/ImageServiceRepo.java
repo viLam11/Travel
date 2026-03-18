@@ -1,6 +1,6 @@
-package com.travollo.Travel.repo;
+package com.travollo.Travel.domains.travel.repo;
 
-import com.travollo.Travel.entity.ImageService;
+import com.travollo.Travel.domains.travel.entity.ImageService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

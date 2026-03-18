@@ -1,6 +1,6 @@
 package com.travollo.Travel.domains.favorite.entity;
 
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.domains.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;

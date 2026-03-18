@@ -1,7 +1,7 @@
 package com.travollo.Travel.domains.travel.repo;
 
 import com.travollo.Travel.entity.Province;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.utils.ServiceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

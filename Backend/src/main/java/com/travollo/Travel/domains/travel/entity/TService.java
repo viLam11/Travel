@@ -1,7 +1,9 @@
-package com.travollo.Travel.entity;
+package com.travollo.Travel.domains.travel.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import com.travollo.Travel.domains.user.entity.User;
+import com.travollo.Travel.domains.comments.entity.Comment;
+import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.utils.ServiceType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -36,7 +38,7 @@ public class TService {
 
     private String address;
     private String contactNumber;
-    private Long rating;
+    private Long rating = 0L;
     private String tags;
 
     @Column(name = "thumbnail")

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travollo.Travel.domains.ai.dto.PlanResponse;
 import com.travollo.Travel.entity.Province;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.ProvinceRepo;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;

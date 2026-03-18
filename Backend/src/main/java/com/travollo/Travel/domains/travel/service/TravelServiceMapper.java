@@ -2,7 +2,7 @@ package com.travollo.Travel.domains.travel.service;
 
 import com.travollo.Travel.domains.travel.dto.UpdatedServiceRequest;
 import com.travollo.Travel.entity.Province;
-import com.travollo.Travel.entity.TService;
+import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.repo.ProvinceRepo;
 import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
