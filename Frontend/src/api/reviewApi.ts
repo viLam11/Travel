@@ -49,6 +49,12 @@ const mockStats: ReviewStats = {
 };
 
 export const reviewApi = {
+    /**
+     * Lấy danh sách review theo service
+     * Backend: GET /comment/{serviceID}?page=&size=&sortBy=&direction=
+     * ⚠️ NOTE: BE chưa có endpoint lọc review theo provider (chỉ có theo serviceID)
+     *          Cần BE thêm: GET /comment/provider/all để lấy tất cả review của provider
+     */
     getProviderReviews: async (params?: {
         serviceId?: string;
         status?: ReviewStatus;
@@ -69,56 +75,107 @@ export const reviewApi = {
             return { reviews: filtered, total: filtered.length, page: 1, totalPages: 1 };
         }
 
+        // Nếu có serviceId cụ thể thì lấy theo serviceId
+        if (params?.serviceId) {
+            try {
+                const response = await apiClient.comments.getByServiceId(
+                    params.serviceId,
+                    params.page || 0,
+                    params.limit || 10,
+                    'createdAt',
+                    'desc'
+                );
+                const content = response.content || response || [];
+                return {
+                    reviews: content,
+                    total: response.totalElements || content.length,
+                    page: response.pageNo || 0,
+                    totalPages: response.totalPages || 1,
+                };
+            } catch (error) {
+                console.error('Error fetching reviews:', error);
+                throw error;
+            }
+        }
+
+        // Nếu không có serviceId => chưa có endpoint phù hợp, dùng mock
+        console.warn('[reviewApi] getProviderReviews without serviceId: No backend endpoint, returning mock');
+        return { reviews: mockReviews, total: mockReviews.length, page: 1, totalPages: 1 };
+    },
+
+    /**
+     * Tạo comment/review mới
+     * Backend: POST /comment/{serviceID} — multipart/form-data
+     */
+    createReview: async (
+        serviceId: string,
+        content: string,
+        rating: number,
+        photos?: File[]
+    ): Promise<Review> => {
         try {
-            return await apiClient.get('/api/provider/reviews', { params });
+            return await apiClient.comments.create(serviceId, content, rating, photos);
         } catch (error) {
-            console.error('Error fetching provider reviews:', error);
+            console.error('Error creating review:', error);
             throw error;
         }
     },
 
-    // Reply to review
-    replyToReview: async (reviewId: string, reply: string): Promise<Review> => {
-        try {
-            return await apiClient.post(`/api/provider/reviews/${reviewId}/reply`, { reply });
-        } catch (error) {
-            console.error('Error replying to review:', error);
-            throw error;
-        }
-    },
-
-    // Update review status (approve/reject)
-    updateReviewStatus: async (reviewId: string, status: ReviewStatus): Promise<Review> => {
-        try {
-            return await apiClient.patch(`/api/provider/reviews/${reviewId}/status`, { status });
-        } catch (error) {
-            console.error('Error updating review status:', error);
-            throw error;
-        }
-    },
-
-    // Delete review
+    /**
+     * Xóa review
+     * Backend: DELETE /comment/{commentID}
+     */
     deleteReview: async (reviewId: string): Promise<void> => {
         try {
-            await apiClient.delete(`/api/provider/reviews/${reviewId}`);
+            await apiClient.comments.delete(reviewId);
         } catch (error) {
             console.error('Error deleting review:', error);
             throw error;
         }
     },
 
-    // Get review stats
+    /**
+     * Like/Unlike/Dislike review
+     * Backend: POST /comment/like/{commentID}, /comment/unlike/{commentID}, /comment/dislike/{commentID}
+     */
+    likeReview: async (reviewId: string): Promise<void> => {
+        return apiClient.comments.like(reviewId);
+    },
+
+    unlikeReview: async (reviewId: string): Promise<void> => {
+        return apiClient.comments.unlike(reviewId);
+    },
+
+    dislikeReview: async (reviewId: string): Promise<void> => {
+        return apiClient.comments.dislike(reviewId);
+    },
+
+    /**
+     * Cập nhật trạng thái review (approve/reject)
+     * ⚠️ NOTE: BE chưa có endpoint này
+     */
+    updateReviewStatus: async (reviewId: string, _status: ReviewStatus): Promise<Review> => {
+        console.warn('[reviewApi] updateReviewStatus: No backend endpoint available');
+        const mock = mockReviews.find(r => r.id === reviewId);
+        return mock || mockReviews[0];
+    },
+
+    /**
+     * Trả lời review
+     * ⚠️ NOTE: BE chưa có endpoint này
+     */
+    replyToReview: async (_reviewId: string, _reply: string): Promise<Review> => {
+        console.warn('[reviewApi] replyToReview: No backend endpoint available');
+        return mockReviews[0];
+    },
+
     getReviewStats: async (): Promise<ReviewStats> => {
         if (USE_MOCK) {
             await new Promise(resolve => setTimeout(resolve, 300));
             return mockStats;
         }
-
-        try {
-            return await apiClient.get('/api/provider/reviews/stats');
-        } catch (error) {
-            console.error('Error fetching review stats:', error);
-            throw error;
-        }
+        // ⚠️ NOTE: BE chưa có API stats review
+        console.warn('[reviewApi] getReviewStats: No backend endpoint, returning mock data');
+        return mockStats;
     },
 };

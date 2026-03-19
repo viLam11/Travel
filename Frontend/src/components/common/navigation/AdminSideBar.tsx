@@ -121,27 +121,27 @@ const getNavItems = (currentPath: string, currentUser: any) => {
             visible: true,
         } as any);
 
-        // Hotel Provider - Room Management
-        if (providerType === 'hotel') {
-            navMain.push({
-                title: "Quản lý phòng",
-                url: ROUTES.PROVIDER_ROOMS,
-                icon: <Bed />,
-                isActive: currentPath === ROUTES.PROVIDER_ROOMS,
-                visible: true,
-            } as any);
-        }
+        // // Hotel Provider - Room Management
+        // if (providerType === 'hotel') {
+        //     navMain.push({
+        //         title: "Quản lý phòng",
+        //         url: ROUTES.PROVIDER_ROOMS,
+        //         icon: <Bed />,
+        //         isActive: currentPath === ROUTES.PROVIDER_ROOMS,
+        //         visible: true,
+        //     } as any);
+        // }
 
         // Venue Provider - Ticket Management
-        if (providerType === 'place') {
-            navMain.push({
-                title: "Quản lý vé",
-                url: ROUTES.PROVIDER_TICKETS,
-                icon: <Tags />,
-                isActive: currentPath === ROUTES.PROVIDER_TICKETS,
-                visible: true,
-            } as any);
-        }
+        // if (providerType === 'place') {
+        //     navMain.push({
+        //         title: "Quản lý vé",
+        //         url: ROUTES.PROVIDER_TICKETS,
+        //         icon: <Tags />,
+        //         isActive: currentPath === ROUTES.PROVIDER_TICKETS,
+        //         visible: true,
+        //     } as any);
+        // }
 
         // Shared Provider menu items
         navMain.push(

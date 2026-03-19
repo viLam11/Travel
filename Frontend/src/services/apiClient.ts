@@ -506,8 +506,13 @@ export class ApiClient {
     create: (data: CreateOrderRequest): ApiResponse<any> => {
       return this.post("/orders/create", data);
     },
-    getAll: (): ApiResponse<any> => {
-      return this.get("/orders/all");
+    getAll: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/orders/all", { params: { page, size } });
+    },
+    updateStatus: (orderId: string | number, status: string): ApiResponse<any> => {
+      return this.patch(`/orders/${orderId}/status`, status, {
+        headers: { 'Content-Type': 'application/json' }
+      });
     },
   };
 
@@ -608,6 +613,22 @@ export class ApiClient {
     },
     remove: (serviceId: string | number): ApiResponse<void> => {
       return this.delete(`/api/favorites/${serviceId}`);
+    },
+  };
+
+  // Notification endpoints
+  notifications = {
+    getAll: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/api/notifications", { params: { page, size } });
+    },
+    getUnreadCount: (): ApiResponse<number> => {
+      return this.get("/api/notifications/unread-count");
+    },
+    markAsRead: (id: string): ApiResponse<void> => {
+      return this.put(`/api/notifications/${id}/read`, {});
+    },
+    markAllAsRead: (): ApiResponse<void> => {
+      return this.put("/api/notifications/read-all", {});
     },
   };
 

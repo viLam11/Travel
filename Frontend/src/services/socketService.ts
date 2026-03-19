@@ -35,7 +35,19 @@ class SocketService {
             // registry.enableSimpleBroker("/topic", "/queue");
             this.client?.subscribe('/user/queue/messages', (message) => {
                 if (message.body) {
-                    const chatMsg: ChatMessage = JSON.parse(message.body);
+                    const backendMsg = JSON.parse(message.body);
+                    
+                    // Map backendDTO to frontend ChatMessage
+                    const chatMsg: ChatMessage = {
+                        id: backendMsg.id || ('msg_' + Date.now()),
+                        conversationId: backendMsg.senderId, // Derive from sender for 1-1
+                        senderId: backendMsg.senderId,
+                        text: backendMsg.content || backendMsg.text, // Handle both
+                        type: backendMsg.type?.toLowerCase() === 'chat' ? 'text' : (backendMsg.type?.toLowerCase() || 'text'),
+                        timestamp: backendMsg.timestamp || new Date().toISOString(),
+                        isRead: backendMsg.isRead || false
+                    };
+                    
                     this.messageListeners.forEach(cb => cb(chatMsg));
                 }
             });
@@ -64,26 +76,40 @@ class SocketService {
         };
     }
 
-    sendMessage(conversationId: string, senderId: string, text: string, recipientRole: 'user' | 'provider', type: 'text' | 'image' = 'text') {
-        if (!this.client?.connected) {
-            console.warn('[SocketService] Cannot send message: Not connected');
-            return;
-        }
-
-        const payload = {
-            conversationId,
+    sendMessage(receiverId: string, senderId: string, text: string, _recipientRole: 'user' | 'provider', type: 'text' | 'image' = 'text'): ChatMessage | void {
+        // Backend ChatMessageDTO: senderId, receiverId, content, type (MessageType), isRead
+        const backendPayload = {
             senderId,
-            text,
-            recipientRole,
-            type,
-            timestamp: new Date().toISOString()
+            receiverId,
+            content: text,
+            type: 'CHAT',
+            isRead: false
         };
 
-        // Backend MessageMapping: /chat/send.message (example prefix /chat from applicationDestinationPrefixes)
-        this.client.publish({
-            destination: '/chat/send.message',
-            body: JSON.stringify(payload)
-        });
+        const frontendPayload: ChatMessage = {
+            id: 'msg_' + Date.now(),
+            conversationId: receiverId,
+            senderId,
+            text,
+            type: type as 'text' | 'image' | 'system',
+            timestamp: new Date().toISOString(),
+            isRead: false
+        };
+
+        if (this.client?.connected) {
+            this.client.publish({
+                destination: '/chat/chat.sendPrivateMessage',
+                body: JSON.stringify(backendPayload)
+            });
+            return frontendPayload;
+        } else {
+            console.warn('[SocketService] Not connected to socket server');
+            // If it's a mock token, we definitely want to return the payload so the UI updates
+            if (localStorage.getItem('token')?.startsWith('mock-token-') || localStorage.getItem('token') === 'mock_token') {
+                return frontendPayload;
+            }
+            return;
+        }
     }
 }
 
