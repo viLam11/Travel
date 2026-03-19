@@ -1,5 +1,6 @@
 package com.travollo.Travel.domains.travel.repo;
 
+import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.utils.ServiceType;
@@ -16,7 +17,7 @@ import java.util.List;
 public interface ServiceRepo extends JpaRepository<TService, String>, JpaSpecificationExecutor<TService> {
     @Query(value = "SELECT * FROM services s WHERE s.province_code = ?1 AND s.thumbnail_url IS NOT NULL LIMIT 1", nativeQuery = true)
     TService findFirstByProvinceCodeAndThumbnailUrlNotNull(String provinceCode);
-
+    TService findByProvider(User Provider);
     List<TService> findTop10ByProvince(Province province, Sort sort);
 
 //    @Query("SELECT s FROM TService s " +
