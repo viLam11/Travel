@@ -10,5 +10,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlanResponse {
+    private String tripTitle;
+    private String overview;
+    private Long totalEstimatedBudget;
     private List<ItineraryDay> itinerary;
 }

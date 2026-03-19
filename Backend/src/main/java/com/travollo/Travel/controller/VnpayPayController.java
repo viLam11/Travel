@@ -37,6 +37,7 @@ public class VnpayPayController {
     @PostMapping("/create-payment")
     public ResponseEntity<?> createPayment(HttpServletRequest request,
                                            @RequestParam int amount,
+                                           @RequestParam String orderID,
                                            @RequestParam(required = false) String bankCode) {
         try {
             // Lấy IP người dùng
@@ -45,7 +46,7 @@ public class VnpayPayController {
                 ipAddress = request.getRemoteAddr();
             }
 
-            String paymentUrl = vnPayService.createPaymentUrl(amount, bankCode, ipAddress);
+            String paymentUrl = vnPayService.createPaymentUrl(amount, orderID, bankCode, ipAddress);
 
             Map<String, String> result = new HashMap<>();
             result.put("code", "00");

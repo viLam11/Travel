@@ -5,10 +5,7 @@ import com.travollo.Travel.domains.hotel.repo.RoomRepo;
 import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
 import com.travollo.Travel.domains.notifications.service.NotificationService;
-import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
-import com.travollo.Travel.domains.orders.dto.PaymentOrderResponse;
-import com.travollo.Travel.domains.orders.dto.PaymentMethod;
-import com.travollo.Travel.domains.orders.dto.PaymentMomoResponse;
+import com.travollo.Travel.domains.orders.dto.*;
 import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.domains.orders.entity.OrderStatus;
 import com.travollo.Travel.domains.orders.entity.OrderedRoom;
@@ -27,6 +24,7 @@ import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.OrderedTicketRepo;
 import com.travollo.Travel.service.VNPayService;
 import com.travollo.Travel.service.impl.MomoServiceImp;
+import com.travollo.Travel.utils.Role;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,15 +80,13 @@ public class OrderService {
      *
      */
     @Transactional
-    public ResponseEntity<Object> createOrder(OrderCreateRequest orderCreateRequest, User user) {
-        try {
-            // 0. Validate constraints: max 2 discounts
+    public PaymentOrderResponse createOrder(OrderCreateRequest orderCreateRequest, User user, String ipAddress) throws Exception {         // 0. Validate constraints: max 2 discounts
             if (orderCreateRequest.getDiscountIds().size() > 2) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Chỉ được áp dụng tối đa 2 mã giảm giá!");
+               throw new CustomException(HttpStatus.BAD_REQUEST,"Chỉ được áp dụng tối đa 2 mã giảm giá!");
             }
             for (String discountId : orderCreateRequest.getDiscountIds()) {
                 if (!discountRepo.existsById(discountId)) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Mã giảm giá không tồn tại: " + discountId);
+                    throw new CustomException(HttpStatus.BAD_REQUEST, "Mã giảm giá không tồn tại: " + discountId);
                 }
             }
             if (orderCreateRequest.getDiscountIds().size() == 2) {
@@ -98,11 +94,11 @@ public class OrderService {
                         .map(id -> discountRepo.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy Discount ID: " + id)))
                         .toList();
                 if (discounts.get(0).getIsSystem() == discounts.get(1).getIsSystem()) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Hai mã giảm giá không được áp dụng cùng loại (1 của hệ thống, 1 của doanh nghiệp)!");
+                    throw new CustomException(HttpStatus.BAD_REQUEST, "Hai mã giảm giá không được áp dụng cùng loại (1 của hệ thống, 1 của doanh nghiệp)!");
                 }
             }
             if (orderCreateRequest.getTickets().isEmpty() && orderCreateRequest.getRooms().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Đơn hàng phải có ít nhất một vé hoặc một phòng!");
+                throw new CustomException(HttpStatus.BAD_REQUEST, "Đơn hàng phải có ít nhất một vé hoặc một phòng!");
             }
             // 1. Khởi tạo đối tượng Order
             Order newOrder = new Order();
@@ -219,7 +215,7 @@ public class OrderService {
             // 7. Tạo link thanh toán MoMo
             PaymentOrderResponse paymentResponse = new PaymentOrderResponse();
             if (orderCreateRequest.getPaymentMethod() == PaymentMethod.VNPAY) {
-                String vnPayServicePaymentUrl = vnPayService.createPaymentUrl(newOrder.getTotalPrice().intValue(), null, null);
+                String vnPayServicePaymentUrl = vnPayService.createPaymentUrl(newOrder.getTotalPrice().intValue(), newOrder.getOrderID(), null, ipAddress);
                 paymentResponse.setPayUrl(vnPayServicePaymentUrl);
             } else {
                 System.out.println("HERE");
@@ -227,10 +223,8 @@ public class OrderService {
                 paymentResponse.setPayUrl(result.getPayUrl());
             }
             paymentResponse.setOrder(orderMapper.toOrderResponse(savedOrder));
-            return new ResponseEntity<>(paymentResponse, HttpStatus.OK);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Lỗi tạo đơn hàng: " + e.getMessage());
-        }
+            return paymentResponse;
+
     }
 
     @Transactional
@@ -282,92 +276,33 @@ public class OrderService {
         }
     }
 
-    //    public ResponseEntity<Object> createOrder(CreateOrder createOrder, User user) {
-//        try {
-//            List<OrderItem> tickets = createOrder.getTickets();
-//            List<OrderItem> rooms = createOrder.getRooms();
-//            LocalDateTime checkInDate = createOrder.getCheckInDate();
-//            LocalDateTime checkOutDate = createOrder.getCheckOutDate();
-//            String guestPhone = createOrder.getGuestPhone();
-//            String note = createOrder.getNote();
-//            List<Long> discountIds = createOrder.getDiscountIds();
-//
-//            List<OrderedTicket> orderedTickets = tickets.stream().map(ticket -> {
-//                OrderedTicket orderedTicket = new OrderedTicket();
-//                try {
-//                    Ticket ticketService = ticketRepo.findById(ticket.getId()).orElseThrow(() -> new Exception("Ticket not found: " + ticket.getId()));
-//                    orderedTicket.setTicket(ticketService);
-//                    orderedTicket.setAmount(ticket.getQuantity());
-//                    BigDecimal price = ticketService.getPrice();
-//                    orderedTicket.setPrice( price.multiply(BigDecimal.valueOf(ticket.getQuantity())));
-//                    orderedTicket.setValidStart(createOrder.getCheckInDate());
-//                    orderedTicket.setValidEnd(createOrder.getCheckOutDate());
-//                    orderedTicket.setCreatedAt(java.time.LocalDateTime.now());
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//                return orderedTicket;
-//            }).toList();
-//
-//            orderedTicketRepo.saveAll(orderedTickets);
-//
-//            List<OrderedRoom> orderedRooms = rooms.stream().map(roomItem -> {;
-//                OrderedRoom orderedRoom = new OrderedRoom();
-//                try {
-//                    Room roomService = roomRepo.findById(roomItem.getId()).orElseThrow(() -> new Exception("Ticket not found: " + roomItem.getId()));
-//                    orderedRoom.setRoom(roomService);
-//                    orderedRoom.setAmount(roomItem.getQuantity());
-//                    BigDecimal price = roomService.getPrice();
-//                    orderedRoom.setPrice( price.multiply(BigDecimal.valueOf(roomItem.getQuantity())));
-//                    orderedRoom.setStartDate(createOrder.getCheckInDate());
-//                    orderedRoom.setEndDate(createOrder.getCheckOutDate());
-//                    orderedRoom.setCreatedAt(java.time.LocalDateTime.now());
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//                return orderedRoom;
-//            }).toList();
-//
-//            Order newOrder = new Order();
-//            newOrder.setCreatedAt(LocalDateTime.now());
-//            newOrder.setStatus("PENDING");
-//            newOrder.setGuestPhone(guestPhone);
-//            newOrder.setNote(note);
-//            newOrder.setUser(user);
-//            newOrder.setOrderedTickets(orderedTickets);
-//            newOrder.setOrderedRooms(orderedRooms);
-//            BigDecimal totalPrice =
-//                    orderedTickets.stream()
-//                        .map(ticket -> ticket.getPrice())
-//                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-//                    .add(
-//                    orderedRooms.stream()
-//                            .map(room -> room.getPrice().multiply(BigDecimal.valueOf(0.3))) // Nhân với 0.3
-//                            .reduce(BigDecimal.ZERO, BigDecimal::add));
-//
-//            newOrder.setTotalPrice(totalPrice);
-//            newOrder.setDiscountPrice(BigDecimal.ZERO);
-//            newOrder.setFinalPrice(totalPrice.subtract(newOrder.getDiscountPrice()));
-//            newOrder.setDeposit(totalPrice.multiply(BigDecimal.valueOf(0.3)));
-//
-//            orderRepo.save(newOrder);
-//
-//            Map<String, Object> result =   momoService.createPayment(newOrder.getOrderID(), newOrder.getTotalPrice().longValue());
-//            return new ResponseEntity<>(result, HttpStatus.OK);
-//
-//            return new ResponseEntity<>("OK", HttpStatus.OK);
-//        } catch (Exception e) {
-//            return ResponseEntity.status(500).body("Error creating order: " + e.getMessage());
-//        }
-//    }
-//
-    public Order updateOrderStatus(String orderID, OrderStatus status) {
+    @Transactional
+    public void deleteOrder(String orderID, User requestingUser){
+        User user = orderRepo.getReferenceById(orderID).getUser();
+        if (user != requestingUser &&  requestingUser.getRole() != Role.ADMIN) {
+            throw new CustomException(HttpStatus.FORBIDDEN, "Not be allowed to delete this order");
+        }
+        orderRepo.deleteById(orderID);
+    }
+
+    public OrderResponse updateOrder(String orderID, OrderUpdateRequest updateRequest, User requestingUser) {
+        Order order = orderRepo.findById(orderID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found order"));
+        User creator = order.getUser();
+        if (creator != requestingUser) {
+            throw new CustomException(HttpStatus.FORBIDDEN, "Only creator can edit this order");
+        }
+        orderMapper.patchOrder(updateRequest, order);
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(String orderID, OrderStatus status) {
         System.out.println("ORDER ID: " + orderID);
         Order order = orderRepo.findById(orderID)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not exist"));
         order.setStatus(status);
         orderRepo.save(order);
-        return orderRepo.save(order);
+        return orderMapper.toOrderResponse(orderRepo.save(order));
     }
 
     public Page<Order> getAllOrderByUser(User user, int page, int size) {

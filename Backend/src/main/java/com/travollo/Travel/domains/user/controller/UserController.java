@@ -33,20 +33,10 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> getMyProfile() {
-        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        String principal = authentication.getName();
-        java.util.Optional<User> userOpt;
-        
-        if (principal.contains("@")) {
-            userOpt = userRepo.findByEmail(principal);
-        } else {
-            userOpt = userRepo.findByUsername(principal);
-        }
-        
-        return userOpt
-                .map(user -> ResponseEntity.ok(com.travollo.Travel.utils.Utils.mapUserEntityToDTO(user)))
-                .orElse(ResponseEntity.status(404).build());
+    public ResponseEntity<?> getMyProfile(
+            @CurrentUser User currentUser
+    ) {
+        return ResponseEntity.ok(currentUser);
     }
 
     @GetMapping("/{userID}")

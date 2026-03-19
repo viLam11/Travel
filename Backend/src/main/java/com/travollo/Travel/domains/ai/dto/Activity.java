@@ -9,10 +9,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Activity {
-    private String name;
+    private String timeOfDay; // MORNING, AFTERNOON, NIGHT
+    private String activityTitle;
     private String description;
-    private String duration;
-    @JsonProperty("estimated_cost")
-    private String estimatedCost;
-    private String location;
+
+    private Boolean isSystemService;
+    private Long serviceId;
+
+    private Long estimatedPrice;
+    private Long actualPrice;
+    private String currency;
 }

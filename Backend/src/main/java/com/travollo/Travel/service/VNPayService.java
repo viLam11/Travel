@@ -1,5 +1,9 @@
 package com.travollo.Travel.service;
 
+import com.travollo.Travel.domains.orders.entity.TransactionVnpay;
+import com.travollo.Travel.domains.orders.service.TransactionRepo;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import javax.crypto.Mac;
@@ -10,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class VNPayService {
 
     @Value("${vnp.pay_url}")
@@ -21,10 +26,13 @@ public class VNPayService {
     @Value("${vnp.hash_secret}")
     private String secretKey;
 
-    public String createPaymentUrl(int amount, String bankCode, String ipAddress) throws Exception {
+    private final TransactionRepo transactionRepo;
+
+    @Transactional
+    public String createPaymentUrl(int amount, String orderID,  String bankCode, String ipAddress) throws Exception {
         String vnp_Version = "2.1.0";
         String vnp_Command = "pay";
-        String vnp_TxnRef = getRandomNumber(8);
+        String vnp_TxnRef = orderID + "_" + System.currentTimeMillis();
 
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", vnp_Version);
@@ -80,7 +88,17 @@ public class VNPayService {
         String vnp_SecureHash = hmacSHA512(secretKey, hashData.toString());
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
 
-        return vnp_PayUrl + "?" + queryUrl;
+        String paymentUrl =  vnp_PayUrl + "?" + queryUrl;
+        TransactionVnpay vnpayTransaction = TransactionVnpay.builder()
+                .orderId(orderID)
+                .amount((long) amount)
+                .vnpTxnRef(vnp_TxnRef)
+                .vnpayCreateDate(vnp_CreateDate)
+                .vnpOrderInfo("Thanh toan don hang:" + vnp_TxnRef)
+                .build();
+        transactionRepo.save(vnpayTransaction);
+
+        return paymentUrl;
     }
 
     public String hmacSHA512(final String key, final String data) {

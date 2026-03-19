@@ -4,15 +4,20 @@ import com.travollo.Travel.domains.notifications.dto.NotiCreateRequest;
 import com.travollo.Travel.domains.notifications.entity.NotificationType;
 import com.travollo.Travel.domains.notifications.service.NotificationService;
 import com.travollo.Travel.domains.orders.dto.OrderCreateRequest;
+import com.travollo.Travel.domains.orders.dto.OrderResponse;
 import com.travollo.Travel.domains.orders.entity.Order;
 import com.travollo.Travel.domains.orders.entity.OrderStatus;
 import com.travollo.Travel.domains.orders.service.OrderService;
 import com.travollo.Travel.domains.user.entity.User;
+import com.travollo.Travel.exception.CustomException;
+import com.travollo.Travel.repo.OrderRepo;
 import com.travollo.Travel.repo.UserRepo;
 import com.travollo.Travel.utils.CurrentUser;
 import com.travollo.Travel.utils.Role;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +34,7 @@ public class OrderController {
     private final OrderService orderService;
     private final NotificationService notificationService;
     private final UserRepo userRepo;
+    private final OrderRepo orderRepo;
 
     @GetMapping("/test")
     public String test() {
@@ -41,8 +47,11 @@ public class OrderController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Object> createOrder(@RequestBody OrderCreateRequest createOrder) {
-        User user = getCurrentUser();
+    public ResponseEntity<Object> createOrder(
+            @RequestBody OrderCreateRequest createOrder,
+            HttpServletRequest request,
+            @CurrentUser User user
+    ) throws Exception {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
@@ -51,17 +60,27 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Must be USER to create order");
         }
 
-        return orderService.createOrder(createOrder, user);
+        String ipAddress = request.getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {
+            ipAddress = request.getRemoteAddr();
+        }
+
+        return ResponseEntity.ok(orderService.createOrder(createOrder, user, ipAddress));
+    }
+
+    @DeleteMapping("/{orderID}")
+    public ResponseEntity<Object> deleteOrder(@PathVariable String orderID) {
+        return ResponseEntity.status(HttpStatus.OK).body("Delete successfully");
     }
 
     @PatchMapping("/{orderID}/status")
-    public ResponseEntity<Order> updateOrderStatus(
+    public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable String orderID,
             @RequestBody OrderStatus newStatus,
             @CurrentUser User currentUser
             ) {
-        Order updatedOrder = orderService.updateOrderStatus(orderID, newStatus);
-
+        OrderResponse updatedOrder = orderService.updateOrderStatus(orderID, newStatus);
+        Order order = orderRepo.findById(orderID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Not found order"));
         try {
             NotiCreateRequest notiRequest = new NotiCreateRequest();
             notiRequest.setReferenceOrderID(updatedOrder.getOrderID());
@@ -84,14 +103,7 @@ public class OrderController {
                 notificationService.createNotification(currentUser, notiRequest);
 
                 // 2.2 Báo cho Provider biết khách vừa cập nhật đơn
-                String providerId = null;
-                if (!updatedOrder.getOrderedRooms().isEmpty()) {
-                    // Lấy chủ của Hotel từ phòng đầu tiên trong đơn
-                    providerId = updatedOrder.getOrderedRooms().get(0).getRoom().getHotel().getProvider().getUserID();
-                } else if (!updatedOrder.getOrderedTickets().isEmpty()) {
-                    // Lấy chủ của Venue/Service từ vé đầu tiên trong đơn
-                     providerId = updatedOrder.getOrderedTickets().get(0).getTicket().getTicketVenue().getProvider().getUserID();
-                }
+                String providerId = getProviderId(order);
 
                 if (providerId != null) {
                     NotiCreateRequest providerNoti = new NotiCreateRequest();
@@ -111,6 +123,18 @@ public class OrderController {
         return ResponseEntity.ok(updatedOrder);
     }
 
+    private static @Nullable String getProviderId(Order updatedOrder) {
+        String providerId = null;
+        if (!updatedOrder.getOrderedRooms().isEmpty()) {
+            // Lấy chủ của Hotel từ phòng đầu tiên trong đơn
+            providerId = updatedOrder.getOrderedRooms().get(0).getRoom().getHotel().getProvider().getUserID();
+        } else if (!updatedOrder.getOrderedTickets().isEmpty()) {
+            // Lấy chủ của Venue/Service từ vé đầu tiên trong đơn
+             providerId = updatedOrder.getOrderedTickets().get(0).getTicket().getTicketVenue().getProvider().getUserID();
+        }
+        return providerId;
+    }
+
     @GetMapping("/all")
     public Page<Order> getOrdersByUser(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -119,6 +143,7 @@ public class OrderController {
     ) {
         return orderService.getAllOrderByUser(currentUser, page, size);
     }
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
