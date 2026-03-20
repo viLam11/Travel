@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travollo.Travel.domains.ai.dto.ItineraryDay;
+import com.travollo.Travel.domains.ai.dto.PlanOverallResponse;
 import com.travollo.Travel.domains.ai.dto.PlanResponse;
+import com.travollo.Travel.domains.ai.entity.PlanCollaboration;
 import com.travollo.Travel.domains.ai.entity.TravelPlan;
+import com.travollo.Travel.domains.ai.repo.PlanCollabRepo;
 import com.travollo.Travel.domains.ai.repo.TravelPlanRepo;
 import com.travollo.Travel.domains.travel.entity.TService;
 import com.travollo.Travel.domains.travel.repo.ServiceRepo;
@@ -13,6 +16,7 @@ import com.travollo.Travel.domains.user.entity.User;
 import com.travollo.Travel.entity.Province;
 import com.travollo.Travel.exception.CustomException;
 import com.travollo.Travel.repo.ProvinceRepo;
+import com.travollo.Travel.repo.UserRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
@@ -21,8 +25,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +36,8 @@ public class PlanAIService {
     private final ProvinceRepo provinceRepo;
     private final ServiceRepo serviceRepo;
     private final TravelPlanRepo planRepo;
+    private final PlanCollabRepo planCollabRepo;
+    private final UserRepo userRepo;
 
     private PlanResponse formatPlan(@NotNull String recommendedPlan) {
         try {
@@ -146,6 +152,10 @@ public class PlanAIService {
         return planRepo.save(newPlan);
     }
 
+    public TravelPlan getPlanById(String planID) {
+        return planRepo.findById(planID).orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "NOT FOUND PLAN"));
+    }
+
     @Transactional
     public TravelPlan updateUserPlan(String planId, String userId, PlanResponse updatedPlanDto) {
         // 1. Tìm DB
@@ -192,7 +202,67 @@ public class PlanAIService {
         return planRepo.findByUserIdOrderByCreatedAtDesc(user.getUserID());
     }
 
-    // Hàm 1: Chuyên dùng để Map cái Itinerary từ DTO sang Entity
+    public List<PlanOverallResponse> getMyOwnedPlans(User currentUser) {
+        // 1. Get all travelPlanSummary
+        System.out.println("User id: " + currentUser.getUserID());
+        List<TravelPlan> allPlans = planRepo.findAllByUserIdOrderByCreatedAtDesc(currentUser.getUserID());
+        System.out.println("All plans: " + allPlans);
+
+        if (allPlans.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 2. get all plan ids
+        List<String> currentPlanIds = allPlans.stream()
+                .map(TravelPlan::getId)
+                .toList();
+
+        // 3. Query 1: Get collaboration list (Tối ưu N+1)
+        List<PlanCollaboration> collabs = planCollabRepo.findByPlanIdIn(currentPlanIds);
+
+        // 4. Query 2: Get members information (Tối ưu N+1)
+        Set<String> memberIds = collabs.stream()
+                .map(PlanCollaboration::getMemberId)
+                .collect(Collectors.toSet());
+
+        Map<String, User> memberDetailMap = userRepo.findByUserIDIn(memberIds).stream()
+                .collect(Collectors.toMap(User::getUserID, user -> user));
+
+        // 5. Group by planId (Cấu trúc: Map<PlanId, List<User>>)
+        Map<String, List<User>> planMembersMap = collabs.stream()
+                .collect(Collectors.groupingBy(
+                        PlanCollaboration::getPlanId,
+                        Collectors.mapping(collab -> memberDetailMap.get(collab.getMemberId()), Collectors.toList())
+                ));
+
+        // 6. Map dữ liệu sang Response
+        return allPlans.stream()
+                .map(plan -> PlanOverallResponse.builder()
+                        .planId(plan.getId())
+                        .place(plan.getPlace())
+                        .tripTitle(plan.getTripTitle())
+                        .overview(plan.getOverview())
+                        .status(plan.getStatus())
+
+                        .owner(PlanOverallResponse.UserInfo.builder()
+                                .userId(currentUser.getUserID())
+                                .username(currentUser.getUsername())
+                                .avatarUrl(currentUser.getAvatarUrl())
+                                .build())
+
+                        .members(planMembersMap.getOrDefault(plan.getId(), Collections.emptyList()).stream()
+                                .filter(Objects::nonNull)
+                                .map(member -> PlanOverallResponse.UserInfo.builder()
+                                        .userId(member.getUserID())
+                                        .username(member.getUsername())
+                                        .avatarUrl(member.getAvatarUrl())
+                                        .build())
+                                .toList())
+                        .build()
+                ).toList();
+    }
+
+    // Helper function 1: Map Itinerary from DTO -> Entity
     private List<TravelPlan.DailyItinerary> mapItineraryToEntity(List<ItineraryDay> dtoItinerary) {
         if (dtoItinerary == null) return new ArrayList<>();
 
@@ -218,7 +288,7 @@ public class PlanAIService {
         }).toList();
     }
 
-    // Hàm 2: Chuyên dùng để cộng dồn tiền thực tế
+    // Helper function 2: Calculate toatal actual budget
     private long calculateTotalActualBudget(List<TravelPlan.DailyItinerary> itinerary) {
         return itinerary.stream()
                 .flatMap(day -> day.getActivities().stream())

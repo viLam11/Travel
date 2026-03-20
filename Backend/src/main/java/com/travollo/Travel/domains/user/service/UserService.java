@@ -24,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -157,8 +158,7 @@ public class UserService implements UserInterface {
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
             UserDetails userDetail = Utils.mapUserEntityToUserDetails(user);
-            String token = jwtUtils.generateToken(userDetail);
-            return token;
+            return jwtUtils.generateToken(userDetail);
         } else {
             throw new CustomException(HttpStatus.NOT_FOUND, "User not found");
         }
@@ -245,9 +245,6 @@ public class UserService implements UserInterface {
 
     /**
      * Verify OTP
-     *
-     * @param: email, OTP
-     *
      */
     public ResponseEntity<Object> verifyOTP(String email, String OTP) {
         User user = theUserRepo.findByEmail(email)
@@ -259,6 +256,14 @@ public class UserService implements UserInterface {
         user.setVerificationCode(null);
         theUserRepo.save(user);
         return ResponseEntity.ok().body("Verify successfully");
+    }
+
+    public List<User> searchUsers(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return theUserRepo.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword.trim(), keyword.trim());
     }
 
 

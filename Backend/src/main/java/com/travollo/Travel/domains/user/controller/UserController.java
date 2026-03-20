@@ -11,10 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/users")
@@ -40,11 +37,11 @@ public class UserController {
     public ResponseEntity<?> getMyProfile(
             @CurrentUser User currentUser
     ) {
-        String myServiceId = null;
+        List<String> myServiceId = new ArrayList<>();
 
         if (currentUser.getRole() == Role.PROVIDER_HOTEL || currentUser.getRole() == Role.PROVIDER_VENUE) {
-            TService serviceOpt = serviceRepo.findByProvider(currentUser);
-            myServiceId = serviceOpt.getId();
+            List<TService> serviceOpt = serviceRepo.findByProvider(currentUser);
+            myServiceId = serviceOpt.stream().map(TService::getId).toList();
         }
 
         Map<String, Object> responseObj = new HashMap<>();
@@ -57,7 +54,7 @@ public class UserController {
         responseObj.put("role", currentUser.getRole().name());
         responseObj.put("address", currentUser.getAddress());
 
-        responseObj.put("serviceId", myServiceId);
+        responseObj.put("serviceIds", myServiceId);
 
         return ResponseEntity.ok(responseObj);
     }
@@ -70,6 +67,13 @@ public class UserController {
     @PutMapping("/{userID}")
     public ResponseEntity<Object> updateUser(@PathVariable String userID, @RequestBody User user) {
         return userService.updateUser(userID, user);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Object> searchUser(
+            @RequestParam(required = false, defaultValue = "") String keyword
+    ) {
+        return ResponseEntity.ok(userService.searchUsers(keyword));
     }
 
 }

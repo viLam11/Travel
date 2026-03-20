@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,7 +23,7 @@ public class TravelPlan {
     @Id
     private String id;
     // --- THÔNG TIN QUẢN LÝ TỪ HỆ THỐNG ---
-    @Field("user_id")
+    @Field(value = "user_id")
     private String userId;
     @Field("place")
     private String place;

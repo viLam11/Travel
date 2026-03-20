@@ -18,5 +18,6 @@ public class NotiCreateRequest {
     private String title;
     private String content;
     private String referenceOrderID = null;
+    private String referencePlanID = null;
     private LocalDateTime createdAt;
 }
