@@ -1,5 +1,13 @@
 *.java linguist-language=Java
-
-*.md linguist-vendored
-*.yml linguist-vendored
+*.md linguist-vendored=true
+*.yml linguist-vendored=true
+*.xml linguist-vendored=true
 /resources/** linguist-vendored
+package-lock.json linguist-generated=true
+yarn.lock linguist-generated=true
+*.svg linguist-generated=true
+*.json linguist-generated=true
+public/* linguist-vendored=true
+dist/* linguist-vendored=true
+build/* linguist-vendored=true
+.next/* linguist-vendored=true
