@@ -11,3 +11,5 @@ public/* linguist-vendored=true
 dist/* linguist-vendored=true
 build/* linguist-vendored=true
 .next/* linguist-vendored=true
+Frontend/src/mocks/** linguist-vendored=true
+Frontend/src/mock/** linguist-vendored=true
