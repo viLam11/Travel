@@ -46,12 +46,9 @@ public class VnpayPayController {
                 ipAddress = request.getRemoteAddr();
             }
 
-            String paymentUrl = vnPayService.createPaymentUrl(amount, orderID, bankCode, ipAddress);
-
             Map<String, String> result = new HashMap<>();
             result.put("code", "00");
             result.put("message", "success");
-            result.put("data", paymentUrl);
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
