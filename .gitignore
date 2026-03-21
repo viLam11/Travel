@@ -25,6 +25,7 @@ target/
 .mvn/
 dependency-reduced-pom.xml
 Backend/test/resou
+Backend/
 
 # Gradle (nếu sau này dùng)
 .gradle/
