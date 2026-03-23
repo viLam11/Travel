@@ -2,7 +2,7 @@
  * Interface cho từng item trong order (vé hoặc phòng)
  */
 export interface OrderItem {
-  id: number;
+  id: string | number;
   quantity: number;
   price?: number; // Tùy chọn nếu backend cần
 }
@@ -17,5 +17,5 @@ export interface CreateOrderRequest {
   checkOutDate: string; // ISO Format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
   guestPhone: string;
   note?: string;
-  discountIds?: number[];
+  discountIds?: string[];
 }

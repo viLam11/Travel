@@ -15,16 +15,16 @@ interface Room {
 }
 
 interface RoomsTabProps {
-    service: any;
-    onRoomBookNow?: (room: Room) => void; // Callback when user clicks "Đặt phòng ngay"
+    rooms?: Room[];
+    onRoomBookNow?: (room: Room) => void;
 }
 
-const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
+const RoomsTab: React.FC<RoomsTabProps> = ({ rooms: propRooms = [], onRoomBookNow }) => {
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    // Mock room data - will be replaced with API data
-    const rooms: Room[] = [
+    // Mock data for fallback
+    const MOCK_ROOMS: Room[] = [
         {
             id: '1',
             title: 'Phòng Deluxe Ocean View',
@@ -55,22 +55,9 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
             ],
             amenities: ['WiFi miễn phí', 'TV màn hình phẳng', 'Minibar', 'Phòng khách riêng', 'Bồn tắm']
         },
-        {
-            id: '3',
-            title: 'Phòng Presidential',
-            desc: '6 người • 120m² • Phòng khách riêng',
-            price: 5000000,
-            capacity: 6,
-            size: 120,
-            bedType: '2 Giường King + Sofa bed',
-            images: [
-                'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&h=600&fit=crop',
-                'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&h=600&fit=crop',
-                'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&h=600&fit=crop',
-            ],
-            amenities: ['WiFi miễn phí', 'TV màn hình phẳng', 'Minibar', 'Phòng khách riêng', 'Bồn tắm Jacuzzi', 'Ban công lớn']
-        },
     ];
+
+    const displayRooms = propRooms.length > 0 ? propRooms : MOCK_ROOMS;
 
     const handleRoomClick = (room: Room) => {
         setSelectedRoom(room);
@@ -116,7 +103,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {rooms.map((room) => (
+                    {displayRooms.map((room: Room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomClick(room)}
@@ -160,7 +147,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                             {(room.price / 1000000).toFixed(1)}M
                                         </p>
                                     </div>
-                                    <button className="text-sm text-orange-500 font-medium hover:text-orange-600">
+                                    <button className="text-sm text-orange-500 font-medium hover:text-orange-600 cursor-pointer">
                                         Xem chi tiết →
                                     </button>
                                 </div>
@@ -181,7 +168,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                             </h3>
                             <button
                                 onClick={handleCloseModal}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -207,13 +194,13 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                             <>
                                                 <button
                                                     onClick={handlePrevImage}
-                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all cursor-pointer"
                                                 >
                                                     <ChevronLeft className="w-6 h-6 text-gray-900" />
                                                 </button>
                                                 <button
                                                     onClick={handleNextImage}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all cursor-pointer"
                                                 >
                                                     <ChevronRight className="w-6 h-6 text-gray-900" />
                                                 </button>
@@ -232,7 +219,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                             <button
                                                 key={idx}
                                                 onClick={() => setCurrentImageIndex(idx)}
-                                                className={`aspect-video rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx
+                                                className={`aspect-video rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${currentImageIndex === idx
                                                     ? 'border-orange-500 ring-2 ring-orange-200'
                                                     : 'border-gray-200 hover:border-orange-300'
                                                     }`}
@@ -299,7 +286,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                     {/* Room Description (if needed) */}
                                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                         <p className="text-sm text-blue-900">
-                                            <span className="font-semibold">💡 Lưu ý:</span> Giá phòng đã bao gồm thuế và phí dịch vụ. Miễn phí hủy trước 24h.
+                                            <span className="font-semibold"> Lưu ý:</span> Giá phòng đã bao gồm thuế và phí dịch vụ. Miễn phí hủy trước 24h.
                                         </p>
                                     </div>
                                 </div>
@@ -317,7 +304,7 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ service, onRoomBookNow }) => {
                                 </div>
                                 <button
                                     onClick={handleBookNow}
-                                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg hover:shadow-xl"
+                                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg hover:shadow-xl cursor-pointer"
                                 >
                                     Đặt phòng ngay
                                 </button>

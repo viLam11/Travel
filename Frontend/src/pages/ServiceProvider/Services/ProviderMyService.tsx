@@ -180,14 +180,14 @@ const ProviderMyService = () => {
                             <div className="flex items-center gap-2 flex-shrink-0">
                                 <button
                                     onClick={() => setTheme('light')}
-                                    className="flex items-center gap-1.5 bg-white text-orange-600 hover:bg-orange-50 font-semibold text-xs px-3 py-1.5 rounded-full transition-all hover:scale-105 shadow-sm"
+                                    className="flex items-center gap-1.5 bg-white text-orange-600 hover:bg-orange-50 font-semibold text-xs px-3 py-1.5 rounded-full transition-all hover:scale-105 shadow-sm cursor-pointer"
                                 >
                                     <Sun className="w-3.5 h-3.5" />
                                     Chuyển sang chế độ sáng
                                 </button>
                                 <button
                                     onClick={() => setBannerDismissed(true)}
-                                    className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all"
+                                    className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all cursor-pointer"
                                     aria-label="Đóng thông báo"
                                 >
                                     <X className="w-4 h-4 text-white" />
@@ -317,7 +317,7 @@ const ProviderMyService = () => {
                             </p>
                             <button
                                 onClick={() => imageInputRef.current?.click()}
-                                className="flex items-center gap-2 text-sm text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm w-full justify-center"
+                                className="flex items-center gap-2 text-sm text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm w-full justify-center cursor-pointer"
                             >
                                 <ImagePlus className="w-4 h-4" />
                                 Thêm ảnh mới
@@ -347,10 +347,10 @@ const ProviderMyService = () => {
 
                             {!isEditing && (
                                 <>
-                                    <button onClick={handlePrevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={handlePrevImage} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                         <ChevronLeft className="w-6 h-6 text-gray-900" />
                                     </button>
-                                    <button onClick={handleNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={handleNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                         <ChevronRight className="w-6 h-6 text-gray-900" />
                                     </button>
                                 </>
@@ -363,7 +363,7 @@ const ProviderMyService = () => {
                                 <div key={idx} className="relative group/thumb flex-shrink-0">
                                     <button
                                         onClick={() => setCurrentImageIndex(idx)}
-                                        className={`relative aspect-square rounded-lg overflow-hidden w-full border-2 transition-all block ${currentImageIndex === idx
+                                        className={`relative aspect-square rounded-lg overflow-hidden w-full border-2 transition-all block cursor-pointer ${currentImageIndex === idx
                                             ? 'border-orange-500 ring-2 ring-orange-200'
                                             : 'border-transparent hover:border-orange-300'
                                             }`}
@@ -386,7 +386,7 @@ const ProviderMyService = () => {
                                         <div className="absolute inset-0 rounded-lg bg-black/50 flex items-center justify-center gap-2 opacity-0 group-hover/thumb:opacity-100 transition-opacity">
                                             {idx !== thumbnailIndex && (
                                                 <button
-                                                    className="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 p-1.5 rounded-full shadow transition-transform hover:scale-110"
+                                                    className="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 p-1.5 rounded-full shadow transition-transform hover:scale-110 cursor-pointer"
                                                     title="Đặt làm thumbnail"
                                                     onClick={(e) => { e.stopPropagation(); handleSetThumbnail(idx); }}
                                                 >
@@ -394,7 +394,7 @@ const ProviderMyService = () => {
                                                 </button>
                                             )}
                                             <button
-                                                className="bg-red-500 hover:bg-red-400 text-white p-1.5 rounded-full shadow transition-transform hover:scale-110"
+                                                className="bg-red-500 hover:bg-red-400 text-white p-1.5 rounded-full shadow transition-transform hover:scale-110 cursor-pointer"
                                                 title="Xóa ảnh"
                                                 onClick={(e) => { e.stopPropagation(); handleDeleteImage(idx); }}
                                             >
@@ -409,7 +409,7 @@ const ProviderMyService = () => {
                             {isEditing && (
                                 <button
                                     onClick={() => imageInputRef.current?.click()}
-                                    className="flex-shrink-0 aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-orange-400 hover:text-orange-400 hover:bg-orange-50 transition-colors bg-white"
+                                    className="flex-shrink-0 aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-orange-400 hover:text-orange-400 hover:bg-orange-50 transition-colors bg-white cursor-pointer"
                                     title="Thêm ảnh"
                                 >
                                     <Plus className="w-6 h-6" />
@@ -435,7 +435,7 @@ const ProviderMyService = () => {
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id as any)}
-                                        className={`pb-3 font-semibold transition-colors relative whitespace-nowrap px-1 ${activeTab === tab.id
+                                        className={`pb-3 font-semibold transition-colors relative whitespace-nowrap px-1 cursor-pointer ${activeTab === tab.id
                                             ? "text-orange-600 border-b-2 border-orange-500"
                                             : "text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-200"
                                             }`}
@@ -484,13 +484,13 @@ const ProviderMyService = () => {
                                                             {attr.label}
                                                             <button
                                                                 onClick={() => handleAttributeRemove(idx)}
-                                                                className="hover:bg-red-200 rounded-full p-0.5 text-red-600"
+                                                                className="hover:bg-red-200 rounded-full p-0.5 text-red-600 cursor-pointer"
                                                             >
                                                                 <X className="w-3 h-3" />
                                                             </button>
                                                         </Badge>
                                                     ))}
-                                                    <Button variant="outline" size="sm" className="h-7 text-xs border-dashed">
+                                                    <Button variant="outline" size="sm" className="h-7 text-xs border-dashed cursor-pointer">
                                                         <Plus className="w-3 h-3 mr-1" /> Thêm tiện ích
                                                     </Button>
                                                 </div>

@@ -179,32 +179,52 @@ const RegionCard: React.FC<RegionCardProps> = ({
 };
 
 const RegionSection: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('north');
+  const [activeTab, setActiveTab] = useState<string>('mien-bac');
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   // Mock Data for Fallback
   const mockProvinces: Province[] = [
-    // North - dong_bac_bo (1), tay_bac_bo (2), dong_bang_song_hong (3)
-    { code: '01', name: 'Hà Nội', fullName: 'Thành phố Hà Nội', codeName: 'ha-noi', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop', regionCode: 'dong_bang_song_hong', id: '01' },
-    { code: '22', name: 'Hạ Long', fullName: 'Quảng Ninh', codeName: 'quang-ninh', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600&h=400&fit=crop', regionCode: 'dong_bac_bo', id: '22' },
-    { code: '15', name: 'Sapa', fullName: 'Lào Cai', codeName: 'lao-cai', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=400&fit=crop', regionCode: 'tay_bac_bo', id: '15' },
-    { code: '37', name: 'Ninh Bình', fullName: 'Ninh Bình', codeName: 'ninh-binh', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1629562777178-577c25126fe8?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1629562777178-577c25126fe8?w=600&h=400&fit=crop', regionCode: 'dong_bang_song_hong', id: '37' },
-    { code: '31', name: 'Hải Phòng', fullName: 'Thành phố Hải Phòng', codeName: 'hai-phong', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1623869068579-a773d4a0f443?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1623869068579-a773d4a0f443?w=600&h=400&fit=crop', regionCode: 'dong_bang_song_hong', id: '31' },
+    // North (Regions 1, 2, 3)
+    { code: '01', name: 'Hà Nội', fullName: 'Thành phố Hà Nội', codeName: 'ha-noi', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://ik.imagekit.io/tvlk/blog/2017/06/kham-pha-cac-dia-diem-du-lich-o-ha-noi-ma-ban-khong-the-bo-qua-3.jpg?tr=w-800,h-600,fo-auto,q-80', imageUrl: 'https://ik.imagekit.io/tvlk/blog/2017/06/kham-pha-cac-dia-diem-du-lich-o-ha-noi-ma-ban-khong-the-bo-qua-3.jpg?tr=w-800,h-600,fo-auto,q-80', regionCode: 'dong_bang_song_hong', id: '01' },
+    { code: '04', name: 'Cao Bằng', fullName: 'Tỉnh Cao Bằng', codeName: 'cao-bang', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1580720334929-6c36b8e2db4d?q=80&w=1032&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1580720334929-6c36b8e2db4d?q=80&w=1032&auto=format&fit=crop', regionCode: 'dong_bac_bo', id: '04' },
+    { code: '08', name: 'Tuyên Quang', fullName: 'Tỉnh Tuyên Quang', codeName: 'tuyen-quang', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', regionCode: 'dong_bac_bo', id: '08' },
+    { code: '11', name: 'Điện Biên', fullName: 'Tỉnh Điện Biên', codeName: 'dien-bien', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1619140179055-bc2288b16d15?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1619140179055-bc2288b16d15?q=80&w=1170&auto=format&fit=crop', regionCode: 'tay_bac_bo', id: '11' },
+    { code: '12', name: 'Lai Châu', fullName: 'Tỉnh Lai Châu', codeName: 'lai-chau', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', regionCode: 'tay_bac_bo', id: '12' },
+    { code: '14', name: 'Sơn La', fullName: 'Tỉnh Sơn La', codeName: 'son-la', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', regionCode: 'tay_bac_bo', id: '14' },
+    { code: '15', name: 'Lào Cai', fullName: 'Tỉnh Lào Cai', codeName: 'lao-cai', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1752127388106-fc3a0595f5b6?q=80&w=1171&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1752127388106-fc3a0595f5b6?q=80&w=1171&auto=format&fit=crop', regionCode: 'tay_bac_bo', id: '15' },
+    { code: '19', name: 'Thái Nguyên', fullName: 'Tỉnh Thái Nguyên', codeName: 'thai-nguyen', divisionType: 'tinh', thumbnailUrl: 'https://statics.vinpearl.com/Thai-Nguyen-Vietnam-12_1703434221.jpg', imageUrl: 'https://statics.vinpearl.com/Thai-Nguyen-Vietnam-12_1703434221.jpg', regionCode: 'dong_bac_bo', id: '19' },
+    { code: '20', name: 'Lạng Sơn', fullName: 'Tỉnh Lạng Sơn', codeName: 'lang-son', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', regionCode: 'dong_bac_bo', id: '20' },
+    { code: '22', name: 'Quảng Ninh', fullName: 'Tỉnh Quảng Ninh', codeName: 'quang-ninh', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1707292098561-a251b9aa4014?q=80&w=1032&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1707292098561-a251b9aa4014?q=80&w=1032&auto=format&fit=crop', regionCode: 'dong_bac_bo', id: '22' },
+    { code: '24', name: 'Bắc Ninh', fullName: 'Tỉnh Bắc Ninh', codeName: 'bac-ninh', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1702300732637-2fd1e481983c?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1702300732637-2fd1e481983c?q=80&w=1170&auto=format&fit=crop', regionCode: 'dong_bang_song_hong', id: '24' },
+    { code: '25', name: 'Phú Thọ', fullName: 'Tỉnh Phú Thọ', codeName: 'phu-tho', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1764141738717-896b3365c196?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1764141738717-896b3365c196?q=80&w=1170&auto=format&fit=crop', regionCode: 'dong_bac_bo', id: '25' },
+    { code: '31', name: 'Hải Phòng', fullName: 'Thành phố Hải Phòng', codeName: 'hai-phong', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1723065176657-85efdc04ac54?q=80&w=1074&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1723065176657-85efdc04ac54?q=80&w=1074&auto=format&fit=crop', regionCode: 'dong_bang_song_hong', id: '31' },
+    { code: '33', name: 'Hưng Yên', fullName: 'Tỉnh Hưng Yên', codeName: 'hung-yen', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80', regionCode: 'dong_bang_song_hong', id: '33' },
+    { code: '37', name: 'Ninh Bình', fullName: 'Tỉnh Ninh Bình', codeName: 'ninh-binh', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1502851755296-d42fd093190e?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1502851755296-d42fd093190e?q=80&w=1170&auto=format&fit=crop', regionCode: 'dong_bang_song_hong', id: '37' },
 
-    // Central - bac_trung_bo (4), duyen_hai_nam_trung_bo (5), tay_nguyen (6)
-    { code: '48', name: 'Đà Nẵng', fullName: 'Thành phố Đà Nẵng', codeName: 'da-nang', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', regionCode: 'duyen_hai_nam_trung_bo', id: '48' },
-    { code: '49', name: 'Hội An', fullName: 'Quảng Nam', codeName: 'quang-nam', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', regionCode: 'duyen_hai_nam_trung_bo', id: '49' },
-    { code: '46', name: 'Huế', fullName: 'Thừa Thiên Huế', codeName: 'thua-thien-hue', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1629562777178-577c25126fe8?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1629562777178-577c25126fe8?w=600&h=400&fit=crop', regionCode: 'bac_trung_bo', id: '46' },
-    { code: '56', name: 'Nha Trang', fullName: 'Khánh Hòa', codeName: 'khanh-hoa', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', regionCode: 'duyen_hai_nam_trung_bo', id: '56' },
-    { code: '68', name: 'Đà Lạt', fullName: 'Lâm Đồng', codeName: 'lam-dong', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop', regionCode: 'tay_nguyen', id: '68' },
+    // Central (Regions 4, 5, 6)
+    { code: '38', name: 'Thanh Hóa', fullName: 'Tỉnh Thanh Hóa', codeName: 'thanh-hoa', divisionType: 'tinh', thumbnailUrl: 'https://anhphatcorp.com.vn/wp-content/uploads/2021/04/Du-Lich-Thanh-Hoa-1.jpg', imageUrl: 'https://anhphatcorp.com.vn/wp-content/uploads/2021/04/Du-Lich-Thanh-Hoa-1.jpg', regionCode: 'bac_trung_bo', id: '38' },
+    { code: '40', name: 'Nghệ An', fullName: 'Tỉnh Nghệ An', codeName: 'nghe-an', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1601361523212-5d7d3084dfcb?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1601361523212-5d7d3084dfcb?q=80&w=1170&auto=format&fit=crop', regionCode: 'bac_trung_bo', id: '40' },
+    { code: '42', name: 'Hà Tĩnh', fullName: 'Tỉnh Hà Tĩnh', codeName: 'ha-tinh', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1671385033947-50112c95d581?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1671385033947-50112c95d581?q=80&w=1170&auto=format&fit=crop', regionCode: 'bac_trung_bo', id: '42' },
+    { code: '44', name: 'Quảng Trị', fullName: 'Tỉnh Quảng Trị', codeName: 'quang-tri', divisionType: 'tinh', thumbnailUrl: 'https://cdn-media.sforum.vn/storage/app/media/ctvseo_MH/%E1%BA%A3nh%20%C4%91%E1%BA%B9p%20Qu%E1%BA%A3ng%20Tr%E1%BB%8B/anh-dep-quang-tri-thumb.jpg', imageUrl: 'https://cdn-media.sforum.vn/storage/app/media/ctvseo_MH/%E1%BA%A3nh%20%C4%91%E1%BA%B9p%20Qu%E1%BA%A3ng%20Tr%E1%BB%8B/anh-dep-quang-tri-thumb.jpg', regionCode: 'bac_trung_bo', id: '44' },
+    { code: '46', name: 'Huế', fullName: 'Thành phố Huế', codeName: 'hue', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1758487892397-688ea7102b47?q=80&w=1031&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1758487892397-688ea7102b47?q=80&w=1031&auto=format&fit=crop', regionCode: 'bac_trung_bo', id: '46' },
+    { code: '48', name: 'Đà Nẵng', fullName: 'Thành phố Đà Nẵng', codeName: 'da-nang', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1738627760098-51b0df6f2ac9?q=80&w=1170&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1738627760098-51b0df6f2ac9?q=80&w=1170&auto=format&fit=crop', regionCode: 'duyen_hai_nam_trung_bo', id: '48' },
+    { code: '51', name: 'Quảng Ngãi', fullName: 'Tỉnh Quảng Ngãi', codeName: 'quang-ngai', divisionType: 'tinh', thumbnailUrl: 'https://vietcetera.com/wp-content/uploads/2017/09/Quang_Ngai_6.jpg', imageUrl: 'https://vietcetera.com/wp-content/uploads/2017/09/Quang_Ngai_6.jpg', regionCode: 'duyen_hai_nam_trung_bo', id: '51' },
+    { code: '52', name: 'Gia Lai', fullName: 'Tỉnh Gia Lai', codeName: 'gia-lai', divisionType: 'tinh', thumbnailUrl: 'https://tse4.mm.bing.net/th/id/OIP.M2-Ew0oOw_Uhqtvbnp3L3AHaEp?rs=1&pid=ImgDetMain', imageUrl: 'https://tse4.mm.bing.net/th/id/OIP.M2-Ew0oOw_Uhqtvbnp3L3AHaEp?rs=1&pid=ImgDetMain', regionCode: 'tay_nguyen', id: '52' },
+    { code: '56', name: 'Khánh Hòa', fullName: 'Tỉnh Khánh Hòa', codeName: 'khanh-hoa', divisionType: 'tinh', thumbnailUrl: 'https://tse3.mm.bing.net/th/id/OIP.y2ICB4u_sZ3bsSADph_L5gHaE3?rs=1&pid=ImgDetMain', imageUrl: 'https://tse3.mm.bing.net/th/id/OIP.y2ICB4u_sZ3bsSADph_L5gHaE3?rs=1&pid=ImgDetMain', regionCode: 'duyen_hai_nam_trung_bo', id: '56' },
+    { code: '66', name: 'Đắk Lắk', fullName: 'Tỉnh Đắk Lắk', codeName: 'dak-lak', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1688729991710-fe54f0d349cd?q=80&w=1035&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1688729991710-fe54f0d349cd?q=80&w=1035&auto=format&fit=crop', regionCode: 'tay_nguyen', id: '66' },
+    { code: '68', name: 'Lâm Đồng', fullName: 'Tỉnh Lâm Đồng', codeName: 'lam-dong', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1652829792625-055eb9e877a3?q=80&w=1032&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1652829792625-055eb9e877a3?q=80&w=1032&auto=format&fit=crop', regionCode: 'tay_nguyen', id: '68' },
 
-    // South - dong_nam_bo (7), dong_bang_song_cuu_long (8)
-    { code: '79', name: 'Hồ Chí Minh', fullName: 'TP. Hồ Chí Minh', codeName: 'ho-chi-minh', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', regionCode: 'dong_nam_bo', id: '79' },
-    { code: '91', name: 'Phú Quốc', fullName: 'An Giang', codeName: 'an-giang', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=600&h=400&fit=crop', regionCode: 'dong_bang_song_cuu_long', id: '91' },
-    { code: '77', name: 'Vũng Tàu', fullName: 'Bà Rịa - Vũng Tàu', codeName: 'ba-ria-vung-tau', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=600&h=400&fit=crop', regionCode: 'dong_nam_bo', id: '77' },
-    { code: '92', name: 'Cần Thơ', fullName: 'Thành phố Cần Thơ', codeName: 'can-tho', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1629562777178-577c25126fe8?w=600&h=400&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1629562777178-577c25126fe8?w=600&h=400&fit=crop', regionCode: 'dong_bang_song_cuu_long', id: '92' },
+    // South (Regions 7, 8)
+    { code: '75', name: 'Đồng Nai', fullName: 'Tỉnh Đồng Nai', codeName: 'dong-nai', divisionType: 'tinh', thumbnailUrl: 'https://ik.imagekit.io/tvlk/blog/2022/03/dia-diem-du-lich-dong-nai-cover.jpeg?tr=dpr-1.5', imageUrl: 'https://ik.imagekit.io/tvlk/blog/2022/03/dia-diem-du-lich-dong-nai-cover.jpeg?tr=dpr-1.5', regionCode: 'dong_nam_bo', id: '75' },
+    { code: '79', name: 'Hồ Chí Minh', fullName: 'TP. Hồ Chí Minh', codeName: 'ho-chi-minh', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://images.unsplash.com/photo-1738697587041-184841d5d23a?q=80&w=1035&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1738697587041-184841d5d23a?q=80&w=1035&auto=format&fit=crop', regionCode: 'dong_nam_bo', id: '79' },
+    { code: '80', name: 'Tây Ninh', fullName: 'Tỉnh Tây Ninh', codeName: 'tay-ninh', divisionType: 'tinh', thumbnailUrl: 'https://tse1.mm.bing.net/th/id/OIP.HLgfM3A25a41bk4vnTlltAHaE7?o=7rm=3&rs=1&pid=ImgDetMain', imageUrl: 'https://tse1.mm.bing.net/th/id/OIP.HLgfM3A25a41bk4vnTlltAHaE7?o=7rm=3&rs=1&pid=ImgDetMain', regionCode: 'dong_nam_bo', id: '80' },
+    { code: '82', name: 'Đồng Tháp', fullName: 'Tỉnh Đồng Tháp', codeName: 'dong-thap', divisionType: 'tinh', thumbnailUrl: 'https://tse1.mm.bing.net/th/id/OIP.CYSajuXyK0rREWDiavSTlwHaEK?o=7rm=3&rs=1&pid=ImgDetMain', imageUrl: 'https://tse1.mm.bing.net/th/id/OIP.CYSajuXyK0rREWDiavSTlwHaEK?o=7rm=3&rs=1&pid=ImgDetMain', regionCode: 'dong_bang_song_cuu_long', id: '82' },
+    { code: '86', name: 'Vĩnh Long', fullName: 'Tỉnh Vĩnh Long', codeName: 'vinh-long', divisionType: 'tinh', thumbnailUrl: 'http://reviewvilla.vn/wp-content/uploads/2022/06/Ban-sao-cua-du-lich-vinh-long-2.jpg', imageUrl: 'http://reviewvilla.vn/wp-content/uploads/2022/06/Ban-sao-cua-du-lich-vinh-long-2.jpg', regionCode: 'dong_bang_song_cuu_long', id: '86' },
+    { code: '91', name: 'An Giang', fullName: 'Tỉnh An Giang', codeName: 'an-giang', divisionType: 'tinh', thumbnailUrl: 'https://images.unsplash.com/photo-1580630873708-e0475b1856c4?q=80&w=1133&auto=format&fit=crop', imageUrl: 'https://images.unsplash.com/photo-1580630873708-e0475b1856c4?q=80&w=1133&auto=format&fit=crop', regionCode: 'dong_bang_song_cuu_long', id: '91' },
+    { code: '92', name: 'Cần Thơ', fullName: 'Thành phố Cần Thơ', codeName: 'can-tho', divisionType: 'thanh_pho_trung_uong', thumbnailUrl: 'https://tse1.mm.bing.net/th/id/OIP.C33mpqWnro6jTnRL3J8_uwHaCu?rs=1&pid=ImgDetMain', imageUrl: 'https://tse1.mm.bing.net/th/id/OIP.C33mpqWnro6jTnRL3J8_uwHaCu?rs=1&pid=ImgDetMain', regionCode: 'dong_bang_song_cuu_long', id: '92' },
+    { code: '96', name: 'Cà Mau', fullName: 'Tỉnh Cà Mau', codeName: 'ca-mau', divisionType: 'tinh', thumbnailUrl: 'http://advmotorcycletours.com/wp-content/uploads/2016/10/Ca-Mau-Vietnam.jpg', imageUrl: 'http://advmotorcycletours.com/wp-content/uploads/2016/10/Ca-Mau-Vietnam.jpg', regionCode: 'dong_bang_song_cuu_long', id: '96' },
   ];
 
   useEffect(() => {
@@ -237,17 +257,17 @@ const RegionSection: React.FC = () => {
     let filtered = [];
 
     switch (tab) {
-      case 'north':
+      case 'mien-bac':
         filtered = allProvinces.filter(p =>
           p.administrativeRegion && ['northest', 'northwest', 'red_river_delta'].includes(p.administrativeRegion.code_name_en)
         );
         break;
-      case 'central':
+      case 'mien-trung':
         filtered = allProvinces.filter(p =>
           p.administrativeRegion && ['north_central_coast', 'south_central_coast', 'central_highlands'].includes(p.administrativeRegion.code_name_en)
         );
         break;
-      case 'south':
+      case 'mien-nam':
         filtered = allProvinces.filter(p =>
           p.administrativeRegion && ['southeast', 'southwest'].includes(p.administrativeRegion.code_name_en)
         );
@@ -266,9 +286,9 @@ const RegionSection: React.FC = () => {
     // Fallback if filtering returns nothing
     if (filtered.length < 5) {
       const fallbackRegion = mockProvinces.filter(p => {
-        if (tab === 'north') return ['dong_bac_bo', 'tay_bac_bo', 'dong_bang_song_hong'].includes(p.regionCode);
-        if (tab === 'central') return ['bac_trung_bo', 'duyen_hai_nam_trung_bo', 'tay_nguyen'].includes(p.regionCode);
-        if (tab === 'south') return ['dong_nam_bo', 'dong_bang_song_cuu_long'].includes(p.regionCode);
+        if (tab === 'mien-bac') return ['dong_bac_bo', 'tay_bac_bo', 'dong_bang_song_hong'].includes(p.regionCode);
+        if (tab === 'mien-trung') return ['bac_trung_bo', 'duyen_hai_nam_trung_bo', 'tay_nguyen'].includes(p.regionCode);
+        if (tab === 'mien-nam') return ['dong_nam_bo', 'dong_bang_song_cuu_long'].includes(p.regionCode);
         return false;
       });
       if (fallbackRegion.length > 0) filtered = fallbackRegion;
@@ -280,7 +300,7 @@ const RegionSection: React.FC = () => {
         name: p.name,
         location: p.name,
         image: p.imageUrl || '/images/placeholder-region.jpg',
-        destinationSlug: p.codeName,
+        destinationSlug: (p.codeName || p.code || '').replace(/_/g, '-'),
         regionSlug: tab
       })),
       places: filtered.slice(3, 5).map(p => ({
@@ -288,7 +308,7 @@ const RegionSection: React.FC = () => {
         name: p.name,
         location: p.name,
         image: p.imageUrl || '/images/placeholder-region.jpg',
-        destinationSlug: p.codeName,
+        destinationSlug: (p.codeName || p.code || '').replace(/_/g, '-'),
         regionSlug: tab
       }))
     };
@@ -296,9 +316,10 @@ const RegionSection: React.FC = () => {
 
   const currentData = getFilteredData(activeTab);
 
-  const handleRegionClick = (_slug: string, name: string) => {
+  const handleRegionClick = (slug: string, _name: string) => {
     const queryParams = new URLSearchParams();
-    queryParams.append('destination', name);
+    queryParams.append('destination', slug);
+    queryParams.append('serviceType', 'TICKET_VENUE');
     navigate(`/destinations?${queryParams.toString()}`);
   };
 
@@ -316,7 +337,7 @@ const RegionSection: React.FC = () => {
 
         <div className="mb-6 sm:mb-8 lg:mb-10 overflow-x-auto scrollbar-hide">
           <div className="flex justify-center gap-6 sm:gap-12 lg:gap-16 min-w-max px-4 sm:px-0">
-            {['north', 'central', 'south'].map((tab) => (
+            {['mien-bac', 'mien-trung', 'mien-nam'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -325,7 +346,7 @@ const RegionSection: React.FC = () => {
                   : 'text-gray-600 hover:text-orange-500'
                   }`}
               >
-                {tab === 'north' ? 'Miền Bắc' : tab === 'central' ? 'Miền Trung' : 'Miền Nam'}
+                {tab === 'mien-bac' ? 'Miền Bắc' : tab === 'mien-trung' ? 'Miền Trung' : 'Miền Nam'}
               </button>
             ))}
           </div>

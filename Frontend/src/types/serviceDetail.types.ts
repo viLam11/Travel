@@ -34,9 +34,19 @@ export interface AdditionalService {
 }
 
 export interface Discount {
+  id: string;
+  name: string;
   code: string;
-  value: number;
-  applied: boolean;
+  description: string;
+  startDate: string;
+  endDate: string;
+  quantity: number;
+  minSpend: number;
+  fixedPrice?: number;
+  percentage?: number;
+  maxDiscountAmount?: number;
+  applied?: boolean;
+  isSystem?: boolean;
 }
 
 export interface Feature {

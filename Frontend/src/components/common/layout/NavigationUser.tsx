@@ -108,7 +108,7 @@ const Navigation: React.FC<NavigationProps> = ({
                   navigate('/destinations');
                 }
               }}
-              className={`text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/destinations')
+              className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/destinations')
                   ? 'text-orange-500 font-semibold border-orange-500'
                   : 'text-gray-700 hover:text-orange-500 border-transparent'
                 }`}
@@ -117,28 +117,28 @@ const Navigation: React.FC<NavigationProps> = ({
             </button>
             <button
               onClick={() => navigate('/hotels')}
-              className={`text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/hotels')
+              className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/hotels')
                   ? 'text-orange-500 font-semibold border-orange-500'
                   : 'text-gray-700 hover:text-orange-500 border-transparent'
                 }`}
             >
               Khách sạn
             </button>
-            <button
+            {/* <button
               onClick={() => toast('Tính năng đang phát triển')}
-              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
+              className="cursor-pointer text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
             >
               Hoạt động
-            </button>
+            </button> */}
             <button
               onClick={() => toast('Tính năng đang phát triển')}
-              className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
+              className="cursor-pointer text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
             >
               Bài viết
             </button>
             <button
               onClick={() => navigate('/ai-planner')}
-              className={`flex items-center gap-1.5 text-sm lg:text-base font-semibold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap border ${isActive('/ai-planner')
+              className={`cursor-pointer flex items-center gap-1.5 text-sm lg:text-base font-semibold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap border ${isActive('/ai-planner')
                   ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-200'
                   : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200'
                 }`}

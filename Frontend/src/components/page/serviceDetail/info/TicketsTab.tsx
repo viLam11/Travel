@@ -4,9 +4,10 @@ import type { TicketType } from '@/types/serviceDetail.types';
 
 interface TicketsTabProps {
     tickets?: TicketType[];
+    onTicketBookNow?: (ticketId: string) => void;
 }
 
-const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [] }) => {
+const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow }) => {
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
 
     if (!tickets || tickets.length === 0) {
@@ -65,10 +66,16 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [] }) => {
                                     <p className="text-xs text-gray-500 mb-0.5">Giá vé</p>
                                     <div className="flex items-center gap-2 sm:block">
                                         <p className="text-xl sm:text-2xl font-bold text-orange-500">
-                                            {ticket.price.toLocaleString()} đ
+                                            {(ticket.price || 0).toLocaleString()} đ
                                         </p>
                                     </div>
-                                    <button className="mt-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (onTicketBookNow) onTicketBookNow(ticket.id);
+                                        }}
+                                        className="cursor-pointer mt-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto cursor-pointer"
+                                    >
                                         Đặt ngay
                                     </button>
                                 </div>

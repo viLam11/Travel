@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Navigation from '../../../components/common/layout/NavigationUser';
 import Footer from '../../../components/common/layout/Footer';
 import DestinationCard from '../../../components/common/DestinationCard';
 import { MapPin, Calendar, ChevronDown, Users, Star, Globe } from 'lucide-react';
@@ -14,7 +13,6 @@ interface Destination {
 }
 
 const ServicePage: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [dateRange] = useState({ start: 'February 05', end: 'March 14' });
   const [tourType] = useState('All tour');
@@ -106,7 +104,6 @@ const ServicePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* <Navigation isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} /> */}
 
       {/* Hero Section with Search */}
       <div className="bg-gradient-to-b from-orange-50 to-white py-8">
@@ -185,11 +182,10 @@ const ServicePage: React.FC = () => {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-6 py-2 rounded-full font-medium whitespace-nowrap transition-all ${
-                selectedCategory === category
-                  ? 'bg-orange-500 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-6 py-2 rounded-full font-medium whitespace-nowrap transition-all ${selectedCategory === category
+                ? 'bg-orange-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               {category}
             </button>
@@ -201,12 +197,14 @@ const ServicePage: React.FC = () => {
           {attractions.map((dest) => (
             <DestinationCard
               key={dest.id}
-              id={dest.id}
-              title={dest.title}
-              location={dest.location}
-              priceRange={dest.priceRange}
-              openingHours={dest.openingHours}
-              image={dest.image}
+              destination={{
+                id: dest.id,
+                title: dest.title,
+                location: dest.location,
+                price: dest.priceRange,
+                image: dest.image,
+                openingHours: dest.openingHours
+              }}
               onBook={handleBook}
             />
           ))}

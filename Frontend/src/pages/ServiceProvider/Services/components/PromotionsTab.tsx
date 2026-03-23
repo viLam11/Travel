@@ -1,8 +1,7 @@
 // src/pages/ServiceProvider/Services/components/PromotionsTab.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
-import { Textarea } from '@/components/ui/admin/textarea';
 import { Label } from '@/components/ui/admin/label';
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { Badge } from '@/components/ui/admin/badge';
@@ -14,92 +13,114 @@ import {
     SelectValue,
 } from '@/components/ui/admin/select';
 import { Plus, Edit, Trash2, X, Tag, Percent } from 'lucide-react';
-import { getPromotionsByService, type Promotion } from '@/mocks/pricing';
+
+
+import { discountApi, type DiscountResponse, type DiscountRequest } from '@/api/discountApi';
+
 
 interface PromotionsTabProps {
-    serviceId: number;
+    serviceId: string;
 }
 
 const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
-    const [promotions, setPromotions] = useState<Promotion[]>(getPromotionsByService(serviceId));
+    const [promotions, setPromotions] = useState<DiscountResponse[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [newPromotion, setNewPromotion] = useState({
         name: '',
         description: '',
-        discountType: 'percentage' as 'percentage' | 'fixed',
+        code: '',
+        discountType: 'Percentage' as 'Percentage' | 'Fixed',
         discountValue: '',
-        conditions: '',
+        maxDiscountAmount: '',
+        minSpend: '0',
         startDate: '',
         endDate: '',
     });
 
+    const fetchPromotions = async () => {
+        setIsLoading(true);
+        try {
+            const data = await discountApi.getAllDiscounts();
+            // Filter discounts related to this service (if applyType is ALL or SERVICE with this serviceId)
+            setPromotions(data.filter((d: DiscountResponse) => d.applyType === 'ALL' || d.applyType === 'SERVICE' || d.applyType === 'PROVINCE' || d.applyType === 'CATEGORY'));
+
+        } catch (err) {
+            console.error('Failed to load promotions', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPromotions();
+    }, [serviceId]);
+
+    const resetForm = () => setNewPromotion({ name: '', description: '', code: '', discountType: 'Percentage', discountValue: '', maxDiscountAmount: '', minSpend: '0', startDate: '', endDate: '' });
+
     const openAddModal = () => {
         setEditingId(null);
-        setNewPromotion({ name: '', description: '', discountType: 'percentage', discountValue: '', conditions: '', startDate: '', endDate: '' });
+        resetForm();
         setIsAdding(true);
     };
 
-    const openEditModal = (promo: Promotion) => {
+    const openEditModal = (promo: DiscountResponse) => {
         setEditingId(promo.id);
         setNewPromotion({
-            name: promo.name,
-            description: promo.description,
+            name: promo.name || '',
+            description: promo.name || '',
+            code: promo.code,
             discountType: promo.discountType,
-            discountValue: promo.discountValue.toString(),
-            conditions: promo.conditions.join('\n'),
-            startDate: promo.startDate,
-            endDate: promo.endDate,
+            discountValue: (promo.discountType === 'Percentage' ? promo.percentage : promo.fixedPrice)?.toString() || '',
+            maxDiscountAmount: promo.maxDiscountAmount?.toString() || '',
+            minSpend: promo.minSpend?.toString() || '0',
+            startDate: promo.startDate ? promo.startDate.split('T')[0] : '',
+            endDate: promo.endDate ? promo.endDate.split('T')[0] : '',
         });
         setIsAdding(true);
     };
 
-    const handleSavePromotion = () => {
+    const buildRequest = (): DiscountRequest => ({
+        name: newPromotion.name,
+        code: newPromotion.code || 'SVC-' + serviceId + '-' + Date.now(),
+        startDate: newPromotion.startDate ? newPromotion.startDate + 'T00:00:00' : new Date().toISOString(),
+        endDate: newPromotion.endDate ? newPromotion.endDate + 'T23:59:59' : new Date().toISOString(),
+        quantity: 0,
+        minSpend: Number(newPromotion.minSpend) || 0,
+        applyType: 'SERVICE',
+        serviceList: [String(serviceId)],
+        discountType: newPromotion.discountType,
+        percentage: newPromotion.discountType === 'Percentage' ? Number(newPromotion.discountValue) : undefined,
+        fixedPrice: newPromotion.discountType === 'Fixed' ? Number(newPromotion.discountValue) : undefined,
+        maxDiscountAmount: Number(newPromotion.maxDiscountAmount) || undefined,
+    });
+
+    const handleSavePromotion = async () => {
         if (!newPromotion.name || !newPromotion.discountValue) return;
-
-        if (editingId !== null) {
-            // Cập nhật ưu đãi đã có
-            setPromotions(prev => prev.map(p => p.id === editingId ? {
-                ...p,
-                name: newPromotion.name,
-                description: newPromotion.description,
-                discountType: newPromotion.discountType,
-                discountValue: parseInt(newPromotion.discountValue),
-                conditions: newPromotion.conditions.split('\n').filter(c => c.trim()),
-                startDate: newPromotion.startDate,
-                endDate: newPromotion.endDate,
-            } : p));
-        } else {
-            // Thêm mới
-            const promotion: Promotion = {
-                id: Math.max(...promotions.map(p => p.id), 0) + 1,
-                serviceId,
-                name: newPromotion.name,
-                description: newPromotion.description,
-                discountType: newPromotion.discountType,
-                discountValue: parseInt(newPromotion.discountValue),
-                conditions: newPromotion.conditions.split('\n').filter(c => c.trim()),
-                startDate: newPromotion.startDate,
-                endDate: newPromotion.endDate,
-                isActive: true,
-            };
-            setPromotions(prev => [...prev, promotion]);
+        try {
+            if (editingId !== null) {
+                await discountApi.updateDiscount(editingId, buildRequest());
+            } else {
+                await discountApi.createDiscount(buildRequest());
+            }
+            setIsAdding(false);
+            setEditingId(null);
+            fetchPromotions();
+        } catch (err) {
+            console.error('Failed to save promotion', err);
         }
-
-        setIsAdding(false);
-        setEditingId(null);
     };
 
-    const handleDeletePromotion = (id: number) => {
+    const handleDeletePromotion = async (id: string) => {
         if (confirm('Bạn có chắc muốn xóa ưu đãi này?')) {
-            setPromotions(promotions.filter(p => p.id !== id));
+            try {
+                await discountApi.deleteDiscount(id);
+                fetchPromotions();
+            } catch (err) {
+                console.error('Failed to delete promotion', err);
+            }
         }
-    };
-
-    const togglePromotionStatus = (id: number) => {
-        setPromotions(promotions.map(p =>
-            p.id === id ? { ...p, isActive: !p.isActive } : p
-        ));
     };
 
     return (
@@ -145,14 +166,14 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                                     <Label className="text-gray-700 font-medium">Loại giảm giá</Label>
                                     <Select
                                         value={newPromotion.discountType}
-                                        onValueChange={(value: 'percentage' | 'fixed') => setNewPromotion({ ...newPromotion, discountType: value })}
+                                        onValueChange={(value: 'Percentage' | 'Fixed') => setNewPromotion({ ...newPromotion, discountType: value })}
                                     >
                                         <SelectTrigger className="border-gray-300">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="percentage">Theo phần trăm (%)</SelectItem>
-                                            <SelectItem value="fixed">Số tiền cố định (VND)</SelectItem>
+                                            <SelectItem value="Percentage">Theo phần trăm (%)</SelectItem>
+                                            <SelectItem value="Fixed">Số tiền cố định (VND)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -161,12 +182,32 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                                     <Input
                                         type="number"
                                         className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
-                                        placeholder={newPromotion.discountType === 'percentage' ? "10" : "50000"}
+                                        placeholder={newPromotion.discountType === 'Percentage' ? "10" : "50000"}
                                         value={newPromotion.discountValue}
                                         onChange={(e) => setNewPromotion({ ...newPromotion, discountValue: e.target.value })}
                                     />
                                 </div>
-                                <div className="md:col-span-2 space-y-2">
+                                <div className="space-y-2">
+                                    <Label className="text-gray-700 font-medium">Giảm tối đa (VNĐ)</Label>
+                                    <Input
+                                        type="number"
+                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
+                                        placeholder="500000"
+                                        value={newPromotion.maxDiscountAmount}
+                                        onChange={(e) => setNewPromotion({ ...newPromotion, maxDiscountAmount: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-gray-700 font-medium">Đơn tối thiểu (VNĐ)</Label>
+                                    <Input
+                                        type="number"
+                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
+                                        placeholder="0"
+                                        value={newPromotion.minSpend}
+                                        onChange={(e) => setNewPromotion({ ...newPromotion, minSpend: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <Label className="text-gray-700 font-medium">Mô tả</Label>
                                     <Input
                                         className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
@@ -193,15 +234,6 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                                         onChange={(e) => setNewPromotion({ ...newPromotion, endDate: e.target.value })}
                                     />
                                 </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-gray-700 font-medium">Điều kiện áp dụng</Label>
-                                    <Textarea
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200 min-h-[80px]"
-                                        placeholder="Mỗi điều kiện một dòng..."
-                                        value={newPromotion.conditions}
-                                        onChange={(e) => setNewPromotion({ ...newPromotion, conditions: e.target.value })}
-                                    />
-                                </div>
                             </div>
 
                             <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
@@ -219,7 +251,9 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
 
             {/* Promotions List - Voucher Style */}
             <div className="grid grid-cols-1 gap-4">
-                {promotions.map((promo) => (
+                {isLoading ? (
+                    <div className="text-center py-12 text-gray-400">Đang tải ưu đãi...</div>
+                ) : promotions.map((promo) => (
                     <div key={promo.id} className="group relative bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-orange-300 transition-all duration-300 flex flex-col md:flex-row min-h-[140px]">
                         {/* Custom visual element for 'Voucher' look */}
                         <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-gray-50 rounded-full border border-gray-200 z-10 hidden md:block"></div>
@@ -227,14 +261,14 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
 
                         {/* Left Side: Discount Value */}
                         <div className="w-full md:w-[180px] bg-orange-50 flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-dashed border-gray-300 relative group-hover:bg-orange-100 transition-colors">
-                            {promo.discountType === 'percentage' ? (
+                            {promo.discountType === 'Percentage' ? (
                                 <div className="text-4xl font-black text-orange-500 flex items-start leading-none mb-2">
-                                    <span>{promo.discountValue}</span>
+                                    <span>{promo.percentage}</span>
                                     <span className="text-2xl mt-1">%</span>
                                 </div>
                             ) : (
                                 <div className="text-2xl font-black text-orange-500 mb-2 text-center">
-                                    {promo.discountValue.toLocaleString()}đ
+                                    {promo.fixedPrice?.toLocaleString()}đ
                                 </div>
                             )}
                             <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">GIẢM GIÁ</div>
@@ -248,44 +282,32 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                                         <h4 className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
                                             {promo.name}
                                         </h4>
-                                        <Badge className={`${promo.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600'} border-transparent font-normal`}>
-                                            {promo.isActive ? 'Đang hoạt động' : 'Đang ẩn'}
+                                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-transparent font-normal">
+                                            Đang hoạt động
                                         </Badge>
                                     </div>
-                                    <p className="text-gray-600 text-sm mb-3">{promo.description}</p>
 
                                     <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
                                         <div className="flex items-center gap-1">
                                             <Tag className="w-3 h-3" />
-                                            <span>Mã: PROMO{promo.id}</span>
+                                            <span>Mã: {promo.code}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <span>Hạn: {new Date(promo.startDate).toLocaleDateString('vi-VN')} - {new Date(promo.endDate).toLocaleDateString('vi-VN')}</span>
+                                            <span>Hạn: {promo.startDate ? new Date(promo.startDate).toLocaleDateString('vi-VN') : ''} - {promo.endDate ? new Date(promo.endDate).toLocaleDateString('vi-VN') : ''}</span>
                                         </div>
+                                        {promo.minSpend > 0 && (
+                                            <div className="flex items-center gap-1">
+                                                <span>Đơn tối thiểu: {promo.minSpend?.toLocaleString()}đ</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Conditions & Actions */}
+                            {/* Actions */}
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mt-2 border-t border-gray-50 pt-3">
-                                <div className="space-y-1 w-full md:w-auto">
-                                    {promo.conditions && promo.conditions.map((condition, idx) => (
-                                        <div key={idx} className="flex items-start gap-2 text-xs text-gray-500">
-                                            <div className="w-1 h-1 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></div>
-                                            <span className="line-clamp-1">{condition.trim()}</span>
-                                        </div>
-                                    ))}
-                                </div>
-
+                                <div></div>
                                 <div className="flex gap-2 w-full md:w-auto justify-end">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => togglePromotionStatus(promo.id)}
-                                        className={`h-8 text-xs ${promo.isActive ? 'text-orange-600 border-orange-200 bg-orange-50' : 'text-gray-500'}`}
-                                    >
-                                        {promo.isActive ? 'Tạm dừng' : 'Kích hoạt'}
-                                    </Button>
                                     <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => openEditModal(promo)}>
                                         <Edit className="w-3.5 h-3.5 text-gray-500 hover:text-blue-500" />
                                     </Button>

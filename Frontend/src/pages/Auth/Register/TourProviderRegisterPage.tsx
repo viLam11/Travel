@@ -110,7 +110,7 @@ const TourProviderRegisterPage: React.FC = () => {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                role: 'ROLE_PROVIDER',
+                role: 'PROVIDER',
                 providerType: 'place', // Tour/Place provider
             });
 
@@ -240,7 +240,7 @@ const TourProviderRegisterPage: React.FC = () => {
                         name="agreeToTerms"
                         checked={formData.agreeToTerms}
                         onChange={handleInputChange}
-                        className="mt-0.5 h-4 w-4 text-green-600 focus:ring-green-600 border-gray-300 rounded flex-shrink-0"
+                        className="cursor-pointer mt-0.5 h-4 w-4 text-green-600 focus:ring-green-600 border-gray-300 rounded flex-shrink-0"
                     />
                     <label className="text-xs sm:text-sm text-gray-600 leading-tight">
                         Tôi đồng ý với{" "}

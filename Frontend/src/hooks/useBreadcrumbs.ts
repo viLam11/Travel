@@ -46,8 +46,10 @@ export const useBreadcrumbs = (options: UseBreadcrumbsOptions = {}): BreadcrumbI
   const location = useLocation();
   const { serviceName } = options;
 
-  const breadcrumbs = useMemo(() => {
+    const breadcrumbs = useMemo(() => {
     const items: BreadcrumbItem[] = [];
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    const baseRoute = pathSegments[0]; // e.g., 'destinations' or 'hotels'
 
     // 1. Trang chủ (luôn có)
     items.push({
@@ -55,7 +57,24 @@ export const useBreadcrumbs = (options: UseBreadcrumbsOptions = {}): BreadcrumbI
       href: '/',
     });
 
-    // 2. Region (nếu có trong URL hoặc infer từ destination)
+    // 2. Base Route Layer (Điểm đến hoặc Khách sạn)
+    const hasDeeperParams = !!region || !!destination;
+    
+    if (baseRoute === 'destinations') {
+      items.push({
+        label: 'Tất cả điểm đến',
+        href: hasDeeperParams ? '/destinations' : undefined,
+        isActive: !hasDeeperParams
+      });
+    } else if (baseRoute === 'hotels') {
+      items.push({
+        label: 'Tất cả khách sạn',
+        href: hasDeeperParams ? '/hotels' : undefined,
+        isActive: !hasDeeperParams
+      });
+    }
+
+    // 3. Region (nếu có trong URL hoặc infer từ destination)
     let regionInfo = null;
     if (region) {
       regionInfo = REGIONS[region as RegionSlug];

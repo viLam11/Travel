@@ -4,6 +4,7 @@ import { SidebarTrigger } from "@/components/ui/admin/sidebar"
 import { ThemeToggle } from "./ThemeToggle"
 import { Breadcrumbs } from "./Breadcrumbs"
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs"
+import { NotificationDropdown } from "./NotificationDropdown"
 
 const SiteHeader = () => {
     const breadcrumbItems = useBreadcrumbs();
@@ -18,6 +19,8 @@ const SiteHeader = () => {
                 />
                 <Breadcrumbs items={breadcrumbItems} />
                 <div className="ml-auto flex items-center gap-2">
+                    <NotificationDropdown />
+                    <Separator orientation="vertical" className="h-4 mx-1" />
                     <ThemeToggle />
                     {/* <SearchForm className="w-full sm:ml-auto sm:w-auto" /> */}
                 </div>

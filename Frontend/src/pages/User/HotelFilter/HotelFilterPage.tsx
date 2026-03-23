@@ -1,11 +1,15 @@
 // src/pages/User/HotelFilter/HotelFilterPage.tsx
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Hotel, Star, MapPin, Wifi, Waves, Dumbbell, Sparkles, Car, UtensilsCrossed, Palmtree } from 'lucide-react';
+import { Hotel } from 'lucide-react';
 import Footer from '../../../components/common/layout/Footer';
 import BreadcrumbSection from '../../../components/common/BreadcrumbSection';
 import Pagination from '../../../components/common/Pagination';
 import HotelFilterSidebar from '../../../components/page/hotelFilter/HotelFilterSidebar';
+import HotelListCard, { type HotelListItem } from '../../../components/page/hotelFilter/HotelListCard';
+import { MOCK_DISCOUNTS } from '@/mocks/discounts';
+import apiClient from '@/services/apiClient';
+import { getDestinationInfo } from '@/constants/regions';
 
 const HotelFilterPage: React.FC = () => {
     const navigate = useNavigate();
@@ -14,68 +18,173 @@ const HotelFilterPage: React.FC = () => {
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
     // Filter states
-    const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000000]); // Max 10M/night
+    const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000000]);
     const [selectedStars, setSelectedStars] = useState<number[]>([]);
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<string>('popular');
 
-    // Get query params
     const destination = searchParams.get('destination') || '';
 
-    // Mock hotel data (will be replaced with API)
-    const mockHotels = [
+    // Resolve slug/code to numeric ID for backend filter
+    const resolvedProvinceID = getDestinationInfo(destination || '')?.id || destination;
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [apiHotels, setApiHotels] = useState<HotelListItem[]>([]);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
+    const mockHotels: HotelListItem[] = [
         {
-            id: '101',
-            name: 'Khách sạn Melia Vinpearl',
+            id: '203',
+            name: 'Khách sạn Melia Vinpearl Nha Trang',
             location: 'Nha Trang, Khánh Hòa',
             rating: 4.9,
             reviews: 856,
             price: 1500000,
             stars: 5,
-            image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop',
-            amenities: ['wifi', 'pool', 'gym', 'spa', 'parking']
+            image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop',
+            amenities: ['wifi', 'pool', 'gym', 'spa', 'parking'],
+            discount: MOCK_DISCOUNTS[0], // -20% Mùa Hè
         },
         {
-            id: '102',
+            id: '204',
             name: 'InterContinental Hanoi Westlake',
-            location: 'Hà Nội',
+            location: 'Tây Hồ, Hà Nội',
             rating: 4.8,
             reviews: 1234,
             price: 2500000,
             stars: 5,
-            image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=300&fit=crop',
-            amenities: ['wifi', 'pool', 'gym', 'restaurant', 'parking']
+            image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&h=400&fit=crop',
+            amenities: ['wifi', 'pool', 'gym', 'restaurant', 'parking'],
+            discount: MOCK_DISCOUNTS[1], // -200k Flash Sale
         },
         {
-            id: '103',
+            id: '205',
             name: 'Pullman Đà Nẵng Beach Resort',
-            location: 'Đà Nẵng',
+            location: 'Ngũ Hành Sơn, Đà Nẵng',
             rating: 4.7,
             reviews: 967,
             price: 1800000,
             stars: 5,
-            image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop',
-            amenities: ['wifi', 'pool', 'gym', 'spa', 'beach']
+            image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&h=400&fit=crop',
+            amenities: ['wifi', 'pool', 'gym', 'spa', 'beach'],
+            // No discount on this one
+        },
+        {
+            id: '206',
+            name: 'Novotel Phú Quốc Resort',
+            location: 'Phú Quốc, Kiên Giang',
+            rating: 4.6,
+            reviews: 742,
+            price: 1200000,
+            stars: 4,
+            image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&h=400&fit=crop',
+            amenities: ['wifi', 'pool', 'restaurant', 'beach', 'parking'],
+            discount: MOCK_DISCOUNTS[3], // -10% Đặt sớm
+        },
+        {
+            id: '207',
+            name: 'Muong Thanh Grand Đà Lạt',
+            location: 'Đà Lạt, Lâm Đồng',
+            rating: 4.4,
+            reviews: 521,
+            price: 890000,
+            stars: 4,
+            image: 'https://images.unsplash.com/photo-1506974210756-8e1b8985d348?w=600&h=400&fit=crop',
+            amenities: ['wifi', 'parking', 'restaurant', 'gym'],
+            // No discount
         },
     ];
 
-    const [hotels] = useState(mockHotels);
-    const totalPages = Math.ceil(hotels.length / 5);
+    const mapServiceToHotel = (service: any): HotelListItem => {
+        const rawPrice = service.averagePrice ?? 0;
+        const stars = service.rating ? Math.floor(service.rating) : 0; // Fallback star estimation if not provided
 
-    const amenitiesMap: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
-        wifi: { label: 'WiFi', icon: Wifi },
-        pool: { label: 'Hồ bơi', icon: Waves },
-        gym: { label: 'Gym', icon: Dumbbell },
-        spa: { label: 'Spa', icon: Sparkles },
-        parking: { label: 'Đỗ xe', icon: Car },
-        restaurant: { label: 'Nhà hàng', icon: UtensilsCrossed },
-        beach: { label: 'Bãi biển', icon: Palmtree },
+        return {
+            id: service.id.toString(),
+            name: service.serviceName,
+            location: service.province?.fullName || service.address || 'Việt Nam',
+            rating: service.rating || 0,
+            reviews: service.reviewCount || 0,
+            price: rawPrice,
+            stars: stars > 0 ? stars : 4, // Default to 4 if unknown
+            image: service.thumbnailUrl || 'https://via.placeholder.com/600x400',
+            amenities: ['wifi', 'parking'], // Basic amenities if not from backend
+            discount: service.discounts?.[0]
+        };
     };
 
-    const handleHotelClick = (hotel: any) => {
+    const fetchHotels = async (signal?: AbortSignal) => {
+        setIsLoading(true);
+        try {
+            const response: any = await apiClient.services.search({
+                provinceCode: resolvedProvinceID || undefined,
+                serviceType: 'HOTEL',
+                minPrice: priceRange[0],
+                maxPrice: priceRange[1] < 10000000 ? priceRange[1] : undefined,
+                minRating: selectedStars.length > 0 ? Math.min(...selectedStars) : undefined,
+                page: currentPage - 1,
+                size: 5,
+                sortBy: sortBy === 'price-low' ? 'averagePrice' : sortBy === 'price-high' ? 'averagePrice' : 'rating',
+                direction: sortBy === 'price-low' ? 'asc' : 'desc',
+                signal
+            });
+
+            if (response && response.services && response.services.length > 0) {
+                const mapped = response.services.map(mapServiceToHotel);
+                setApiHotels(mapped);
+                setTotalPages(response.totalPages);
+                setTotalItems(response.totalItems);
+            } else {
+                setApiHotels([]);
+                setTotalItems(0);
+                setTotalPages(1);
+            }
+        } catch (error: any) {
+            if (error.name !== 'AbortError') {
+                console.error("Failed to fetch hotels:", error);
+                setApiHotels([]);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    React.useEffect(() => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            fetchHotels(controller.signal);
+        }, 300); // Debounce
+
+        return () => {
+            controller.abort();
+            clearTimeout(timeoutId);
+        };
+    }, [destination, priceRange, selectedStars, sortBy, currentPage]);
+
+    // Final hotels list: use API if results found, otherwise mock (as requested)
+    const hotelsToShow = apiHotels.length > 0 ? apiHotels : mockHotels.filter(h => {
+        if (destination && !h.location.toLowerCase().includes(destination.toLowerCase())) return false;
+        if (h.price < priceRange[0] || h.price > priceRange[1]) return false;
+        if (selectedStars.length > 0 && !selectedStars.includes(h.stars)) return false;
+        return true;
+    });
+
+    const effectiveHotelsCount = apiHotels.length > 0 ? totalItems : hotelsToShow.length;
+    const pagedHotels = apiHotels.length > 0 ? apiHotels : hotelsToShow.slice((currentPage - 1) * 5, currentPage * 5);
+
+    const handleHotelClick = (hotel: HotelListItem) => {
+        // ID slug
         const titleSlug = hotel.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        const idSlug = `${hotel.id}-${titleSlug}`;
-        navigate(`/destinations/vietnam/general/hotel/${idSlug}`);
+        // Destination slug (từ location VD: "Tây Hồ, Hà Nội" -> "ha-noi")
+        const locationParts = hotel.location.split(',');
+        const destStr = locationParts[locationParts.length - 1].trim();
+        const destSlug = destStr.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+        navigate(`/destinations/vietnam/${destSlug}/hotel/${hotel.id}-${titleSlug}`);
     };
 
     return (
@@ -83,11 +192,11 @@ const HotelFilterPage: React.FC = () => {
             <BreadcrumbSection
                 auto
                 title={destination || 'Tất cả khách sạn'}
-                subtitle={`Tìm thấy ${hotels.length} khách sạn`}
+                subtitle={`Tìm thấy ${effectiveHotelsCount} khách sạn`}
             />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-                <div className="flex gap-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="flex gap-8 items-start">
                     {/* LEFT: Filter Sidebar */}
                     <HotelFilterSidebar
                         isMobileOpen={isMobileSidebarOpen}
@@ -104,74 +213,53 @@ const HotelFilterPage: React.FC = () => {
                         onSortChange={setSortBy}
                     />
 
-                    {/* RIGHT: Hotel Grid */}
-                    <main className="flex-1">
+                    {/* RIGHT: Hotel List */}
+                    <main className="flex-1 min-w-0">
+                        {/* Active filter pills */}
+                        {(selectedStars.length > 0 || selectedAmenities.length > 0 || sortBy !== 'popular') && (
+                            <div className="flex flex-wrap gap-2 mb-5">
+                                {sortBy !== 'popular' && (
+                                    <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                                        Sắp xếp: {sortBy === 'price-low' ? 'Giá thấp→cao' : sortBy === 'price-high' ? 'Giá cao→thấp' : 'Đánh giá cao'}
+                                        <button onClick={() => setSortBy('popular')} className="hover:text-orange-900">✕</button>
+                                    </span>
+                                )}
+                                {selectedStars.map(s => (
+                                    <span key={s} className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                                        {s}★
+                                        <button onClick={() => setSelectedStars(prev => prev.filter(x => x !== s))} className="hover:text-orange-900">✕</button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="space-y-4">
-                            {hotels.map(hotel => (
-                                <div
-                                    key={hotel.id}
-                                    onClick={() => handleHotelClick(hotel)}
-                                    className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-                                >
-                                    <div className="flex flex-col sm:flex-row">
-                                        <div className="sm:w-64 h-48 sm:h-auto">
-                                            <img
-                                                src={hotel.image}
-                                                alt={hotel.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <div className="flex-1 p-4 sm:p-6">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div>
-                                                    <h3 className="text-lg font-bold text-gray-900 mb-1">{hotel.name}</h3>
-                                                    <div className="flex items-center gap-1 mb-2">
-                                                        {Array.from({ length: hotel.stars }).map((_, i) => (
-                                                            <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                                        ))}
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                                                        <MapPin className="w-4 h-4" />
-                                                        {hotel.location}
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="flex items-center gap-1 mb-1">
-                                                        <Star className="w-4 h-4 fill-orange-500 text-orange-500" />
-                                                        <span className="font-bold text-gray-900">{hotel.rating}</span>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500">{hotel.reviews} đánh giá</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-end justify-between mt-4">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {hotel.amenities.slice(0, 4).map(amenity => {
-                                                        const amenityInfo = amenitiesMap[amenity];
-                                                        if (!amenityInfo) return null;
-                                                        const IconComponent = amenityInfo.icon;
-                                                        return (
-                                                            <div key={amenity} className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded">
-                                                                <IconComponent className="w-3.5 h-3.5" />
-                                                                <span>{amenityInfo.label}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-sm text-gray-600">Từ</p>
-                                                    <p className="text-xl font-bold text-orange-500">
-                                                        {(hotel.price / 1000000).toFixed(1)}M
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">/đêm</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                            {isLoading ? (
+                                <div className="flex justify-center py-20">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
                                 </div>
-                            ))}
+                            ) : pagedHotels.length === 0 ? (
+                                <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
+                                    <p className="text-gray-500 text-lg font-medium mb-2">Không tìm thấy khách sạn phù hợp</p>
+                                    <p className="text-gray-400 text-sm">Thử điều chỉnh bộ lọc để xem thêm kết quả</p>
+                                    <button
+                                        onClick={() => { setPriceRange([0, 10000000]); setSelectedStars([]); setSelectedAmenities([]); setSortBy('popular'); }}
+                                        className="mt-4 text-orange-500 hover:text-orange-600 text-sm font-semibold underline cursor-pointer"
+                                    >
+                                        Xóa tất cả bộ lọc
+                                    </button>
+                                </div>
+                            ) : (
+                                pagedHotels.map(hotel => (
+                                    <HotelListCard
+                                        key={hotel.id}
+                                        hotel={hotel}
+                                        onClick={() => handleHotelClick(hotel)}
+                                    />
+                                ))
+                            )}
                         </div>
 
-                        {/* Pagination */}
                         {totalPages > 1 && (
                             <div className="mt-8">
                                 <Pagination

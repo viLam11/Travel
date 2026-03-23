@@ -171,13 +171,13 @@ const UserSavedPage: React.FC = () => {
         <div className="flex gap-2 bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-500'}`}
+            className={`p-2 rounded cursor-pointer ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-500'}`}
           >
             <Grid3x3 className="w-5 h-5" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}`}
+            className={`p-2 rounded cursor-pointer ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}`}
           >
             <List className="w-5 h-5" />
           </button>
@@ -197,7 +197,7 @@ const UserSavedPage: React.FC = () => {
           <button
             key={tab.value}
             onClick={() => setSelectedType(tab.value as any)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
               selectedType === tab.value
                 ? 'bg-orange-500 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -231,7 +231,7 @@ const UserSavedPage: React.FC = () => {
                 />
                 <button
                   onClick={() => handleRemove(item.id)}
-                  className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md hover:bg-red-50 transition-colors"
+                  className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   <Heart className="w-5 h-5 text-red-500 fill-red-500" />
                 </button>
@@ -312,7 +312,7 @@ const UserSavedPage: React.FC = () => {
 
                     <button
                       onClick={() => handleRemove(item.id)}
-                      className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

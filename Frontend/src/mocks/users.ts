@@ -5,7 +5,7 @@ export interface MockUser {
     email: string;
     role: 'admin' | 'provider' | 'user';
     providerType?: 'hotel' | 'tour'; // Only for providers
-    status: 'active' | 'blocked';
+    status: 'active' | 'blocked' | 'pending';
     joinDate: string;
     lastLogin: string;
     avatar: string;
@@ -84,6 +84,28 @@ export const MOCK_USERS_DATA: MockUser[] = [
         joinDate: "2023-08-05",
         lastLogin: "2024-02-04T16:00:00",
         avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=resort"
+    },
+    {
+        id: 8,
+        name: "Hoi An Homestays",
+        email: "hoian@homestay.com",
+        role: "provider",
+        providerType: "hotel",
+        status: "pending",
+        joinDate: "2024-03-01",
+        lastLogin: "2024-03-01T08:00:00",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=hoian"
+    },
+    {
+        id: 9,
+        name: "Mekong Delta Tours",
+        email: "mekong@tours.com",
+        role: "provider",
+        providerType: "tour",
+        status: "pending",
+        joinDate: "2024-03-05",
+        lastLogin: "2024-03-05T09:30:00",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mekong"
     }
 ];
 

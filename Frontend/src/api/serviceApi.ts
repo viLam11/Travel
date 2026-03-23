@@ -1,8 +1,7 @@
-// src/api/serviceApi.ts
 import type { Service, ServiceStats, ServiceStatus, ServiceType } from '@/types/service.types';
+import apiClient from '@/services/apiClient';
 
-const API_BASE_URL = 'http://localhost:8080';
-const USE_MOCK = true; // Set to false to use real API
+const USE_MOCK = false; // Set to false to use real API
 
 // Mock Data
 const mockServices: Service[] = [
@@ -98,7 +97,7 @@ const mockServices: Service[] = [
         thumbnailUrl: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400',
         province: { id: 'hcm', fullName: 'Hồ Chí Minh' },
         address: '141 Nguyễn Huệ, Quận 1',
-        description: 'Khách sạn lịch sử với vị trí đắc địa',
+        description: 'Khách sạn lịch sử with vị trí đắc địa',
         averagePrice: 2200000,
         rating: 4.4,
         starRating: 5,
@@ -184,33 +183,16 @@ export const serviceApi = {
         }
 
         try {
-            const queryParams = new URLSearchParams();
-            if (params?.type) queryParams.append('type', params.type);
-            if (params?.status) queryParams.append('status', params.status);
-            if (params?.provinceId) queryParams.append('provinceId', params.provinceId);
-            if (params?.search) queryParams.append('search', params.search);
-            if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-            if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-            if (params?.page) queryParams.append('page', params.page.toString());
-            if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/services?${queryParams.toString()}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get('/api/provider/services', { params });
         } catch (error) {
             console.error('Error fetching provider services:', error);
+            // Fallback to mock on error if needed, or rethrow
+            if (USE_MOCK) return {
+                services: mockServices,
+                total: mockServices.length,
+                page: 1,
+                totalPages: 1,
+            };
             throw error;
         }
     },
@@ -225,21 +207,7 @@ export const serviceApi = {
         }
 
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/services/${serviceId}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get(`/api/provider/services/${serviceId}`);
         } catch (error) {
             console.error('Error fetching service:', error);
             throw error;
@@ -249,23 +217,7 @@ export const serviceApi = {
     // Cập nhật service
     updateService: async (serviceId: string, data: Partial<Service>): Promise<Service> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/services/${serviceId}`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.put(`/api/provider/services/${serviceId}`, data);
         } catch (error) {
             console.error('Error updating service:', error);
             throw error;
@@ -275,20 +227,7 @@ export const serviceApi = {
     // Xóa service
     deleteService: async (serviceId: string): Promise<void> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/services/${serviceId}`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            await apiClient.delete(`/api/provider/services/${serviceId}`);
         } catch (error) {
             console.error('Error deleting service:', error);
             throw error;
@@ -298,23 +237,7 @@ export const serviceApi = {
     // Toggle service status (active/inactive)
     toggleServiceStatus: async (serviceId: string, status: 'active' | 'inactive'): Promise<Service> => {
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/services/${serviceId}/status`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ status }),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.patch(`/api/provider/services/${serviceId}/status`, { status });
         } catch (error) {
             console.error('Error toggling service status:', error);
             throw error;
@@ -329,21 +252,7 @@ export const serviceApi = {
         }
 
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/provider/services/stats`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await apiClient.get('/api/provider/services/stats');
         } catch (error) {
             console.error('Error fetching service stats:', error);
             throw error;

@@ -35,13 +35,16 @@ const UserProfilePage = lazy(() => import("@/pages/User/Profile/UserProfilePage"
 const UserBookingsPage = lazy(() => import("@/pages/User/Bookings/UserBookingsPage"));
 const UserTransactionsPage = lazy(() => import("@/pages/User/Transactions/UserTransactionsPage"));
 const UserSavedPage = lazy(() => import("@/pages/User/Saved/UserSavedPage"));
+const UserMessagesPage = lazy(() => import("@/pages/User/Messages/UserMessagesPage"));
 
-// Admin Pages (System Admin)
 const AdminDashboard = lazy(() => import("@/pages/Admin/Dashboard/AdminDashboard"));
 const AdminServiceList = lazy(() => import("@/pages/Admin/Services/AdminServiceList"));
 const AdminReviews = lazy(() => import("@/pages/Admin/Reviews/AdminReviews"));
 const AdminBookings = lazy(() => import("@/pages/Admin/Bookings/AdminBookings"));
 const AdminUsers = lazy(() => import("@/pages/Admin/Users/AdminUsers"));
+const AdminServiceApprovalsPage = lazy(() => import("@/pages/Admin/Approvals/AdminServiceApprovalsPage"));
+const AdminPromotionsPage = lazy(() => import("@/pages/Admin/Promotions/AdminPromotionsPage"));
+const AdminMessagesPage = lazy(() => import("@/pages/Admin/Messages/AdminMessagesPage"));
 
 // Service Provider Pages
 const ProviderDashboard = lazy(() => import("@/pages/ServiceProvider/Dashboard/DashBoardPage"));
@@ -58,6 +61,7 @@ const ProviderEditHotelPage = lazy(() => import("@/pages/ServiceProvider/Hotels/
 const ProviderRoomManagementPage = lazy(() => import("@/pages/ServiceProvider/Rooms/RoomManagementPage"));
 const ProviderBookingsManagementPage = lazy(() => import("@/pages/ServiceProvider/Bookings/BookingsManagementPage"));
 const ProviderReviewsManagementPage = lazy(() => import("@/pages/ServiceProvider/Reviews/ReviewsManagementPage"));
+const ProviderMessagesPage = lazy(() => import("@/pages/ServiceProvider/Messages/ProviderMessagesPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 const AIPlannerPage = lazy(() => import("@/pages/User/AIPlanner/AIPlannerPage"));
 
@@ -224,6 +228,10 @@ const routes: RouteObject[] = [
             element: withSuspense(UserSavedPage as LazyExoticComponent<ComponentType<unknown>>),
           },
           {
+            path: "messages",
+            element: withSuspense(UserMessagesPage as LazyExoticComponent<ComponentType<unknown>>),
+          },
+          {
             path: "success/payment",
             element: <div>SUCCESS PAYMENT</div>,
             // element: withSuspense(UserSavedPage as LazyExoticComponent<ComponentType<unknown>>),
@@ -260,10 +268,22 @@ const routes: RouteObject[] = [
         element: withSuspense(AdminServiceList as LazyExoticComponent<ComponentType<unknown>>),
       },
 
+      // Services Approval
+      {
+        path: "approvals",
+        element: withSuspense(AdminServiceApprovalsPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
       // Reviews Moderation
       {
         path: "reviews",
         element: withSuspense(AdminReviews as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
+      // Promotions
+      {
+        path: "promotions",
+        element: withSuspense(AdminPromotionsPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
       // Bookings Management
@@ -276,6 +296,12 @@ const routes: RouteObject[] = [
       {
         path: "users",
         element: withSuspense(AdminUsers as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
+      // Messages / Support
+      {
+        path: "messages",
+        element: withSuspense(AdminMessagesPage as LazyExoticComponent<ComponentType<unknown>>),
       },
     ],
   },
@@ -343,6 +369,10 @@ const routes: RouteObject[] = [
       {
         path: "reviews",
         element: withSuspense(ProviderReviews as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: "messages",
+        element: withSuspense(ProviderMessagesPage as LazyExoticComponent<ComponentType<unknown>>),
       },
     ],
   },

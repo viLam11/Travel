@@ -27,6 +27,8 @@ input[type="password"]::-ms-clear {
 
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @layer base {
     html {
         scrollbar-gutter: stable;

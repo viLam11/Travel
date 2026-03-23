@@ -19,9 +19,9 @@ class AuthService {
         try {
             // Call logout API to invalidate token on server
             await apiClient.auth.logout();
-            console.log('✅ Đăng xuất thành công từ server');
+            console.log('Đăng xuất thành công từ server');
         } catch (error) {
-            console.error('❌ Lỗi khi đăng xuất từ server:', error);
+            console.error(' Lỗi khi đăng xuất từ server:', error);
             // Continue with local logout even if API fails
             throw error; // Re-throw để caller biết có lỗi
         }
@@ -42,7 +42,7 @@ class AuthService {
         // 2. Cleanup local storage (luôn thực hiện)
         this.clearLocalAuthData();
 
-        console.log('✅ Đăng xuất hoàn tất (local cleanup)');
+        console.log('Đăng xuất hoàn tất (local cleanup)');
     }
 
     /**
@@ -53,7 +53,7 @@ class AuthService {
         keysToRemove.forEach(key => {
             localStorage.removeItem(key);
         });
-        console.log('🗑️ Đã xóa dữ liệu auth từ localStorage');
+        console.log(' Đã xóa dữ liệu auth từ localStorage');
     }
 
     /**
