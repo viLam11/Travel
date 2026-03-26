@@ -66,7 +66,7 @@ export interface ResourceAdapter<
 /**
  * ApiClient class for type-safe API calls
  */
-export class ApiClient {
+export class ApiServiceClient {
   private rateLimitInfo: RateLimitInfo | null = null;
   public static readonly USE_MOCK = false; // Bật fallback sang mock khi API lỗi
 
@@ -162,9 +162,15 @@ export class ApiClient {
       });
     },
 
-    getById: (serviceID: number): ApiResponse<any> => {
+    getById: (serviceID: string): ApiResponse<any> => {
       return this.get(`/services/${serviceID}`);
     },
+
+    getAllRoomByID: (hotelID: string): ApiResponse<any> => {
+        return this.get(`/services/${hotelID}/rooms`)
+    },
+    
+    // getAllTicketsByID: (venueID: string): 
 
     list: (page = 0, size = 10): ApiResponse<any> => {
       return this.get("/services/data", { params: { page, size } });
@@ -219,32 +225,7 @@ export class ApiClient {
       direction?: string;
       signal?: AbortSignal;
     }): ApiResponse<any> => {
-      try {
-        const self = (this as any);
-        console.log("Fetching real API services/search", params);
-        let response: any = await self.get("/services/search", { params });
-        
-        // Handle Spring Boot Page<T> response structure where data is in 'content' array
-        if (response && response.content) {
-            response.services = response.content;
-        } else if (Array.isArray(response)) {
-            response = { services: response, totalElements: response.length, totalPages: 1 };
-        }
-        
-        if (ApiClient.USE_MOCK && (!response || !response.services || response.services.length === 0)) {
-           console.warn("Real API returned no data, falling back to Mock...");
-           return self.services.getMockSearch(params);
-        }
-        
-        return response;
-      } catch (error) {
-        const self = (this as any);
-        console.error("API Search failed, using Fallback Mock:", error);
-        if (ApiClient.USE_MOCK) {
-          return self.services.getMockSearch(params);
-        }
-        throw error;
-      }
+        return this.get("/services/search", {params});
     },
 
     getMockSearch: async (params: any): Promise<any> => {
@@ -252,27 +233,27 @@ export class ApiClient {
         
         const MOCK_DATA = [
           {
-            id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "TICKET_VENUE",
+            id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "DESTINATION",
             province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
             address: "Nha Trang, Khánh Hòa", averagePrice: 880000, thumbnailUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", rating: 4.8, reviewCount: 240, bookingCount: 1500
           },
           {
-            id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "TICKET_VENUE",
+            id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "DESTINATION",
             province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
             address: "Đà Nẵng", averagePrice: 850000, thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800", rating: 4.9, reviewCount: 1200, bookingCount: 5000
           },
           {
-            id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "TICKET_VENUE",
+            id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "DESTINATION",
             province: { code: "quang-nam", name: "Hội An", fullName: "Quảng Nam" },
             address: "Hội An, Quảng Nam", averagePrice: 0, thumbnailUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800", rating: 4.9, reviewCount: 680, bookingCount: 3000
           },
           {
-            id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "TICKET_VENUE",
+            id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "DESTINATION",
             province: { code: "22", name: "Hạ Long", fullName: "Quảng Ninh" },
             address: "Hạ Long, Quảng Ninh", averagePrice: 290000, thumbnailUrl: "https://images.unsplash.com/photo-1506606401543-2e73709cebb4?w=800", rating: 4.7, reviewCount: 450, bookingCount: 2000
           },
           {
-            id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "TICKET_VENUE",
+            id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "DESTINATION",
             province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
             address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
           },
@@ -334,8 +315,7 @@ export class ApiClient {
 
         return {
           services: paginatedItems,
-          totalElements: totalItems,  // Match Spring Boot Page response key
-          totalItems,                 // Keep for backward compat
+          totalItems,
           totalPages,
           currentPage: page
         };
@@ -514,54 +494,14 @@ export class ApiClient {
     create: (data: CreateOrderRequest): ApiResponse<any> => {
       return this.post("/orders/create", data);
     },
-    getAll: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get("/orders/all", { params: { page, size } });
-    },
-    updateStatus: (orderId: string | number, status: string): ApiResponse<any> => {
-      return this.patch(`/orders/${orderId}/status`, status, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+    getAll: (): ApiResponse<any> => {
+      return this.get("/orders/all");
     },
   };
 
   tickets = {
     getByServiceId: (serviceId: string | number): ApiResponse<any[]> => {
       return this.get(`/services/${serviceId}/tickets`);
-    },
-    create: (serviceId: string | number, data: any): ApiResponse<any> => {
-      return this.post(`/services/${serviceId}/tickets`, data);
-    },
-    update: (ticketId: string | number, data: any): ApiResponse<any> => {
-      return this.patch(`/tickets/${ticketId}`, data);
-    },
-    delete: (ticketId: string | number): ApiResponse<any> => {
-      return this.delete(`/tickets/${ticketId}`);
-    },
-  };
-
-  rooms = {
-    getByHotelId: (hotelId: string | number): ApiResponse<any[]> => {
-      return this.get(`/services/${hotelId}/rooms`);
-    },
-    create: (hotelId: string | number, data: any): ApiResponse<any> => {
-      // Create room uses multipart/form-data according to Controller
-      const formData = new FormData();
-      Object.keys(data).forEach(key => {
-        if (key === 'photos' && Array.isArray(data[key])) {
-          data[key].forEach((photo: File) => formData.append('photos', photo));
-        } else {
-          formData.append(key, data[key]);
-        }
-      });
-      return this.post(`/services/${hotelId}/rooms`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    },
-    update: (roomId: string | number, data: any): ApiResponse<any> => {
-      return this.patch(`/rooms/${roomId}`, data);
-    },
-    delete: (roomId: string | number): ApiResponse<any> => {
-      return this.delete(`/rooms/${roomId}`);
     },
   };
 
@@ -593,50 +533,13 @@ export class ApiClient {
     },
 
     getAll: async (): Promise<any[]> => {
-      try {
-        const response = await this.get<any[]>("/provinces/all");
-        return response;
-      } catch (error) {
-        if (ApiClient.USE_MOCK) {
-          return this.provinces.getMockProvinces();
-        }
-        throw error;
-      }
+        return this.get<any[]>("/provinces/all");
     },
   };
 
   transactions = {
     getAll: (): ApiResponse<any> => {
       return this.get("/orders/all");
-    },
-    // Chế độ mở rộng nếu sau này có API riêng cho giao dịch ví/thanh toán
-  };
-
-  favorites = {
-    getAll: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get("/api/favorites", { params: { page, size } });
-    },
-    add: (serviceId: string | number): ApiResponse<void> => {
-      return this.post(`/api/favorites/${serviceId}`, {});
-    },
-    remove: (serviceId: string | number): ApiResponse<void> => {
-      return this.delete(`/api/favorites/${serviceId}`);
-    },
-  };
-
-  // Notification endpoints
-  notifications = {
-    getAll: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get("/api/notifications", { params: { page, size } });
-    },
-    getUnreadCount: (): ApiResponse<number> => {
-      return this.get("/api/notifications/unread-count");
-    },
-    markAsRead: (id: string): ApiResponse<void> => {
-      return this.put(`/api/notifications/${id}/read`, {});
-    },
-    markAllAsRead: (): ApiResponse<void> => {
-      return this.put("/api/notifications/read-all", {});
     },
   };
 
@@ -832,5 +735,5 @@ export class ApiClient {
   }
 }
 
-const apiClient = new ApiClient();
-export default apiClient;
+const apiServiceClient = new ApiServiceClient();
+export default apiServiceClient;

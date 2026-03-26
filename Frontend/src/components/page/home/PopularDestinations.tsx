@@ -30,23 +30,23 @@ const PopularDestinations: React.FC = () => {
   const [isLoadingHotels, setIsLoadingHotels] = useState<boolean>(true);
 
   // Mock data for fallback
-  const mockDestinations: Destination[] = [
-    { id: '1', title: 'Vinpearl Land Nha Trang', location: 'Nha Trang, Khánh Hòa', priceRange: '880.000 ₫', openingHours: '8:00 - 21:00', image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop', destinationSlug: 'nha-trang', regionSlug: 'mien-trung', serviceType: 'place', rating: '4.8', reviews: '240 reviews' },
-    { id: '2', title: 'Sun World Ba Na Hills', location: 'Đà Nẵng', priceRange: '850.000 ₫', openingHours: '7:00 - 22:00', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop', destinationSlug: 'da-nang', regionSlug: 'mien-trung', serviceType: 'place', rating: '4.9', reviews: '1.2k reviews' },
-    { id: '4', title: 'Du thuyền Heritage', location: 'Hạ Long, Quảng Ninh', priceRange: '3.200.000 ₫', openingHours: '8:00 - 17:00', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=300&fit=crop', destinationSlug: 'ha-long', regionSlug: 'mien-bac', serviceType: 'place', rating: '4.7', reviews: '56 reviews' },
-    { id: '5', title: 'Landmark 81 SkyView', location: 'Bình Thạnh, TP.HCM', priceRange: '810.000 ₫', openingHours: '9:00 - 22:00', image: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=400&h=300&fit=crop', destinationSlug: 'ho-chi-minh', regionSlug: 'mien-nam', serviceType: 'ticket', rating: '4.6', reviews: '310 reviews' },
-    { id: '6', title: 'Grand World Phú Quốc', location: 'Phú Quốc, Kiên Giang', priceRange: 'Miễn phí', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=400&h=300&fit=crop', destinationSlug: 'phu-quoc', regionSlug: 'mien-nam', serviceType: 'place', rating: '4.8', reviews: '450 reviews' },
-    { id: '9', title: 'Phố cổ Hội An', location: 'Hội An, Quảng Nam', priceRange: 'Miễn phí', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop', destinationSlug: 'hoi-an', regionSlug: 'mien-trung', serviceType: 'place', rating: '4.9', reviews: '680 reviews' },
-  ];
+  // const mockDestinations: Destination[] = [
+  //   { id: '1', title: 'Vinpearl Land Nha Trang', location: 'Nha Trang, Khánh Hòa', priceRange: '880.000 ₫', openingHours: '8:00 - 21:00', image: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=300&fit=crop', destinationSlug: 'nha-trang', regionSlug: 'mien-trung', serviceType: 'place', rating: '4.8', reviews: '240 reviews' },
+  //   { id: '2', title: 'Sun World Ba Na Hills', location: 'Đà Nẵng', priceRange: '850.000 ₫', openingHours: '7:00 - 22:00', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop', destinationSlug: 'da-nang', regionSlug: 'mien-trung', serviceType: 'place', rating: '4.9', reviews: '1.2k reviews' },
+  //   { id: '4', title: 'Du thuyền Heritage', location: 'Hạ Long, Quảng Ninh', priceRange: '3.200.000 ₫', openingHours: '8:00 - 17:00', image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=300&fit=crop', destinationSlug: 'ha-long', regionSlug: 'mien-bac', serviceType: 'place', rating: '4.7', reviews: '56 reviews' },
+  //   { id: '5', title: 'Landmark 81 SkyView', location: 'Bình Thạnh, TP.HCM', priceRange: '810.000 ₫', openingHours: '9:00 - 22:00', image: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=400&h=300&fit=crop', destinationSlug: 'ho-chi-minh', regionSlug: 'mien-nam', serviceType: 'ticket', rating: '4.6', reviews: '310 reviews' },
+  //   { id: '6', title: 'Grand World Phú Quốc', location: 'Phú Quốc, Kiên Giang', priceRange: 'Miễn phí', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=400&h=300&fit=crop', destinationSlug: 'phu-quoc', regionSlug: 'mien-nam', serviceType: 'place', rating: '4.8', reviews: '450 reviews' },
+  //   { id: '9', title: 'Phố cổ Hội An', location: 'Hội An, Quảng Nam', priceRange: 'Miễn phí', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&h=300&fit=crop', destinationSlug: 'hoi-an', regionSlug: 'mien-trung', serviceType: 'place', rating: '4.9', reviews: '680 reviews' },
+  // ];
 
-  const mockHotels: Destination[] = [
-    { id: '3', title: 'Khách sạn Melia Vinpearl', location: 'Huế', priceRange: '2.500.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop', destinationSlug: 'hue', regionSlug: 'mien-trung', serviceType: 'hotel', rating: '5.0', reviews: '89 reviews' },
-    { id: '7', title: 'InterContinental Hanoi', location: 'Hà Nội', priceRange: '3.500.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&h=300&fit=crop', destinationSlug: 'ha-noi', regionSlug: 'mien-bac', serviceType: 'hotel', rating: '4.9', reviews: '156 reviews' },
-    { id: '8', title: 'Vinpearl Resort Phú Quốc', location: 'Phú Quốc, Kiên Giang', priceRange: '4.200.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop', destinationSlug: 'phu-quoc', regionSlug: 'mien-nam', serviceType: 'hotel', rating: '4.8', reviews: '203 reviews' },
-    { id: '10', title: 'JW Marriott Hanoi', location: 'Hà Nội', priceRange: '4.800.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&fit=crop', destinationSlug: 'ha-noi', regionSlug: 'mien-bac', serviceType: 'hotel', rating: '4.9', reviews: '278 reviews' },
-    { id: '11', title: 'Sheraton Nha Trang', location: 'Nha Trang, Khánh Hòa', priceRange: '3.200.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop', destinationSlug: 'nha-trang', regionSlug: 'mien-trung', serviceType: 'hotel', rating: '4.7', reviews: '192 reviews' },
-    { id: '12', title: 'Pullman Đà Nẵng', location: 'Đà Nẵng', priceRange: '2.800.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1596436889106-be35e843f974?w=400&h=300&fit=crop', destinationSlug: 'da-nang', regionSlug: 'mien-trung', serviceType: 'hotel', rating: '4.8', reviews: '234 reviews' },
-  ];
+  // const mockHotels: Destination[] = [
+  //   { id: '3', title: 'Khách sạn Melia Vinpearl', location: 'Huế', priceRange: '2.500.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop', destinationSlug: 'hue', regionSlug: 'mien-trung', serviceType: 'hotel', rating: '5.0', reviews: '89 reviews' },
+  //   { id: '7', title: 'InterContinental Hanoi', location: 'Hà Nội', priceRange: '3.500.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&h=300&fit=crop', destinationSlug: 'ha-noi', regionSlug: 'mien-bac', serviceType: 'hotel', rating: '4.9', reviews: '156 reviews' },
+  //   { id: '8', title: 'Vinpearl Resort Phú Quốc', location: 'Phú Quốc, Kiên Giang', priceRange: '4.200.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop', destinationSlug: 'phu-quoc', regionSlug: 'mien-nam', serviceType: 'hotel', rating: '4.8', reviews: '203 reviews' },
+  //   { id: '10', title: 'JW Marriott Hanoi', location: 'Hà Nội', priceRange: '4.800.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&fit=crop', destinationSlug: 'ha-noi', regionSlug: 'mien-bac', serviceType: 'hotel', rating: '4.9', reviews: '278 reviews' },
+  //   { id: '11', title: 'Sheraton Nha Trang', location: 'Nha Trang, Khánh Hòa', priceRange: '3.200.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&h=300&fit=crop', destinationSlug: 'nha-trang', regionSlug: 'mien-trung', serviceType: 'hotel', rating: '4.7', reviews: '192 reviews' },
+  //   { id: '12', title: 'Pullman Đà Nẵng', location: 'Đà Nẵng', priceRange: '2.800.000 ₫', openingHours: '24/7', image: 'https://images.unsplash.com/photo-1596436889106-be35e843f974?w=400&h=300&fit=crop', destinationSlug: 'da-nang', regionSlug: 'mien-trung', serviceType: 'hotel', rating: '4.8', reviews: '234 reviews' },
+  // ];
 
   const mapServiceToDestination = (service: any): Destination => {
     const regionSlug = 'vietnam';
@@ -78,6 +78,7 @@ const PopularDestinations: React.FC = () => {
         setIsLoadingDestinations(true);
         const response: any = await apiClient.services.search({
           serviceType: 'TICKET_VENUE',
+          serviceType: 'TICKET_VENUE',
           page: 0,
           size: 6
         });
@@ -87,11 +88,11 @@ const PopularDestinations: React.FC = () => {
           setDestinations(mapped);
         } else {
           console.log("No destinations found, using mock data");
-          setDestinations(mockDestinations);
+          // setDestinations(mockDestinations);
         }
       } catch (error) {
         console.error("Failed to fetch destinations, using mock data", error);
-        setDestinations(mockDestinations);
+        // setDestinations(mockDestinations);
       } finally {
         setIsLoadingDestinations(false);
       }
@@ -111,11 +112,11 @@ const PopularDestinations: React.FC = () => {
           setHotels(mapped);
         } else {
           console.log("No hotels found, using mock data");
-          setHotels(mockHotels);
+          // setHotels(mockHotels);
         }
       } catch (error) {
         console.error("Failed to fetch hotels, using mock data", error);
-        setHotels(mockHotels);
+        // setHotels(mockHotels);
       } finally {
         setIsLoadingHotels(false);
       }

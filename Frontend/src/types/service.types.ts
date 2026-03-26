@@ -58,3 +58,24 @@ export interface ServiceStats {
     totalRevenue: number;
     totalBookings: number;
 }
+
+
+export enum SERVICETYPE {
+  HOTEL = "HOTEL",
+  TICKET_VENUE = "TICKET_VENUE"
+}
+export interface Service2 {
+  id: string;
+  serviceName: string;
+  description: string;
+  province: string | null; // Cho phép null như trong ví dụ
+  address: string;
+  contactNumber: string;
+  rating: number | null;    // Thường rating sẽ là number hoặc null
+  tags: string;
+  thumbnailUrl: string;
+  averagePrice: number;
+  serviceType: SERVICETYPE;
+  minPrice: number;
+  imageList: string[];      // Mảng các chuỗi URL hình ảnh
+}

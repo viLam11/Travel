@@ -37,6 +37,8 @@ import toast from 'react-hot-toast';
 import AuthModal from '@/components/common/AuthModal';
 import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
 import apiClient from '@/services/apiClient';
+import apiServiceClient from "@/services/apiServiceClient";
+import  {type Service2, SERVICETYPE} from "@/types";
 
 // ─── Toggle mock / real API ───────────────────────────────────────────────────
 const USE_MOCK = false; // set true để dùng mock data, false để gọi API thật
@@ -154,7 +156,6 @@ const ServiceDetailPage: React.FC = () => {
   // Load rooms/tickets from API when serviceId is available
   const fetchReviews = async () => {
     try {
-      if (USE_MOCK) return; // Skip if forcing mock
       if (!id) return;
       setIsLoadingReviews(true);
       const response = await apiClient.comments.getByServiceId(id);
@@ -176,7 +177,6 @@ const ServiceDetailPage: React.FC = () => {
 
   const fetchDiscounts = async () => {
     try {
-      if (USE_MOCK) return;
       if (!id || !resolvedProvinceID) return;
       const data = await discountApi.getSatisfiedDiscounts(id, resolvedProvinceID);
       if (Array.isArray(data) && data.length > 0) {
@@ -397,14 +397,6 @@ const ServiceDetailPage: React.FC = () => {
       return;
     }
 
-    if (USE_MOCK) {
-      // Mock: chỉ log và đóng modal
-      console.log('[MOCK] Room booking confirmed:', { checkInDate, checkOutDate, selectedRooms, roomPhone, specialRequests });
-      toast.success('[Mock] Đặt phòng thành công!');
-      handleCloseRoomModal();
-      return;
-    }
-
     if (isBooking) return;
     setIsBooking(true);
 
@@ -603,41 +595,6 @@ const ServiceDetailPage: React.FC = () => {
     return icons[iconName] || <Info className="w-6 h-6 text-orange-500" />;
   };
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: 1,
-      author: "Ali Tufan",
-      date: "April 2023",
-      rating: 5,
-      title: "Take this tour! Its fantastic!",
-      content:
-        "Great for 4-5 hours to explore. Really a lot to see and tons of photo spots. Even have a passport for you to collect all the stamps as a souvenir. Must see for a Harry Potter fan.",
-      images: [
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400",
-        "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=400",
-        "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400",
-      ],
-      helpful: 0,
-      notHelpful: 0,
-    },
-    {
-      id: 2,
-      author: "Ali Tufan",
-      date: "April 2023",
-      rating: 5,
-      title: "Take this tour! Its fantastic!",
-      content:
-        "Great for 4-5 hours to explore. Really a lot to see and tons of photo spots. Even have a passport for you to collect all the stamps as a souvenir. Must see for a Harry Potter fan.",
-      images: [
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400",
-        "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=400",
-        "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400",
-      ],
-      helpful: 0,
-      notHelpful: 0,
-    },
-  ];
 
   // If we have real API reviews, use them + user's newly mock-added reviews. 
   // Otherwise, fallback to the hardcoded `reviews` array + user's local reviews.
@@ -659,7 +616,7 @@ const ServiceDetailPage: React.FC = () => {
 
   const allReviews = hasRealReviews 
     ? [...userReviews, ...formattedApiReviews] 
-    : [...userReviews, ...reviews];
+    : [...userReviews];
 
   // Loading state
   if (loading) {
@@ -917,9 +874,6 @@ const ServiceDetailPage: React.FC = () => {
                 />
               )
             )}
-
-
-
 
             {activeTab === "rooms" && (
               serviceType === 'hotel' ? (
