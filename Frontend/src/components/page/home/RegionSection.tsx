@@ -341,7 +341,7 @@ const RegionSection: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-2 sm:pb-3 px-2 font-bold text-base sm:text-lg lg:text-xl transition-all whitespace-nowrap ${activeTab === tab
+                className={`cursor-pointer pb-2 sm:pb-3 px-2 font-bold text-base sm:text-lg lg:text-xl transition-all whitespace-nowrap ${activeTab === tab
                   ? 'text-[#1A1D7A] border-b-3 sm:border-b-4 border-blue-600'
                   : 'text-gray-600 hover:text-orange-500'
                   }`}

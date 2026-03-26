@@ -309,8 +309,8 @@ const mockData: Record<string, ServiceDetail> = {
 
 export const mockServiceDetailApi = {
   getServiceDetail: async (
-    destination?: string,
-    serviceType?: string,
+    destination: string,
+    serviceType: string,
     id: string
   ): Promise<ServiceDetail> => {
     // Simulate API delay
@@ -326,7 +326,7 @@ export const mockServiceDetailApi = {
       console.log(`⚠️ Service ID "${id}" not in mock data, generating dynamic data...`);
       data = {
         id: id,
-        name: `Service ${id}`,
+        name: `Dịch vụ ${id.substring(0, 8)}...`, // Show shortened ID as name for missing mocks
         type: serviceType === 'hotel' ? 'hotel' : serviceType === 'restaurant' ? 'restaurant' : 'place',
         rating: 4.5,
         reviews: 100,

@@ -78,27 +78,24 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
 
         const currentUserId = currentUser.user.userID.toString();
         
-        socketService.sendMessage(
+        const result = socketService.sendMessage(
             conversationId,
             currentUserId,
             newMessage,
             'provider'
         );
 
-        // Optimistic update
-        const optimisticMsg: ChatMessage = {
-            id: `temp_${Date.now()}`,
-            conversationId,
-            senderId: currentUserId,
-            text: newMessage,
-            timestamp: new Date().toISOString(),
-            isRead: false,
-            type: 'text'
-        };
-
-        setMessages(prev => [...prev, optimisticMsg]);
-        setNewMessage('');
-        scrollToBottom();
+        if (result) {
+            // Optimistic update
+            const optimisticMsg = result;
+            setMessages(prev => [...prev, optimisticMsg]);
+            setNewMessage('');
+            scrollToBottom();
+        } else {
+            // If message was not sent, we don't optimistic update or we show error
+            console.warn('Message not sent. Check socket connection.');
+            // Maybe add a temporary error message or UI state here
+        }
     };
 
     const toggleWidget = () => {

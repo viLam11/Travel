@@ -102,7 +102,7 @@ const HotelFilterPage: React.FC = () => {
         return {
             id: service.id.toString(),
             name: service.serviceName,
-            location: service.province?.fullName || service.address || 'Việt Nam',
+            location: service.province?.full_name || service.province?.fullName || service.address || 'Việt Nam',
             rating: service.rating || 0,
             reviews: service.reviewCount || 0,
             price: rawPrice,
@@ -132,8 +132,8 @@ const HotelFilterPage: React.FC = () => {
             if (response && response.services && response.services.length > 0) {
                 const mapped = response.services.map(mapServiceToHotel);
                 setApiHotels(mapped);
-                setTotalPages(response.totalPages);
-                setTotalItems(response.totalItems);
+                setTotalPages(response.totalPages || 1);
+                setTotalItems(response.totalItems || response.totalElements || response.services.length);
             } else {
                 setApiHotels([]);
                 setTotalItems(0);
@@ -147,10 +147,6 @@ const HotelFilterPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
     };
 
     React.useEffect(() => {
@@ -184,7 +180,7 @@ const HotelFilterPage: React.FC = () => {
         const destStr = locationParts[locationParts.length - 1].trim();
         const destSlug = destStr.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-        navigate(`/destinations/vietnam/${destSlug}/hotel/${hotel.id}-${titleSlug}`);
+        navigate(`/hotels/vietnam/${destSlug}/${hotel.id}-${titleSlug}`);
     };
 
     return (

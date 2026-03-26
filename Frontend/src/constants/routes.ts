@@ -47,6 +47,11 @@ export const ROUTES = {
 
   // ==================== AI PLANNER ====================
   AI_PLANNER: '/ai-planner',
+
+  // ==================== BLOG ====================
+  BLOG: '/blog',
+  BLOG_DETAIL: '/blog/:id',
+  BLOG_CREATE: '/blog/create',
 } as const;
 
 export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {

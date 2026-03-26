@@ -1,6 +1,6 @@
 // src/pages/ServiceDetailPage/ServiceDetailPage.tsx
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   MapPin,
@@ -31,6 +31,8 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthCheck } from '@/hooks/useAuthCheck';
 import { discountApi } from '@/api/discountApi';
+import { roomApi } from '@/api/roomApi';
+import { ticketApi } from '@/api/ticketApi';
 import toast from 'react-hot-toast';
 import AuthModal from '@/components/common/AuthModal';
 import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
@@ -41,13 +43,15 @@ const USE_MOCK = false; // set true để dùng mock data, false để gọi API
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ServiceDetailPage: React.FC = () => {
-  const { region, destination, serviceType, idSlug, id: directId } = useParams<{
+  const { region, destination, serviceType: urlServiceType, idSlug, id: directId } = useParams<{
     region: string;
     destination: string;
     serviceType: string;
     idSlug: string;
     id: string;
   }>();
+  const location = useLocation();
+  const serviceType = urlServiceType || (location.pathname.startsWith('/hotels') ? 'hotel' : 'place');
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -69,6 +73,10 @@ const ServiceDetailPage: React.FC = () => {
   // Helper: extract numeric ID from slug (e.g. "123-ten-dich-vu" → "123")
   const extractId = (slug: string | undefined): string => {
     if (!slug) return '';
+    const uuidMatch = slug.match(/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+    if (uuidMatch) return uuidMatch[1];
+    const intMatch = slug.match(/^(\d+)-/);
+    if (intMatch) return intMatch[1];
     return slug.split('-')[0];
   };
 
@@ -189,19 +197,31 @@ const ServiceDetailPage: React.FC = () => {
       }
 
       try {
-        const data: any[] = await apiClient.tickets.getByServiceId(id);
+        let data: any[] = [];
+        if (serviceType === 'hotel') {
+          data = await roomApi.getRoomsByHotel(id);
+        } else {
+          try {
+             data = await ticketApi.getTicketsByService(id);
+          } catch(e) {
+             data = await apiClient.tickets.getByServiceId(id);
+          }
+        }
+        
         // Map backend ticket/room response to UI shape
         const mapped = (Array.isArray(data) ? data : []).map((item: any) => ({
-          id: item.roomID || item.id, // Fallback to roomID for hotels
-          name: item.roomName ?? item.name ?? `Room ${item.roomID || item.id}`,
-          type: item.roomType ?? item.ticketType ?? '',
-          price: item.price ?? item.pricePerNight ?? 0,
+          id: item.id || item.roomID, // RoomResponseDTO has 'id', fallback to roomID
+          name: item.name ?? item.roomName ?? `Room ${item.id || item.roomID}`,
+          // RoomResponseDTO sends type as enum (SINGLE, DOUBLE...), tickets send ticketType or name
+          type: item.type ?? item.roomType ?? item.ticketType ?? item.term ?? '',
+          price: item.price ? parseFloat(item.price) : (item.pricePerNight ?? 0),
           capacity: item.capacity ?? item.maxGuests ?? 2,
           amenities: item.amenities ?? [],
           available: item.available ?? item.isAvailable ?? true,
           currentBookings: item.currentBookings ?? [],
           description: item.description ?? '',
           quantity: item.quantity ?? item.remainingQuantity ?? 0,
+          image: item.roomImgUrl || (item.images && item.images[0]) || '',
           count: 0 // Initialize count for UI
         }));
 
@@ -232,7 +252,7 @@ const ServiceDetailPage: React.FC = () => {
   // Load service detail
   useEffect(() => {
     // If none of the access methods are provided, go home
-    if (!directId && (!destination || !serviceType || !idSlug || !region)) {
+    if (!directId && (!destination || !idSlug || !region)) {
       navigate('/homepage');
       return;
     }
@@ -1069,9 +1089,9 @@ const ServiceDetailPage: React.FC = () => {
       {/* Floating Chat Widget */}
       {service && (
         <ServiceChatWidget
-          providerId={`provider_${service.id}`} // In reality, get this from service data
-          providerName={`Nhà cung cấp: ${service.name}`} // Just a mock
-          serviceId={service.id.toString()}
+          providerId={service.providerId || service.provider?.userID || `provider_${service.id}`}
+          providerName={service.provider?.fullname || `Nhà cung cấp: ${service.name}`}
+          serviceId={service.id}
           serviceName={service.name}
         />
       )}

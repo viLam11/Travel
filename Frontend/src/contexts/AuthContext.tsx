@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import apiClient from '@/services/apiClient';
 
 // MOCK AUTH MODE - Set to true to test with mock users
-const USE_MOCK_AUTH = true; // Change to true to test with mock users
+const USE_MOCK_AUTH = false; // Change to true to test with mock users
 
 
 // Mock Users for Testing

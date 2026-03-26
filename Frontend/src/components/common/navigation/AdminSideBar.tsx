@@ -132,7 +132,7 @@ const getNavItems = (currentPath: string, currentUser: any) => {
         //     } as any);
         // }
 
-        // Venue Provider - Ticket Management
+        // // Venue Provider - Ticket Management
         // if (providerType === 'place') {
         //     navMain.push({
         //         title: "Quản lý vé",

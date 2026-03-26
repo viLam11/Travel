@@ -1,5 +1,5 @@
 // src/pages/Admin/Users/AdminUsers.tsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/admin/avatar';
@@ -34,7 +34,8 @@ import {
     DialogDescription,
 } from '@/components/ui/admin/dialog';
 import { Search, MoreVertical, ShieldAlert, Trash2, Ban, CheckCircle, Users, Building2, UserCheck, UserX, Shield, Hotel, Map, User } from 'lucide-react';
-import { MOCK_USERS_DATA, type MockUser } from '@/mocks/users';
+import { type MockUser } from '@/mocks/users';
+import { userApi } from '@/api/userApi';
 import { useToast } from '@/contexts/ToastContext';
 
 const AdminUsers = () => {
@@ -48,9 +49,26 @@ const AdminUsers = () => {
     const [dialogType, setDialogType] = useState<'block' | 'unblock' | 'delete' | 'promote' | 'approve' | 'reject' | null>(null);
     const [selectedNewRole, setSelectedNewRole] = useState<string>('');
 
+    const [users, setUsers] = useState<MockUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const data = await userApi.getAllUsers();
+                setUsers(data);
+            } catch (error) {
+                console.error("Failed to load users", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUsers();
+    }, []);
+
     // Filter users
     const filteredUsers = useMemo(() => {
-        return MOCK_USERS_DATA.filter(user => {
+        return users.filter(user => {
             const matchesSearch =
                 user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 user.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -60,18 +78,18 @@ const AdminUsers = () => {
 
             return matchesSearch && matchesRole && matchesStatus;
         });
-    }, [searchQuery, roleFilter, statusFilter]);
+    }, [users, searchQuery, roleFilter, statusFilter]);
 
     // Stats
     const stats = useMemo(() => ({
-        total: MOCK_USERS_DATA.length,
-        admins: MOCK_USERS_DATA.filter(u => u.role === 'admin').length,
-        providers: MOCK_USERS_DATA.filter(u => u.role === 'provider').length,
-        users: MOCK_USERS_DATA.filter(u => u.role === 'user').length,
-        active: MOCK_USERS_DATA.filter(u => u.status === 'active').length,
-        blocked: MOCK_USERS_DATA.filter(u => u.status === 'blocked').length,
-        pending: MOCK_USERS_DATA.filter(u => u.status === 'pending').length,
-    }), []);
+        total: users.length,
+        admins: users.filter(u => u.role === 'admin').length,
+        providers: users.filter(u => u.role === 'provider').length,
+        users: users.filter(u => u.role === 'user').length,
+        active: users.filter(u => u.status === 'active').length,
+        blocked: users.filter(u => u.status === 'blocked').length,
+        pending: users.filter(u => u.status === 'pending').length,
+    }), [users]);
 
     const getRoleBadge = (role: string, type?: string) => {
         switch (role) {
@@ -119,27 +137,48 @@ const AdminUsers = () => {
         setDialogType(null);
     };
 
-    const confirmAction = () => {
+    const confirmAction = async () => {
         if (!actionUser) return;
 
-        if (dialogType === 'block') {
-            success(`Tài khoản ${actionUser.name} đã bị khóa.`);
-        } else if (dialogType === 'unblock') {
-            success(`Tài khoản ${actionUser.name} đã được mở khóa.`);
-        } else if (dialogType === 'delete') {
-            success(`Tài khoản ${actionUser.name} đã bị xóa vĩnh viễn.`);
-        } else if (dialogType === 'promote') {
-            let roleName = 'Khách hàng';
-            if (selectedNewRole === 'provider_hotel') roleName = 'Chủ dịch vụ (Khách sạn)';
-            if (selectedNewRole === 'provider_tour') roleName = 'Chủ dịch vụ (Tour)';
-            if (selectedNewRole === 'admin') roleName = 'Quản trị viên';
-            success(`Đã thay đổi vai trò của ${actionUser.name} thành ${roleName}.`);
-        } else if (dialogType === 'approve') {
-            success(`Đã duyệt tài khoản Chủ dịch vụ cho ${actionUser.name}.`);
-        } else if (dialogType === 'reject') {
-            success(`Đã từ chối yêu cầu đăng ký Chủ dịch vụ của ${actionUser.name}.`);
+        try {
+            if (dialogType === 'block') {
+                await userApi.updateUserStatus(actionUser.id, 'blocked');
+                setUsers(prev => prev.map(u => u.id === actionUser.id ? { ...u, status: 'blocked' } : u));
+                success(`Tài khoản ${actionUser.name} đã bị khóa.`);
+            } else if (dialogType === 'unblock') {
+                await userApi.updateUserStatus(actionUser.id, 'active');
+                setUsers(prev => prev.map(u => u.id === actionUser.id ? { ...u, status: 'active' } : u));
+                success(`Tài khoản ${actionUser.name} đã được mở khóa.`);
+            } else if (dialogType === 'delete') {
+                await userApi.deleteUser(actionUser.id);
+                setUsers(prev => prev.filter(u => u.id !== actionUser.id));
+                success(`Tài khoản ${actionUser.name} đã bị xóa vĩnh viễn.`);
+            } else if (dialogType === 'promote') {
+                let roleName = 'Khách hàng';
+                let roleEnum: 'admin' | 'provider' | 'user' = 'user';
+                if (selectedNewRole === 'provider_hotel' || selectedNewRole === 'provider_tour') {
+                    roleEnum = 'provider';
+                    roleName = selectedNewRole === 'provider_hotel' ? 'Chủ dịch vụ (Khách sạn)' : 'Chủ dịch vụ (Tour)';
+                } else if (selectedNewRole === 'admin') {
+                    roleEnum = 'admin';
+                    roleName = 'Quản trị viên';
+                }
+                await userApi.updateUserRole(actionUser.id, roleEnum);
+                setUsers(prev => prev.map(u => u.id === actionUser.id ? { ...u, role: roleEnum, providerType: selectedNewRole === 'provider_hotel' ? 'hotel' : selectedNewRole === 'provider_tour' ? 'tour' : undefined } : u));
+                success(`Đã thay đổi vai trò của ${actionUser.name} thành ${roleName}.`);
+            } else if (dialogType === 'approve') {
+                await userApi.updateUserStatus(actionUser.id, 'active');
+                setUsers(prev => prev.map(u => u.id === actionUser.id ? { ...u, status: 'active' } : u));
+                success(`Đã duyệt tài khoản Chủ dịch vụ cho ${actionUser.name}.`);
+            } else if (dialogType === 'reject') {
+                await userApi.deleteUser(actionUser.id); // Or block? We'll delete for reject
+                setUsers(prev => prev.filter(u => u.id !== actionUser.id));
+                success(`Đã từ chối yêu cầu đăng ký Chủ dịch vụ của ${actionUser.name}.`);
+            }
+            closeDialog();
+        } catch (error) {
+            console.error("Action failed", error);
         }
-        closeDialog();
     };
 
     // const handleRoleChange = (userId: number, newRoleValue: string) => {
@@ -266,7 +305,13 @@ const AdminUsers = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredUsers.length === 0 ? (
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-32 text-center text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                                        Đang tải dữ liệu...
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredUsers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
                                         Không tìm thấy người dùng phù hợp
@@ -401,7 +446,7 @@ const AdminUsers = () => {
 
             {/* Results count */}
             <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-4">
-                Hiển thị {filteredUsers.length} / {MOCK_USERS_DATA.length} tài khoản
+                Hiển thị {filteredUsers.length} / {users.length} tài khoản
             </div>
 
             {/* Confirmation Dialog */}

@@ -50,7 +50,7 @@ const PopularDestinations: React.FC = () => {
 
   const mapServiceToDestination = (service: any): Destination => {
     const regionSlug = 'vietnam';
-    const destinationSlug = (service.province?.codeName || service.province?.code || 'general').replace(/_/g, '-');
+    const destinationSlug = (service.province?.code_name || service.province?.codeName || service.province?.code || 'general').replace(/_/g, '-');
 
     let typeSlug = 'place';
     if (service.serviceType === 'HOTEL') typeSlug = 'hotel';
@@ -60,7 +60,7 @@ const PopularDestinations: React.FC = () => {
     return {
       id: service.id.toString(),
       title: service.serviceName,
-      location: service.province?.fullName || service.address || 'Việt Nam',
+      location: service.province?.full_name || service.province?.fullName || service.address || 'Việt Nam',
       priceRange: service.averagePrice ? `${service.averagePrice.toLocaleString('vi-VN')} ₫` : 'Liên hệ',
       openingHours: '8:00 - 22:00',
       image: service.thumbnailUrl || 'https://via.placeholder.com/400x300',
@@ -131,7 +131,11 @@ const PopularDestinations: React.FC = () => {
     if (!item) return;
 
     const idSlug = `${id}-${item.title.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
-    navigate(`/destinations/vietnam/${item.destinationSlug}/${item.serviceType}/${idSlug}`);
+    if (item.serviceType === 'hotel') {
+        navigate(`/hotels/vietnam/${item.destinationSlug}/${idSlug}`);
+    } else {
+        navigate(`/destinations/vietnam/${item.destinationSlug}/${item.serviceType}/${idSlug}`);
+    }
   };
 
   const handleViewAllDestinations = () => {

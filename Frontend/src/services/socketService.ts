@@ -2,7 +2,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import type { ChatMessage } from '@/types/chat.types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_DEPLOY_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 type MessageCallback = (msg: ChatMessage) => void;
 
@@ -13,7 +13,10 @@ class SocketService {
     connect(userToken: string) {
         if (this.client?.active) return;
 
-        const socket = new SockJS(`${BASE_URL}/ws`);
+        const normalizedBaseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+        const connectionUrl = `${normalizedBaseUrl}/ws`;
+        console.log('[SocketService] Connecting to:', connectionUrl);
+        const socket = new SockJS(connectionUrl);
         this.client = new Client({
             webSocketFactory: () => socket,
             connectHeaders: {
@@ -95,6 +98,8 @@ class SocketService {
             timestamp: new Date().toISOString(),
             isRead: false
         };
+
+        console.log(`[SocketService] Preparing to send message to ${receiverId}:`, backendPayload);
 
         if (this.client?.connected) {
             this.client.publish({

@@ -34,8 +34,28 @@ export interface DiscountResponse {
     isSystem?: boolean;
 }
 
+import { MOCK_DISCOUNTS } from '@/mocks/discounts';
+
+const USE_MOCK = true; // Set to false to use real backend API
+
+const mapMockToResponse = (mock: any): DiscountResponse => ({
+    ...mock,
+    discountType: mock.discountType === 'PERCENTAGE' ? 'Percentage' : 'Fixed',
+    quantity: mock.quantity || 100,
+    applyType: mock.applyType || 'ALL',
+    percentage: mock.percentage || 0,
+    fixedPrice: mock.fixedPrice || 0,
+    maxDiscountAmount: mock.maxDiscountAmount || 0,
+    serviceList: mock.serviceList || [],
+    provinceList: mock.provinceList || []
+});
+
 export const discountApi = {
     getAllDiscounts: async (): Promise<DiscountResponse[]> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return MOCK_DISCOUNTS.map(mapMockToResponse);
+        }
         try {
             return await apiClient.get<DiscountResponse[]>('/api/discounts');
         } catch (error) {
@@ -46,6 +66,14 @@ export const discountApi = {
 
 
     getSatisfiedDiscounts: async (serviceID: string, placeCode: string): Promise<DiscountResponse[]> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return MOCK_DISCOUNTS.map(mapMockToResponse).filter(d => 
+                d.applyType === 'ALL' || 
+                (d.applyType === 'SERVICE' && (d as any).serviceList?.includes(serviceID)) ||
+                (d.applyType === 'PROVINCE' && (d as any).provinceList?.includes(placeCode))
+            );
+        }
         try {
             return await apiClient.get<DiscountResponse[]>('/api/discounts/apply', {
                 params: { serviceID, placeCode },
@@ -58,6 +86,12 @@ export const discountApi = {
 
 
     getDiscountById: async (id: string): Promise<DiscountResponse> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const discount = MOCK_DISCOUNTS.find(d => d.id === id);
+            if (!discount) throw new Error('Discount not found');
+            return mapMockToResponse(discount);
+        }
         try {
             return await apiClient.get<DiscountResponse>(`/api/discounts/${id}`);
         } catch (error) {
@@ -68,6 +102,15 @@ export const discountApi = {
 
 
     createDiscount: async (data: DiscountRequest): Promise<DiscountResponse> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return {
+                id: `mock-discount-${Date.now()}`,
+                ...data,
+                quantity: data.quantity || 100,
+                isSystem: false,
+            } as DiscountResponse;
+        }
         try {
             return await apiClient.post<DiscountResponse>('/api/discounts', data);
         } catch (error) {
@@ -78,6 +121,10 @@ export const discountApi = {
 
 
     updateDiscount: async (id: string, data: DiscountRequest): Promise<DiscountResponse> => {
+        if (USE_MOCK) {
+             await new Promise(resolve => setTimeout(resolve, 300));
+             return { id, ...data } as unknown as DiscountResponse;
+        }
         try {
             return await apiClient.put<DiscountResponse>(`/api/discounts/${id}`, data);
         } catch (error) {
@@ -88,6 +135,10 @@ export const discountApi = {
 
 
     deleteDiscount: async (id: string): Promise<void> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return;
+        }
         try {
             await apiClient.delete(`/api/discounts/${id}`);
         } catch (error) {

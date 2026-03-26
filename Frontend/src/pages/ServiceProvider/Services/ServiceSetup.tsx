@@ -24,10 +24,8 @@ interface ServiceSetupProps {
 
 const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
     const navigate = useNavigate();
-    const { completeServiceSetup } = useAuthContext();
-
-    // Mock: Get service type from user profile (hotel or tour)
-    const userServiceType = 'hotel'; // In real app, from auth context
+    const { currentUser, completeServiceSetup } = useAuthContext();
+    const userServiceType = currentUser?.user?.providerType || 'hotel';
 
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
@@ -108,7 +106,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
     };
 
     return (
-        <div className="min-h-screen bg-background py-8">
+        <div className="bg-background py-8">
             <div className="max-w-4xl mx-auto px-4 space-y-6">
                 {/* Welcome Header */}
                 <Card className="border-primary/20 bg-primary/5">
@@ -122,7 +120,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                 )}
                             </div>
                             <div className="flex-1">
-                                <h1 className="text-2xl font-bold mb-2">Chào mừng! Hãy thiết lập {userServiceType === 'hotel' ? 'Khách sạn' : 'Tour'} của bạn</h1>
+                                <h1 className="text-2xl font-bold mb-2">Chào mừng! Hãy thiết lập dịch vụ của bạn</h1>
                                 <p className="text-muted-foreground">
                                     Hoàn thành thông tin bên dưới để tạo hồ sơ dịch vụ của bạn.
                                     Sau khi gửi, đội ngũ quản trị sẽ xem xét và phê duyệt dịch vụ của bạn.
@@ -137,12 +135,12 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                     <Card>
                         <CardHeader>
                             <CardTitle>Thông tin cơ bản</CardTitle>
-                            <CardDescription>Cung cấp thông tin cơ bản về {userServiceType === 'hotel' ? 'khách sạn' : 'tour'} của bạn</CardDescription>
+                            <CardDescription>Cung cấp thông tin cơ bản về dịch vụ của bạn</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
                                 <Label htmlFor="name">
-                                    {userServiceType === 'hotel' ? 'Tên Khách sạn' : 'Tên Tour'} *
+                                    Tên dịch vụ *
                                 </Label>
                                 <Input
                                     id="name"
@@ -191,10 +189,10 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                     </Card>
 
                     {/* Service-Specific Details */}
-                    {userServiceType === 'hotel' ? (
+                {userServiceType === 'hotel' ? (
                         <Card>
                             <CardHeader>
-                                <CardTitle>Thông tin Khách sạn</CardTitle>
+                                <CardTitle>Thông tin chi tiết</CardTitle>
                                 <CardDescription>Thông tin chi tiết về khách sạn</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -235,7 +233,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                 </div>
 
                                 <div>
-                                    <Label>Tiện ích Khách sạn</Label>
+                                    <Label>Tiện ích & Điểm nổi bật</Label>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
                                         {amenitiesList.map((amenity) => (
                                             <button
@@ -257,7 +255,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                     ) : (
                         <Card>
                             <CardHeader>
-                                <CardTitle>Thông tin Tour</CardTitle>
+                                <CardTitle>Thông tin chi tiết</CardTitle>
                                 <CardDescription>Thông tin chi tiết về tour</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">

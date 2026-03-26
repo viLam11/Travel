@@ -131,8 +131,11 @@ const Navigation: React.FC<NavigationProps> = ({
               Hoạt động
             </button> */}
             <button
-              onClick={() => toast('Tính năng đang phát triển')}
-              className="cursor-pointer text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 border-transparent"
+              onClick={() => navigate('/blog')}
+              className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/blog')
+                  ? 'text-orange-500 font-semibold border-orange-500'
+                  : 'text-gray-700 hover:text-orange-500 border-transparent'
+                }`}
             >
               Bài viết
             </button>
@@ -239,8 +242,8 @@ const Navigation: React.FC<NavigationProps> = ({
               Hoạt động
             </button>
             <button
-              onClick={() => toast('Tính năng đang phát triển')}
-              className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
+              onClick={() => navigate('/blog')}
+              className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/blog') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'}`}
             >
               Bài viết
             </button>

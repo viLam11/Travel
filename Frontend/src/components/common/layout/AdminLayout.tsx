@@ -37,11 +37,11 @@ const AdminLayoutContent: FC<AdminLayoutProps> = ({
                     <div className="mx-auto w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center mb-6">
                         <Clock className="w-10 h-10" />
                     </div>
-                    
+
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                         Tài Khoản Đang Chờ Duyệt
                     </h1>
-                    
+
                     <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
                         Cảm ơn bạn đã đăng ký trở thành Chủ dịch vụ. Hồ sơ của bạn hiện đang được ban quản trị xem xét. Quá trình này thường mất từ <span className="font-semibold text-gray-800 dark:text-gray-200">24-48 giờ làm việc</span>.
                     </p>
@@ -64,14 +64,14 @@ const AdminLayoutContent: FC<AdminLayoutProps> = ({
                     </div>
 
                     <div className="flex gap-3 justify-center">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => navigate('/homepage')}
                             className="flex-1 cursor-pointer"
                         >
                             Về trang chủ
                         </Button>
-                        <Button 
+                        <Button
                             onClick={async () => {
                                 await logout();
                                 navigate('/login');

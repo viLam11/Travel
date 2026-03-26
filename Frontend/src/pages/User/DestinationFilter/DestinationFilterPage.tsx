@@ -74,8 +74,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
       // Handle response
       if (response && response.services) {
         setDestinations(response.services);
-        setTotalPages(response.totalPages);
-        setTotalItems(response.totalItems);
+        setTotalPages(response.totalPages || 1);
+        setTotalItems(response.totalItems || response.totalElements || response.services.length);
       } else {
         setDestinations([]);
       }
@@ -113,7 +113,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
       // 2. Try to get from first service result from API
       if (destinations.length > 0 && destinations[0].province) {
         const p = destinations[0].province;
-        return p.fullName || p.name || provinceCode;
+        return p.full_name || p.fullName || p.name || provinceCode;
       }
 
       // 3. Last fallback: decode and capitalize provinceCode
@@ -149,7 +149,9 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
     // Province fallback logic
     const provinceCode = item.province?.code || item.provinceCode || destination || 'ha-noi';
 
-    const finalUrl = `/destinations/${targetRegion}/${provinceCode}/${typeSlug}/${idSlug}`;
+    const finalUrl = typeSlug === 'hotel'
+      ? `/hotels/${targetRegion}/${provinceCode}/${idSlug}`
+      : `/destinations/${targetRegion}/${provinceCode}/${typeSlug}/${idSlug}`;
     console.log('Final Navigation URL:', finalUrl);
 
     navigate(finalUrl);
@@ -340,7 +342,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                       destination={{
                         id: item.id?.toString() || '',
                         title: item.serviceName,
-                        location: item.province?.fullName || item.address || 'Việt Nam',
+                        location: item.province?.full_name || item.province?.fullName || item.address || 'Việt Nam',
                         rating: item.rating?.toString() || '0',
                         reviews: item.reviewCount?.toString() || '0',
                         description: item.description,

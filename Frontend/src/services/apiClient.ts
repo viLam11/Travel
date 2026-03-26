@@ -222,7 +222,14 @@ export class ApiClient {
       try {
         const self = (this as any);
         console.log("Fetching real API services/search", params);
-        const response: any = await self.get("/services/search", { params });
+        let response: any = await self.get("/services/search", { params });
+        
+        // Handle Spring Boot Page<T> response structure where data is in 'content' array
+        if (response && response.content) {
+            response.services = response.content;
+        } else if (Array.isArray(response)) {
+            response = { services: response, totalElements: response.length, totalPages: 1 };
+        }
         
         if (ApiClient.USE_MOCK && (!response || !response.services || response.services.length === 0)) {
            console.warn("Real API returned no data, falling back to Mock...");
@@ -327,7 +334,8 @@ export class ApiClient {
 
         return {
           services: paginatedItems,
-          totalItems,
+          totalElements: totalItems,  // Match Spring Boot Page response key
+          totalItems,                 // Keep for backward compat
           totalPages,
           currentPage: page
         };
