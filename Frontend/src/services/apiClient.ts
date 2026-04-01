@@ -218,22 +218,39 @@ export class ApiClient {
       sortBy?: string;
       direction?: string;
       signal?: AbortSignal;
-    }): ApiResponse<any> => {
+    }): Promise<any> => {
       try {
         const self = (this as any);
         console.log("Fetching real API services/search", params);
+        
         const response: any = await self.get("/services/search", { params });
         
-        if (ApiClient.USE_MOCK && (!response || !response.services || response.services.length === 0)) {
+        // 1. Lột bỏ lớp vỏ của Axios để lấy data thật
+        const realData = response.data ? response.data : response;
+        
+        // 2. Backend trả về danh sách trong biến "content"
+        const itemsArray = realData?.content;
+
+        // 3. Nếu không có data thì gọi Mock
+        if (!itemsArray || itemsArray.length === 0) {
            console.warn("Real API returned no data, falling back to Mock...");
            return self.services.getMockSearch(params);
         }
         
-        return response;
+        // 4. BƯỚC QUYẾT ĐỊNH: Đóng gói lại thành object có chứa key "services" 
+        // để chiều theo đúng logic của file PopularDestinations.tsx
+        return {
+           services: itemsArray,
+           // Trả về thêm thông tin phân trang phòng trường hợp sau này bạn cần làm nút Next/Prev
+           pageNo: realData.pageNo,
+           totalPages: realData.totalPages,
+           totalElements: realData.totalElements
+        };
+        
       } catch (error) {
         const self = (this as any);
         console.error("API Search failed, using Fallback Mock:", error);
-        if (ApiClient.USE_MOCK) {
+        if (self.USE_MOCK) { // Chú ý: Dùng self.USE_MOCK hoặc ApiClient.USE_MOCK tùy setup của bạn
           return self.services.getMockSearch(params);
         }
         throw error;
