@@ -262,27 +262,27 @@ export class ApiClient {
         
         const MOCK_DATA = [
           {
-            id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "DESTINATION",
+            id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "TICKET_VENUE",
             province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
             address: "Nha Trang, Khánh Hòa", averagePrice: 880000, thumbnailUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", rating: 4.8, reviewCount: 240, bookingCount: 1500
           },
           {
-            id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "DESTINATION",
+            id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "TICKET_VENUE",
             province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
             address: "Đà Nẵng", averagePrice: 850000, thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800", rating: 4.9, reviewCount: 1200, bookingCount: 5000
           },
           {
-            id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "DESTINATION",
+            id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "TICKET_VENUE",
             province: { code: "quang-nam", name: "Hội An", fullName: "Quảng Nam" },
             address: "Hội An, Quảng Nam", averagePrice: 0, thumbnailUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800", rating: 4.9, reviewCount: 680, bookingCount: 3000
           },
           {
-            id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "DESTINATION",
+            id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "TICKET_VENUE",
             province: { code: "22", name: "Hạ Long", fullName: "Quảng Ninh" },
             address: "Hạ Long, Quảng Ninh", averagePrice: 290000, thumbnailUrl: "https://images.unsplash.com/photo-1506606401543-2e73709cebb4?w=800", rating: 4.7, reviewCount: 450, bookingCount: 2000
           },
           {
-            id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "DESTINATION",
+            id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "TICKET_VENUE",
             province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
             address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
           },
@@ -577,6 +577,19 @@ export class ApiClient {
   transactions = {
     getAll: (): ApiResponse<any> => {
       return this.get("/orders/all");
+    },
+    // Chế độ mở rộng nếu sau này có API riêng cho giao dịch ví/thanh toán
+  };
+
+  favorites = {
+    getAll: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/api/favorites", { params: { page, size } });
+    },
+    add: (serviceId: string | number): ApiResponse<void> => {
+      return this.post(`/api/favorites/${serviceId}`, {});
+    },
+    remove: (serviceId: string | number): ApiResponse<void> => {
+      return this.delete(`/api/favorites/${serviceId}`);
     },
   };
 

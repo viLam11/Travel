@@ -1,6 +1,7 @@
 // src/components/page/hotelFilter/HotelListCard.tsx
 import React, { useState } from 'react';
-import { MapPin, Star, Wifi, Waves, Dumbbell, Sparkles, Car, UtensilsCrossed, Palmtree, Heart, Tag } from 'lucide-react';
+import { MapPin, Star, Wifi, Waves, Dumbbell, Sparkles, Car, UtensilsCrossed, Palmtree, Tag } from 'lucide-react';
+import FavoriteButton from '@/components/common/FavoriteButton';
 import type { MockDiscount } from '@/mocks/discounts';
 import { getDiscountLabel, computeDiscountedPrice } from '@/mocks/discounts';
 
@@ -33,7 +34,6 @@ const amenitiesMap: Record<string, { label: string; icon: React.ComponentType<{ 
 };
 
 const HotelListCard: React.FC<HotelListCardProps> = ({ hotel, onClick }) => {
-    const [isFavorite, setIsFavorite] = useState(false);
     const { discount } = hotel;
     const discountLabel = discount ? getDiscountLabel(discount) : null;
     const discountedPrice = discount ? computeDiscountedPrice(hotel.price, discount) : hotel.price;
@@ -67,13 +67,12 @@ const HotelListCard: React.FC<HotelListCardProps> = ({ hotel, onClick }) => {
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                    {/* Favorite */}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setIsFavorite(p => !p); }}
-                        className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10"
-                    >
-                        <Heart className={`w-4 h-4 transition-colors ${isFavorite ? 'fill-orange-500 text-orange-500' : 'text-orange-500'}`} />
-                    </button>
+                    {/* Favorite Button */}
+                    <FavoriteButton
+                        serviceId={hotel.id}
+                        className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow opacity-0 group-hover:opacity-100 transition-all duration-300 z-10"
+                        iconClassName="w-4 h-4"
+                    />
                 </div>
 
                 {/* ── Content ── */}

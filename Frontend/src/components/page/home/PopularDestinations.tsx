@@ -55,7 +55,7 @@ const PopularDestinations: React.FC = () => {
     let typeSlug = 'place';
     if (service.serviceType === 'HOTEL') typeSlug = 'hotel';
     if (service.serviceType === 'RESTAURANT') typeSlug = 'restaurant';
-    if (service.serviceType === 'TICKET_VENUE') typeSlug = 'ticket';
+    if (service.serviceType === 'TICKET_VENUE' || service.serviceType === 'DESTINATION') typeSlug = 'place';
 
     return {
       id: service.id.toString(),

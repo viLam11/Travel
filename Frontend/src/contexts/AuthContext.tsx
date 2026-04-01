@@ -255,7 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsAuthenticated(true);
         } catch (error: any) {
             console.error('Đăng nhập thất bại:', error);
-            console.error('🔍 FULL ERROR OBJECT:', JSON.stringify(error, null, 2));
+            console.error('FULL ERROR OBJECT:', JSON.stringify(error, null, 2));
 
             // Extract error message from backend response
             let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';

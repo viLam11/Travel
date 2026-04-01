@@ -7,8 +7,8 @@ const USE_MOCK_API = false; // Set to false khi có backend thật
 
 const realApi = {
   getServiceDetail: async (
-    destination: string,
-    serviceType: string,
+    destination: string | undefined,
+    serviceType: string | undefined,
     id: string
   ): Promise<ServiceDetail> => {
     try {
@@ -19,7 +19,7 @@ const realApi = {
       console.log('Backend data received:', backendData);
 
       // Get mock data for this service to fill missing fields
-      const mockData = await mockServiceDetailApi.getServiceDetail(destination, serviceType, id);
+      const mockData = await mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
 
       // Merge: Use backend data where available, fall back to mock for missing fields
       const mergedData: ServiceDetail = {
@@ -62,13 +62,13 @@ const realApi = {
       
       // If mock is explicitly allowed, return mock
       if (USE_MOCK_API) {
-        return mockServiceDetailApi.getServiceDetail(destination, serviceType, id);
+        return mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
       }
       
       // Otherwise, return mock but it's better to show the error or a better fallback
       // For now, let's keep falling back to mock so the app doesn't crash, 
       // but the log above will tell us WHY it failed.
-      return mockServiceDetailApi.getServiceDetail(destination, serviceType, id);
+      return mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
     }
   },
 

@@ -374,19 +374,24 @@ export default function TravelServicesDashboard() {
 
   // Check if provider has completed service setup
   useEffect(() => {
-    if (currentUser?.user?.role === 'provider' && !currentUser?.user?.hasService) {
+    const userRole = currentUser?.user?.role?.toLowerCase() || '';
+    const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
+    
+    if (isProvider && !currentUser?.user?.hasService) {
       // Redirect to service setup if not completed
       navigate(ROUTES.PROVIDER_MY_SERVICE, { replace: true });
     }
   }, [currentUser, navigate]);
 
-  // TODO: Get from user context/API - for now using mock
-  // This should come from: const { user } = useAuth();
-  // 
-  // 🧪 TEST DIFFERENT PROVIDER TYPES:
-  // - 'hotel' → Shows hotel-specific metrics (occupancy, check-ins)
-  // - 'place' → Shows place-specific metrics (tickets sold, services)
-  const providerType = (currentUser?.user?.providerType || 'place') as 'hotel' | 'place';
+  // Derive provider type based on specific role or providerType field
+  const userRole = currentUser?.user?.role?.toLowerCase() || '';
+  let providerType: 'hotel' | 'place' = 'place';
+  
+  if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place') {
+    providerType = 'place';
+  } else if (userRole === 'provider_hotel' || currentUser?.user?.providerType === 'hotel') {
+    providerType = 'hotel';
+  }
 
   // Filter bookings by providerType
   const filteredBookings = localBookings.filter(b => {

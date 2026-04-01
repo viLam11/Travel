@@ -4,6 +4,8 @@
 export interface OrderItem {
   id: string | number;
   quantity: number;
+  checkInDate?: string;  // ISO Format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+  checkOutDate?: string; // ISO Format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
   price?: number; // Tùy chọn nếu backend cần
 }
 
@@ -13,8 +15,6 @@ export interface OrderItem {
 export interface CreateOrderRequest {
   tickets: OrderItem[];
   rooms: OrderItem[];
-  checkInDate: string;  // ISO Format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
-  checkOutDate: string; // ISO Format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
   guestPhone: string;
   note?: string;
   discountIds?: string[];

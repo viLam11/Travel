@@ -180,6 +180,13 @@ const routes: RouteObject[] = [
         element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
+      // Direct Service Detail Page - Simplified access by ID
+      // Example: /service/101
+      {
+        path: 'service/:id',
+        element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
       // ==================== HOTEL ROUTES ====================
 
       // Hotel Filter Page - List all hotels

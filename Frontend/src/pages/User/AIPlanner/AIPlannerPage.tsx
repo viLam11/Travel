@@ -6,19 +6,26 @@ import {
     Clock, DollarSign, Wand2, ArrowRightLeft,
     Waves, Landmark, UtensilsCrossed, Mountain, ShoppingBag, Leaf, BedDouble, Camera,
     CalendarDays, Banknote, RefreshCw, MoveHorizontal, CheckCircle2, PlaneTakeoff, Compass, Receipt,
-    BookOpen, BarChart2
+    BookOpen, BarChart2, Edit2
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { aiPlannerApi, USE_MOCK_AI_PLANNER } from '@/api/aiPlannerApi';
 import { MOCK_LIBRARY_ACTIVITIES } from '@/mocks/aiPlanner';
 import type { ItineraryDay, Activity, TimeSlot, PlanData } from '@/types/aiPlanner.types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
 let idCounter = 0;
 const uid = () => `act-${++idCounter}-${Math.random().toString(36).slice(2, 6)}`;
 
-// removed injectIds 
+const injectIds = (itin: ItineraryDay[]) => {
+    return itin.map(day => ({
+        ...day,
+        morning_activities: day.morning_activities.map(a => ({ ...a, id: a.id || uid() })),
+        afternoon_activities: day.afternoon_activities.map(a => ({ ...a, id: a.id || uid() })),
+        evening_activities: day.evening_activities.map(a => ({ ...a, id: a.id || uid() })),
+    }));
+};
 
 const SLOT_META: Record<TimeSlot, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
     morning_activities: { label: 'Buổi sáng', icon: <Sun className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -45,71 +52,240 @@ interface DragPayload {
     fromSlot: TimeSlot | null;
 }
 
+// ─── Activity Modal ──────────────────────────────────────────────────────────
+
+function ActivityModal({
+    isOpen,
+    onClose,
+    onSave,
+    initialData
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (data: Partial<Activity>) => void;
+    initialData?: Activity;
+}) {
+    const [name, setName] = useState(initialData?.name || '');
+    const [description, setDescription] = useState(initialData?.description || '');
+    const [duration, setDuration] = useState(initialData?.duration || '1 giờ');
+    const [cost, setCost] = useState(initialData?.estimated_cost || 'Miễn phí');
+    const [location, setLocation] = useState(initialData?.location || '');
+
+    useEffect(() => {
+        if (isOpen) {
+            setName(initialData?.name || '');
+            setDescription(initialData?.description || '');
+            setDuration(initialData?.duration || '1 giờ');
+            setCost(initialData?.estimated_cost || 'Miễn phí');
+            setLocation(initialData?.location || '');
+        }
+    }, [isOpen, initialData]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        onSave({ name: name.trim(), description, duration, estimated_cost: cost, location });
+        onClose();
+    };
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                />
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+                >
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
+                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-orange-500" />
+                            {initialData ? 'Chỉnh sửa hoạt động' : 'Thêm hoạt động mới'}
+                        </h3>
+                        <button onClick={onClose} className="p-1.5 hover:bg-white rounded-full text-gray-400 hover:text-gray-600 transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700">Tên địa điểm / Hoạt động</label>
+                            <input
+                                autoFocus
+                                type="text"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                placeholder="VD: Nhà thờ Đức Bà, Ăn tối tại..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all text-sm"
+                                required
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <Clock className="w-4 h-4 text-orange-400" /> Thời gian
+                                </label>
+                                <input
+                                    type="text"
+                                    value={duration}
+                                    onChange={e => setDuration(e.target.value)}
+                                    placeholder="VD: 1.5 giờ"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <DollarSign className="w-4 h-4 text-orange-400" /> Chi phí
+                                </label>
+                                <input
+                                    type="text"
+                                    value={cost}
+                                    onChange={e => setCost(e.target.value)}
+                                    placeholder="VD: 50.000đ"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4 text-orange-400" /> Địa chỉ
+                            </label>
+                            <input
+                                type="text"
+                                value={location}
+                                onChange={e => setLocation(e.target.value)}
+                                placeholder="Quận 1, TP. HCM..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700">Mô tả ngắn</label>
+                            <textarea
+                                rows={2}
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                                placeholder="Ghi chú thêm về địa điểm này..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm resize-none"
+                            />
+                        </div>
+
+                        <div className="pt-2 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-semibold rounded-xl transition-colors border border-gray-100"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="submit"
+                                className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all shadow-md shadow-orange-200 hover:shadow-lg active:scale-[0.98]"
+                            >
+                                {initialData ? 'Lưu thay đổi' : 'Thêm vào plan'}
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
+            </div>
+        </AnimatePresence>
+    );
+}
+
 // ─── Activity Card ────────────────────────────────────────────────────────────
 
-function ActivityCard({ activity, onRemove, onDragStart, onMobileMove }: {
+function ActivityCard({ activity, onRemove, onEdit, onDragStart, onMobileMove }: {
     activity: Activity;
     onRemove: () => void;
+    onEdit: () => void;
     onDragStart: (e: React.DragEvent) => void;
     onMobileMove?: () => void;
 }) {
     return (
-        <div
-            draggable
-            onDragStart={onDragStart}
-            className="group bg-white border border-gray-200 rounded-xl p-3 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-orange-300 transition-all duration-200 select-none"
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="group relative"
         >
+            <div
+                draggable
+                onDragStart={onDragStart}
+                className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-orange-300 transition-all duration-200 select-none"
+            >
             <div className="flex items-start gap-2">
-                <GripVertical className="hidden lg:block w-4 h-4 text-gray-300 mt-0.5 shrink-0 group-hover:text-gray-400 transition-colors" />
+                <div className="mt-0.5 shrink-0 text-gray-300 group-hover:text-orange-400 transition-colors hidden lg:block">
+                    <GripVertical className="w-4 h-4" />
+                </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-800 leading-tight truncate">{activity.name}</p>
+                    <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors">{activity.name}</p>
                     {activity.description && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{activity.description}</p>
+                        <p className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed italic">{activity.description}</p>
                     )}
                     <div className="flex items-center gap-3 mt-2 flex-wrap">
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
                             <Clock className="w-3 h-3 text-orange-400" />{activity.duration}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
                             <DollarSign className="w-3 h-3 text-orange-400" />{activity.estimated_cost}
                         </span>
                         {activity.location && (
-                            <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
                                 <MapPin className="w-3 h-3 text-orange-400" /><span className="truncate max-w-[100px]">{activity.location}</span>
                             </span>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                    {/* Mobile: move button always visible */}
-                    {onMobileMove && (
-                        <button
-                            onClick={onMobileMove}
-                            className="lg:hidden p-1.5 text-orange-400 hover:bg-orange-50 rounded-md"
-                            title="Chuyển sang buổi khác"
-                        >
-                            <ArrowRightLeft className="w-3.5 h-3.5" />
-                        </button>
-                    )}
-                    {/* Remove button */}
+                <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={onEdit}
+                        className="p-1.5 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-md transition-colors"
+                        title="Chỉnh sửa"
+                    >
+                        <Edit2 className="w-3.5 h-3.5" />
+                    </button>
                     <button
                         onClick={onRemove}
-                        className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 hover:text-red-500 rounded-md text-gray-400"
+                        className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-md transition-colors"
+                        title="Xóa"
                     >
                         <X className="w-3.5 h-3.5" />
                     </button>
                 </div>
+                
+                {/* Mobile Specific Move Button */}
+                {onMobileMove && (
+                    <button
+                        onClick={onMobileMove}
+                        className="lg:hidden absolute top-2 right-2 p-1.5 bg-orange-50 text-orange-500 rounded-full shadow-sm"
+                    >
+                        <ArrowRightLeft className="w-3.5 h-3.5" />
+                    </button>
+                )}
             </div>
-        </div>
+            </div>
+        </motion.div>
     );
 }
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
 
-function DropZone({ dayIdx, slot, activities, onDrop, onRemove, onDragStartCard, onAddActivity, onMobileMove }: {
+function DropZone({ dayIdx, slot, activities, onDrop, onRemove, onEditActivity, onDragStartCard, onAddActivity, onMobileMove }: {
     dayIdx: number; slot: TimeSlot; activities: Activity[];
     onDrop: (e: React.DragEvent, toDayIdx: number, toSlot: TimeSlot) => void;
     onRemove: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
+    onEditActivity: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
     onDragStartCard: (e: React.DragEvent, payload: DragPayload) => void;
     onAddActivity: (dayIdx: number, slot: TimeSlot) => void;
     onMobileMove?: (activityId: string, fromDayIdx: number, fromSlot: TimeSlot) => void;
@@ -119,38 +295,43 @@ function DropZone({ dayIdx, slot, activities, onDrop, onRemove, onDragStartCard,
 
     return (
         <div className="space-y-1.5">
-            <div className={`flex items-center gap-1.5 mb-2 ${meta.color}`}>
+            <div className={`flex items-center gap-1.5 mb-1 ${meta.color}`}>
                 {meta.icon}
-                <span className="text-xs font-semibold uppercase tracking-wide">{meta.label}</span>
-                <span className="ml-auto text-xs text-gray-400">{activities.length}</span>
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest">{meta.label}</span>
+                <span className="ml-auto text-[10px] bg-white/50 px-1.5 rounded-full border border-current opacity-70">{activities.length}</span>
             </div>
             <div
                 onDragOver={e => { e.preventDefault(); setOver(true); }}
                 onDragLeave={() => setOver(false)}
                 onDrop={e => { setOver(false); onDrop(e, dayIdx, slot); }}
-                className={`min-h-[72px] rounded-xl p-2 space-y-2 border-2 border-dashed transition-all duration-200 ${over ? 'border-orange-400 bg-orange-50 scale-[1.01]' : `${meta.border} ${meta.bg}`
-                    }`}
+                className={`min-h-[80px] rounded-2xl p-2.5 space-y-2.5 border-2 border-dashed transition-all duration-300 ${over 
+                    ? 'border-orange-500 bg-orange-50/50 scale-[1.02] shadow-inner' 
+                    : `${meta.border} ${meta.bg.replace('bg-', 'bg-')}/40 hover:bg-white/50`
+                }`}
             >
-                {activities.map((act, idx) => (
-                    <ActivityCard
-                        key={act.id || idx}
-                        activity={act}
-                        onRemove={() => onRemove(dayIdx, slot, idx)}
-                        onDragStart={e => onDragStartCard(e, { activityId: act.id!, fromDayIdx: dayIdx, fromSlot: slot })}
-                        onMobileMove={onMobileMove ? () => onMobileMove(act.id!, dayIdx, slot) : undefined}
-                    />
-                ))}
+                <AnimatePresence mode="popLayout">
+                    {activities.map((act, idx) => (
+                        <ActivityCard
+                            key={act.id || idx}
+                            activity={act}
+                            onRemove={() => onRemove(dayIdx, slot, idx)}
+                            onEdit={() => onEditActivity(dayIdx, slot, idx)}
+                            onDragStart={e => onDragStartCard(e, { activityId: act.id!, fromDayIdx: dayIdx, fromSlot: slot })}
+                            onMobileMove={onMobileMove ? () => onMobileMove(act.id!, dayIdx, slot) : undefined}
+                        />
+                    ))}
+                </AnimatePresence>
                 {activities.length === 0 && !over && (
-                    <div className="hidden lg:flex items-center justify-center h-14 text-xs text-gray-400">
-                        Kéo hoạt động vào đây
+                    <div className="hidden lg:flex items-center justify-center py-6 text-xs text-gray-400 italic font-medium">
+                        <Plus className="w-3.5 h-3.5 mr-1 opacity-50" /> Thả địa điểm vào đây
                     </div>
                 )}
             </div>
             <button
                 onClick={() => onAddActivity(dayIdx, slot)}
-                className="w-full text-xs text-gray-400 hover:text-orange-500 py-1.5 flex items-center justify-center gap-1 hover:bg-orange-50 rounded-lg transition-colors"
+                className="w-full text-[10px] sm:text-xs text-gray-400 hover:text-orange-500 py-1.5 flex items-center justify-center gap-1 hover:bg-white rounded-xl transition-all border border-transparent hover:border-orange-100 hover:shadow-sm"
             >
-                <Plus className="w-3 h-3" /> Thêm thủ công
+                <Plus className="w-3.5 h-3.5" /> Thêm thủ công
             </button>
         </div>
     );
@@ -178,11 +359,14 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
     const handleSubmit = async () => {
         if (!place.trim()) return;
         setLoading(true);
+        // Normalize: capitalize first letter of each word to help restricted BE search
+        const formattedPlace = place.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        
         const additionalInfo = [
             interests.length ? `Sở thích: ${interests.join(', ')}` : '',
             notes.trim() ? `Ghi chú: ${notes}` : '',
         ].filter(Boolean).join('. ');
-        await onGenerate(place.trim(), days, additionalInfo);
+        await onGenerate(formattedPlace, days, additionalInfo);
         setLoading(false);
     };
 
@@ -248,7 +432,7 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
                                     <button
                                         key={tag.label}
                                         onClick={() => toggleInterest(tag.label)}
-                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all duration-150 font-medium ${interests.includes(tag.label)
+                                        className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all duration-150 font-medium ${interests.includes(tag.label)
                                             ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
                                             : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50'
                                             }`}
@@ -449,6 +633,38 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const draggingLeft = useRef(false);
     const draggingRight = useRef(false);
 
+    const [libraryActivities, setLibraryActivities] = useState<Activity[]>([]);
+    const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+
+    useEffect(() => {
+        // Fetch preferences (mock + real API attempt)
+        if (place) {
+            setIsLoadingLibrary(true);
+            
+            // Start with mock data
+            const mockWithIds = MOCK_LIBRARY_ACTIVITIES.map(a => ({ ...a, id: a.id || uid() }));
+            setLibraryActivities(mockWithIds);
+
+            aiPlannerApi.getPreferences(place)
+                .then(res => {
+                    if (res && res.length > 0) {
+                        const apiWithIds = res.map(a => ({ ...a, id: a.id || uid() }));
+                        // Combine or replace? User usually wants mock for testing, 
+                        // but let's prioritize API if it returns results, or combine.
+                        // For "mock bên trái giúp t đi", they might strictly want the mock data.
+                        // I'll combine them so they see both.
+                        setLibraryActivities(prev => [...prev, ...apiWithIds]);
+                    }
+                })
+                .catch(err => {
+                    console.error("Fetch preferences error:", err);
+                })
+                .finally(() => {
+                    setIsLoadingLibrary(false);
+                });
+        }
+    }, [place]);
+
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
             if (draggingLeft.current) {
@@ -519,7 +735,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             }));
             let activity: Activity;
             if (p.fromDayIdx === null) {
-                const lib = MOCK_LIBRARY_ACTIVITIES.find(a => a.id === p.activityId);
+                const lib = libraryActivities.find(a => a.id === p.activityId);
                 if (!lib) return prev;
                 activity = { ...lib, id: uid() };
             } else {
@@ -534,34 +750,53 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         dragPayload.current = null;
     }, []);
 
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        dayIdx: number;
+        slot: TimeSlot;
+        actIdx?: number;
+        initialData?: Activity;
+    }>({ isOpen: false, dayIdx: 0, slot: 'morning_activities' });
+
     const handleRemove = useCallback((dayIdx: number, slot: TimeSlot, actIdx: number) => {
         setItinerary(prev => {
-            const next = prev.map(d => ({
+            const next = prev.map((d, i) => i === dayIdx ? ({
                 ...d,
-                morning_activities: [...d.morning_activities],
-                afternoon_activities: [...d.afternoon_activities],
-                evening_activities: [...d.evening_activities],
-            }));
-            next[dayIdx][slot].splice(actIdx, 1);
+                [slot]: d[slot].filter((_, idx) => idx !== actIdx)
+            }) : d);
             return next;
         });
     }, []);
 
+    const handleEditActivity = useCallback((dayIdx: number, slot: TimeSlot, actIdx: number) => {
+        const act = itinerary[dayIdx][slot][actIdx];
+        setModalConfig({ isOpen: true, dayIdx, slot, actIdx, initialData: act });
+    }, [itinerary]);
+
     const handleAddActivity = useCallback((dayIdx: number, slot: TimeSlot) => {
-        const name = prompt('Tên hoạt động:');
-        if (!name?.trim()) return;
-        const newAct: Activity = { id: uid(), name: name.trim(), description: '', duration: '1 giờ', estimated_cost: 'Tùy ý', location: '' };
+        setModalConfig({ isOpen: true, dayIdx, slot });
+    }, []);
+
+    const handleSaveActivity = (data: Partial<Activity>) => {
+        const { dayIdx, slot, actIdx } = modalConfig;
         setItinerary(prev => {
-            const next = prev.map(d => ({
-                ...d,
-                morning_activities: [...d.morning_activities],
-                afternoon_activities: [...d.afternoon_activities],
-                evening_activities: [...d.evening_activities],
-            }));
-            next[dayIdx][slot].push(newAct);
+            const next = [...prev];
+            const currentDay = { ...next[dayIdx] };
+            const currentSlot = [...currentDay[slot]];
+
+            if (actIdx !== undefined) {
+                // Editing
+                currentSlot[actIdx] = { ...currentSlot[actIdx], ...data };
+            } else {
+                // Adding
+                currentSlot.push({ id: uid(), ...data } as Activity);
+            }
+
+            currentDay[slot] = currentSlot;
+            next[dayIdx] = currentDay;
             return next;
         });
-    }, []);
+    };
 
     const handleMobilePick = useCallback(() => {
         if (!mobilePicker) return;
@@ -579,7 +814,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 const [act] = fromArr.splice(idx, 1);
                 next[pickerDay][pickerSlot].push(act);
             } else if (mobilePicker.type === 'add' && mobilePicker.libId) {
-                const lib = MOCK_LIBRARY_ACTIVITIES.find(a => a.id === mobilePicker.libId);
+                const lib = libraryActivities.find(a => a.id === mobilePicker.libId);
                 if (!lib) return prev;
                 next[pickerDay][pickerSlot].push({ ...lib, id: uid() });
             }
@@ -592,40 +827,59 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
 
     const LibraryContent = () => (
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-            {MOCK_LIBRARY_ACTIVITIES.map(lib => (
-                <div
-                    key={lib.id}
-                    draggable
-                    onDragStart={e => {
-                        dragPayload.current = { activityId: lib.id, fromDayIdx: null, fromSlot: null };
-                        e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    className="bg-white border border-gray-200 rounded-xl p-3 hover:border-orange-300 hover:shadow-sm transition-all group"
-                >
-                    <div className="flex items-start gap-2">
-                        <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
-                        <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-sm text-gray-800">{lib.name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{lib.description}</p>
-                            <div className="flex gap-2 mt-1.5">
-                                <span className="text-xs text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
-                                <span className="text-xs text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
-                            </div>
-                        </div>
-                        {/* Mobile: add button */}
-                        <button
-                            onClick={() => {
-                                setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                setPickerDay(0);
-                                setPickerSlot('morning_activities');
-                            }}
-                            className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
+            {isLoadingLibrary ? (
+                <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                    <p className="text-xs">Đang tải gợi ý...</p>
                 </div>
-            ))}
+            ) : libraryActivities.length > 0 ? (
+                libraryActivities.map(lib => (
+                    <motion.div
+                        key={lib.id}
+                        layout
+                        className="group relative"
+                    >
+                        <div
+                            draggable
+                            onDragStart={e => {
+                                dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
+                                e.dataTransfer.effectAllowed = 'copy';
+                                e.dataTransfer.setData('text/plain', lib.id!);
+                            }}
+                            className="bg-white border border-gray-200 rounded-xl p-3 hover:border-orange-300 hover:shadow-md transition-all relative overflow-hidden"
+                        >
+                        <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
+                        <div className="flex items-start gap-2 pl-1">
+                            <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
+                            <div className="min-w-0 flex-1">
+                                <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
+                                <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1 italic">{lib.description}</p>
+                                <div className="flex gap-2 mt-2">
+                                    <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
+                                    <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
+                                </div>
+                            </div>
+                            {/* Mobile: add button */}
+                            <button
+                                onClick={() => {
+                                    setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
+                                    setPickerDay(0);
+                                    setPickerSlot('morning_activities');
+                                }}
+                                className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-transform"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        </div>
+                    </motion.div>
+                ))
+            ) : (
+                <div className="py-10 text-center px-4">
+                    <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                    <p className="text-xs text-gray-400">Không tìm thấy địa điểm gợi ý cho "{place}"</p>
+                </div>
+            )}
         </div>
     );
 
@@ -744,6 +998,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 activities={day[slot]}
                                 onDrop={handleDrop}
                                 onRemove={handleRemove}
+                                onEditActivity={handleEditActivity}
                                 onDragStartCard={handleDragStartCard}
                                 onAddActivity={handleAddActivity}
                                 onMobileMove={mobile ? (actId, fDay, fSlot) => {
@@ -984,6 +1239,13 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     </div>
                 </div>
             )}
+            {/* ── Activity Modal Overlay ── */}
+            <ActivityModal
+                isOpen={modalConfig.isOpen}
+                onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+                onSave={handleSaveActivity}
+                initialData={modalConfig.initialData}
+            />
         </div>
     );
 }
@@ -1007,6 +1269,7 @@ export default function AIPlannerPage() {
         if (planId) {
             setStep('plan');
             setLoadingPlan(true);
+
             aiPlannerApi.getPlan(planId)
                 .then(data => {
                     setPlanData(data);
@@ -1030,17 +1293,17 @@ export default function AIPlannerPage() {
             // Bước 1: Gọi ChatGPT/Gemini sinh lịch trình
             const result = await aiPlannerApi.generatePlan({ place: p, numberOfDays: days, additionalInformation: info });
 
-            // Bước 2: Lưu thẳng xuống backend & lấy UUID
-            const savedData = await aiPlannerApi.savePlan({
+            // Bước 2: Bơm ID cho các hoạt động & Lưu vào cache
+            const saveResult = await aiPlannerApi.savePlan({
                 title: `Kế hoạch ${p} ${days} ngày`,
                 destination: p,
                 days: days,
-                itinerary: result.itinerary,
+                itinerary: injectIds(result.itinerary),
                 isPublic: false
             });
 
-            // Bước 3: Redirect sang URL của Plan
-            navigate(`/ai-planner/${savedData.id}`);
+            // Bước 3: Chuyển sang URL của Plan
+            navigate(`/ai-planner/${saveResult.id}`);
         } catch (error) {
             console.error(error);
             alert('Tạo plan thất bại, vui lòng thử lại.');

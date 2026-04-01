@@ -309,8 +309,8 @@ const mockData: Record<string, ServiceDetail> = {
 
 export const mockServiceDetailApi = {
   getServiceDetail: async (
-    destination: string,
-    serviceType: string,
+    destination?: string,
+    serviceType?: string,
     id: string
   ): Promise<ServiceDetail> => {
     // Simulate API delay

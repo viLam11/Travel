@@ -43,11 +43,12 @@ const USE_MOCK = false; // set true để dùng mock data, false để gọi API
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ServiceDetailPage: React.FC = () => {
-  const { region, destination, serviceType, idSlug } = useParams<{
+  const { region, destination, serviceType, idSlug, id: directId } = useParams<{
     region: string;
     destination: string;
     serviceType: string;
     idSlug: string;
+    id: string;
   }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -72,6 +73,8 @@ const ServiceDetailPage: React.FC = () => {
     if (!slug) return '';
     return slug.split('-')[0];
   };
+
+  // const id = directId || extractId(idSlug);
 
   // const MOCK_ROOMS = [
   //   { id: 101, name: 'Room 101', type: 'Tiêu chuẩn', price: 120, capacity: 2, amenities: ['WiFi', 'Điều hòa', 'TV'], available: true, currentBookings: [{ roomId: 101, checkIn: '2025-10-20', checkOut: '2025-10-22' }] },
@@ -107,7 +110,7 @@ const ServiceDetailPage: React.FC = () => {
   const [showDiscountSection, setShowDiscountSection] = useState(true);
   const [ticketList, setTicketList] = useState<any[]>([]);
 
-  const [allRooms, setAllRooms] = useState<any[]>([]);
+  const [allRooms, ] = useState<any[]>([]);
 
 
   // Room booking modal state - Updated for multiple rooms
@@ -141,17 +144,28 @@ const ServiceDetailPage: React.FC = () => {
   const [apiDiscounts, setApiDiscounts] = useState<any[]>([]);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [totalApiReviews, setTotalApiReviews] = useState(0);
 
   // Load rooms/tickets from API when serviceId is available
   const fetchReviews = async () => {
     try {
       if (!id) return;
+      setIsLoadingReviews(true);
       const response = await apiClient.comments.getByServiceId(id);
-      if (response?.data?.content?.length > 0) {
-        setApiReviews(response.data.content);
+      // Response structure from backend is PageResponse which has 'content' directly or standard Axios 'data'
+      // apiClient.get returns response.data directly
+      if (response?.content) {
+        setApiReviews(response.content);
+        setTotalApiReviews(response.totalElements || response.content.length);
+      } else if (Array.isArray(response)) {
+        setApiReviews(response);
+        setTotalApiReviews(response.length);
       }
     } catch (error) {
       console.error("Failed to fetch reviews", error);
+    } finally {
+      setIsLoadingReviews(false);
     }
   };
 
@@ -187,27 +201,24 @@ const ServiceDetailPage: React.FC = () => {
 
   // Load service detail
   useEffect(() => {
-    if (!destination || !serviceType || !idSlug || !region) {
+    // If none of the access methods are provided, go home
+    if (!directId && (!destination || !serviceType || !idSlug || !region)) {
       navigate('/homepage');
       return;
     }
 
-    // Validate region-destination mapping
-    // Temporarily disabled to allow navigation with placeholder destinations
-    // const destInfo = getDestinationInfo(destination);
-    // if (!destInfo || destInfo.region !== region) {
-    //   navigate('/homepage');
-    //   return;
-    // }
-
-    const id = extractId(idSlug);
-    dispatch(loadServiceDetail({ destination, serviceType, id }));
+    const finalId = directId || extractId(idSlug);
+    dispatch(loadServiceDetail({ 
+      destination: destination || undefined, 
+      serviceType: serviceType || undefined, 
+      id: finalId 
+    }));
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     return () => {
       dispatch(clearServiceDetail());
     };
-  }, [destination, serviceType, idSlug, dispatch, navigate]);
+  }, [directId, destination, serviceType, idSlug, region, dispatch, navigate]);
 
   // Handlers
   const handlePrevImage = () => {
@@ -257,13 +268,14 @@ const ServiceDetailPage: React.FC = () => {
           // Standardize ID as string to match UUID expectations
           id: t.id.toString(),
           quantity: Number(t.count),
+          // Backend now expects dates per item
+          checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
+          checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
         }));
 
       const payload = {
         tickets,
         rooms: [],
-        checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
-        checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
         guestPhone: customerPhone,
         note: customerNote || undefined,
         discountIds: selectedDiscountIds?.map(id => id.toString()) || [],
@@ -342,13 +354,14 @@ const ServiceDetailPage: React.FC = () => {
       const rooms = selectedRooms.map((roomId: string | number) => ({
         id: roomId,
         quantity: 1,
+        // Backend now expects dates per item
+        checkInDate: checkInDate ? `${checkInDate}T14:00:00.000Z` : new Date().toISOString(),
+        checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
       }));
 
       const response: any = await apiClient.orders.create({
         tickets: [],
         rooms,
-        checkInDate: checkInDate ? `${checkInDate}T14:00:00.000Z` : new Date().toISOString(),
-        checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
         guestPhone: roomPhone,
         note: specialRequests || undefined,
         discountIds: selectedDiscountIds,
@@ -375,10 +388,10 @@ const ServiceDetailPage: React.FC = () => {
   };
 
   const handleSelectPayment = async (method: 'vnpay' | 'zalopay' | 'momo', orderId: string | number, amount: number) => {
-    const id = orderId;
+    const targetOrderId = orderId;
     const finalAmount = amount;
 
-    if (!id) return;
+    if (!targetOrderId) return;
     
     const loadingToast = toast.loading('Đang khởi tạo thanh toán...');
     try {
@@ -456,7 +469,7 @@ const ServiceDetailPage: React.FC = () => {
           await apiClient.comments.create(id, reviewText, reviewRating, reviewImages);
           toast.success('Đánh giá của bạn đã được gửi!');
           // Refresh reviews
-          fetchReviews();
+          setTimeout(() => fetchReviews(), 500); // Small delay to ensure DB is updated
         } else {
           // Mock submission behavior
           const newReview = {
@@ -861,8 +874,9 @@ const ServiceDetailPage: React.FC = () => {
                 displayedReviews={allReviews}
                 showAllReviews={showAllReviews}
                 setShowAllReviews={setShowAllReviews}
-                totalReviews={allReviews.length}
+                totalReviews={hasRealReviews ? totalApiReviews : allReviews.length}
                 isSubmitting={isSubmittingReview}
+                isLoading={isLoadingReviews}
               />
             )}
           </div>

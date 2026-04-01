@@ -1,13 +1,15 @@
 // src/components/common/DestinationCard.tsx
 import React, { useState } from 'react';
-import { MapPin, Calendar, Heart, Star } from 'lucide-react';
+import { MapPin, Calendar, Star } from 'lucide-react';
 import { useLazyImage } from '../../hooks/useLazyImage';
+import FavoriteButton from './FavoriteButton';
 
 export interface Destination {
   id: string;
   title: string;
   location: string;
-  price: string;
+  price?: string;
+  priceRange?: string;
   image: string;
   rating?: string;
   reviews?: string;
@@ -35,6 +37,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     title,
     location,
     price,
+    priceRange,
     openingHours,
     image,
     rating,
@@ -42,7 +45,6 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     discount
   } = destination;
 
-  const [isFavorite, setIsFavorite] = useState(false);
 
   const {
     ref,
@@ -125,20 +127,13 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         )}
 
-        {/* Heart Icon */}
+        {/* Favorite Button */}
         {imageLoaded && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFavorite(!isFavorite);
-            }}
-            className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 sm:p-2.5 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer hover:scale-110 active:scale-95 z-10"
-          >
-            <Heart
-              className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isFavorite ? 'fill-orange-500 text-orange-500' : 'text-orange-500'
-                }`}
-            />
-          </div>
+          <FavoriteButton
+            serviceId={id}
+            className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 sm:p-2.5 shadow-md z-10 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300"
+            iconClassName="w-4 h-4 sm:w-5 sm:h-5"
+          />
         )}
       </div>
 
@@ -178,7 +173,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
               </p>
             ) : reviews ? (
               <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                <span>📝</span> {reviews} đánh giá
+                <span></span> {reviews} đánh giá
               </p>
             ) : null}
           </div>
@@ -189,7 +184,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
           <div className="flex flex-col">
             <p className="text-xs sm:text-sm text-gray-500">Giá chỉ từ:</p>
             <p className="text-sm sm:text-base font-bold text-orange-500">
-              {price}
+              {price || priceRange}
             </p>
           </div>
 
