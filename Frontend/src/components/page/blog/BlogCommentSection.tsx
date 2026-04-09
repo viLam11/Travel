@@ -31,29 +31,36 @@ interface CommentItemProps {
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = false }) => {
   const [liked, setLiked] = useState(comment.isLiked || false);
-  const [likeCount, setLikeCount] = useState(comment.likes);
+  const [likeCount, setLikeCount] = useState(comment.likes ?? 0);
   const [showReplies, setShowReplies] = useState(false);
   const [reportState, setReportState] = useState<{ open: boolean; id: string }>({
     open: false,
     id: '',
   });
 
+  // Support both API format (authorName) and legacy mock format (author.name)
+  const displayName = comment.authorName || comment.author?.name || 'Ẩn danh';
+  const displayAvatar =
+    comment.authorAvatarUrl ||
+    comment.author?.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=fb923c&color=fff`;
+
   const handleLike = () => {
     setLiked((prev) => !prev);
-    setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+    setLikeCount((prev) => (liked ? Math.max(0, prev - 1) : prev + 1));
   };
 
   return (
     <div className={`flex gap-3 ${isReply ? 'ml-10 mt-3' : ''}`}>
       <img
-        src={comment.author.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author.name)}&background=fb923c&color=fff`}
-        alt={comment.author.name}
+        src={displayAvatar}
+        alt={displayName}
         className="w-9 h-9 rounded-full object-cover flex-shrink-0 mt-0.5"
       />
       <div className="flex-1">
         <div className="bg-gray-50 rounded-2xl px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-gray-900 text-sm">{comment.author.name}</span>
+            <span className="font-semibold text-gray-900 text-sm">{displayName}</span>
             <span className="text-xs text-gray-400">{timeAgo(comment.createdAt)}</span>
           </div>
           <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
@@ -73,7 +80,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
 
           {!isReply && (
             <button
-              onClick={() => onReply(comment.id, comment.author.name)}
+              onClick={() => onReply(comment.id, displayName)}
               className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-orange-500 transition-colors"
             >
               <MessageCircle className="w-3.5 h-3.5" />
@@ -128,7 +135,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
 };
 
 const BlogCommentSection: React.FC<BlogCommentSectionProps> = ({
-  postId,
   comments,
   onAddComment,
 }) => {
@@ -177,7 +183,7 @@ const BlogCommentSection: React.FC<BlogCommentSectionProps> = ({
       <div className="flex gap-3 mb-8">
         <img
           src={
-            currentUser?.user?.avatar ||
+            currentUser?.user?.avatarUrl ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.user?.name || 'U')}&background=fb923c&color=fff`
           }
           alt="avatar"

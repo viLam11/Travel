@@ -18,4 +18,5 @@ export interface CreateOrderRequest {
   guestPhone: string;
   note?: string;
   discountIds?: string[];
+  paymentMethod: 'MOMO' | 'VNPAY';
 }

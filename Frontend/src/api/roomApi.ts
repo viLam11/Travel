@@ -1,58 +1,75 @@
-import apiClient from '../services/apiClient';
-import { MOCK_ROOM_TYPES } from '@/mocks/roomTypes';
-
-const USE_MOCK = false; // Set to false to use real backend API
+import apiClient from '@/services/apiClient';
 
 export const roomApi = {
-    getRoomsByHotel: async (hotelId: string): Promise<any[]> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return MOCK_ROOM_TYPES.filter((r: any) => r.hotelId === hotelId);
-        }
+    /**
+     * Lấy danh sách phòng theo hotelId
+     */
+    getRoomsByHotelId: async (hotelId: string | number) => {
         try {
-            return await apiClient.get(`/services/${hotelId}/rooms`);
+            return await apiClient.rooms.getByHotelId(hotelId);
         } catch (error) {
-            console.error('Error fetching rooms', error);
+            console.error('Error fetching rooms:', error);
             throw error;
         }
     },
 
-    createRoom: async (hotelId: string, data: any): Promise<any> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return { id: Date.now().toString(), ...data, hotelId } as any;
-        }
+    /**
+     * Tạo phòng mới
+     */
+    createRoom: async (hotelId: string | number, data: any) => {
         try {
-            return await apiClient.post(`/services/${hotelId}/rooms`, data);
+            return await apiClient.rooms.create(hotelId, data);
         } catch (error) {
-            console.error('Error creating room', error);
+            console.error('Error creating room:', error);
             throw error;
         }
     },
 
-    updateRoom: async (roomId: string, data: any): Promise<any> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return { id: roomId, ...data } as any;
-        }
+    /**
+     * Cập nhật phòng
+     */
+    updateRoom: async (roomId: string | number, data: any) => {
         try {
-            return await apiClient.patch(`/rooms/${roomId}`, data);
+            return await apiClient.rooms.update(roomId, data);
         } catch (error) {
-            console.error('Error updating room', error);
+            console.error('Error updating room:', error);
             throw error;
         }
     },
 
-    deleteRoom: async (roomId: string): Promise<void> => {
-        if (USE_MOCK) {
-             await new Promise(resolve => setTimeout(resolve, 300));
-             return;
-        }
+    /**
+     * Xóa phòng
+     */
+    deleteRoom: async (roomId: string | number) => {
         try {
-            await apiClient.delete(`/rooms/${roomId}`);
+            return await apiClient.rooms.delete(roomId);
         } catch (error) {
-            console.error('Error deleting room', error);
+            console.error('Error deleting room:', error);
             throw error;
         }
-    }
+    },
+
+    /**
+     * Thêm ảnh cho phòng
+     */
+    addRoomImages: async (roomId: string | number, photos: File[]) => {
+        try {
+            return await apiClient.rooms.addImage(roomId, photos);
+        } catch (error) {
+            console.error('Error adding room images:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Lấy danh sách ảnh của phòng
+     */
+    getRoomImages: async (roomId: string | number) => {
+        try {
+            return await apiClient.rooms.getImages(roomId);
+        } catch (error) {
+            console.error('Error fetching room images:', error);
+            throw error;
+        }
+    },
 };

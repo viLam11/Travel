@@ -85,11 +85,11 @@ export const reviewApi = {
                     'createdAt',
                     'desc'
                 );
-                const content = response.content || response || [];
+                const content = response.content || (Array.isArray(response) ? response : []);
                 return {
                     reviews: content,
-                    total: response.totalElements || content.length,
-                    page: response.pageNo || 0,
+                    total: response.totalElements || (Array.isArray(response) ? response.length : 0),
+                    page: response.pageNo ?? response.number ?? 0,
                     totalPages: response.totalPages || 1,
                 };
             } catch (error) {

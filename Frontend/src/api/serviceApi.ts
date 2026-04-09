@@ -63,7 +63,7 @@ export const serviceApi = {
     /**
      * Lấy danh sách dịch vụ của provider đang đăng nhập
      * Backend: GET /services/data?page=&size= (trả về tất cả services có phân trang)
-     * ⚠️ NOTE: BE cần thêm GET /services/my (chỉ lấy services của provider đang đăng nhập)
+     * NOTE: BE cần thêm GET /services/my (chỉ lấy services của provider đang đăng nhập)
      */
     getProviderServices: async (params?: {
         type?: ServiceType;
@@ -103,11 +103,11 @@ export const serviceApi = {
                     size: params?.limit || 10
                 }
             });
-            const content = response.content || response || [];
+            const content = response.content || (Array.isArray(response) ? response : []);
             return {
                 services: content,
-                total: response.totalElements || content.length,
-                page: response.number || 0,
+                total: response.totalElements || (Array.isArray(response) ? response.length : 0),
+                page: response.pageNo ?? response.number ?? 0,
                 totalPages: response.totalPages || 1,
             };
         } catch (error) {
@@ -145,7 +145,7 @@ export const serviceApi = {
 
     /**
      * Lấy thống kê services
-     * ⚠️ NOTE: BE chưa có endpoint này — trả về mock tạm thời
+     * NOTE: BE chưa có endpoint này — trả về mock tạm thời
      */
     getServiceStats: async (): Promise<ServiceStats> => {
         if (USE_MOCK) {
@@ -157,12 +157,12 @@ export const serviceApi = {
     },
 
     /**
-     * Cập nhật service (chưa có endpoint PATCH/PUT /services/{id} trên BE)
-     * ⚠️ NOTE: BE cần thêm PATCH /services/{id}
+     * Cập nhật service
+     * Đã nối BE: PATCH /services/{id}
      */
     updateService: async (serviceId: string, data: Partial<Service>): Promise<Service> => {
         try {
-            return await apiClient.put(`/services/${serviceId}`, data);
+            return await apiClient.services.update(serviceId, data);
         } catch (error) {
             console.error('Error updating service:', error);
             throw error;
@@ -171,13 +171,56 @@ export const serviceApi = {
 
     /**
      * Toggle trạng thái service
-     * ⚠️ NOTE: BE cần thêm PATCH /services/{id}/status
+     * Đã nối BE: POST /users/{serviceID}/handleServiceStatus
      */
     toggleServiceStatus: async (serviceId: string, status: 'active' | 'inactive'): Promise<Service> => {
         try {
-            return await apiClient.patch(`/services/${serviceId}/status`, { status });
+            // Note: BE's endpoint is under /users/...
+            return await apiClient.post(`/users/${serviceId}/handleServiceStatus`, null, { params: { status } });
         } catch (error) {
             console.error('Error toggling service status:', error);
+            throw error;
+        }
+    },
+    /**
+     * Tạo service mới
+     * Backend: POST /services/{hotelID}/rooms (Note: API create service in apiClient is different)
+     */
+    createService: async (params: any, thumbnail: File, photos: File[]): Promise<any> => {
+        try {
+            return await apiClient.services.create(params, thumbnail, photos);
+        } catch (error) {
+            console.error('Error creating service:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Upload ảnh cho service
+     * Backend: PATCH /services/upload/img/{id}
+     */
+    uploadImages: async (serviceId: number | string, photos: File[]): Promise<any> => {
+        try {
+            return await apiClient.services.uploadImages(Number(serviceId), photos);
+        } catch (error) {
+            console.error('Error uploading service images:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Tìm kiếm dịch vụ (public)
+     */
+    searchServices: async (params: any): Promise<any> => {
+        try {
+            const res = await apiClient.services.search(params);
+            return {
+                data: res.services || res.content || [],
+                total: res.totalElements || 0,
+                page: res.pageNo || 0
+            };
+        } catch (error) {
+            console.error('Error searching services:', error);
             throw error;
         }
     },

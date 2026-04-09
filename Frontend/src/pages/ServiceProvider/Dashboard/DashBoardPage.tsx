@@ -44,6 +44,8 @@ import {
   type Booking,
 } from '@/data/dashboardData';
 import { useAuthContext } from '@/contexts/AuthContext';
+import apiClient from '@/services/apiClient';
+import { serviceDetailApi } from '@/api/serviceDetailApi';
 
 // --- Utility: Hàm định dạng tiền tệ VND ---
 const formatCurrency = (value: number | string) => {
@@ -393,6 +395,65 @@ export default function TravelServicesDashboard() {
     providerType = 'hotel';
   }
 
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [serviceInfo, setServiceInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchServiceInfo = async () => {
+      const serviceId = currentUser?.user?.serviceId;
+      if (!serviceId) return;
+      try {
+        const data = await serviceDetailApi.getServiceDetail('', '', serviceId.toString());
+        setServiceInfo(data);
+      } catch (err) {
+        console.error("Failed to fetch service info for dashboard:", err);
+      }
+    };
+    fetchServiceInfo();
+  }, [currentUser]);
+
+  useEffect(() => {
+    const fetchApiBookings = async () => {
+      const serviceId = currentUser?.user?.serviceId;
+      if (!serviceId) return;
+      
+      setIsLoadingBookings(true);
+      try {
+        let response: any;
+        if (providerType === 'hotel') {
+          response = await apiClient.orders.getHotelOrders(serviceId);
+        } else {
+          response = await apiClient.orders.getTicketVenueOrders(serviceId);
+        }
+        
+        const fetchedOrders = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
+        
+        if (fetchedOrders.length > 0) {
+           const mappedBookings = fetchedOrders.map((o: any) => ({
+             id: o.orderID || o.id,
+             guest: o.user?.fullname || o.guestPhone || `Khách #${o.orderID || o.id}`,
+             guests: (o.orderedRooms?.length || 0) + (o.orderedTickets?.length || 0), // Logic tạm thời cho số lượng
+             checkIn: o.orderedRooms?.[0]?.startDate || o.createdAt,
+             checkOut: o.orderedRooms?.[0]?.endDate || o.createdAt,
+             service: o.orderedRooms?.[0]?.room?.hotel?.serviceName || o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName || "Dịch vụ của bạn",
+             serviceType: providerType,
+             amount: o.finalPrice || o.totalPrice || 0,
+             status: o.status === 'SUCCESS' ? 'completed' : 
+                     (o.status === 'ACCEPTED' || o.status === 'CONFIRMED') ? 'confirmed' : 
+                     (o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'FAILED') ? 'cancelled' : 'pending'
+           }));
+           setLocalBookings(mappedBookings);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải đơn hàng của nhà cung cấp:", error);
+      } finally {
+        setIsLoadingBookings(false);
+      }
+    };
+    
+    fetchApiBookings();
+  }, [currentUser, providerType]);
+
   // Filter bookings by providerType
   const filteredBookings = localBookings.filter(b => {
     if (providerType === 'hotel') return b.serviceType === 'hotel';
@@ -690,11 +751,18 @@ export default function TravelServicesDashboard() {
           </Button>
         </CardHeader>
         <CardContent>
-          <BookingsTable
-            data={filteredBookings}
-            onViewDetail={(b) => setDetailBooking(b)}
-            onUpdateStatus={(b) => setStatusBooking(b)}
-          />
+          {isLoadingBookings ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground text-sm font-medium">Đang tải danh sách đơn hàng...</p>
+            </div>
+          ) : (
+            <BookingsTable
+              data={filteredBookings}
+              onViewDetail={(b) => setDetailBooking(b)}
+              onUpdateStatus={(b) => setStatusBooking(b)}
+            />
+          )}
         </CardContent>
       </Card>
 

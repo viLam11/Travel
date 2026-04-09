@@ -39,6 +39,7 @@
     "dayjs": "^1.11.13",
     "export-to-csv": "^1.4.0",
     "framer-motion": "^12.23.16",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.544.0",
     "material-react-table": "^3.2.1",
     "my-app-1": "file:",

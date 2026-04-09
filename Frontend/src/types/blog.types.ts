@@ -1,59 +1,83 @@
 // src/types/blog.types.ts
 
+export type BlogStatus = 'DRAFT' | 'PUBLISHED' | 'HIDDEN';
+export type ReactionType = 'LIKE' | 'LOVE' | 'HELPFUL' | 'WOW' | 'SAD';
+
 export interface BlogAuthor {
   id: string;
   name: string;
-  avatar?: string;
+  avatarUrl?: string;
   bio?: string;
 }
 
 export interface LinkedService {
   id: string;
-  name: string;
-  type: 'hotel' | 'place';
-  location: string;
-  image?: string;
-  rating?: number;
-  slug?: string;
-  region?: string;
-  destination?: string;
+  serviceName: string;
+  description?: string;
+  province?: string;
+  thumbnailUrl?: string;
+  type?: 'HOTEL' | 'RESTAURANT' | 'TICKET_VENUE' | 'ALL';
+}
+
+export interface PostReaction {
+  id: string;
+  userId: string;
+  username: string;
+  postId: string;
+  reactionType: ReactionType;
 }
 
 export interface BlogComment {
   id: string;
-  postId: string;
-  author: BlogAuthor;
   content: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl?: string;
   createdAt: string;
-  likes: number;
+  likes?: number;
   isLiked?: boolean;
-  parentId?: string | null;
   replies?: BlogComment[];
+  // Legacy mock data compat
+  author?: { id: string; name: string; avatar?: string };
+  postId?: string;
+  parentId?: string;
 }
 
 export interface BlogPost {
   id: string;
   title: string;
-  summary: string;
   content: string; // HTML-like rich text
-  coverImage: string;
-  images?: string[];
-  author: BlogAuthor;
+  authorName: string;
+  authorId: string;
+  authorAvatarUrl?: string;
+  thumbnailUrl?: string;
+  mediaUrls?: string[];
+  status?: BlogStatus;
+  reactionCount: number;
+  commentCount: number;
+  likeCount?: number; // From BlogPostDocument
   createdAt: string;
   updatedAt?: string;
-  likes: number;
+  taggedServiceIds?: (string | LinkedService)[];
+  reactions?: PostReaction[];
+  comments?: BlogComment[];
+  
+  // Frontend UI extensions
   isLiked?: boolean;
   isBookmarked?: boolean;
-  commentCount: number;
-  viewCount: number;
-  tags: string[];
-  linkedPlaces: LinkedService[];
-  linkedHotels: LinkedService[];
-  readTimeMinutes: number;
-  isDraft?: boolean;
+  summary?: string;
+  readTimeMinutes?: number;
 }
 
 export type BlogFilterTab = 'all' | 'latest' | 'popular' | 'following';
+
+export interface BlogRequest {
+  title: string;
+  content: string;
+  mediaUrls?: string[] | File[];
+  status: BlogStatus;
+  taggedServiceIds?: string[];
+}
 
 export interface ReportReason {
   id: string;
@@ -68,3 +92,4 @@ export const REPORT_REASONS: ReportReason[] = [
   { id: 'hate', label: 'Kích động thù địch' },
   { id: 'other', label: 'Lý do khác' },
 ];
+

@@ -50,7 +50,8 @@ const PopularDestinations: React.FC = () => {
 
   const mapServiceToDestination = (service: any): Destination => {
     const regionSlug = 'vietnam';
-    const destinationSlug = (service.province?.code_name || service.province?.codeName || service.province?.code || 'general').replace(/_/g, '-');
+    const provinceCodeRaw = service.provinceCode || service.province?.code || service.province?.code_name || '79';
+    const destinationSlug = provinceCodeRaw.toString().replace(/_/g, '-');
 
     let typeSlug = 'place';
     if (service.serviceType === 'HOTEL') typeSlug = 'hotel';
@@ -77,7 +78,6 @@ const PopularDestinations: React.FC = () => {
       try {
         setIsLoadingDestinations(true);
         const response: any = await apiClient.services.search({
-          serviceType: 'TICKET_VENUE',
           serviceType: 'TICKET_VENUE',
           page: 0,
           size: 6

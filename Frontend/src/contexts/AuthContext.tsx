@@ -81,6 +81,7 @@ interface User {
     role: string;
     phoneNumber?: string;
     address?: string;
+    avatarUrl?: string;
     providerType?: 'hotel' | 'place'; // For providers
     hasService?: boolean; // For providers - whether they have completed service setup
     serviceId?: number; // For providers - their service ID
@@ -136,7 +137,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Mapping backend DTO to frontend User interface
             const rawRole = userResponse.role?.toUpperCase() || 'USER';
             const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+
+            // Extract serviceId safely based on current BE behavior
+            // "Mặc định chọn 7 if available"
+            const serviceIds: any[] = (userResponse as any).serviceIds || [];
+            let fetchedServiceId: number = 7; // Khởi tạo mặc định là 7 như yêu cầu
             
+            if (serviceIds.includes('7') || serviceIds.includes(7)) {
+                fetchedServiceId = 7;
+            } else if (Array.isArray((userResponse as any).services) && (userResponse as any).services.length > 0) {
+                const firstService = (userResponse as any).services[0];
+                fetchedServiceId = typeof firstService === 'object' ? firstService.id : firstService;
+            } else if (serviceIds.length > 0) {
+                fetchedServiceId = Number(serviceIds[0]);
+            } else if ((userResponse as any).serviceId) {
+                fetchedServiceId = Number((userResponse as any).serviceId);
+            }
+
             const user: User = {
                 userID: userResponse.userID ?? 0,
                 name: userResponse.fullname || userResponse.username || 'User',
@@ -144,9 +161,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 role: normalizedRole,
                 phoneNumber: userResponse.phone,
                 address: userResponse.address,
+                avatarUrl: userResponse.avatarUrl,
                 // Derive providerType from specific provider role
                 providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' : 
                               rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                serviceId: fetchedServiceId,
+                hasService: !!fetchedServiceId,
                 // Add the original specific role for component-level checks if needed
                 status: userResponse.status || 'active'
             };

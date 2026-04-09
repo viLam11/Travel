@@ -25,7 +25,7 @@ const realApi = {
           console.error("Failed to parse backendData string", e);
         }
       }
-      
+
       console.log('--- Debug Data Start ---');
       console.log('ID:', id);
       console.log('Raw Backend UserToken-Data:', backendData);
@@ -37,7 +37,7 @@ const realApi = {
 
       // Merge: Use backend data where available, fall back to mock for missing fields
       const reviewCount = backendData.commentList?.length || backendData.reviewCount || 0;
-      
+
       const mergedData: ServiceDetail = {
         id: backendData.id?.toString() || mockData.id,
         name: backendData.serviceName || backendData.name || mockData.name,
@@ -47,6 +47,14 @@ const realApi = {
         reviews: reviewCount ? reviewCount.toString() : mockData.reviews,
         description: backendData.description || mockData.description,
         address: backendData.address || mockData.address,
+
+        // Provider info for socket/chat
+        provider: backendData.provider ? {
+          userID: backendData.provider.userID || backendData.provider.id,
+          fullname: backendData.provider.fullname || backendData.provider.username,
+          avatarUrl: backendData.provider.avatarUrl
+        } : undefined,
+        providerId: backendData.provider?.userID || backendData.provider?.id,
 
         // Use mock data for fields not in backend
         // Combined photos from thumbnail and imageList
@@ -80,12 +88,12 @@ const realApi = {
       return mergedData;
     } catch (error) {
       console.error('Error fetching service detail:', error);
-      
+
       // If mock is explicitly allowed, return mock
       if (USE_MOCK_API) {
         return mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
       }
-      
+
       // Otherwise, return mock but it's better to show the error or a better fallback
       // For now, let's keep falling back to mock so the app doesn't crash, 
       // but the log above will tell us WHY it failed.

@@ -107,11 +107,11 @@ export const bookingApi = {
 
         try {
             const response = await apiClient.orders.getAll(params?.page || 0, params?.limit || 10);
-            const content = response.content || response || [];
+            const content = response.content || (Array.isArray(response) ? response : []);
             return {
                 bookings: content,
-                total: response.totalElements || content.length,
-                page: response.number || 0,
+                total: response.totalElements || (Array.isArray(response) ? response.length : 0),
+                page: response.pageNo ?? response.number ?? 0,
                 totalPages: response.totalPages || 1,
             };
         } catch (error) {
@@ -145,7 +145,11 @@ export const bookingApi = {
         _note?: string
     ): Promise<any> => {
         try {
-            const backendStatus = status.toUpperCase();
+            let backendStatus = status.toUpperCase();
+            if (backendStatus === 'CONFIRMED') backendStatus = 'ACCEPTED';
+            if (backendStatus === 'COMPLETED') backendStatus = 'SUCCESS';
+            if (backendStatus === 'CANCELLED') backendStatus = 'CANCELLED';
+            
             return await apiClient.orders.updateStatus(bookingId, backendStatus);
         } catch (error) {
             console.error('Error updating booking status:', error);
@@ -155,7 +159,7 @@ export const bookingApi = {
 
     cancelBooking: async (bookingId: string, _reason: string): Promise<any> => {
         try {
-            return await apiClient.orders.updateStatus(bookingId, 'CANCELED');
+            return await apiClient.orders.updateStatus(bookingId, 'CANCELLED');
         } catch (error) {
             console.error('Error cancelling booking:', error);
             throw error;
@@ -167,7 +171,7 @@ export const bookingApi = {
             await new Promise(resolve => setTimeout(resolve, 300));
             return mockStats;
         }
-        // ⚠️ NOTE: BE chưa có API stats cho provider
+        // NOTE: BE chưa có API stats cho provider
         console.warn('[bookingApi] getBookingStats: No backend endpoint, returning mock data');
         return mockStats;
     },

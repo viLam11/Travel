@@ -36,7 +36,7 @@ export interface DiscountResponse {
 
 import { MOCK_DISCOUNTS } from '@/mocks/discounts';
 
-const USE_MOCK = true; // Set to false to use real backend API
+const USE_MOCK = false; // Set to false to use real backend API
 
 const mapMockToResponse = (mock: any): DiscountResponse => ({
     ...mock,

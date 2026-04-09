@@ -162,12 +162,32 @@ export class ApiClient {
       });
     },
 
-    getById: (serviceID: number): ApiResponse<any> => {
+    getById: (serviceID: number | string): ApiResponse<any> => {
       return this.get(`/services/${serviceID}`);
+    },
+
+    update: (serviceID: number | string, updatedServiceRequest: any): ApiResponse<any> => {
+      // API expects the payload as a query param (perhaps incorrectly, but we follow swagger)
+      // or if it's actually body, we pass it as body. Let's pass it as params and DTO in body just to be safe.
+      return this.patch(`/services/${serviceID}`, updatedServiceRequest, {
+        params: { updatedServiceRequest: JSON.stringify(updatedServiceRequest) },
+        headers: { "Content-Type": "application/json" }
+      });
     },
 
     list: (page = 0, size = 10): ApiResponse<any> => {
       return this.get("/services/data", { params: { page, size } });
+    },
+    filter: (params: any): ApiResponse<any> => {
+      return this.get("/services/filter", { params });
+    },
+    filterStats: (params: any): ApiResponse<any> => {
+      // e.g. /statistics/services/filter
+      return this.get("/statistics/services/filter", { params });
+    },
+    searchInProvince: (params: any): ApiResponse<any> => {
+      // e.g. /statistics/services/search
+      return this.get("/statistics/services/search", { params });
     },
 
     getAll: (): ApiResponse<any> => {
@@ -218,25 +238,33 @@ export class ApiClient {
       sortBy?: string;
       direction?: string;
       signal?: AbortSignal;
-    }): ApiResponse<any> => {
+    }): Promise<any> => {
       try {
         const self = (this as any);
         console.log("Fetching real API services/search", params);
-        let response: any = await self.get("/services/search", { params });
         
-        // Handle Spring Boot Page<T> response structure where data is in 'content' array
-        if (response && response.content) {
-            response.services = response.content;
-        } else if (Array.isArray(response)) {
-            response = { services: response, totalElements: response.length, totalPages: 1 };
-        }
+        const response: any = await self.get("/services/search", { params });
         
-        if (ApiClient.USE_MOCK && (!response || !response.services || response.services.length === 0)) {
-           console.warn("Real API returned no data, falling back to Mock...");
+        // Backend returns PageResponse containing "content" array
+        // We ensure data is extracted correctly from the API client response
+        const realData = response;
+        const itemsArray = realData?.content;
+
+        // Fallback to mock if API returns empty content and USE_MOCK is active
+        if (ApiClient.USE_MOCK && (!itemsArray || itemsArray.length === 0)) {
+           console.warn("Real API returned no results for search, falling back to Mock data...");
            return self.services.getMockSearch(params);
         }
         
-        return response;
+        // Repackage data to include "services" key for UI consistency (PopularDestinations.tsx expects this)
+        return {
+           services: itemsArray || [],
+           pageNo: realData?.pageNo || 0,
+           totalPages: realData?.totalPages || 0,
+           totalElements: realData?.totalElements || 0,
+           size: realData?.size || 0
+        };
+        
       } catch (error) {
         const self = (this as any);
         console.error("API Search failed, using Fallback Mock:", error);
@@ -398,6 +426,12 @@ export class ApiClient {
     undoDislike: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/undoDislike/${commentID}`, {});
     },
+
+    reply: (commentID: string | number, data: any): ApiResponse<any> => {
+      return this.post(`/comment/${commentID}/reply`, data, {
+        headers: { "Content-Type": "application/json" }
+      });
+    },
   };
 
   // Payment endpoints
@@ -441,6 +475,19 @@ export class ApiClient {
               vnp_Locale,
               vnp_BankCode,
             },
+          }
+        );
+      },
+      createPaymentV2: (
+        amount: number,
+        orderID: string,
+        bankCode?: string
+      ): ApiResponse<any> => {
+        return this.post(
+          "/api/vnpay/create-payment",
+          {},
+          {
+            params: { amount, orderID, bankCode },
           }
         );
       },
@@ -501,6 +548,12 @@ export class ApiClient {
     ): ApiResponse<any> => {
       return this.put(`/users/${userID}`, data);
     },
+    search: (keyword: string): ApiResponse<any> => {
+      return this.get("/users/search", { params: { keyword } });
+    },
+    handleServiceStatus: (serviceId: string | number, status: string): ApiResponse<any> => {
+      return this.post(`/users/${serviceId}/handleServiceStatus`, null, { params: { status } });
+    },
   };
 
   // Order endpoints
@@ -514,8 +567,17 @@ export class ApiClient {
     create: (data: CreateOrderRequest): ApiResponse<any> => {
       return this.post("/orders/create", data);
     },
+    getMyOrders: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/orders/my-orders", { params: { page, size } });
+    },
     getAll: (page = 0, size = 10): ApiResponse<any> => {
       return this.get("/orders/all", { params: { page, size } });
+    },
+    getHotelOrders: (hotelID: string | number, page = 0, size = 10): ApiResponse<any> => {
+      return this.get(`/services/hotels/${hotelID}/all-orders`, { params: { page, size } });
+    },
+    getTicketVenueOrders: (ticketVenueID: string | number, page = 0, size = 10): ApiResponse<any> => {
+      return this.get(`/services/ticketVenues/${ticketVenueID}/all-orders`, { params: { page, size } });
     },
     updateStatus: (orderId: string | number, status: string): ApiResponse<any> => {
       return this.patch(`/orders/${orderId}/status`, status, {
@@ -562,6 +624,17 @@ export class ApiClient {
     },
     delete: (roomId: string | number): ApiResponse<any> => {
       return this.delete(`/rooms/${roomId}`);
+    },
+    getImages: (roomId: string | number): ApiResponse<any> => {
+      // Backend: GET /rooms/room/{roomID}
+      return this.get(`/rooms/room/${roomId}`);
+    },
+    addImage: (roomId: string | number, photos: File[]): ApiResponse<any> => {
+      const formData = new FormData();
+      photos.forEach(p => formData.append('photos', p));
+      return this.post(`/rooms/${roomId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
   };
 
@@ -638,6 +711,30 @@ export class ApiClient {
     markAllAsRead: (): ApiResponse<void> => {
       return this.put("/api/notifications/read-all", {});
     },
+  };
+
+  // Statistics and Admin endpoints
+  statistics = {
+    getTopCities: (): ApiResponse<any> => {
+      return this.get("/statistics/top-cities");
+    },
+    getTopVenues: (): ApiResponse<any> => {
+      return this.get("/statistics/top-10-venues");
+    },
+    getTopHotels: (): ApiResponse<any> => {
+      return this.get("/statistics/top-10-hotels");
+    },
+    getVenueStats: (venueId?: string | number): ApiResponse<any> => {
+      if (venueId) return this.get(`/statistics/ticketVenues/${venueId}`);
+      return this.get("/statistics/ticketVenues");
+    },
+    getHotelStats: (hotelId?: string | number): ApiResponse<any> => {
+      if (hotelId) return this.get(`/statistics/hotels/${hotelId}`);
+      return this.get("/statistics/hotels");
+    },
+    getSystemRevenue: (startDate?: string, endDate?: string): ApiResponse<any> => {
+      return this.get("/statistics/revenue", { params: { startDate, endDate } });
+    }
   };
 
   /**

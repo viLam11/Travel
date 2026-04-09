@@ -9,7 +9,8 @@ import {
   Heart,
   Settings,
   Bell,
-  LogOut
+  LogOut,
+  Compass
 } from 'lucide-react';
 import Avatar from '@/components/common/avatar/Avatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -60,6 +61,12 @@ const UserDropdownMenu: React.FC<UserDropdownMenuProps> = ({ isOpen, onClose, ch
       icon: User,
       label: 'Chỉnh sửa hồ sơ',
       path: '/user/profile',
+      color: 'text-gray-700',
+    },
+    {
+      icon: Compass,
+      label: 'Chuyến đi của tôi',
+      path: '/my-plans',
       color: 'text-gray-700',
     },
     {

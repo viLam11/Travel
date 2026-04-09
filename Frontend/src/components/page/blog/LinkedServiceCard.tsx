@@ -1,6 +1,6 @@
 // src/components/page/blog/LinkedServiceCard.tsx
 import React from 'react';
-import { MapPin, Star, Hotel, Compass, ArrowRight } from 'lucide-react';
+import { MapPin, Hotel, Compass, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { LinkedService } from '@/types/blog.types';
 
@@ -12,10 +12,8 @@ const LinkedServiceCard: React.FC<LinkedServiceCardProps> = ({ service }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (service.type === 'hotel' && service.region && service.destination) {
-      navigate(`/hotels/${service.region}/${service.destination}/${service.id}`);
-    } else if (service.type === 'place' && service.region && service.destination) {
-      navigate(`/destinations/${service.region}/${service.destination}`);
+    if (service.type === 'HOTEL') {
+      navigate(`/hotels/${service.id}`);
     } else {
       navigate(`/service/${service.id}`);
     }
@@ -27,15 +25,15 @@ const LinkedServiceCard: React.FC<LinkedServiceCardProps> = ({ service }) => {
       className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-100 rounded-xl cursor-pointer hover:bg-orange-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 group"
     >
       {/* Image */}
-      {service.image ? (
+      {service.thumbnailUrl ? (
         <img
-          src={service.image}
-          alt={service.name}
+          src={service.thumbnailUrl}
+          alt={service.serviceName}
           className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
         />
       ) : (
         <div className="w-14 h-14 rounded-lg bg-orange-200 flex items-center justify-center flex-shrink-0">
-          {service.type === 'hotel' ? (
+          {service.type === 'HOTEL' ? (
             <Hotel className="w-6 h-6 text-orange-500" />
           ) : (
             <Compass className="w-6 h-6 text-orange-500" />
@@ -48,24 +46,18 @@ const LinkedServiceCard: React.FC<LinkedServiceCardProps> = ({ service }) => {
         <div className="flex items-center gap-1.5 mb-0.5">
           <span
             className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-              service.type === 'hotel'
+              service.type === 'HOTEL'
                 ? 'bg-blue-100 text-blue-600'
                 : 'bg-green-100 text-green-600'
             }`}
           >
-            {service.type === 'hotel' ? 'Khách sạn' : 'Địa điểm'}
+            {service.type === 'HOTEL' ? 'Khách sạn' : 'Dịch vụ'}
           </span>
-          {service.rating && (
-            <span className="flex items-center gap-0.5 text-xs text-amber-500 font-semibold">
-              <Star className="w-3 h-3 fill-current" />
-              {service.rating}
-            </span>
-          )}
         </div>
-        <p className="font-semibold text-gray-800 text-sm truncate">{service.name}</p>
+        <p className="font-semibold text-gray-800 text-sm truncate">{service.serviceName}</p>
         <p className="flex items-center gap-1 text-xs text-gray-500 truncate mt-0.5">
           <MapPin className="w-3 h-3 text-orange-400 flex-shrink-0" />
-          {service.location}
+          {service.province || 'Chưa xác định'}
         </p>
       </div>
 

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import Avatar from '@/components/common/avatar/Avatar';
 import UserDropdownMenu from '@/components/common/UserDropdownMenu';
+import NotificationBell from '@/components/common/layout/NotificationBell';
 import apiClient from '@/services/apiClient';
 
 interface NavigationProps {
@@ -151,6 +152,11 @@ const Navigation: React.FC<NavigationProps> = ({
 
             {isAuthenticated ? (
               <>
+                {/* Notification Bell */}
+                <div className="flex items-center">
+                   <NotificationBell />
+                </div>
+
                 {/* User Avatar + Name with Dropdown */}
                 <UserDropdownMenu
                   isOpen={isUserDropdownOpen}
@@ -242,7 +248,7 @@ const Navigation: React.FC<NavigationProps> = ({
               Hoạt động
             </button>
             <button
-              onClick={() => navigate('/blog')}
+              onClick={() => { navigate('/blog'); setIsMobileMenuOpen(false); }}
               className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/blog') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'}`}
             >
               Bài viết

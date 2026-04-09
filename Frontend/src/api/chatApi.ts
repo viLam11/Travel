@@ -31,15 +31,18 @@ interface PageResponse<T> {
     last: boolean;
 }
 
-const mapBackendToFrontendMessage = (msg: BackendChatMessage): ChatMessage => ({
-    id: msg.id,
-    conversationId: msg.sender.userId, // Derive from participants for 1-1
-    senderId: msg.sender.userId,
-    text: msg.content,
-    timestamp: msg.createdAt,
-    isRead: msg.isRead,
-    type: msg.type.toLowerCase() === 'chat' ? 'text' : (msg.type.toLowerCase() as any)
-});
+const mapBackendToFrontendMessage = (msg: BackendChatMessage): ChatMessage => {
+    const messageType = msg.type || 'CHAT';
+    return {
+        id: msg.id,
+        conversationId: msg.sender?.userId || 'unknown',
+        senderId: msg.sender?.userId || 'unknown',
+        text: msg.content || '',
+        timestamp: msg.createdAt || new Date().toISOString(),
+        isRead: msg.isRead || false,
+        type: messageType.toLowerCase() === 'chat' ? 'text' : (messageType.toLowerCase() as any)
+    };
+};
 
 export const chatApi = {
     // Fetch all conversations for a user or provider
@@ -48,22 +51,32 @@ export const chatApi = {
             return mockConversations;
         }
 
-        const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/chat-list`);
-        
-        return lastMessages.map(msg => {
-            const otherUser = msg.sender.userId === userId ? msg.receiver : msg.sender;
-            return {
-                id: otherUser.userId, // Use other user's ID as conversation ID for simplicity in 1-1 chat
-                participants: [
-                    { id: msg.sender.userId, name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
-                    { id: msg.receiver.userId, name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
-                ],
-                lastMessage: mapBackendToFrontendMessage(msg),
-                unreadCount: msg.isRead ? 0 : (msg.receiver.userId === userId ? 1 : 0),
-                updatedAt: msg.createdAt,
-                serviceName: 'Hỗ trợ khách hàng'
-            };
-        });
+        try {
+            const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/chat-list`);
+            
+            if (!Array.isArray(lastMessages)) {
+                console.warn('Expected array for chat list, got:', lastMessages);
+                return [];
+            }
+
+            return lastMessages.map(msg => {
+                const otherUser = msg.sender.userId === userId ? msg.receiver : msg.sender;
+                return {
+                    id: otherUser.userId, // Use other user's ID as conversation ID for simplicity in 1-1 chat
+                    participants: [
+                        { id: msg.sender.userId, name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
+                        { id: msg.receiver.userId, name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
+                    ],
+                    lastMessage: mapBackendToFrontendMessage(msg),
+                    unreadCount: msg.isRead ? 0 : (msg.receiver.userId === userId ? 1 : 0),
+                    updatedAt: msg.createdAt,
+                    serviceName: 'Hỗ trợ khách hàng'
+                };
+            });
+        } catch (error) {
+            console.error('Failed to fetch conversations:', error);
+            return [];
+        }
     },
 
     // Fetch messages for a specific conversation
@@ -100,5 +113,13 @@ export const chatApi = {
             unreadCount: 0,
             updatedAt: new Date().toISOString()
         };
+    },
+
+    deleteMessage: async (messageId: string): Promise<void> => {
+        return apiClient.delete(`/api/chat/delete/${messageId}`);
+    },
+
+    updateMessageContent: async (messageId: string, newContent: string): Promise<BackendChatMessage> => {
+        return apiClient.patch(`/api/chat/update-content/${messageId}`, { content: newContent });
     }
 };

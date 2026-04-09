@@ -9,6 +9,12 @@ const UserMessagesPage: React.FC = () => {
     const { currentUser, isAuthenticated } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+    const activeConversationRef = useRef<Conversation | null>(null);
+
+    // Sync ref with state
+    useEffect(() => {
+        activeConversationRef.current = activeConversation;
+    }, [activeConversation]);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -40,10 +46,11 @@ const UserMessagesPage: React.FC = () => {
         socketService.connect(token);
 
         const destroyListener = socketService.onMessage((msg) => {
+            const currentActive = activeConversationRef.current;
+            
             // Update messages if it's the active conversation
             setMessages(prev => {
-                // We need to check active conversation from ref or pass via dependency
-                if (activeConversation?.id === msg.conversationId) {
+                if (currentActive?.id === msg.conversationId) {
                     setTimeout(() => scrollToBottom(), 100);
                     return [...prev, msg];
                 }
@@ -56,7 +63,7 @@ const UserMessagesPage: React.FC = () => {
                     return {
                         ...conv,
                         lastMessage: msg,
-                        unreadCount: activeConversation?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
+                        unreadCount: currentActive?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
                         updatedAt: msg.timestamp
                     };
                 }
@@ -66,7 +73,7 @@ const UserMessagesPage: React.FC = () => {
 
         return () => {
             destroyListener();
-            socketService.disconnect();
+            // Keep socket connected for the entire session
         };
     }, [isAuthenticated, currentUser?.user?.userID]); // Note: activeConversation is omitted intentionally to avoid re-binding socket, but handle it carefully
 
@@ -269,7 +276,7 @@ const UserMessagesPage: React.FC = () => {
                                 </div>
                             ) : (
                                 messages.map(msg => {
-                                    const isMine = msg.senderId === (currentUser?.user?.userID?.toString() || 'user_123');
+                                    const isMine = msg.senderId.toString() === (currentUser?.user?.userID?.toString() || 'user_123');
                                     return (
                                         <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                                             <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMine

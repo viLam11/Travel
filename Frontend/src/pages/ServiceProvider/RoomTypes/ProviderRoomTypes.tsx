@@ -1,5 +1,5 @@
 // src/pages/ServiceProvider/RoomTypes/ProviderRoomTypes.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
@@ -14,7 +14,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/admin/dialog';
-import { CheckCircle2, BedDouble, DoorOpen, Search } from 'lucide-react';
+import { CheckCircle2, BedDouble, DoorOpen, Search, Plus, Edit, Trash2, Upload, X } from 'lucide-react';
 import { type MockRoomType } from '@/mocks/roomTypes';
 import { roomApi } from '@/api/roomApi';
 import { useToast } from '@/contexts/ToastContext';
@@ -28,11 +28,10 @@ const ProviderRoomTypes = () => {
     const [roomTypes, setRoomTypes] = useState<MockRoomType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    import { useEffect } from 'react';
     useEffect(() => {
         const fetchRooms = async () => {
             try {
-                const data = await roomApi.getRoomsByHotel(currentHotelId);
+                const data = await roomApi.getRoomsByHotelId(currentHotelId);
                 setRoomTypes(data);
             } catch (error) {
                 console.error("Failed to load rooms", error);

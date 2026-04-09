@@ -9,6 +9,12 @@ const ProviderMessagesPage: React.FC = () => {
     const { currentUser, isAuthenticated } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+    const activeConversationRef = useRef<Conversation | null>(null);
+
+    // Update ref whenever state changes
+    useEffect(() => {
+        activeConversationRef.current = activeConversation;
+    }, [activeConversation]);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
@@ -46,8 +52,10 @@ const ProviderMessagesPage: React.FC = () => {
         socketService.connect(token);
 
         const destroyListener = socketService.onMessage((msg) => {
+            const currentActive = activeConversationRef.current;
+            
             setMessages(prev => {
-                if (activeConversation?.id === msg.conversationId) {
+                if (currentActive?.id === msg.conversationId) {
                     setTimeout(() => scrollToBottom(), 100);
                     return [...prev, msg];
                 }
@@ -59,7 +67,7 @@ const ProviderMessagesPage: React.FC = () => {
                     return {
                         ...conv,
                         lastMessage: msg,
-                        unreadCount: activeConversation?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
+                        unreadCount: currentActive?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
                         updatedAt: msg.timestamp
                     };
                 }
@@ -69,7 +77,7 @@ const ProviderMessagesPage: React.FC = () => {
 
         return () => {
             destroyListener();
-            socketService.disconnect();
+            // Keep socket connected for the entire session
         };
     }, [isAuthenticated, currentUser?.user?.userID]);
 
@@ -280,7 +288,7 @@ const ProviderMessagesPage: React.FC = () => {
                                 </div>
                             ) : (
                                 messages.map((msg) => {
-                                    const isMine = msg.senderId === (currentUser?.user?.userID?.toString() || 'provider_101');
+                                    const isMine = msg.senderId.toString() === (currentUser?.user?.userID?.toString() || 'provider_101');
                                     // Logic for grouping messages could go here
 
                                     return (
