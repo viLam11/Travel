@@ -2,6 +2,7 @@
 export interface DayPricing {
     date: string; // YYYY-MM-DD
     price: number;
+    remainingRooms?: number; // Số phòng trống theo ngày
     isSpecial?: boolean;
     dayOfWeek?: string;
 }

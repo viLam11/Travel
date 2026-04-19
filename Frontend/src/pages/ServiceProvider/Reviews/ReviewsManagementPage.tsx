@@ -353,8 +353,8 @@ export default function ReviewsManagementPage() {
         <div className="w-full space-y-8 pb-8">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold">Quản lý đánh giá</h1>
-                <p className="text-muted-foreground mt-1">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Quản lý đánh giá</h1>
+                <p className="text-sm text-muted-foreground mt-1">
                     Quản lý tất cả đánh giá từ khách hàng
                 </p>
             </div>

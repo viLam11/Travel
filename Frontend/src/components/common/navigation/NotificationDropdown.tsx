@@ -1,4 +1,6 @@
 import { Bell, CheckCircle2, AlertCircle, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/admin/button";
 import {
   DropdownMenu,
@@ -13,7 +15,7 @@ interface MockNotification {
     id: number;
     title: string;
     message: string;
-    type: 'order' | 'report' | 'system';
+    type: 'order' | 'report' | 'system' | 'chat';
     isRead: boolean;
     date: string;
 }
@@ -42,17 +44,42 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
         type: 'system',
         isRead: true,
         date: "1 ngày trước"
+    },
+    {
+        id: 4,
+        title: "Tin nhắn mới",
+        message: "Khách hàng Nguyen Van A đã gửi tin nhắn hỏi về dịch vụ của bạn.",
+        type: 'chat',
+        isRead: false,
+        date: "Vừa xong"
     }
 ];
 
 export const NotificationDropdown = () => {
+    const navigate = useNavigate();
+    const { currentUser } = useAuth();
     const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.isRead).length;
 
     const getIcon = (type: string) => {
         switch(type) {
             case 'order': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
             case 'report': return <AlertCircle className="w-4 h-4 text-orange-500" />;
-            default: return <MessageSquare className="w-4 h-4 text-blue-500" />;
+            case 'chat': return <MessageSquare className="w-4 h-4 text-blue-500" />;
+            default: return <Bell className="w-4 h-4 text-blue-500" />;
+        }
+    };
+
+    const handleNotificationClick = (notification: MockNotification) => {
+        const type = notification.type?.toLowerCase();
+        if (type === 'chat') {
+            const role = currentUser?.user?.role || 'user';
+            if (role === 'admin') {
+                navigate('/admin/messages');
+            } else if (role === 'provider') {
+                navigate('/provider/messages');
+            } else {
+                navigate('/user/messages');
+            }
         }
     };
 
@@ -73,6 +100,7 @@ export const NotificationDropdown = () => {
                     {MOCK_NOTIFICATIONS.map((notification) => (
                         <DropdownMenuItem 
                             key={notification.id} 
+                            onClick={() => handleNotificationClick(notification)}
                             className={`flex items-start gap-3 p-3 cursor-pointer ${notification.isRead ? 'opacity-70 hover:bg-gray-50 dark:hover:bg-gray-800 focus:bg-gray-50 dark:focus:bg-gray-800' : 'bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30'}`}
                         >
                             <div className="mt-1 flex-shrink-0">

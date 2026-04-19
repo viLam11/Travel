@@ -19,6 +19,7 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [connStatus, setConnStatus] = useState(socketService.connectionStatus);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -38,7 +39,7 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
     useEffect(() => {
         if (isOpen && isAuthenticated && conversationId) {
             setLoading(true);
-            // Load initial messages for this service if any exist
+            // Load initial messages
             chatApi.getMessages(conversationId).then(msgs => {
                 setMessages(msgs || []);
                 setLoading(false);
@@ -51,8 +52,14 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
                 socketService.connect(token);
             }
 
+            // Sync connection status for UI re-renders
+            const destroyStatusListener = socketService.onStatusChange((status) => {
+                setConnStatus(status as any);
+            });
+
             // Listen for new messages
-            const destroyListener = socketService.onMessage((msg) => {
+            const destroyMsgListener = socketService.onMessage((msg) => {
+                // ... same logic but using conversationId from scope ...
                 if (msg.conversationId === conversationId) {
                     setMessages(prev => [...prev, msg]);
                     scrollToBottom();
@@ -60,8 +67,10 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
             });
 
             return () => {
-                destroyListener();
-                socketService.disconnect();
+                destroyStatusListener();
+                destroyMsgListener();
+                // We keep the socket alive unless the user explicitly logs out or reloads
+                // but let's see if keeping it connected helps with stability
             };
         }
     }, [isOpen, isAuthenticated, conversationId]);
@@ -78,27 +87,24 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
 
         const currentUserId = currentUser.user.userID.toString();
         
-        socketService.sendMessage(
+        const result = socketService.sendMessage(
             conversationId,
             currentUserId,
             newMessage,
             'provider'
         );
 
-        // Optimistic update
-        const optimisticMsg: ChatMessage = {
-            id: `temp_${Date.now()}`,
-            conversationId,
-            senderId: currentUserId,
-            text: newMessage,
-            timestamp: new Date().toISOString(),
-            isRead: false,
-            type: 'text'
-        };
-
-        setMessages(prev => [...prev, optimisticMsg]);
-        setNewMessage('');
-        scrollToBottom();
+        if (result) {
+            // Optimistic update
+            const optimisticMsg = result;
+            setMessages(prev => [...prev, optimisticMsg]);
+            setNewMessage('');
+            scrollToBottom();
+        } else {
+            // If message was not sent, we don't optimistic update or we show error
+            console.warn('Message not sent. Check socket connection.');
+            // Maybe add a temporary error message or UI state here
+        }
     };
 
     const toggleWidget = () => {
@@ -134,8 +140,9 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
                     <div>
                         <h3 className="font-semibold text-sm line-clamp-1">{providerName}</h3>
                         <p className="text-xs text-orange-100 line-clamp-1 flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
-                            Đang trực tuyến
+                            <span className={`w-2 h-2 rounded-full inline-block ${connStatus === 'CONNECTED' ? 'bg-green-400' : 'bg-gray-400 animate-pulse'}`}></span>
+                            {connStatus === 'CONNECTED' ? 'Đang trực tuyến' : 
+                             connStatus === 'CONNECTING' ? 'Đang kết nối...' : 'Mất kết nối'}
                         </p>
                     </div>
                 </div>
@@ -164,7 +171,7 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
                     </div>
                 ) : (
                     messages.map((msg) => {
-                        const isMine = msg.senderId === (currentUser?.user?.userID?.toString() || 'user_123'); // Adjust user check
+                        const isMine = msg.senderId.toString() === (currentUser?.user?.userID?.toString() || 'user_123');
                         return (
                             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${isMine ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>

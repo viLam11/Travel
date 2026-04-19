@@ -64,6 +64,10 @@ const ProviderReviewsManagementPage = lazy(() => import("@/pages/ServiceProvider
 const ProviderMessagesPage = lazy(() => import("@/pages/ServiceProvider/Messages/ProviderMessagesPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 const AIPlannerPage = lazy(() => import("@/pages/User/AIPlanner/AIPlannerPage"));
+const BlogListPage = lazy(() => import("@/pages/User/Blog/BlogListPage"));
+const BlogDetailPage = lazy(() => import("@/pages/User/Blog/BlogDetailPage"));
+const BlogCreatePage = lazy(() => import("@/pages/User/Blog/BlogCreatePage"));
+const MyPlansPage = lazy(() => import("@/pages/User/AIPlanner/MyPlansPage"));
 
 // ==================== ROUTE CONFIGURATION ====================
 
@@ -133,6 +137,10 @@ const routes: RouteObject[] = [
         path: 'ai-planner/:planId',
         element: withSuspense(AIPlannerPage as LazyExoticComponent<ComponentType<unknown>>),
       },
+      {
+        path: 'my-plans',
+        element: withSuspense(MyPlansPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
       // {
       //   path: ROUTES.DESTINATIONS,
       //   element: withSuspense(DestinationFilterPage as LazyExoticComponent<ComponentType<unknown>>),
@@ -180,6 +188,27 @@ const routes: RouteObject[] = [
         element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
+      // Direct Service Detail Page - Simplified access by ID
+      // Example: /service/101
+      {
+        path: 'service/:id',
+        element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
+      // ==================== BLOG ROUTES ====================
+      {
+        path: 'blog',
+        element: withSuspense(BlogListPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: 'blog/create',
+        element: withSuspense(BlogCreatePage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: 'blog/:id',
+        element: withSuspense(BlogDetailPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+
       // ==================== HOTEL ROUTES ====================
 
       // Hotel Filter Page - List all hotels
@@ -196,6 +225,12 @@ const routes: RouteObject[] = [
       {
         path: 'hotels/:region/:destination',
         element: withSuspense(HotelFilterPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      
+      // Hotel Detail Page - Direct access inside /hotels
+      {
+        path: 'hotels/:region/:destination/:idSlug',
+        element: withSuspense(ServiceDetailPage as LazyExoticComponent<ComponentType<unknown>>),
       },
 
       // ==================== USER PROFILE ROUTES (Protected) ====================

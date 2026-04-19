@@ -94,27 +94,29 @@ export default function RevenueByServiceChart({ data: initialData }: RevenueBySe
   };
 
   return (
-    <Card className="border-0 shadow-sm h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <div>
-          <CardTitle className="text-lg font-semibold">{titles[timeRange]}</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">So sánh hiệu quả kinh doanh</p>
-        </div>
-        
-        <div className="flex bg-muted/50 p-1 rounded-lg border border-border">
-          {(['week', 'month', 'year'] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                timeRange === range 
-                  ? 'bg-background shadow-sm text-foreground' 
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {range === 'week' ? 'Tuần' : range === 'month' ? 'Tháng' : 'Năm'}
-            </button>
-          ))}
+    <Card className="border-0 shadow-sm h-full flex flex-col min-w-[280px]">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-semibold whitespace-nowrap">{titles[timeRange]}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">So sánh hiệu quả kinh doanh</p>
+          </div>
+          
+          <div className="flex bg-muted/50 p-1 rounded-lg border border-border shrink-0">
+            {(['week', 'month', 'year'] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                  timeRange === range 
+                    ? 'bg-background shadow-sm text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {range === 'week' ? 'Tuần' : range === 'month' ? 'Tháng' : 'Năm'}
+              </button>
+            ))}
+          </div>
         </div>
       </CardHeader>
 

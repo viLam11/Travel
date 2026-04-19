@@ -162,12 +162,32 @@ export class ApiClient {
       });
     },
 
-    getById: (serviceID: number): ApiResponse<any> => {
+    getById: (serviceID: number | string): ApiResponse<any> => {
       return this.get(`/services/${serviceID}`);
+    },
+
+    update: (serviceID: number | string, updatedServiceRequest: any): ApiResponse<any> => {
+      // API expects the payload as a query param (perhaps incorrectly, but we follow swagger)
+      // or if it's actually body, we pass it as body. Let's pass it as params and DTO in body just to be safe.
+      return this.patch(`/services/${serviceID}`, updatedServiceRequest, {
+        params: { updatedServiceRequest: JSON.stringify(updatedServiceRequest) },
+        headers: { "Content-Type": "application/json" }
+      });
     },
 
     list: (page = 0, size = 10): ApiResponse<any> => {
       return this.get("/services/data", { params: { page, size } });
+    },
+    filter: (params: any): ApiResponse<any> => {
+      return this.get("/services/filter", { params });
+    },
+    filterStats: (params: any): ApiResponse<any> => {
+      // e.g. /statistics/services/filter
+      return this.get("/statistics/services/filter", { params });
+    },
+    searchInProvince: (params: any): ApiResponse<any> => {
+      // e.g. /statistics/services/search
+      return this.get("/statistics/services/search", { params });
     },
 
     getAll: (): ApiResponse<any> => {
@@ -222,31 +242,29 @@ export class ApiClient {
       try {
         const self = (this as any);
         console.log("Fetching real API services/search", params);
-        
+
         const response: any = await self.get("/services/search", { params });
-        
-        // 1. Lột bỏ lớp vỏ của Axios để lấy data thật
-        const realData = response.data ? response.data : response;
-        
-        // 2. Backend trả về danh sách trong biến "content"
+
+        // Backend returns PageResponse containing "content" array
+        // We ensure data is extracted correctly from the API client response
+        const realData = response;
         const itemsArray = realData?.content;
 
-        // 3. Nếu không có data thì gọi Mock
-        if (!itemsArray || itemsArray.length === 0) {
-           console.warn("Real API returned no data, falling back to Mock...");
-           return self.services.getMockSearch(params);
+        // Fallback to mock if API returns empty content and USE_MOCK is active
+        if (ApiClient.USE_MOCK && (!itemsArray || itemsArray.length === 0)) {
+          console.warn("Real API returned no results for search, falling back to Mock data...");
+          return self.services.getMockSearch(params);
         }
-        
-        // 4. BƯỚC QUYẾT ĐỊNH: Đóng gói lại thành object có chứa key "services" 
-        // để chiều theo đúng logic của file PopularDestinations.tsx
+
+        // Repackage data to include "services" key for UI consistency (PopularDestinations.tsx expects this)
         return {
-           services: itemsArray,
-           // Trả về thêm thông tin phân trang phòng trường hợp sau này bạn cần làm nút Next/Prev
-           pageNo: realData.pageNo,
-           totalPages: realData.totalPages,
-           totalElements: realData.totalElements
+          services: itemsArray || [],
+          pageNo: realData?.pageNo || 0,
+          totalPages: realData?.totalPages || 0,
+          totalElements: realData?.totalElements || 0,
+          size: realData?.size || 0
         };
-        
+
       } catch (error) {
         const self = (this as any);
         console.error("API Search failed, using Fallback Mock:", error);
@@ -258,96 +276,97 @@ export class ApiClient {
     },
 
     getMockSearch: async (params: any): Promise<any> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const MOCK_DATA = [
-          {
-            id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "DESTINATION",
-            province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
-            address: "Nha Trang, Khánh Hòa", averagePrice: 880000, thumbnailUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", rating: 4.8, reviewCount: 240, bookingCount: 1500
-          },
-          {
-            id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "DESTINATION",
-            province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
-            address: "Đà Nẵng", averagePrice: 850000, thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800", rating: 4.9, reviewCount: 1200, bookingCount: 5000
-          },
-          {
-            id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "DESTINATION",
-            province: { code: "quang-nam", name: "Hội An", fullName: "Quảng Nam" },
-            address: "Hội An, Quảng Nam", averagePrice: 0, thumbnailUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800", rating: 4.9, reviewCount: 680, bookingCount: 3000
-          },
-          {
-            id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "DESTINATION",
-            province: { code: "22", name: "Hạ Long", fullName: "Quảng Ninh" },
-            address: "Hạ Long, Quảng Ninh", averagePrice: 290000, thumbnailUrl: "https://images.unsplash.com/photo-1506606401543-2e73709cebb4?w=800", rating: 4.7, reviewCount: 450, bookingCount: 2000
-          },
-          {
-            id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "DESTINATION",
-            province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
-            address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
-          },
-          {
-            id: 201, serviceName: "Khách sạn Majestic Saigon", description: "Khách sạn di sản 5 sao.", serviceType: "HOTEL",
-            province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
-            address: "Quận 1, Hồ Chí Minh", averagePrice: 2500000, thumbnailUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800", rating: 4.7, reviewCount: 180, bookingCount: 850
-          },
-          {
-            id: 202, serviceName: "InterContinental Hanoi Westlake", description: "Khách sạn sang trọng Hồ Tây.", serviceType: "HOTEL",
-            province: { code: "01", name: "Hà Nội", fullName: "Hà Nội" },
-            address: "Tây Hồ, Hà Nội", averagePrice: 3200000, thumbnailUrl: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800", rating: 4.9, reviewCount: 210, bookingCount: 920
-          },
-          {
-            id: 203, serviceName: "Vinpearl Resort Nha Trang", description: "Khu nghỉ dưỡng biển.", serviceType: "HOTEL",
-            province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
-            address: "Nha Trang, Khánh Hòa", averagePrice: 2800000, thumbnailUrl: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800", rating: 4.8, reviewCount: 350, bookingCount: 1400
-          },
-          {
-            id: 205, serviceName: "Pullman Danang Beach Resort", description: "Khu nghỉ dưỡng 5 sao.", serviceType: "HOTEL",
-            province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
-            address: "Đà Nẵng", averagePrice: 3500000, thumbnailUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800", rating: 4.8, reviewCount: 280, bookingCount: 1100
-          },
-          {
-            id: 301, serviceName: "Tour 4 đảo Phú Quốc", description: "Khám phá 4 hòn đảo.", serviceType: "TOUR",
-            province: { code: "91", name: "Phú Quốc", fullName: "Kiên Giang" },
-            address: "Phú Quốc", averagePrice: 950000, thumbnailUrl: "https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=800", rating: 4.7, reviewCount: 150, bookingCount: 800
-          }
-        ];
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-        let results = [...MOCK_DATA];
-
-        if (params.serviceType) {
-          const type = params.serviceType.toUpperCase();
-          results = results.filter(item => item.serviceType === type);
+      const MOCK_DATA = [
+        {
+          id: 101, serviceName: "Vinpearl Land Nha Trang", description: "Thiên đường vui chơi giải trí.", serviceType: "TICKET_VENUE",
+          province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
+          address: "Nha Trang, Khánh Hòa", averagePrice: 880000, thumbnailUrl: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", rating: 4.8, reviewCount: 240, bookingCount: 1500
+        },
+        {
+          id: 102, serviceName: "Sun World Ba Na Hills", description: "Quần thể du lịch nghỉ dưỡng.", serviceType: "TICKET_VENUE",
+          province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
+          address: "Đà Nẵng", averagePrice: 850000, thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800", rating: 4.9, reviewCount: 1200, bookingCount: 5000
+        },
+        {
+          id: 103, serviceName: "Phố cổ Hội An", description: "Di sản văn hóa thế giới.", serviceType: "TICKET_VENUE",
+          province: { code: "quang-nam", name: "Hội An", fullName: "Quảng Nam" },
+          address: "Hội An, Quảng Nam", averagePrice: 0, thumbnailUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800", rating: 4.9, reviewCount: 680, bookingCount: 3000
+        },
+        {
+          id: 104, serviceName: "Vịnh Hạ Long", description: "Kỳ quan thiên nhiên thế giới.", serviceType: "TICKET_VENUE",
+          province: { code: "22", name: "Hạ Long", fullName: "Quảng Ninh" },
+          address: "Hạ Long, Quảng Ninh", averagePrice: 290000, thumbnailUrl: "https://images.unsplash.com/photo-1506606401543-2e73709cebb4?w=800", rating: 4.7, reviewCount: 450, bookingCount: 2000
+        },
+        {
+          id: 106, serviceName: "Landmark 81 SkyView", description: "Đài quan sát cao nhất VN.", serviceType: "TICKET_VENUE",
+          province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
+          address: "Hồ Chí Minh", averagePrice: 810000, thumbnailUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", rating: 4.8, reviewCount: 560, bookingCount: 2500
+        },
+        {
+          id: 201, serviceName: "Khách sạn Majestic Saigon", description: "Khách sạn di sản 5 sao.", serviceType: "HOTEL",
+          province: { code: "79", name: "Hồ Chí Minh", fullName: "Hồ Chí Minh" },
+          address: "Quận 1, Hồ Chí Minh", averagePrice: 2500000, thumbnailUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800", rating: 4.7, reviewCount: 180, bookingCount: 850
+        },
+        {
+          id: 202, serviceName: "InterContinental Hanoi Westlake", description: "Khách sạn sang trọng Hồ Tây.", serviceType: "HOTEL",
+          province: { code: "01", name: "Hà Nội", fullName: "Hà Nội" },
+          address: "Tây Hồ, Hà Nội", averagePrice: 3200000, thumbnailUrl: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800", rating: 4.9, reviewCount: 210, bookingCount: 920
+        },
+        {
+          id: 203, serviceName: "Vinpearl Resort Nha Trang", description: "Khu nghỉ dưỡng biển.", serviceType: "HOTEL",
+          province: { code: "56", name: "Nha Trang", fullName: "Khánh Hòa" },
+          address: "Nha Trang, Khánh Hòa", averagePrice: 2800000, thumbnailUrl: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800", rating: 4.8, reviewCount: 350, bookingCount: 1400
+        },
+        {
+          id: 205, serviceName: "Pullman Danang Beach Resort", description: "Khu nghỉ dưỡng 5 sao.", serviceType: "HOTEL",
+          province: { code: "48", name: "Đà Nẵng", fullName: "Đà Nẵng" },
+          address: "Đà Nẵng", averagePrice: 3500000, thumbnailUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800", rating: 4.8, reviewCount: 280, bookingCount: 1100
+        },
+        {
+          id: 301, serviceName: "Tour 4 đảo Phú Quốc", description: "Khám phá 4 hòn đảo.", serviceType: "TOUR",
+          province: { code: "91", name: "Phú Quốc", fullName: "Kiên Giang" },
+          address: "Phú Quốc", averagePrice: 950000, thumbnailUrl: "https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=800", rating: 4.7, reviewCount: 150, bookingCount: 800
         }
+      ];
 
-        if (params.provinceCode) {
-          const pCode = params.provinceCode.toLowerCase();
-          results = results.filter(item =>
-            item.province.code.includes(pCode) ||
-            item.province.name.toLowerCase().includes(pCode)
-          );
-        }
+      let results = [...MOCK_DATA];
 
-        if (params.keyword) {
-          const lowerKeyword = params.keyword.toLowerCase();
-          results = results.filter(item =>
-            item.serviceName.toLowerCase().includes(lowerKeyword) ||
-            item.province.name.toLowerCase().includes(lowerKeyword)
-          );
-        }
+      if (params.serviceType) {
+        const type = params.serviceType.toUpperCase();
+        results = results.filter(item => item.serviceType === type);
+      }
 
-        const page = params.page || 0;
-        const size = params.size || 10;
-        const totalItems = results.length;
-        const totalPages = Math.ceil(totalItems / size);
-        const paginatedItems = results.slice(page * size, (page + 1) * size);
+      if (params.provinceCode) {
+        const pCode = params.provinceCode.toLowerCase();
+        results = results.filter(item =>
+          item.province.code.includes(pCode) ||
+          item.province.name.toLowerCase().includes(pCode)
+        );
+      }
 
-        return {
-          services: paginatedItems,
-          totalItems,
-          totalPages,
-          currentPage: page
-        };
+      if (params.keyword) {
+        const lowerKeyword = params.keyword.toLowerCase();
+        results = results.filter(item =>
+          item.serviceName.toLowerCase().includes(lowerKeyword) ||
+          item.province.name.toLowerCase().includes(lowerKeyword)
+        );
+      }
+
+      const page = params.page || 0;
+      const size = params.size || 10;
+      const totalItems = results.length;
+      const totalPages = Math.ceil(totalItems / size);
+      const paginatedItems = results.slice(page * size, (page + 1) * size);
+
+      return {
+        services: paginatedItems,
+        totalElements: totalItems,  // Match Spring Boot Page response key
+        totalItems,                 // Keep for backward compat
+        totalPages,
+        currentPage: page
+      };
     },
   };
 
@@ -360,7 +379,7 @@ export class ApiClient {
       sortBy?: string,
       direction?: string
     ): ApiResponse<any> => {
-      return this.get(`/comment/${serviceID}`, {
+      return this.get(`/comment/${serviceID}/all`, {
         params: { page, size, sortBy, direction },
       });
     },
@@ -407,6 +426,12 @@ export class ApiClient {
     undoDislike: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/undoDislike/${commentID}`, {});
     },
+
+    reply: (commentID: string | number, data: any): ApiResponse<any> => {
+      return this.post(`/comment/${commentID}/reply`, data, {
+        headers: { "Content-Type": "application/json" }
+      });
+    },
   };
 
   // Payment endpoints
@@ -450,6 +475,19 @@ export class ApiClient {
               vnp_Locale,
               vnp_BankCode,
             },
+          }
+        );
+      },
+      createPaymentV2: (
+        amount: number,
+        orderID: string,
+        bankCode?: string
+      ): ApiResponse<any> => {
+        return this.post(
+          "/api/vnpay/create-payment",
+          {},
+          {
+            params: { amount, orderID, bankCode },
           }
         );
       },
@@ -510,6 +548,12 @@ export class ApiClient {
     ): ApiResponse<any> => {
       return this.put(`/users/${userID}`, data);
     },
+    search: (keyword: string): ApiResponse<any> => {
+      return this.get("/users/search", { params: { keyword } });
+    },
+    handleServiceStatus: (serviceId: string | number, status: string): ApiResponse<any> => {
+      return this.post(`/users/${serviceId}/handleServiceStatus`, null, { params: { status } });
+    },
   };
 
   // Order endpoints
@@ -523,14 +567,74 @@ export class ApiClient {
     create: (data: CreateOrderRequest): ApiResponse<any> => {
       return this.post("/orders/create", data);
     },
-    getAll: (): ApiResponse<any> => {
-      return this.get("/orders/all");
+    getMyOrders: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/orders/my-orders", { params: { page, size } });
+    },
+    getAll: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/orders/all", { params: { page, size } });
+    },
+    getHotelOrders: (hotelID: string | number, page = 0, size = 10): ApiResponse<any> => {
+      return this.get(`/services/hotels/${hotelID}/all-orders`, { params: { page, size } });
+    },
+    getTicketVenueOrders: (ticketVenueID: string | number, page = 0, size = 10): ApiResponse<any> => {
+      return this.get(`/services/ticketVenues/${ticketVenueID}/all-orders`, { params: { page, size } });
+    },
+    updateStatus: (orderId: string | number, status: string): ApiResponse<any> => {
+      return this.patch(`/orders/${orderId}/status`, status, {
+        headers: { 'Content-Type': 'application/json' }
+      });
     },
   };
 
   tickets = {
     getByServiceId: (serviceId: string | number): ApiResponse<any[]> => {
       return this.get(`/services/${serviceId}/tickets`);
+    },
+    create: (serviceId: string | number, data: any): ApiResponse<any> => {
+      return this.post(`/services/${serviceId}/tickets`, data);
+    },
+    update: (ticketId: string | number, data: any): ApiResponse<any> => {
+      return this.patch(`/tickets/${ticketId}`, data);
+    },
+    delete: (ticketId: string | number): ApiResponse<any> => {
+      return this.delete(`/tickets/${ticketId}`);
+    },
+  };
+
+  rooms = {
+    getByHotelId: (hotelId: string | number): ApiResponse<any[]> => {
+      return this.get(`/services/${hotelId}/rooms`);
+    },
+    create: (hotelId: string | number, data: any): ApiResponse<any> => {
+      // Create room uses multipart/form-data according to Controller
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key === 'photos' && Array.isArray(data[key])) {
+          data[key].forEach((photo: File) => formData.append('photos', photo));
+        } else {
+          formData.append(key, data[key]);
+        }
+      });
+      return this.post(`/services/${hotelId}/rooms`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    update: (roomId: string | number, data: any): ApiResponse<any> => {
+      return this.patch(`/rooms/${roomId}`, data);
+    },
+    delete: (roomId: string | number): ApiResponse<any> => {
+      return this.delete(`/rooms/${roomId}`);
+    },
+    getImages: (roomId: string | number): ApiResponse<any> => {
+      // Backend: GET /rooms/room/{roomID}
+      return this.get(`/rooms/room/${roomId}`);
+    },
+    addImage: (roomId: string | number, photos: File[]): ApiResponse<any> => {
+      const formData = new FormData();
+      photos.forEach(p => formData.append('photos', p));
+      return this.post(`/rooms/${roomId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
   };
 
@@ -578,6 +682,59 @@ export class ApiClient {
     getAll: (): ApiResponse<any> => {
       return this.get("/orders/all");
     },
+    // Chế độ mở rộng nếu sau này có API riêng cho giao dịch ví/thanh toán
+  };
+
+  favorites = {
+    getAll: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/api/favorites", { params: { page, size } });
+    },
+    add: (serviceId: string | number): ApiResponse<void> => {
+      return this.post(`/api/favorites/${serviceId}`, {});
+    },
+    remove: (serviceId: string | number): ApiResponse<void> => {
+      return this.delete(`/api/favorites/${serviceId}`);
+    },
+  };
+
+  // Notification endpoints
+  notifications = {
+    getAll: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/api/notifications", { params: { page, size } });
+    },
+    getUnreadCount: (): ApiResponse<number> => {
+      return this.get("/api/notifications/unread-count");
+    },
+    markAsRead: (id: string): ApiResponse<void> => {
+      return this.put(`/api/notifications/${id}/read`, {});
+    },
+    markAllAsRead: (): ApiResponse<void> => {
+      return this.put("/api/notifications/read-all", {});
+    },
+  };
+
+  // Statistics and Admin endpoints
+  statistics = {
+    getTopCities: (): ApiResponse<any> => {
+      return this.get("/statistics/top-cities");
+    },
+    getTopVenues: (): ApiResponse<any> => {
+      return this.get("/statistics/top-10-venues");
+    },
+    getTopHotels: (): ApiResponse<any> => {
+      return this.get("/statistics/top-10-hotels");
+    },
+    getVenueStats: (venueId?: string | number): ApiResponse<any> => {
+      if (venueId) return this.get(`/statistics/ticketVenues/${venueId}`);
+      return this.get("/statistics/ticketVenues");
+    },
+    getHotelStats: (hotelId?: string | number): ApiResponse<any> => {
+      if (hotelId) return this.get(`/statistics/hotels/${hotelId}`);
+      return this.get("/statistics/hotels");
+    },
+    getSystemRevenue: (startDate?: string, endDate?: string): ApiResponse<any> => {
+      return this.get("/statistics/revenue", { params: { startDate, endDate } });
+    }
   };
 
   /**

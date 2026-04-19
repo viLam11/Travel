@@ -42,6 +42,12 @@ export interface Service {
 
     createdAt: string;
     updatedAt: string;
+    provider?: {
+        userID: string;
+        fullname?: string;
+        avatarUrl?: string;
+    };
+    providerId?: string; // Optional direct field if BE decides to expose it this way
 }
 
 export interface ServiceStats {

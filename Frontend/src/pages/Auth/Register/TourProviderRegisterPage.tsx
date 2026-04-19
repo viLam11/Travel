@@ -167,7 +167,7 @@ const TourProviderRegisterPage: React.FC = () => {
                         </div>
                     </div>
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-green-600 mb-1">
-                        Đăng Ký Nhà Cung Cấp Tour
+                        Nhà Cung Cấp Tour
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500">Tạo tài khoản quản lý dịch vụ tour</p>
                 </div>

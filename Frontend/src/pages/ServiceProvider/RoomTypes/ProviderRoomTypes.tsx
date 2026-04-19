@@ -1,5 +1,5 @@
 // src/pages/ServiceProvider/RoomTypes/ProviderRoomTypes.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
@@ -14,17 +14,34 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/admin/dialog';
-import { Plus, Edit, Trash2, Upload, X, CheckCircle2, BedDouble, DoorOpen, Search } from 'lucide-react';
-import { MOCK_ROOM_TYPES, type MockRoomType } from '@/mocks/roomTypes';
+import { CheckCircle2, BedDouble, DoorOpen, Search, Plus, Edit, Trash2, Upload, X } from 'lucide-react';
+import { type MockRoomType } from '@/mocks/roomTypes';
+import { roomApi } from '@/api/roomApi';
+import { useToast } from '@/contexts/ToastContext';
 
 const ProviderRoomTypes = () => {
     // Mock: Get current provider's hotel ID (in real app, from auth context)
     const currentHotelId = 1; // Grand Hotel Saigon
     const hotelName = "Grand Hotel Saigon";
+    const { toast } = useToast();
 
-    const [roomTypes, setRoomTypes] = useState<MockRoomType[]>(
-        MOCK_ROOM_TYPES.filter(room => room.hotelId === currentHotelId)
-    );
+    const [roomTypes, setRoomTypes] = useState<MockRoomType[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const data = await roomApi.getRoomsByHotelId(currentHotelId);
+                setRoomTypes(data);
+            } catch (error) {
+                console.error("Failed to load rooms", error);
+                toast("Lỗi tải danh sách phòng", "error");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchRooms();
+    }, [currentHotelId, toast]);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<MockRoomType | null>(null);
@@ -72,44 +89,59 @@ const ProviderRoomTypes = () => {
         setEditingRoom(null);
     };
 
-    const handleSave = () => {
-        if (editingRoom) {
-            // Update existing room
-            setRoomTypes(prev => prev.map(room =>
-                room.id === editingRoom.id
-                    ? {
-                        ...room,
-                        name: formData.name,
-                        price: parseInt(formData.price),
-                        quantity: parseInt(formData.quantity),
-                        description: formData.description,
-                        amenities: formData.amenities,
-                        images: formData.images,
-                    }
-                    : room
-            ));
-        } else {
-            // Add new room
-            const newRoom: MockRoomType = {
-                id: Math.max(...roomTypes.map(r => r.id)) + 1,
-                hotelId: currentHotelId,
-                hotelName: hotelName,
-                name: formData.name,
-                price: parseInt(formData.price),
-                quantity: parseInt(formData.quantity),
-                available: parseInt(formData.quantity),
-                description: formData.description,
-                amenities: formData.amenities,
-                images: formData.images,
-            };
-            setRoomTypes(prev => [...prev, newRoom]);
+    const handleSave = async () => {
+        try {
+            if (editingRoom) {
+                // Update existing room
+                const updateData = {
+                    name: formData.name,
+                    price: parseInt(formData.price),
+                    quantity: parseInt(formData.quantity),
+                    description: formData.description,
+                    amenities: formData.amenities,
+                    images: formData.images,
+                };
+                await roomApi.updateRoom(editingRoom.id, updateData);
+                
+                setRoomTypes(prev => prev.map(room =>
+                    room.id === editingRoom.id
+                        ? { ...room, ...updateData }
+                        : room
+                ));
+                toast(`Đã cập nhật: ${formData.name}`, "success");
+            } else {
+                // Add new room
+                const newData = {
+                    hotelName: hotelName,
+                    name: formData.name,
+                    price: parseInt(formData.price),
+                    quantity: parseInt(formData.quantity),
+                    available: parseInt(formData.quantity),
+                    description: formData.description,
+                    amenities: formData.amenities,
+                    images: formData.images,
+                };
+                const newRoom = await roomApi.createRoom(currentHotelId, newData);
+                setRoomTypes(prev => [...prev, newRoom]);
+                toast(`Tạo mới thành công: ${formData.name}`, "success");
+            }
+            handleCloseDialog();
+        } catch (error) {
+            console.error("Save failed", error);
+            toast("Thao tác thất bại", "error");
         }
-        handleCloseDialog();
     };
 
-    const handleDelete = (room: MockRoomType) => {
+    const handleDelete = async (room: MockRoomType) => {
         if (confirm(`Bạn có chắc chắn muốn xóa "${room.name}"?`)) {
-            setRoomTypes(prev => prev.filter(r => r.id !== room.id));
+            try {
+                await roomApi.deleteRoom(room.id);
+                setRoomTypes(prev => prev.filter(r => r.id !== room.id));
+                toast(`Đã xóa: ${room.name}`, "success");
+            } catch (error) {
+                console.error("Delete failed", error);
+                toast("Xóa thất bại", "error");
+            }
         }
     };
 
@@ -234,7 +266,20 @@ const ProviderRoomTypes = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {roomTypes.map((room) => (
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-10 text-center text-muted-foreground text-lg">
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : roomTypes.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-10 text-center text-muted-foreground text-lg">
+                                            Không tìm thấy loại phòng nào.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    roomTypes.map((room) => (
                                     <tr key={room.id} className="hover:bg-muted/50 transition-colors">
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-4">
@@ -311,13 +356,7 @@ const ProviderRoomTypes = () => {
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                                {roomTypes.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="p-10 text-center text-muted-foreground text-lg">
-                                            Không tìm thấy loại phòng nào.
-                                        </td>
-                                    </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>

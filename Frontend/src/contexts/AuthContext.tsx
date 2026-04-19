@@ -81,9 +81,10 @@ interface User {
     role: string;
     phoneNumber?: string;
     address?: string;
+    avatarUrl?: string;
     providerType?: 'hotel' | 'place'; // For providers
     hasService?: boolean; // For providers - whether they have completed service setup
-    serviceId?: number; // For providers - their service ID
+    serviceId?: string | number; // For providers - their service ID
     status?: 'active' | 'blocked' | 'pending';
 }
 
@@ -133,14 +134,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userResponse = await apiClient.users.getProfile();
             console.log('User Profile Fetched:', userResponse);
 
-            // Map backend DTO to frontend User interface
+            // Mapping backend DTO to frontend User interface
+            const rawRole = userResponse.role?.toUpperCase() || 'USER';
+            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+
+            // Extract serviceId safely - One provider = One service
+            let fetchedServiceId: string | number | undefined = undefined;
+
+            if ((userResponse as any).serviceId) {
+                fetchedServiceId = (userResponse as any).serviceId;
+            } else if (Array.isArray((userResponse as any).services) && (userResponse as any).services.length > 0) {
+                const firstService = (userResponse as any).services[0];
+                fetchedServiceId = typeof firstService === 'object' ? firstService.id : firstService;
+            } else if (Array.isArray((userResponse as any).serviceIds) && (userResponse as any).serviceIds.length > 0) {
+                fetchedServiceId = (userResponse as any).serviceIds[0];
+            }
+
             const user: User = {
                 userID: userResponse.userID ?? 0,
                 name: userResponse.fullname || userResponse.username || 'User',
                 email: userResponse.email,
-                role: userResponse.role?.toLowerCase() || 'user',
+                role: normalizedRole,
                 phoneNumber: userResponse.phone,
-                address: userResponse.address
+                address: userResponse.address,
+                avatarUrl: userResponse.avatarUrl,
+                // Derive providerType from specific provider role
+                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' :
+                    rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                serviceId: fetchedServiceId,
+                hasService: !!fetchedServiceId,
+                // Add the original specific role for component-level checks if needed
+                status: userResponse.status || 'active'
             };
 
             const authData: LoginResponse = { token, user };
@@ -231,20 +255,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Real Backend API
             const response = await apiClient.auth.login({
                 email,
-                password,
-                remember_me: true
+                password
+                // remember_me: true
             }) as unknown as LoginResponse;
             console.log("Đăng nhập thành công:", response);
 
-            // Map fullname to name if needed (if backend returns fullname in login response too)
-            // But usually login response matches DTO. Let's ensure name is set.
+            // Map fullname to name if needed
             if ((response.user as any).fullname && !response.user.name) {
                 response.user.name = (response.user as any).fullname;
             }
 
-            // Normalize role to lowercase
-            if (response.user.role) {
-                response.user.role = response.user.role.toLowerCase();
+            // Normalize role and set providerType
+            const rawRole = (response.user.role as string)?.toUpperCase() || 'USER';
+            if (rawRole.startsWith('PROVIDER_')) {
+                response.user.role = 'provider';
+                response.user.providerType = rawRole === 'PROVIDER_HOTEL' ? 'hotel' : 'place';
+            } else {
+                response.user.role = rawRole.toLowerCase();
             }
 
             // Save JWT token and user data
@@ -255,7 +282,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsAuthenticated(true);
         } catch (error: any) {
             console.error('Đăng nhập thất bại:', error);
-            console.error('🔍 FULL ERROR OBJECT:', JSON.stringify(error, null, 2));
+            console.error('FULL ERROR OBJECT:', JSON.stringify(error, null, 2));
 
             // Extract error message from backend response
             let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';

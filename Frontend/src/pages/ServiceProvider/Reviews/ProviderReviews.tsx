@@ -1,17 +1,7 @@
 // src/pages/ServiceProvider/Reviews/ProviderReviews.tsx
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
+import { Card, CardContent } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
-import { Badge } from '@/components/ui/admin/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/admin/avatar';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/admin/table';
 import {
     Dialog,
     DialogContent,
@@ -20,7 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/admin/dialog";
-import { Star, MessageSquare, Send, Reply, CheckCircle2, Clock, Flag, AlertTriangle, X } from 'lucide-react';
+import { Star, MessageSquare, Send, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { MOCK_REVIEWS } from '@/mocks/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/services/apiClient';
@@ -28,10 +18,15 @@ import { useEffect } from 'react';
 
 const USE_MOCK = false;
 
-const ProviderReviews = () => {
-    const { currentUser } = useAuth();
+const AVATAR_COLORS = [
+    "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+    "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+    "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300",
+    "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+];
 
-    // Get current provider's service ID from auth context
+export default function ProviderReviews() {
+    const { currentUser } = useAuth();
     const currentServiceId = currentUser?.user?.serviceId || 1;
     const serviceName = currentServiceId === 1 ? "Grand Hotel Saigon" : "Ha Long Bay Cruise";
 
@@ -44,13 +39,13 @@ const ProviderReviews = () => {
     const [otherReason, setOtherReason] = useState<string>('');
     const [reportedReviews, setReportedReviews] = useState<Set<number>>(new Set());
     
-    // API Data Tracking
+    // API Data
     const [apiReviews, setApiReviews] = useState<any[]>([]);
 
     const REPORT_REASONS = [
-        "Cạnh tranh không lành mạnh, đánh giá ảo dìm sao",
-        "Ngôn từ đả kích, xúc phạm cá nhân/doanh nghiệp",
-        "Spam quảng cáo tour/khách sạn khác trong phần bình luận",
+        "Cạnh tranh không lành mạnh, đánh giá ảo",
+        "Ngôn từ đả kích, xúc phạm",
+        "Spam quảng cáo",
         "Khác"
     ];
 
@@ -58,24 +53,21 @@ const ProviderReviews = () => {
         const fetchReviews = async () => {
             try {
                 if (USE_MOCK) return;
-                const response = await apiClient.comments.getByServiceId(currentServiceId);
-                if (response?.data?.content?.length > 0) {
-                    setApiReviews(response.data.content);
+                const response: any = await apiClient.comments.getByServiceId(currentServiceId);
+                const fetchedReviews = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
+                
+                if (fetchedReviews && fetchedReviews.length > 0) {
+                    setApiReviews(fetchedReviews);
                 }
             } catch (error) {
                 console.error("Failed to fetch provider reviews", error);
             }
         };
-
-        if (currentServiceId) {
-            fetchReviews();
-        }
+        if (currentServiceId) fetchReviews();
     }, [currentServiceId]);
 
-    // Format & Filter reviews for this provider's service only
     const providerReviews = useMemo(() => {
         const hasRealReviews = apiReviews.length > 0;
-
         if (hasRealReviews) {
             return apiReviews.map((r: any) => ({
                 id: r.id,
@@ -89,17 +81,16 @@ const ProviderReviews = () => {
                 createdAt: r.createdAt || new Date().toISOString(),
                 updatedAt: r.updatedAt || new Date().toISOString(),
                 status: 'approved',
-                replies: []
+                replies: r.replies ? r.replies.map((reply: any) => ({
+                    id: reply.id,
+                    comment: reply.content,
+                    createdAt: reply.createdAt || new Date().toISOString()
+                })) : []
             }));
         }
-
-        // Fallback or Mock
-        return MOCK_REVIEWS.filter(review =>
-            review.serviceId === currentServiceId && review.status === 'approved'
-        );
+        return MOCK_REVIEWS.filter(review => review.serviceId === currentServiceId && review.status === 'approved');
     }, [currentServiceId, apiReviews]);
 
-    // Stats
     const stats = useMemo(() => ({
         total: providerReviews.length,
         avgRating: providerReviews.length > 0
@@ -111,336 +102,233 @@ const ProviderReviews = () => {
 
     const getRatingStars = (rating: number) => {
         return (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
                 {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                         key={i}
-                        className={`w-4 h-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                            }`}
+                        className={`w-3.5 h-3.5 ${i < rating ? 'fill-yellow-400 text-yellow-500' : 'text-gray-200 dark:text-gray-700'}`}
                     />
                 ))}
-                <span className="ml-1 text-sm font-medium text-muted-foreground">{rating}.0</span>
             </div>
         );
     };
 
     const handleReply = (reviewId: number) => {
         const reply = replyText[reviewId]?.trim();
-        if (!reply) {
-            alert('Vui lòng nhập nội dung phản hồi');
-            return;
-        }
-
-        console.log('Reply to review:', reviewId, reply);
-        alert(`Phản hồi đã được gửi thành công!\n\nNội dung: "${reply}"`);
-
-        // Clear reply text and exit edit mode
+        if (!reply) return;
+        alert(`Phản hồi đã được gửi:\n\n"${reply}"`);
         setReplyText(prev => ({ ...prev, [reviewId]: '' }));
         setEditingReply(prev => ({ ...prev, [reviewId]: false }));
-    };
-
-    const handleCancelEdit = (reviewId: number) => {
-        setEditingReply(prev => ({ ...prev, [reviewId]: false }));
-        setReplyText(prev => ({ ...prev, [reviewId]: '' }));
     };
 
     const submitReport = () => {
         if (reportingReviewId !== null) {
             setReportedReviews(prev => new Set(prev).add(reportingReviewId));
-            alert('Báo cáo đã được gửi đến Ban Quản Trị để xem xét.');
-            console.log('Submitted Report:', {
-                reviewId: reportingReviewId,
-                reason: reportReason === 'Khác' ? otherReason : reportReason,
-                reporterId: currentServiceId,
-                reporterType: 'provider'
-            });
             setReportingReviewId(null);
             setReportReason('');
             setOtherReason('');
         }
     };
 
+    const STAT_CARDS = [
+        { title: 'Tổng đánh giá', value: stats.total, badge: 'Đánh giá hiển thị', iconColor: "text-blue-600", iconBg: "bg-blue-50 dark:bg-blue-950/40", accent: "border-blue-500", icon: MessageSquare },
+        { title: 'Điểm trung bình', value: stats.avgRating, badge: 'Chất lượng', iconColor: "text-amber-500", iconBg: "bg-amber-50 dark:bg-amber-950/40", accent: "border-amber-400", icon: Star },
+        { title: 'Đã phản hồi', value: stats.replied, badge: 'Đã tương tác', iconColor: "text-emerald-500", iconBg: "bg-emerald-50 dark:bg-emerald-950/40", accent: "border-emerald-500", icon: CheckCircle2 },
+        { title: 'Chưa phản hồi', value: stats.pending, badge: 'Đang đợi rep', iconColor: "text-orange-500", iconBg: "bg-orange-50 dark:bg-orange-950/40", accent: "border-orange-500", icon: Clock },
+    ];
+
     return (
-        <div className="w-full max-w-7xl mx-auto space-y-8 pb-8">
+        <div className="w-full max-w-7xl mx-auto space-y-8 pb-10 font-sans">
             {/* Header */}
             <div>
-                <h1 className="text-4xl font-bold tracking-tight">Đánh giá của khách hàng</h1>
-                <p className="text-lg text-muted-foreground mt-1">
-                    Xem và phản hồi đánh giá cho {serviceName}
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Đánh giá khách hàng</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                    Quản lý và tương tác đánh giá dịch vụ <span className="font-semibold text-foreground">{serviceName}</span>
                 </p>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-6 md:grid-cols-4">
-                {[
-                    { title: 'Tổng đánh giá', value: stats.total, badge: 'Tất cả', badgeColor: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-500/20', iconColor: 'text-blue-600 dark:text-blue-400', icon: MessageSquare },
-                    { title: 'Điểm trung bình', value: stats.avgRating, badge: 'Trên 5.0', badgeColor: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400', iconBg: 'bg-yellow-100 dark:bg-yellow-500/20', iconColor: 'text-yellow-600 dark:text-yellow-400', icon: Star, fillIcon: true },
-                    { title: 'Đã trả lời', value: stats.replied, badge: 'Đã phản hồi', badgeColor: 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400', iconBg: 'bg-green-100 dark:bg-green-500/20', iconColor: 'text-green-600 dark:text-green-400', icon: MessageSquare },
-                    { title: 'Chờ trả lời', value: stats.pending, badge: 'Cần xử lý', badgeColor: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400', iconBg: 'bg-orange-100 dark:bg-orange-500/20', iconColor: 'text-orange-600 dark:text-orange-400', icon: MessageSquare },
-                ].map((stat, index) => {
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {STAT_CARDS.map((stat, i) => {
                     const Icon = stat.icon;
-                    const valueLength = stat.value.toString().length;
-                    let fontSizeClass = 'text-3xl';
-                    if (valueLength > 15) {
-                        fontSizeClass = 'text-xl';
-                    } else if (valueLength > 10) {
-                        fontSizeClass = 'text-2xl';
-                    }
-
                     return (
-                        <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden">
-                            <CardContent className="p-6 flex justify-between items-start gap-4">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                                    <div className={`${fontSizeClass} font-bold mt-2 break-words leading-tight`}>{stat.value}</div>
-                                    <div className="mt-4 flex items-center">
-                                        <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-sm font-medium ${stat.badgeColor}`}>
-                                            {stat.badge}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className={`p-3 ${stat.iconBg} rounded-2xl`}>
-                                    <Icon className={`w-6 h-6 ${stat.iconColor} ${stat.fillIcon ? 'fill-current' : ''}`} />
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <div key={i} className="relative flex items-center justify-between p-5 rounded-xl bg-background shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-border/40 overflow-hidden">
+                            <div className="flex-1 min-w-0 pr-4">
+                                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1 truncate">{stat.title}</p>
+                                <div className="text-[28px] font-semibold text-foreground leading-none mb-2 truncate">{stat.value}</div>
+                                <p className="text-[12px] text-muted-foreground truncate">{stat.badge}</p>
+                            </div>
+                            <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${stat.iconBg}`}>
+                                <Icon className={`w-6 h-6 ${stat.iconColor} ${stat.title === 'Điểm trung bình' ? 'fill-current' : ''}`} />
+                            </div>
+                        </div>
                     );
                 })}
             </div>
 
-            {/* Reviews List — Card per row */}
-            <Card className="border-0 shadow-sm rounded-xl overflow-hidden">
-                <CardHeader className="pb-4 bg-muted/30 border-b border-border">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-xl font-bold">Danh sách đánh giá</CardTitle>
-                        <span className="text-sm text-muted-foreground font-medium">{providerReviews.length} đánh giá</span>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0 divide-y divide-border">
+            {/* Reviews List */}
+            <div className="bg-card shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-xl border border-border p-8 pb-2">
+                <div className="flex flex-col divide-y divide-border -mx-8 px-8">
                     {providerReviews.length === 0 ? (
-                        <div className="py-20 flex flex-col items-center justify-center text-muted-foreground gap-3">
+                        <div className="py-24 flex flex-col items-center justify-center text-muted-foreground gap-3">
                             <MessageSquare className="w-12 h-12 opacity-20" />
-                            <p className="text-base">Chưa có đánh giá nào</p>
+                            <p className="text-[14px]">Chưa có đánh giá nào được tìm thấy</p>
                         </div>
                     ) : (
-                        providerReviews.map((review) => {
+                        providerReviews.map((review, idx) => {
                             const hasReplied = review.replies && review.replies.length > 0;
+                            const initial = review.userName ? review.userName[0].toUpperCase() : 'U';
+                            const avatarClass = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+
                             return (
-                                <div key={review.id} className="flex gap-0 hover:bg-muted/20 transition-colors group">
-                                    {/* Main content */}
-                                    <div className="flex-1 p-6 space-y-4">
-                                        {/* User info row */}
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-11 w-11 ring-2 ring-border">
-                                                    <AvatarImage src={review.userAvatar} />
-                                                    <AvatarFallback className="font-semibold text-base">{review.userName[0]}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-semibold text-sm text-foreground leading-tight">{review.userName}</p>
-                                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                                        {new Date(review.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2.5">
-                                                {getRatingStars(review.rating)}
-                                                <Badge
-                                                    className={`whitespace-nowrap text-xs font-semibold border-transparent px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 ${hasReplied
-                                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                                        }`}
-                                                >
-                                                    {hasReplied
-                                                        ? <><CheckCircle2 className="w-3 h-3 shrink-0" />{review.replies!.length} phản hồi</>
-                                                        : <><Clock className="w-3 h-3 shrink-0" />Chờ phản hồi</>
-                                                    }
-                                                </Badge>
-                                            </div>
+                                <div key={review.id} className="py-5">
+                                    {/* User info row */}
+                                    <div className="flex gap-4">
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-medium shrink-0 ${avatarClass}`}>
+                                            {initial}
                                         </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium text-[14px] text-foreground">{review.userName}</p>
+                                                {hasReplied && (
+                                                    <span className="rounded-full bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400 px-2.5 py-0.5 text-[11px] font-medium">
+                                                        Đã phản hồi
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {getRatingStars(review.rating)}
+                                                <span className="text-[13px] text-muted-foreground">
+                                                    {Number(review.rating).toFixed(1)} • {new Date(review.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                </span>
+                                            </div>
 
-                                        {/* Comment */}
-                                        <p className="text-[15px] text-foreground leading-relaxed">{review.comment}</p>
+                                            {/* Comment text */}
+                                            <p className="text-[14px] text-foreground leading-relaxed mt-2">
+                                                {review.comment}
+                                            </p>
 
-                                        {/* Review Images */}
-                                        {review.images && review.images.length > 0 && (
-                                            <div className="flex gap-2">
-                                                {review.images.slice(0, 4).map((img: string, idx: number) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="w-20 h-20 rounded-lg overflow-hidden relative group/img cursor-pointer shrink-0 border border-border"
+                                            {/* Images Gallery */}
+                                            {review.images && review.images.length > 0 && (
+                                                <div className="flex gap-2 pt-3">
+                                                    {review.images.map((img: string, idx: number) => (
+                                                        <div key={idx} className="w-16 h-16 rounded-md overflow-hidden shrink-0 border border-border bg-muted">
+                                                            <img src={img} alt="" className="w-full h-full object-cover" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Replies */}
+                                            {hasReplied && review.replies.map((reply: any) => (
+                                                <div key={reply.id} className="border-l-[3px] border-blue-200 dark:border-blue-800 pl-3 mt-3 bg-transparent">
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <span className="text-[12px] font-medium text-muted-foreground">Phản hồi của khách sạn</span>
+                                                        <span className="text-[12px] text-muted-foreground">• {new Date(reply.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                    </div>
+                                                    <p className="text-[13px] text-foreground">{reply.comment}</p>
+                                                </div>
+                                            ))}
+
+                                            {/* Actions */}
+                                            {!editingReply[review.id] && (
+                                                <div className="flex items-center gap-3 pt-4">
+                                                    {hasReplied ? (
+                                                        <Button size="sm" variant="outline" className="h-8">Xem phản hồi</Button>
+                                                    ) : (
+                                                        <Button size="sm" variant="default" className="h-8" onClick={() => setEditingReply(prev => ({ ...prev, [review.id]: true }))}>
+                                                            Phản hồi ngay
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setReportingReviewId(review.id)}
+                                                        disabled={reportedReviews.has(review.id)}
+                                                        className={`text-muted-foreground font-normal text-sm hover:text-destructive transition-colors ${reportedReviews.has(review.id) ? 'opacity-50' : ''}`}
                                                     >
-                                                        <img
-                                                            src={img}
-                                                            alt={`Review ${idx + 1}`}
-                                                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                                                        {reportedReviews.has(review.id) ? 'Đã báo cáo' : 'Báo cáo vi phạm'}
+                                                    </Button>
+                                                </div>
+                                            )}
+
+                                            {/* Reply Thread Input */}
+                                            {editingReply[review.id] && (
+                                                <div className="border-l-[3px] border-blue-200 dark:border-blue-800 pl-3 mt-4 bg-transparent max-w-2xl">
+                                                    <div className="flex items-center gap-1.5 mb-2">
+                                                        <span className="text-[12px] font-medium text-muted-foreground">Phản hồi mới</span>
+                                                    </div>
+                                                    <div className="border border-border rounded-md overflow-hidden bg-background focus-within:ring-1 focus-within:ring-primary/20">
+                                                        <textarea
+                                                            placeholder="Nhập nội dung phản hồi..."
+                                                            className="flex min-h-[60px] w-full resize-none border-0 bg-transparent p-2.5 text-[13px] focus:outline-none placeholder:text-muted-foreground"
+                                                            value={replyText[review.id] || ''}
+                                                            onChange={(e) => setReplyText(prev => ({ ...prev, [review.id]: e.target.value }))}
                                                         />
-                                                        {idx === 3 && review.images!.length > 4 && (
-                                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                                                                <span className="text-white font-bold text-sm">+{review.images!.length - 4}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Replies Thread */}
-                                        {review.replies && review.replies.length > 0 && (
-                                            <div className="space-y-3 mt-1">
-                                                {review.replies.map((reply) => (
-                                                    <div key={reply.id} className="flex gap-3 bg-primary/5 dark:bg-primary/10 rounded-xl p-4 border border-primary/10 dark:border-primary/20">
-                                                        <div className="bg-primary/15 dark:bg-primary/25 rounded-full p-1.5 h-fit text-primary mt-0.5 shrink-0">
-                                                            <Reply className="w-3.5 h-3.5" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="font-semibold text-sm text-foreground">Phản hồi của bạn</span>
-                                                                <span className="text-xs text-muted-foreground">•</span>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {new Date(reply.createdAt).toLocaleDateString('vi-VN')}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm text-foreground leading-relaxed">{reply.comment}</p>
+                                                        <div className="flex items-center justify-end gap-2 bg-muted/20 p-2 border-t border-border">
+                                                            <Button size="sm" variant="ghost" className="h-7 text-[12px]" onClick={() => setEditingReply(prev => ({ ...prev, [review.id]: false }))}>
+                                                                Hủy
+                                                            </Button>
+                                                            <Button size="sm" className="h-7 text-[12px] gap-1" onClick={() => handleReply(review.id)}>
+                                                                <Send className="w-3 h-3" /> Gửi
+                                                            </Button>
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Reply Input */}
-                                        {editingReply[review.id] && (
-                                            <div className="flex gap-2 items-center bg-muted/30 rounded-xl p-3 border border-border">
-                                                <input
-                                                    className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                                                    placeholder="Viết phản hồi của bạn..."
-                                                    value={replyText[review.id] || ''}
-                                                    onChange={(e) => setReplyText(prev => ({
-                                                        ...prev,
-                                                        [review.id]: e.target.value
-                                                    }))}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault();
-                                                            handleReply(review.id);
-                                                        }
-                                                        if (e.key === 'Escape') handleCancelEdit(review.id);
-                                                    }}
-                                                    autoFocus
-                                                />
-                                                <Button size="icon" className="h-9 w-9 shrink-0 rounded-lg" onClick={() => handleReply(review.id)}>
-                                                    <Send className="w-4 h-4" />
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground hover:bg-muted" onClick={() => handleCancelEdit(review.id)}>
-                                                    <X className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Actions Sidebar */}
-                                    <div className="w-[140px] shrink-0 border-l border-border flex flex-col items-center justify-start gap-2.5 p-4 pt-5 bg-muted/10">
-                                        <Button
-                                            size="sm"
-                                            onClick={() => setEditingReply(prev => ({ ...prev, [review.id]: true }))}
-                                            className={`w-full text-xs gap-1.5 h-9 justify-center shadow-sm font-medium ${hasReplied
-                                                ? 'bg-background border border-border text-foreground hover:bg-muted'
-                                                : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                                                }`}
-                                            variant={hasReplied ? 'outline' : 'default'}
-                                        >
-                                            <Reply className="w-3.5 h-3.5" />
-                                            {hasReplied ? 'Trả lời thêm' : 'Phản hồi'}
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => setReportingReviewId(review.id)}
-                                            disabled={reportedReviews.has(review.id)}
-                                            className={`w-full text-xs gap-1.5 h-9 justify-center cursor-pointer font-medium ${reportedReviews.has(review.id)
-                                                ? 'text-muted-foreground bg-muted border-transparent opacity-60'
-                                                : 'text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/30 bg-transparent'
-                                                }`}
-                                        >
-                                            <Flag className="w-3.5 h-3.5" />
-                                            {reportedReviews.has(review.id) ? 'Đã báo cáo' : 'Báo cáo'}
-                                        </Button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );
                         })
                     )}
-                </CardContent>
-            </Card>
-
-            {/* Results count */}
-            <div className="text-sm text-muted-foreground px-1">
-                Hiển thị {providerReviews.length} đánh giá đã được duyệt
+                </div>
             </div>
 
             {/* Provider Report Dialog */}
             <Dialog open={reportingReviewId !== null} onOpenChange={(open) => !open && setReportingReviewId(null)}>
-                <DialogContent className="sm:max-w-[425px] border-border bg-background">
+                <DialogContent className="sm:max-w-md border-border bg-background">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                            <AlertTriangle className="w-5 h-5" />
+                        <DialogTitle className="flex items-center gap-2 text-foreground">
+                            <AlertTriangle className="w-5 h-5 text-red-500" />
                             Báo cáo vi phạm
                         </DialogTitle>
-                        <DialogDescription className="text-muted-foreground">
-                            Vui lòng cho chúng tôi biết lý do bạn báo cáo đánh giá này. Hệ thống sẽ ẩn đánh giá và kiểm duyệt lại.
+                        <DialogDescription className="text-[14px]">
+                            Đánh giá này sẽ được hệ thống xem xét trong 24h.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="py-4 space-y-4">
-                        <div className="space-y-3">
-                            {REPORT_REASONS.map((reason, idx) => (
-                                <label key={idx} className="flex items-start gap-3 cursor-pointer group">
-                                    <div className="relative flex items-center justify-center mt-0.5">
-                                        <input
-                                            type="radio"
-                                            name="report_reason"
-                                            value={reason}
-                                            checked={reportReason === reason}
-                                            onChange={(e) => setReportReason(e.target.value)}
-                                            className="peer sr-only"
-                                        />
-                                        <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 group-hover:border-primary peer-checked:border-primary transition-colors"></div>
-                                        <div className="absolute w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform"></div>
-                                    </div>
-                                    <span className={`text-sm ${reportReason === reason ? 'text-foreground font-medium' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                                        {reason}
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
-
-                        {reportReason === "Khác" && (
-                            <div className="mt-2">
-                                <textarea
-                                    value={otherReason}
-                                    onChange={(e) => setOtherReason(e.target.value)}
-                                    placeholder="Vui lòng cung cấp thêm chi tiết để Admin dễ dàng xác minh..."
-                                    className="w-full h-24 p-3 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    <div className="py-2 space-y-3">
+                        {REPORT_REASONS.map((reason, idx) => (
+                            <label key={idx} className="flex items-center gap-3 cursor-pointer group">
+                                <input
+                                    type="radio"
+                                    name="report_reason"
+                                    value={reason}
+                                    checked={reportReason === reason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                    className="w-4 h-4 text-primary focus:ring-primary border-border bg-background"
                                 />
-                            </div>
+                                <span className={`text-[14px] ${reportReason === reason ? 'text-foreground font-medium' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                                    {reason}
+                                </span>
+                            </label>
+                        ))}
+                        {reportReason === "Khác" && (
+                            <textarea
+                                value={otherReason}
+                                onChange={(e) => setOtherReason(e.target.value)}
+                                placeholder="Nhập lý do chi tiết..."
+                                className="w-full h-20 p-3 mt-2 text-[13px] border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary resize-none bg-background"
+                            />
                         )}
                     </div>
 
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setReportingReviewId(null)}
-                            className="mt-2 sm:mt-0 cursor-pointer"
-                        >
-                            Hủy
+                    <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border mt-4">
+                        <Button type="button" variant="ghost" onClick={() => setReportingReviewId(null)}>
+                            Hủy bỏ
                         </Button>
-                        <Button
-                            type="button"
-                            onClick={submitReport}
-                            disabled={!reportReason || (reportReason === "Khác" && !otherReason.trim())}
-                            className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 cursor-pointer"
-                        >
+                        <Button type="button" variant="destructive" onClick={submitReport} disabled={!reportReason || (reportReason === "Khác" && !otherReason.trim())}>
                             Gửi báo cáo
                         </Button>
                     </DialogFooter>
@@ -448,6 +336,4 @@ const ProviderReviews = () => {
             </Dialog>
         </div>
     );
-};
-
-export default ProviderReviews;
+}

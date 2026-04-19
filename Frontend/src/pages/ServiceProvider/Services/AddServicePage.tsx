@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { Upload, X, ChevronRight, ChevronLeft, Plus, Trash2, MapPin, Calendar, Clock, CheckCircle, Users, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, X, ChevronRight, ChevronLeft, Plus, Trash2, MapPin, Calendar, Clock, CheckCircle, Users, Info, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
 import { Textarea } from '@/components/ui/admin/textarea';
 import { Label } from '@/components/ui/admin/label';
 import { Badge } from '@/components/ui/admin/badge';
+import { serviceApi } from '@/api/serviceApi';
+import { provinceApi } from '@/api/provinceApi';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/constants/routes';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 // Types
 interface AdditionalService {
@@ -35,7 +41,9 @@ interface ServiceFormData {
   priceAdult: number;
   priceChild: number;
   thumbnailImage: string | null;
+  thumbnailFile: File | null;
   additionalImages: string[];
+  additionalFiles: File[];
   features: Feature[];
   additionalServices: AdditionalService[];
   discounts: Discount[];
@@ -59,12 +67,26 @@ const AdminAddServicePage: React.FC = () => {
     priceAdult: 0,
     priceChild: 0,
     thumbnailImage: null,
+    thumbnailFile: null,
     additionalImages: [],
+    additionalFiles: [],
     features: [],
     additionalServices: [],
     discounts: [],
     availability: {}
   });
+
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [provinces, setProvinces] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      const data = await provinceApi.getAllProvinces();
+      setProvinces(data);
+    };
+    fetchProvinces();
+  }, []);
 
   // Temporary inputs
   const [newFeature, setNewFeature] = useState<Feature>({ title: '', desc: '', icon: 'info' });
@@ -77,6 +99,7 @@ const AdminAddServicePage: React.FC = () => {
   const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setFormData(prev => ({ ...prev, thumbnailFile: file }));
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, thumbnailImage: reader.result as string }));
@@ -88,31 +111,30 @@ const AdminAddServicePage: React.FC = () => {
   const handleAdditionalImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages: string[] = [];
-      const readFile = (index: number) => {
-        if (index >= files.length) {
-          setFormData(prev => ({
-            ...prev,
-            additionalImages: [...prev.additionalImages, ...newImages]
-          }));
-          return;
-        }
+      const fileList = Array.from(files);
+      setFormData(prev => ({
+        ...prev,
+        additionalFiles: [...prev.additionalFiles, ...fileList]
+      }));
 
+      fileList.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          newImages.push(reader.result as string);
-          readFile(index + 1);
+          setFormData(prev => ({
+            ...prev,
+            additionalImages: [...prev.additionalImages, reader.result as string]
+          }));
         };
-        reader.readAsDataURL(files[index]);
-      };
-      readFile(0);
+        reader.readAsDataURL(file);
+      });
     }
   };
 
   const removeAdditionalImage = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      additionalImages: prev.additionalImages.filter((_, i) => i !== index)
+      additionalImages: prev.additionalImages.filter((_, i) => i !== index),
+      additionalFiles: prev.additionalFiles.filter((_, i) => i !== index)
     }));
   };
 
@@ -208,27 +230,38 @@ const AdminAddServicePage: React.FC = () => {
 
   // Submit
   const handleSubmit = async () => {
-    alert('Dịch vụ đã được tạo thành công!');
+    if (!formData.thumbnailFile) {
+        toast.error("Vui lòng chọn ảnh đại diện!");
+        return;
+    }
 
-    // Reset
-    setFormData({
-      name: '',
-      description: '',
-      location: '',
-      address: '',
-      openingHours: '08:00 - 18:00',
-      duration: 'Cả ngày',
-      priceAdult: 0,
-      priceChild: 0,
-      thumbnailImage: null,
-      additionalImages: [],
-      features: [],
-      additionalServices: [],
-      discounts: [],
-      availability: {}
-    });
-    setSelectedDays({});
-    setStep('form');
+    setIsSubmitting(true);
+    try {
+      // Find province code if location is a name
+      const province = provinces.find(p => p.name.toLowerCase() === formData.location.toLowerCase() || p.fullName.toLowerCase() === formData.location.toLowerCase());
+      const provinceCode = province ? province.code : "79"; // default to HCM if not found
+
+      const params = {
+        serviceName: formData.name,
+        description: formData.description,
+        provinceCode: provinceCode,
+        address: formData.address,
+        averagePrice: formData.priceAdult,
+        serviceType: 'TICKET_VENUE', // Since this page seems tailored for ticket venues
+        open_time: formData.openingHours.split('-')[0].trim(),
+        close_time: formData.openingHours.split('-')[1]?.trim(),
+      };
+
+      await serviceApi.createService(params, formData.thumbnailFile, formData.additionalFiles);
+
+      toast.success('Dịch vụ đã được tạo thành công!');
+      navigate(ROUTES.PROVIDER_DASHBOARD);
+    } catch (error) {
+      console.error("Error creating service:", error);
+      toast.error('Có lỗi xảy ra khi tạo dịch vụ. Vui lòng thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Calendar data
@@ -508,9 +541,18 @@ const AdminAddServicePage: React.FC = () => {
                       <ChevronLeft className="w-4 h-4 mr-1" />
                       Chỉnh sửa
                     </Button>
-                    <Button onClick={handleSubmit} className="flex-1">
-                      Tạo dịch vụ
-                      <CheckCircle className="w-4 h-4 ml-1" />
+                    <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Đang tạo...
+                        </>
+                      ) : (
+                        <>
+                          Tạo dịch vụ
+                          <CheckCircle className="w-4 h-4 ml-1" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -552,12 +594,10 @@ const AdminAddServicePage: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Mô tả <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    id="description"
+                  <RichTextEditor
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                     placeholder="Mô tả chi tiết về dịch vụ..."
-                    rows={4}
                   />
                 </div>
 

@@ -271,14 +271,14 @@ function ServicesTable({
             </div>
 
             {/* Table */}
-            <div className="rounded-lg border border-border overflow-hidden">
+            <div className="rounded-xl border border-border overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px]">
-                        <thead className="bg-muted">
+                        <thead className="bg-muted/30">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <tr key={headerGroup.id} className="border-b border-border">
                                     {headerGroup.headers.map((header) => (
-                                        <th key={header.id} className="text-left p-4 font-semibold text-sm">
+                                        <th key={header.id} className="text-left p-4">
                                             {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                                         </th>
                                     ))}
@@ -404,13 +404,13 @@ export default function ServiceListPage() {
             {/* Header */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">Quản lý dịch vụ</h1>
-                    <p className="text-muted-foreground mt-1">
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Quản lý dịch vụ</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
                         Tìm kiếm, lọc và quản lý tất cả dịch vụ của bạn • {servicesData?.total || 0} dịch vụ
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline">
+                    <Button variant="outline" className="text-sm h-9">
                         <Download className="w-4 h-4 mr-2" />
                         Xuất Excel
                     </Button>
@@ -418,16 +418,16 @@ export default function ServiceListPage() {
             </div>
 
             {/* Services Table */}
-            <Card className="border-0 shadow-sm">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
+            <Card className="shadow-sm overflow-hidden">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4 bg-muted/20 border-b">
                     <div>
-                        <CardTitle className="text-xl font-semibold">Danh sách dịch vụ</CardTitle>
+                        <CardTitle className="text-base font-semibold">Danh sách dịch vụ</CardTitle>
                         <p className="text-sm text-muted-foreground mt-1">
                             Tổng số {servicesData?.total || 0} dịch vụ
                         </p>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     <ServicesTable
                         data={servicesData?.services || []}
                         onView={handleView}

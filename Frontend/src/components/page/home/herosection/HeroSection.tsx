@@ -8,7 +8,7 @@ interface SearchFormData {
   destination: string;
   startDate: string;
   endDate: string;
-  serviceType: 'DESTINATION' | 'HOTEL'; // Changed from tripType array to single serviceType
+  serviceType: 'TICKET_VENUE' | 'HOTEL'; // Changed from tripType array to single serviceType
 }
 
 interface Province {
@@ -31,7 +31,7 @@ const HeroSection: React.FC = () => {
     destination: '',
     startDate: '',
     endDate: '',
-    serviceType: 'DESTINATION' // Default to destinations
+    serviceType: 'TICKET_VENUE' // Default to destinations
   });
 
   // Slider states
@@ -288,10 +288,10 @@ const HeroSection: React.FC = () => {
               <div className="relative">
                 <select
                   value={formData.serviceType}
-                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value as 'DESTINATION' | 'HOTEL' })}
+                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value as 'TICKET_VENUE' | 'HOTEL' })}
                   className="w-full px-3 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all appearance-none bg-white cursor-pointer"
                 >
-                  <option value="DESTINATION">Địa điểm</option>
+                  <option value="TICKET_VENUE">Địa điểm</option>
                   <option value="HOTEL">Khách sạn</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />

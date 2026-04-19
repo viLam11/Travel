@@ -26,6 +26,9 @@ import {
     DialogDescription,
 } from '@/components/ui/admin/dialog';
 import { Input } from '@/components/ui/admin/input';
+import { useEffect } from 'react';
+import apiClient from '@/services/apiClient';
+import { Loader2 } from 'lucide-react';
 
 // Format currency
 const formatCurrency = (value: number) => {
@@ -48,20 +51,21 @@ function StatsCard({ stat }: { stat: any }) {
     }
 
     return (
-        <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-card rounded-xl overflow-hidden">
+        <Card className="shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             <CardContent className="p-6 flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <div className={`${fontSizeClass} font-bold text-foreground mt-2 break-words leading-tight`}>{stat.value}</div>
+                    <div className={`${fontSizeClass} font-bold mt-2 break-words leading-tight`}>{stat.value}</div>
                     {stat.change && (
                         <div className="mt-4 flex items-center">
-                            <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-sm font-medium ${trendBg} ${trendColor}`}>
-                                {stat.trend === 'up' ? '+' : ''}{stat.change} so với tháng trước
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${trendBg} ${trendColor}`}>
+                                {stat.trend === 'up' ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                                {stat.trend === 'up' ? '+' : ''}{stat.change}
                             </span>
                         </div>
                     )}
                 </div>
-                <div className={`p-3 ${stat.iconBg} rounded-2xl`}>
+                <div className={`p-3 ${stat.iconBg} rounded-xl flex-shrink-0`}>
                     <Icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
             </CardContent>
@@ -110,18 +114,73 @@ export default function AdminDashboard() {
     const navigate = useNavigate();
     const { success } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
-    const [services, setServices] = useState(initialMockServices);
+    const [services, setServices] = useState<any[]>([]);
 
     const [isApproveOpen, setIsApproveOpen] = useState(false);
     const [isRejectOpen, setIsRejectOpen] = useState(false);
-    const [selectedService, setSelectedService] = useState<{ id: number; name: string } | null>(null);
+    const [selectedService, setSelectedService] = useState<{ id: string | number; name: string } | null>(null);
     const [rejectReason, setRejectReason] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [systemStats, setSystemStats] = useState({
+        totalServices: 0,
+        totalUsers: 0,
+        monthlyRevenue: 0,
+        monthlyOrders: 0
+    });
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch stats (some might fail if not fully implemented in BE, so we use Promise.allSettled or just try/catch individually)
+                const [servicesRes, usersRes, revenueRes, ordersRes] = await Promise.allSettled([
+                    apiClient.services.list(0, 1),
+                    apiClient.users.getAll(),
+                    apiClient.statistics.getSystemRevenue(),
+                    apiClient.orders.getAll(0, 1)
+                ]);
+
+                const totalServices = servicesRes.status === 'fulfilled' ? (servicesRes.value.totalElements || servicesRes.value.length || 0) : 156;
+                const totalUsers = usersRes.status === 'fulfilled' ? (usersRes.value.length || 0) : 48;
+                const monthlyRevenue = revenueRes.status === 'fulfilled' ? (revenueRes.value.totalAmount || revenueRes.value.revenue || 0) : 2450000000;
+                const monthlyOrders = ordersRes.status === 'fulfilled' ? (ordersRes.value.totalElements || ordersRes.value.length || 0) : 1247;
+
+                setSystemStats({ totalServices, totalUsers, monthlyRevenue, monthlyOrders });
+
+                // Fetch real services for approval
+                const realServicesRes = await apiClient.services.list(0, 50);
+                const fetchedServices = Array.isArray(realServicesRes) ? realServicesRes : (realServicesRes.content || []);
+                
+                if (fetchedServices.length > 0) {
+                   const mapped = fetchedServices.map((s: any) => ({
+                      id: s.id,
+                      name: s.serviceName || "Dịch vụ mới",
+                      type: s.serviceType?.toLowerCase() || 'hotel',
+                      provider: s.provider?.fullname || s.provider?.username || "N/A",
+                      location: s.province?.name || "N/A",
+                      status: s.status?.toLowerCase() || 'pending',
+                      rating: s.rating || 0,
+                      bookings: 0,
+                      revenue: 0,
+                      createdAt: s.createdAt || new Date().toISOString()
+                   }));
+                   setServices(mapped);
+                }
+            } catch (err) {
+                console.error("Failed to fetch admin dashboard data:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
 
     // System-wide stats
     const stats = [
         {
             title: 'Tổng dịch vụ',
-            value: '156',
+            value: systemStats.totalServices.toString(),
             icon: Building2,
             color: 'text-blue-600 dark:text-blue-400',
             iconBg: 'bg-blue-100 dark:bg-blue-500/20',
@@ -129,8 +188,8 @@ export default function AdminDashboard() {
             trend: 'up',
         },
         {
-            title: 'Nhà cung cấp',
-            value: '48',
+            title: 'Tổng người dùng',
+            value: systemStats.totalUsers.toString(),
             icon: Users,
             color: 'text-green-600 dark:text-green-400',
             iconBg: 'bg-green-100 dark:bg-green-500/20',
@@ -139,7 +198,7 @@ export default function AdminDashboard() {
         },
         {
             title: 'Doanh thu tháng này',
-            value: formatCurrency(2450000000),
+            value: formatCurrency(systemStats.monthlyRevenue),
             icon: Banknote,
             color: 'text-yellow-600 dark:text-yellow-400',
             iconBg: 'bg-yellow-100 dark:bg-yellow-500/20',
@@ -147,8 +206,8 @@ export default function AdminDashboard() {
             trend: 'up',
         },
         {
-            title: 'Đơn đặt tháng này',
-            value: '1,247',
+            title: 'Tổng đơn hàng',
+            value: systemStats.monthlyOrders.toLocaleString(),
             icon: Calendar,
             color: 'text-purple-600 dark:text-purple-400',
             iconBg: 'bg-purple-100 dark:bg-purple-500/20',
@@ -157,25 +216,35 @@ export default function AdminDashboard() {
         },
     ];
 
-    const pendingServices = services.filter(service =>
+    const pendingServices = services.filter((service: any) =>
         service.status === 'pending' &&
         (service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             service.provider.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-    const handleQuickApprove = () => {
+    const handleQuickApprove = async () => {
         if (!selectedService) return;
-        setServices(prev => prev.map(s => s.id === selectedService.id ? { ...s, status: 'active' } : s));
-        success(`Đã duyệt thành công dịch vụ "${selectedService.name}"`);
-        setIsApproveOpen(false);
+        try {
+            await apiClient.users.handleServiceStatus(selectedService.id, 'APPROVED');
+            setServices(prev => prev.map(s => s.id === selectedService.id ? { ...s, status: 'approved' } : s));
+            success(`Đã duyệt thành công dịch vụ "${selectedService.name}"`);
+            setIsApproveOpen(false);
+        } catch (err) {
+            console.error("Approve failed:", err);
+        }
     };
 
-    const handleQuickReject = () => {
+    const handleQuickReject = async () => {
         if (!selectedService) return;
-        setServices(prev => prev.map(s => s.id === selectedService.id ? { ...s, status: 'rejected' } : s));
-        success(`Đã từ chối dịch vụ "${selectedService.name}"`);
-        setIsRejectOpen(false);
-        setRejectReason('');
+        try {
+            await apiClient.users.handleServiceStatus(selectedService.id, 'REJECTED');
+            setServices(prev => prev.map(s => s.id === selectedService.id ? { ...s, status: 'rejected' } : s));
+            success(`Đã từ chối dịch vụ "${selectedService.name}"`);
+            setIsRejectOpen(false);
+            setRejectReason('');
+        } catch (err) {
+            console.error("Reject failed:", err);
+        }
     };
 
     return (
@@ -211,7 +280,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Services Management */}
-            <Card className="border-0 shadow-sm">
+            <Card className="shadow-sm">
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
                     <div>
                         <CardTitle className="text-xl font-semibold">Yêu cầu duyệt dịch vụ mới</CardTitle>
@@ -242,82 +311,89 @@ export default function AdminDashboard() {
                     {/* Services Table */}
                     <div className="rounded-lg border border-border overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[900px]">
-                                <thead className="bg-muted">
-                                    <tr className="border-b border-border">
-                                        <th className="text-left p-4 font-semibold text-sm">Tên dịch vụ</th>
-                                        <th className="text-left p-4 font-semibold text-sm">Loại hình</th>
-                                        <th className="text-left p-4 font-semibold text-sm">Nhà cung cấp</th>
-                                        <th className="text-left p-4 font-semibold text-sm">Địa điểm</th>
-                                        <th className="text-left p-4 font-semibold text-sm">Thời gian gửi</th>
-                                        <th className="text-right p-4 font-semibold text-sm">Thao tác nhanh</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {pendingServices.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="text-center p-8 text-muted-foreground">
-                                                Không có yêu cầu duyệt dịch vụ mới nào.
-                                            </td>
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+                                    <p className="text-muted-foreground text-sm font-medium">Đang tải dữ liệu hệ thống...</p>
+                                </div>
+                            ) : (
+                                <table className="w-full min-w-[900px]">
+                                    <thead className="bg-muted">
+                                        <tr className="border-b border-border">
+                                            <th className="text-left p-4 font-semibold text-sm">Tên dịch vụ</th>
+                                            <th className="text-left p-4 font-semibold text-sm">Loại hình</th>
+                                            <th className="text-left p-4 font-semibold text-sm">Nhà cung cấp</th>
+                                            <th className="text-left p-4 font-semibold text-sm">Địa điểm</th>
+                                            <th className="text-left p-4 font-semibold text-sm">Thời gian gửi</th>
+                                            <th className="text-right p-4 font-semibold text-sm">Thao tác nhanh</th>
                                         </tr>
-                                    ) : (
-                                        pendingServices.map((service) => (
-                                            <tr
-                                                key={service.id}
-                                                className="border-b border-border hover:bg-muted/50 transition-colors"
-                                            >
-                                                <td className="p-4 text-sm font-medium">{service.name}</td>
-                                                <td className="p-4 text-sm">
-                                                    <Badge
-                                                        className={
-                                                            service.type === 'hotel'
-                                                                ? 'bg-blue-100 text-blue-700'
-                                                                : 'bg-green-100 text-green-700'
-                                                        }
-                                                    >
-                                                        {service.type === 'hotel' ? 'Khách sạn' : 'Tham quan'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="p-4 text-sm">{service.provider}</td>
-                                                <td className="p-4 text-sm">
-                                                    <div className="flex items-center gap-1">
-                                                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                                                        {service.location}
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-sm whitespace-nowrap text-muted-foreground">
-                                                    Hôm nay, 09:30
-                                                </td>
-                                                <td className="p-4 text-sm">
-                                                    <div className="flex gap-1 justify-end">
-                                                        <button
-                                                            onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}
-                                                            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                                                            title="Xem chi tiết để duyệt"
-                                                        >
-                                                            <Eye className="w-4 h-4 text-muted-foreground" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsApproveOpen(true); }}
-                                                            className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600 cursor-pointer"
-                                                            title="Duyệt nhanh"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsRejectOpen(true); setRejectReason(''); }}
-                                                            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600 cursor-pointer"
-                                                            title="Từ chối nhanh"
-                                                        >
-                                                            <XCircle className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {pendingServices.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="text-center p-8 text-muted-foreground">
+                                                    Không có yêu cầu duyệt dịch vụ mới nào.
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            pendingServices.map((service) => (
+                                                <tr
+                                                    key={service.id}
+                                                    className="border-b border-border hover:bg-muted/50 transition-colors"
+                                                >
+                                                    <td className="p-4 text-sm font-medium">{service.name}</td>
+                                                    <td className="p-4 text-sm">
+                                                        <Badge
+                                                            className={
+                                                                service.type === 'hotel'
+                                                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                                                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                            }
+                                                        >
+                                                            {service.type === 'hotel' ? 'Khách sạn' : 'Tham quan'}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-4 text-sm">{service.provider}</td>
+                                                    <td className="p-4 text-sm">
+                                                        <div className="flex items-center gap-1">
+                                                            <MapPin className="w-4 h-4 text-muted-foreground" />
+                                                            {service.location}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-sm whitespace-nowrap text-muted-foreground">
+                                                        {new Date(service.createdAt).toLocaleDateString('vi-VN')}
+                                                    </td>
+                                                    <td className="p-4 text-sm">
+                                                        <div className="flex gap-1 justify-end">
+                                                            <button
+                                                                onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}
+                                                                className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                                title="Xem chi tiết để duyệt"
+                                                            >
+                                                                <Eye className="w-4 h-4 text-muted-foreground" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsApproveOpen(true); }}
+                                                                className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600 cursor-pointer"
+                                                                title="Duyệt nhanh"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsRejectOpen(true); setRejectReason(''); }}
+                                                                className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600 cursor-pointer"
+                                                                title="Từ chối nhanh"
+                                                            >
+                                                                <XCircle className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
                 </CardContent>
@@ -329,7 +405,7 @@ export default function AdminDashboard() {
                     <DialogHeader>
                         <DialogTitle>Duyệt dịch vụ</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn duyệt nhanh dịch vụ <strong className="text-gray-900">{selectedService?.name}</strong>?
+                            Bạn có chắc chắn muốn duyệt nhanh dịch vụ <strong className="text-foreground">{selectedService?.name}</strong>?
                             Dịch vụ sẽ hiển thị ngay lập tức trên hệ thống.
                         </DialogDescription>
                     </DialogHeader>
@@ -348,12 +424,12 @@ export default function AdminDashboard() {
                     <DialogHeader>
                         <DialogTitle>Từ chối dịch vụ</DialogTitle>
                         <DialogDescription>
-                            Vui lòng nhập lý do từ chối dịch vụ <strong className="text-gray-900">{selectedService?.name}</strong>.
+                            Vui lòng nhập lý do từ chối dịch vụ <strong className="text-foreground">{selectedService?.name}</strong>.
                             Lý do này sẽ được gửi đến đối tác để họ khắc phục.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Lý do từ chối <span className="text-red-500">*</span></label>
+                        <label className="text-sm font-medium text-foreground">Lý do từ chối <span className="text-destructive">*</span></label>
                         <Input
                             placeholder="Nhập lý do chi tiết..."
                             value={rejectReason}

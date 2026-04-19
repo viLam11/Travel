@@ -18,6 +18,8 @@ import {
 import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 export default function EditServicePage() {
     const { id } = useParams<{ id: string }>();
@@ -49,6 +51,9 @@ export default function EditServicePage() {
     });
 
     const [images, setImages] = useState<string[]>([]);
+    const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         if (service) {
@@ -75,20 +80,59 @@ export default function EditServicePage() {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleAddImage = () => {
-        const mockImage = `https://images.unsplash.com/photo-${Date.now()}`;
-        setImages(prev => [...prev, mockImage]);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files) {
+            const fileList = Array.from(files);
+            setNewImageFiles(prev => [...prev, ...fileList]);
+
+            // Add preview URLs
+            fileList.forEach(file => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImages(prev => [...prev, reader.result as string]);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
     };
 
     const handleRemoveImage = (index: number) => {
+        // Find if this image was one of the newly added ones
+        // This is a bit simplified, ideally we track original vs new
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Updating service:', { ...formData, images });
-        toast.success(`Service "${formData.name}" updated successfully!`);
-        navigate('/provider/services/list'); // Redirect to list
+        if (!id) return;
+
+        setIsSaving(true);
+        try {
+            // 1. Update basic info
+            await serviceApi.updateService(id, {
+                serviceName: formData.name,
+                description: formData.description,
+                location: formData.location,
+                price: Number(formData.basePrice),
+                starRating: Number(formData.starRating),
+                amenities: formData.amenities
+            });
+
+            // 2. Upload new images if any
+            if (newImageFiles.length > 0) {
+                await serviceApi.uploadImages(id, newImageFiles);
+            }
+
+            toast.success(`Cập nhật dịch vụ "${formData.name}" thành công!`);
+            queryClient.invalidateQueries({ queryKey: ['service', id] });
+            navigate(ROUTES.PROVIDER_DASHBOARD);
+        } catch (error) {
+            console.error('Error updating service:', error);
+            toast.error('Có lỗi xảy ra khi cập nhật dịch vụ.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const amenitiesList = [
@@ -183,12 +227,10 @@ export default function EditServicePage() {
 
                         <div className="space-y-2">
                             <Label htmlFor="description">Description *</Label>
-                            <Textarea
-                                id="description"
-                                rows={4}
+                            <RichTextEditor
                                 value={formData.description}
-                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                required
+                                onChange={(value) => handleInputChange('description', value)}
+                                placeholder="Mô tả chi tiết về dịch vụ..."
                             />
                         </div>
                     </CardContent>
@@ -327,14 +369,13 @@ export default function EditServicePage() {
                                     </button>
                                 </div>
                             ))}
-                            <button
-                                type="button"
-                                onClick={handleAddImage}
-                                className="aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary"
+                            <label
+                                className="aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary cursor-pointer"
                             >
                                 <Upload className="w-6 h-6" />
                                 <span className="text-sm">Add Image</span>
-                            </button>
+                                <input type="file" className="hidden" multiple onChange={handleFileChange} accept="image/*" />
+                            </label>
                         </div>
                     </CardContent>
                 </Card>
@@ -345,11 +386,17 @@ export default function EditServicePage() {
                         type="button"
                         variant="outline"
                         onClick={() => navigate(-1)}
+                        disabled={isSaving}
                     >
                         Cancel
                     </Button>
-                    <Button type="submit">
-                        Update Service
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Updating...
+                            </>
+                        ) : 'Update Service'}
                     </Button>
                 </div>
             </form>

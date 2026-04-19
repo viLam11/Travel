@@ -1,6 +1,6 @@
 // src/pages/User/Profile/UserProfilePage.tsx
 import React, { useState, useEffect } from 'react';
-import { Camera, Save } from 'lucide-react';
+import { Camera, Save, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/common/avatar/Avatar';
 import toast from 'react-hot-toast';
@@ -112,26 +112,26 @@ const UserProfilePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="p-4 border-b md:border-b-0 md:border-r border-gray-200">
               <p className="text-sm text-gray-500 mb-1">Họ và tên</p>
-              <p className="font-medium text-gray-900">{formData.name || 'Chưa cập nhật'}</p>
+              <p className="font-medium text-gray-900">{formData.name || <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}</p>
             </div>
             <div className="p-4 border-b border-gray-200 md:border-b-0">
               <p className="text-sm text-gray-500 mb-1">Email</p>
-              <p className="font-medium text-gray-900">{formData.email}</p>
+              <p className="font-medium text-gray-900">{formData.email || <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}</p>
             </div>
             <div className="p-4 border-b md:border-b-0 md:border-r border-gray-200">
               <p className="text-sm text-gray-500 mb-1">Số điện thoại</p>
-              <p className="font-medium text-gray-900">{formData.phone || 'Chưa cập nhật'}</p>
+              <p className="font-medium text-gray-900">{formData.phone || <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}</p>
             </div>
             <div className="p-4">
               <p className="text-sm text-gray-500 mb-1">Ngày sinh</p>
               <p className="font-medium text-gray-900">
-                {formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                {formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('vi-VN') : <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}
               </p>
             </div>
             <div className="p-4 border-t md:border-r border-gray-200">
               <p className="text-sm text-gray-500 mb-1">Giới tính</p>
               <p className="font-medium text-gray-900">
-                {formData.gender === 'male' ? 'Nam' : formData.gender === 'female' ? 'Nữ' : formData.gender === 'other' ? 'Khác' : 'Chưa cập nhật'}
+                {formData.gender === 'male' ? 'Nam' : formData.gender === 'female' ? 'Nữ' : formData.gender === 'other' ? 'Khác' : <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}
               </p>
             </div>
           </div>
@@ -145,16 +145,16 @@ const UserProfilePage: React.FC = () => {
           <div className="grid grid-cols-1">
             <div className="p-4 border-b border-gray-200">
               <p className="text-sm text-gray-500 mb-1">Địa chỉ</p>
-              <p className="font-medium text-gray-900">{formData.address || 'Chưa cập nhật'}</p>
+              <p className="font-medium text-gray-900">{formData.address || <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="p-4 border-b md:border-b-0 md:border-r border-gray-200">
                 <p className="text-sm text-gray-500 mb-1">Thành phố</p>
-                <p className="font-medium text-gray-900">{formData.city || 'Chưa cập nhật'}</p>
+                <p className="font-medium text-gray-900">{formData.city || <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}</p>
               </div>
               <div className="p-4">
                 <p className="text-sm text-gray-500 mb-1">Quốc gia</p>
-                <p className="font-medium text-gray-900">{formData.country || 'Chưa cập nhật'}</p>
+                <p className="font-medium text-gray-900">{formData.country || <span className="text-gray-400 italic font-normal">Chưa cập nhật</span>}</p>
               </div>
             </div>
           </div>
@@ -164,8 +164,19 @@ const UserProfilePage: React.FC = () => {
   );
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Hồ sơ cá nhân</h1>
+    <div className="max-w-4xl">
+      {/* Premium Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-orange-100 p-2.5 rounded-2xl shadow-sm">
+              <User className="w-6 h-6 text-orange-600" />
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Hồ sơ cá nhân</h1>
+          </div>
+          <p className="text-gray-500 font-medium tracking-wide">Quản lý thông tin tài khoản và thiết lập cá nhân của bạn</p>
+        </div>
+      </div>
 
       {/* Avatar Section */}
       <div className="mb-8 flex items-center gap-6 p-6 bg-gray-50 rounded-lg">

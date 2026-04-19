@@ -102,10 +102,8 @@ export const DESTINATIONS = {
   'ca-mau': { id: '96', name: 'Cà Mau', slug: 'ca-mau', region: 'mien-nam', regionName: 'Miền Nam' },
   '96': { id: '96', name: 'Cà Mau', slug: 'ca-mau', region: 'mien-nam', regionName: 'Miền Nam' },
   'quang-nam': { id: '51', name: 'Quảng Nam', slug: 'quang-nam', region: 'mien-trung', regionName: 'Miền Trung' },
-  '51': { id: '51', name: 'Quảng Nam', slug: 'quang-nam', region: 'mien-trung', regionName: 'Miền Trung' },
   'hoi-an': { id: '51', name: 'Hội An', slug: 'hoi-an', region: 'mien-trung', regionName: 'Miền Trung' },
   'kien-giang': { id: '91', name: 'Kiên Giang', slug: 'kien-giang', region: 'mien-nam', regionName: 'Miền Nam' },
-  '91': { id: '91', name: 'Kiên Giang', slug: 'kien-giang', region: 'mien-nam', regionName: 'Miền Nam' },
   'phu-quoc': { id: '91', name: 'Phú Quốc', slug: 'phu-quoc', region: 'mien-nam', regionName: 'Miền Nam' }
 } as const;
 

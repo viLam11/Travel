@@ -1,7 +1,7 @@
-// src/components/page/destinationFilter/DestinationFIlterCard.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { useLazyImage } from '../../../hooks/useLazyImage';
-import { MapPin, Star, Tag, Heart, Clock, BadgeCheck, Leaf } from 'lucide-react';
+import { MapPin, Star, Tag, Clock, BadgeCheck, Leaf } from 'lucide-react';
+import FavoriteButton from '@/components/common/FavoriteButton';
 
 interface DestinationCardProps {
   destination: {
@@ -22,7 +22,6 @@ interface DestinationCardProps {
 }
 
 const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook, onClick }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
 
   const {
     ref,
@@ -90,12 +89,11 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook, 
           <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
           {/* Favorite */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsFavorite(p => !p); }}
-            className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-10"
-          >
-            <Heart className={`w-4 h-4 transition-colors ${isFavorite ? 'fill-orange-500 text-orange-500' : 'text-orange-500'}`} />
-          </button>
+          <FavoriteButton
+            serviceId={destination.id}
+            className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow z-10 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+            iconClassName="w-4 h-4"
+          />
         </div>
 
         {/* ── MIDDLE + RIGHT: Content ── */}
@@ -127,9 +125,10 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook, 
               </div>
 
               {/* Description */}
-              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
-                {destination.description}
-              </p>
+              <div 
+                className="text-sm text-gray-500 line-clamp-2 leading-relaxed [&>p]:inline-block [&>p]:m-0"
+                dangerouslySetInnerHTML={{ __html: destination.description }}
+              />
             </div>
 
             {/* Tags */}

@@ -3,8 +3,9 @@
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 
 export interface Booking {
-    id: string;
-    bookingCode: string;
+    id: string;          // Legacy/Mock support
+    orderID?: string;    // Backend Order ID
+    bookingCode: string; // Tương đương orderID trong một số context
     guest: {
         id: string;
         name: string;
@@ -25,8 +26,9 @@ export interface Booking {
         children: number;
     };
     totalAmount: number;
+    finalPrice?: number; // Giá sau khi áp dụng mã giảm giá
     status: BookingStatus;
-    paymentStatus: 'pending' | 'paid' | 'refunded';
+    paymentStatus: 'pending' | 'paid' | 'refunded' | 'SUCCESS' | 'FAILED';
     createdAt: string;
     updatedAt: string;
     note?: string;

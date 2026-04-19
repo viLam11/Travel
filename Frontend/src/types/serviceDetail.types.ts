@@ -18,6 +18,12 @@ export interface ServiceDetail {
   features: Feature[];
   availability: Record<string, Record<string, string>>;
   ticketTypes?: TicketType[];
+  provider?: {
+    userID: string;
+    fullname?: string;
+    avatarUrl?: string;
+  };
+  providerId?: string;
 }
 
 export interface TicketType {

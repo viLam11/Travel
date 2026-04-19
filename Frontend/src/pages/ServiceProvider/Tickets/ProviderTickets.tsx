@@ -1,5 +1,5 @@
 // src/pages/ServiceProvider/Tickets/ProviderTickets.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
@@ -15,16 +15,34 @@ import {
     DialogFooter,
 } from '@/components/ui/admin/dialog';
 import { Plus, Edit, Trash2, Ticket } from 'lucide-react';
-import { MOCK_TICKETS, type MockTicket } from '@/mocks/tickets';
+import { type MockTicket } from '@/mocks/tickets';
+import { ticketApi } from '@/api/ticketApi';
+import { useToast } from '@/contexts/ToastContext';
 
 const ProviderTickets = () => {
     // Mock: Get current provider's tour ID (in real app, from auth context)
     const currentTourId = 6; // Ha Long Bay Cruise
     const tourName = "Ha Long Bay Cruise";
+    const { toast } = useToast();
 
-    const [tickets, setTickets] = useState<MockTicket[]>(
-        MOCK_TICKETS.filter(ticket => ticket.tourId === currentTourId)
-    );
+    const [tickets, setTickets] = useState<MockTicket[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch tickets on mount
+    useEffect(() => {
+        const fetchTickets = async () => {
+            try {
+                const data = await ticketApi.getTicketsByService(currentTourId);
+                setTickets(data);
+            } catch (error) {
+                console.error("Failed to load tickets", error);
+                toast("Lỗi tải danh sách vé", "error");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchTickets();
+    }, [currentTourId, toast]);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTicket, setEditingTicket] = useState<MockTicket | null>(null);
@@ -64,45 +82,57 @@ const ProviderTickets = () => {
         setEditingTicket(null);
     };
 
-    const handleSave = () => {
-        if (editingTicket) {
-            // Update existing ticket
-            setTickets(prev => prev.map(ticket =>
-                ticket.id === editingTicket.id
-                    ? {
-                        ...ticket,
-                        name: formData.name,
-                        price: parseInt(formData.price),
-                        maxQuantity: parseInt(formData.maxQuantity),
-                        description: formData.description,
-                        content: formData.content,
-                    }
-                    : ticket
-            ));
-            alert(`Updated: ${formData.name}`);
-        } else {
-            // Add new ticket
-            const newTicket: MockTicket = {
-                id: Math.max(...tickets.map(t => t.id)) + 1,
-                tourId: currentTourId,
-                tourName: tourName,
-                name: formData.name,
-                price: parseInt(formData.price),
-                maxQuantity: parseInt(formData.maxQuantity),
-                available: parseInt(formData.maxQuantity),
-                description: formData.description,
-                content: formData.content,
-            };
-            setTickets(prev => [...prev, newTicket]);
-            alert(`Created: ${formData.name}`);
+    const handleSave = async () => {
+        try {
+            if (editingTicket) {
+                // Update existing ticket
+                const updateData = {
+                    name: formData.name,
+                    price: parseInt(formData.price),
+                    maxQuantity: parseInt(formData.maxQuantity),
+                    description: formData.description,
+                    content: formData.content,
+                };
+                await ticketApi.updateTicket(editingTicket.id, updateData);
+                
+                setTickets(prev => prev.map(ticket =>
+                    ticket.id === editingTicket.id
+                        ? { ...ticket, ...updateData }
+                        : ticket
+                ));
+                toast(`Cập nhật thành công: ${formData.name}`, "success");
+            } else {
+                // Add new ticket
+                const newData = {
+                    tourName: tourName,
+                    name: formData.name,
+                    price: parseInt(formData.price),
+                    maxQuantity: parseInt(formData.maxQuantity),
+                    available: parseInt(formData.maxQuantity),
+                    description: formData.description,
+                    content: formData.content,
+                };
+                const newTicket = await ticketApi.createTicket(currentTourId, newData);
+                setTickets(prev => [...prev, newTicket]);
+                toast(`Thêm vé thành công: ${formData.name}`, "success");
+            }
+            handleCloseDialog();
+        } catch (error) {
+            console.error("Save failed", error);
+            toast("Thao tác thất bại", "error");
         }
-        handleCloseDialog();
     };
 
-    const handleDelete = (ticket: MockTicket) => {
+    const handleDelete = async (ticket: MockTicket) => {
         if (confirm(`Are you sure you want to delete "${ticket.name}"?`)) {
-            setTickets(prev => prev.filter(t => t.id !== ticket.id));
-            alert(`Deleted: ${ticket.name}`);
+            try {
+                await ticketApi.deleteTicket(ticket.id);
+                setTickets(prev => prev.filter(t => t.id !== ticket.id));
+                toast(`Đã xóa vé: ${ticket.name}`, "success");
+            } catch (error) {
+                console.error("Delete failed", error);
+                toast("Xóa thất bại", "error");
+            }
         }
     };
 
@@ -155,70 +185,78 @@ const ProviderTickets = () => {
             </div>
 
             {/* Tickets List */}
-            <div className="space-y-4">
-                {tickets.map((ticket) => (
-                    <Card key={ticket.id}>
-                        <CardContent className="pt-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-4 flex-1">
-                                    <div className="p-3 bg-primary/10 rounded-lg">
-                                        <Ticket className="w-6 h-6 text-primary" />
+            {isLoading ? (
+                <div className="py-12 text-center text-muted-foreground">Đang tải danh sách vé...</div>
+            ) : tickets.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground border rounded-lg bg-card">
+                    Bạn chưa tạo loại vé nào cho dịch vụ này.
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {tickets.map((ticket) => (
+                        <Card key={ticket.id}>
+                            <CardContent className="pt-6">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-4 flex-1">
+                                        <div className="p-3 bg-primary/10 rounded-lg">
+                                            <Ticket className="w-6 h-6 text-primary" />
+                                        </div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="font-semibold text-lg">{ticket.name}</h3>
+                                                <Badge variant={ticket.available > 0 ? 'default' : 'secondary'}>
+                                                    {ticket.available > 0 ? 'Available' : 'Sold Out'}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">
+                                                {ticket.description}
+                                            </p>
+                                            <div className="bg-muted/50 p-3 rounded-md">
+                                                <p className="text-sm font-medium mb-1">What's Included:</p>
+                                                <p className="text-sm text-muted-foreground">{ticket.content}</p>
+                                            </div>
+                                            <div className="flex items-center gap-6 text-sm">
+                                                <div>
+                                                    <span className="text-muted-foreground">Price: </span>
+                                                    <span className="font-semibold text-lg text-primary">
+                                                        {ticket.price.toLocaleString('vi-VN')} ₫
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-muted-foreground">Availability: </span>
+                                                    <span className="font-medium">
+                                                        {ticket.available}/{ticket.maxQuantity}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 space-y-2">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="font-semibold text-lg">{ticket.name}</h3>
-                                            <Badge variant={ticket.available > 0 ? 'default' : 'secondary'}>
-                                                {ticket.available > 0 ? 'Available' : 'Sold Out'}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">
-                                            {ticket.description}
-                                        </p>
-                                        <div className="bg-muted/50 p-3 rounded-md">
-                                            <p className="text-sm font-medium mb-1">What's Included:</p>
-                                            <p className="text-sm text-muted-foreground">{ticket.content}</p>
-                                        </div>
-                                        <div className="flex items-center gap-6 text-sm">
-                                            <div>
-                                                <span className="text-muted-foreground">Price: </span>
-                                                <span className="font-semibold text-lg text-primary">
-                                                    {ticket.price.toLocaleString('vi-VN')} ₫
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="text-muted-foreground">Availability: </span>
-                                                <span className="font-medium">
-                                                    {ticket.available}/{ticket.maxQuantity}
-                                                </span>
-                                            </div>
-                                        </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2"
+                                            onClick={() => handleOpenDialog(ticket)}
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2 text-destructive hover:text-destructive"
+                                            onClick={() => handleDelete(ticket)}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </Button>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2"
-                                        onClick={() => handleOpenDialog(ticket)}
-                                    >
-                                        <Edit className="w-4 h-4" />
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2 text-destructive hover:text-destructive"
-                                        onClick={() => handleDelete(ticket)}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
             {/* Add/Edit Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

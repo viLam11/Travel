@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { MapPin } from 'lucide-react';
+import { MapPin, SearchX } from 'lucide-react';
 import type { AppDispatch, RootState } from '../../../store';
 import { loadDestination } from '../../../store/slices/destinationSlice';
 // import Navigation from '../../components/common/layout/NavigationUser';
@@ -106,7 +106,7 @@ const DestinationDetailPage: React.FC = () => {
         {/* <Navigation isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} /> */}
         <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 64px)' }}>
           <div className="text-center max-w-md px-4">
-            <div className="text-6xl mb-4">😔</div>
+            <SearchX className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Không tìm thấy thông tin
             </h2>
@@ -225,7 +225,6 @@ const DestinationDetailPage: React.FC = () => {
                 <DestinationCard
                   key={item.id}
                   destination={item}
-                  {...item}
                   onBook={(id) => handleBook(id, { ...item, category: 'place' })}
                 />
               ))}
@@ -253,7 +252,7 @@ const DestinationDetailPage: React.FC = () => {
               {displayedFood.map((item) => (
                 <DestinationCard
                   key={item.id}
-                  {...item}
+                  destination={item}
                   onBook={(id) => handleBook(id, { ...item, category: 'food' })}
                 />
               ))}
@@ -281,7 +280,7 @@ const DestinationDetailPage: React.FC = () => {
               {displayedHotels.map((item) => (
                 <DestinationCard
                   key={item.id}
-                  {...item}
+                  destination={item}
                   onBook={(id) => handleBook(id, { ...item, category: 'hotel' })}
                 />
               ))}

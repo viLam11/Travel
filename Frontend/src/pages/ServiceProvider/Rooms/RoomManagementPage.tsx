@@ -1,5 +1,5 @@
 // src/pages/ServiceProvider/Rooms/RoomManagementPage.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Badge } from '@/components/ui/admin/badge';
@@ -47,7 +47,6 @@ import {
 import {
   Filter,
   Plus,
-  Eye,
   Edit,
   Wifi,
   Tv,
@@ -61,18 +60,17 @@ import {
   Power,
   Ban,
   CheckCircle2,
-  Building2
+  Building2,
+  Upload
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { roomApi } from '@/api/roomApi';
+import toast from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
 
 // --- Interfaces Mới (Đơn giản hóa trạng thái) ---
-
-interface Hotel {
-  id: string;
-  name: string;
-  location: string;
-}
 
 interface RoomCategory {
   id: string;
@@ -101,6 +99,30 @@ interface Booking {
 
 // Card hiển thị Loại phòng (Đã cập nhật logic)
 function RoomCategoryCard({ category }: { category: RoomCategory }) {
+  const queryClient = useQueryClient();
+  const [isUploading, setIsUploading] = useState(false);
+
+  const uploadImagesMutation = useMutation({
+    mutationFn: (files: File[]) => roomApi.addRoomImages(category.id, files),
+    onSuccess: () => {
+      toast.success('Tải ảnh lên thành công!');
+      queryClient.invalidateQueries({ queryKey: ['rooms', category.hotelId] });
+      setIsUploading(false);
+    },
+    onError: () => {
+      toast.error('Có lỗi xảy ra khi tải ảnh.');
+      setIsUploading(false);
+    }
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setIsUploading(true);
+      uploadImagesMutation.mutate(Array.from(files));
+    }
+  };
+
   // Cấu hình trạng thái đơn giản
   const statusConfig = {
     active: {
@@ -199,10 +221,15 @@ function RoomCategoryCard({ category }: { category: RoomCategory }) {
 
         {/* Actions */}
         <div className="flex gap-2 mt-5 pt-4 border-t border-sidebar-border">
-          <Button variant="outline" size="sm" className="flex-1 hover:bg-sidebar-accent border-sidebar-border">
-            <Eye className="w-4 h-4 mr-1.5" />
-            Chi tiết
-          </Button>
+          <label className="flex-1">
+            <Button variant="outline" size="sm" className="w-full hover:bg-sidebar-accent border-sidebar-border cursor-pointer flex items-center justify-center" asChild>
+              <div className="flex items-center">
+                {isUploading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Upload className="w-4 h-4 mr-1.5" />}
+                Ảnh
+                <input type="file" className="hidden" multiple onChange={handleFileChange} accept="image/*" disabled={isUploading} />
+              </div>
+            </Button>
+          </label>
           <Button variant="default" size="sm" className="flex-1">
             <Edit className="w-4 h-4 mr-1.5" />
             Sửa
@@ -292,73 +319,44 @@ function NewBookingDialog() {
 // Main Page
 export default function RoomManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  // const [selectedDate, setSelectedDate] = useState<Date>();
-  const [selectedHotelId, setSelectedHotelId] = useState<string>('hotel-1');
+  const [selectedHotelId, setSelectedHotelId] = useState<string>('');
 
-  // Mock Hotels Data
-  const hotels: Hotel[] = [
-    { id: 'hotel-1', name: 'Khách sạn Majestic Sài Gòn', location: 'Hồ Chí Minh' },
-    { id: 'hotel-2', name: 'Rex Hotel Saigon', location: 'Hồ Chí Minh' },
-    { id: 'hotel-3', name: 'Pullman Saigon Centre', location: 'Hồ Chí Minh' },
-  ];
+  // Fetch hotels for selector
+  const { data: myHotels = [] } = useQuery({
+    queryKey: ['myHotels'],
+    queryFn: async () => {
+      // Logic would go here to fetch current provider's hotels
+      // For now, let's keep the mock hotels but structure for real fetch
+      return [
+        { id: '11', name: 'Khách sạn Majestic Sài Gòn', location: 'Hồ Chí Minh' },
+        { id: '12', name: 'Rex Hotel Saigon', location: 'Hồ Chí Minh' },
+      ];
+    }
+  });
 
-  // Dữ liệu mẫu Hạng phòng (Chỉ còn active/stopped)
-  const roomCategories: RoomCategory[] = [
-    {
-      id: '1',
-      hotelId: 'hotel-1',
-      name: 'Standard Room',
-      totalRooms: 20,
-      status: 'active',
-      price: '1.200.000₫',
-      amenities: ['WiFi', 'TV', 'Coffee'],
-    },
-    {
-      id: '2',
-      hotelId: 'hotel-1',
-      name: 'Deluxe Room',
-      totalRooms: 10,
-      status: 'active',
-      price: '2.500.000₫',
-      amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
-    },
-    {
-      id: '3',
-      hotelId: 'hotel-1',
-      name: 'Executive Suite',
-      totalRooms: 5,
-      status: 'stopped',
-      price: '4.500.000₫',
-      amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
-    },
-    {
-      id: '4',
-      hotelId: 'hotel-2',
-      name: 'Superior Room',
-      totalRooms: 15,
-      status: 'active',
-      price: '1.800.000₫',
-      amenities: ['WiFi', 'TV', 'Coffee'],
-    },
-    {
-      id: '5',
-      hotelId: 'hotel-2',
-      name: 'Premium Suite',
-      totalRooms: 8,
-      status: 'active',
-      price: '3.500.000₫',
-      amenities: ['WiFi', 'TV', 'Coffee', 'Bath'],
-    },
-    {
-      id: '6',
-      hotelId: 'hotel-3',
-      name: 'Business Room',
-      totalRooms: 25,
-      status: 'active',
-      price: '2.200.000₫',
-      amenities: ['WiFi', 'TV', 'Coffee'],
-    },
-  ];
+  useEffect(() => {
+    if (myHotels.length > 0 && !selectedHotelId) {
+      setSelectedHotelId(myHotels[0].id);
+    }
+  }, [myHotels, selectedHotelId]);
+
+  // Fetch rooms for selected hotel
+  const { data: rooms = [] } = useQuery({
+    queryKey: ['rooms', selectedHotelId],
+    queryFn: () => roomApi.getRoomsByHotelId(selectedHotelId),
+    enabled: !!selectedHotelId
+  });
+
+  // Map backend rooms to RoomCategory interface
+  const roomCategories: RoomCategory[] = rooms.map((r: any) => ({
+    id: r.id.toString(),
+    hotelId: selectedHotelId,
+    name: r.roomType || 'Room',
+    totalRooms: r.max_occupancy || 1,
+    status: 'active', // Default as backend doesn't seem to provide specific status yet
+    price: r.price ? `${r.price.toLocaleString()}₫` : '0₫',
+    amenities: ['WiFi', 'TV'], // Mock default
+  }));
 
   // Filter rooms by selected hotel
   const filteredRoomCategories = roomCategories.filter(
@@ -370,7 +368,7 @@ export default function RoomManagementPage() {
     { id: 'BK002', guest: 'Nguyễn Thị Mai', roomType: 'Deluxe Room', checkIn: '22/01/2025', checkOut: '25/01/2025', guests: 1, amount: '7.500.000₫', status: 'pending', source: 'Booking.com' },
   ];
 
-  const selectedHotel = hotels.find(h => h.id === selectedHotelId);
+  const selectedHotel = myHotels.find((h: any) => h.id === selectedHotelId);
 
   return (
     <div className="w-full space-y-6 p-6">
@@ -414,7 +412,7 @@ export default function RoomManagementPage() {
                     <SelectValue placeholder="Chọn khách sạn..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {hotels.map((hotel) => (
+                    {myHotels.map((hotel: any) => (
                       <SelectItem key={hotel.id} value={hotel.id}>
                         <div className="flex flex-col py-1">
                           <span className="font-medium">{hotel.name}</span>
@@ -425,26 +423,23 @@ export default function RoomManagementPage() {
                   </SelectContent>
                 </Select>
 
-                {selectedHotel && (
+                {selectedHotelId && (
                   <div className="mt-3 flex items-center gap-2 text-xs">
                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                       <span className="font-medium">Đang hoạt động</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                      <span>{selectedHotel.location}</span>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Right: Quick Stats */}
-              {selectedHotel && (
+              {selectedHotelId && (
                 <div className="flex gap-3">
                   {/* Total Rooms */}
                   <div className="text-center px-4 py-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/50 dark:border-blue-800/50 min-w-[100px]">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {filteredRoomCategories.reduce((sum, cat) => sum + cat.totalRooms, 0)}
+                      {roomCategories.reduce((sum, cat) => sum + cat.totalRooms, 0)}
                     </div>
                     <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mt-1">
                       Tổng phòng
@@ -454,7 +449,7 @@ export default function RoomManagementPage() {
                   {/* Active Categories */}
                   <div className="text-center px-4 py-3 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border border-green-200/50 dark:border-green-800/50 min-w-[100px]">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {filteredRoomCategories.filter(cat => cat.status === 'active').length}
+                      {roomCategories.filter(cat => cat.status === 'active').length}
                     </div>
                     <div className="text-xs font-medium text-green-700 dark:text-green-300 mt-1">
                       Đang bán

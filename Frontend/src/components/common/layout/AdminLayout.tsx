@@ -32,16 +32,16 @@ const AdminLayoutContent: FC<AdminLayoutProps> = ({
 
     if (isPendingProvider) {
         return (
-            <div className={cn("min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4", isDark ? "dark bg-gray-900" : "")}>
-                <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center border border-gray-100 dark:border-gray-700">
-                    <div className="mx-auto w-20 h-20 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center mb-6">
+            <div className={cn("min-h-screen flex flex-col items-center justify-center p-4", isDark ? "dark" : "")} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
+                <div className="max-w-md w-full rounded-2xl shadow-lg p-8 text-center border" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
+                    <div className="mx-auto w-20 h-20 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-6">
                         <Clock className="w-10 h-10" />
                     </div>
-                    
+
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                         Tài Khoản Đang Chờ Duyệt
                     </h1>
-                    
+
                     <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
                         Cảm ơn bạn đã đăng ký trở thành Chủ dịch vụ. Hồ sơ của bạn hiện đang được ban quản trị xem xét. Quá trình này thường mất từ <span className="font-semibold text-gray-800 dark:text-gray-200">24-48 giờ làm việc</span>.
                     </p>
@@ -64,14 +64,14 @@ const AdminLayoutContent: FC<AdminLayoutProps> = ({
                     </div>
 
                     <div className="flex gap-3 justify-center">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => navigate('/homepage')}
                             className="flex-1 cursor-pointer"
                         >
                             Về trang chủ
                         </Button>
-                        <Button 
+                        <Button
                             onClick={async () => {
                                 await logout();
                                 navigate('/login');
@@ -99,11 +99,11 @@ const AdminLayoutContent: FC<AdminLayoutProps> = ({
                 <AdminSideBar variant="inset" collapsible="icon" />
                 <SidebarInset className="overflow-x-hidden">
                     {showHeader && (
-                        <header className="sticky top-0 z-10 bg-background border-b">
+                        <header className="top-0 z-10 bg-background">
                             <SiteHeader />
                         </header>
                     )}
-                    <main className="flex-1 overflow-auto">
+                    <main className="flex-1">
                         <Container className="py-6" maxWidth="full" withPadding={true}>
                             {children || <Outlet />}
                         </Container>

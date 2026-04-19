@@ -59,17 +59,11 @@ const mockBookingDetail: BookingDetail = {
         phone: '0901234567',
         avatar: 'https://i.pravatar.cc/150?img=1'
     },
-    service: {
-        id: 's1',
-        name: 'Khách sạn Majestic Saigon',
-        type: 'hotel'
-    },
+    service: { id: 's1', name: 'Khách sạn Majestic Saigon', type: 'hotel' },
     checkIn: '2024-12-25',
     checkOut: '2024-12-28',
     guests: { adults: 2, children: 0 },
-    rooms: [
-        { id: 'r1', name: 'Deluxe Room', quantity: 1, pricePerNight: 2500000 }
-    ],
+    rooms: [{ id: 'r1', name: 'Deluxe Room', quantity: 1, pricePerNight: 2500000 }],
     totalAmount: 7500000,
     status: 'confirmed',
     paymentStatus: 'paid',
@@ -84,25 +78,18 @@ const mockBookingDetail: BookingDetail = {
 };
 
 const mockStats = {
-    today: {
-        total: 3,
-        pending: 1,
-        confirmed: 1,
-        completed: 1,
-        cancelled: 0,
-    },
-    thisMonth: {
-        total: 24,
-        revenue: 125000000,
-    },
+    today: { total: 3, pending: 1, confirmed: 1, completed: 1, cancelled: 0 },
+    thisMonth: { total: 24, revenue: 125000000 },
 };
 
 export const bookingApi = {
+    /**
+     * Lấy danh sách đơn hàng
+     * Backend: GET /orders/all — trả về Page<Order> của user đang đăng nhập
+     * ⚠️ NOTE: BE cần thêm GET /orders/provider để provider lọc đơn theo dịch vụ của mình
+     */
     getProviderBookings: async (params?: {
         status?: BookingStatus;
-        serviceId?: string;
-        startDate?: string;
-        endDate?: string;
         page?: number;
         limit?: number;
     }): Promise<{
@@ -119,9 +106,16 @@ export const bookingApi = {
         }
 
         try {
-            return await apiClient.get('/api/provider/bookings', { params });
+            const response = await apiClient.orders.getAll(params?.page || 0, params?.limit || 10);
+            const content = response.content || (Array.isArray(response) ? response : []);
+            return {
+                bookings: content,
+                total: response.totalElements || (Array.isArray(response) ? response.length : 0),
+                page: response.pageNo ?? response.number ?? 0,
+                totalPages: response.totalPages || 1,
+            };
         } catch (error) {
-            console.error('Error fetching provider bookings:', error);
+            console.error('Error fetching bookings:', error);
             throw error;
         }
     },
@@ -131,62 +125,54 @@ export const bookingApi = {
             await new Promise(resolve => setTimeout(resolve, 300));
             return mockBookingDetail;
         }
-
+        // Backend: GET /orders/{id}
         try {
-            return await apiClient.get(`/api/provider/bookings/${bookingId}`);
+            return await apiClient.orders.getById(bookingId);
         } catch (error) {
             console.error('Error fetching booking detail:', error);
             throw error;
         }
     },
 
-    // Cập nhật trạng thái booking
+    /**
+     * Cập nhật trạng thái đơn hàng
+     * Backend: PATCH /orders/{orderID}/status — body là OrderStatus enum string
+     * Các giá trị hợp lệ: PENDING, ACCEPTED, CANCELED, COMPLETED
+     */
     updateBookingStatus: async (
         bookingId: string,
         status: BookingStatus,
-        note?: string
-    ): Promise<Booking> => {
+        _note?: string
+    ): Promise<any> => {
         try {
-            return await apiClient.patch(`/api/provider/bookings/${bookingId}/status`, { status, note });
+            let backendStatus = status.toUpperCase();
+            if (backendStatus === 'CONFIRMED') backendStatus = 'ACCEPTED';
+            if (backendStatus === 'COMPLETED') backendStatus = 'SUCCESS';
+            if (backendStatus === 'CANCELLED') backendStatus = 'CANCELLED';
+            
+            return await apiClient.orders.updateStatus(bookingId, backendStatus);
         } catch (error) {
             console.error('Error updating booking status:', error);
             throw error;
         }
     },
 
-    // Hủy booking
-    cancelBooking: async (bookingId: string, reason: string): Promise<Booking> => {
+    cancelBooking: async (bookingId: string, _reason: string): Promise<any> => {
         try {
-            return await apiClient.post(`/api/provider/bookings/${bookingId}/cancel`, { reason });
+            return await apiClient.orders.updateStatus(bookingId, 'CANCELLED');
         } catch (error) {
             console.error('Error cancelling booking:', error);
             throw error;
         }
     },
 
-    getBookingStats: async (): Promise<{
-        today: {
-            total: number;
-            pending: number;
-            confirmed: number;
-            completed: number;
-            cancelled: number;
-        };
-        thisMonth: {
-            total: number;
-            revenue: number;
-        };
-    }> => {
+    getBookingStats: async (): Promise<typeof mockStats> => {
         if (USE_MOCK) {
             await new Promise(resolve => setTimeout(resolve, 300));
             return mockStats;
         }
-
-        try {
-            return await apiClient.get('/api/provider/bookings/stats');
-        } catch (error) {
-            console.error('Error fetching booking stats:', error);
-            throw error;
-        }
+        // NOTE: BE chưa có API stats cho provider
+        console.warn('[bookingApi] getBookingStats: No backend endpoint, returning mock data');
+        return mockStats;
     },
 };
