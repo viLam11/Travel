@@ -11,6 +11,7 @@ import { provinceApi } from '@/api/provinceApi';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 // Types
 interface AdditionalService {
@@ -593,12 +594,10 @@ const AdminAddServicePage: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Mô tả <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    id="description"
+                  <RichTextEditor
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                     placeholder="Mô tả chi tiết về dịch vụ..."
-                    rows={4}
                   />
                 </div>
 

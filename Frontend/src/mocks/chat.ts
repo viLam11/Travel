@@ -52,6 +52,25 @@ export const mockConversations: Conversation[] = [
         serviceId: '102',
         serviceName: 'Tour Vịnh Hạ Long 2 ngày 1 đêm',
         updatedAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+        id: 'conv_3',
+        participants: [
+            mockCurrentUser,
+            { id: 'admin_support', name: 'Hotline Hỗ Trợ', avatar: 'https://i.pravatar.cc/150?u=admin_support', role: 'admin', isOnline: true }
+        ],
+        lastMessage: {
+            id: 'msg_99',
+            conversationId: 'conv_3',
+            senderId: 'admin_support',
+            text: 'Cần hỗ trợ gấp, hãy gọi hotline: 1900 1234',
+            timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
+            isRead: true,
+            type: 'text'
+        },
+        unreadCount: 0,
+        serviceName: 'Trung tâm trợ giúp Travollo',
+        updatedAt: new Date(Date.now() - 3600000 * 5).toISOString()
     }
 ];
 
@@ -101,6 +120,44 @@ export const mockMessagesByConversation: Record<string, ChatMessage[]> = {
             senderId: 'user_123',
             text: 'Cảm ơn bạn. Mình sẽ báo lại sau.',
             timestamp: new Date(Date.now() - 86400000).toISOString(),
+            isRead: true,
+            type: 'text'
+        }
+    ],
+    'conv_3': [
+        {
+            id: 'msg_31',
+            conversationId: 'conv_3',
+            senderId: 'admin_support',
+            text: 'Xin chào, chúng tôi có thể giúp gì cho bạn?',
+            timestamp: new Date(Date.now() - 3600000 * 10).toISOString(),
+            isRead: true,
+            type: 'text'
+        },
+        {
+            id: 'msg_32',
+            conversationId: 'conv_3',
+            senderId: 'user_123',
+            text: 'Mình muốn hủy đặt phòng ở Nha Trang ạ.',
+            timestamp: new Date(Date.now() - 3600000 * 9).toISOString(),
+            isRead: true,
+            type: 'text'
+        },
+        {
+            id: 'msg_33',
+            conversationId: 'conv_3',
+            senderId: 'admin_support',
+            text: 'Dạ, bạn vui lòng cung cấp mã đặt phòng (Booking ID) để bên mình kiểm tra nhé.',
+            timestamp: new Date(Date.now() - 3600000 * 8).toISOString(),
+            isRead: true,
+            type: 'text'
+        },
+        {
+            id: 'msg_34',
+            conversationId: 'conv_3',
+            senderId: 'admin_support',
+            text: 'Cần hỗ trợ gấp, hãy gọi hotline: 1900 1234',
+            timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
             isRead: true,
             type: 'text'
         }

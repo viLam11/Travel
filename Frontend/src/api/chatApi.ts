@@ -2,14 +2,20 @@ import type { Conversation, ChatMessage } from '@/types/chat.types';
 import apiClient from '../services/apiClient';
 import { mockConversations, mockMessagesByConversation } from '@/mocks/chat';
 
-const USE_MOCK = false; // Set to false to use real backend APIs by default
+import { shouldUseMock } from '@/config/mockConfig';
+
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+const LOCAL_MOCK_OVERRIDE: boolean | null = null;
+const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 interface BackendChatMessage {
     id: string;
     content: string;
     type: 'CHAT' | 'JOIN' | 'LEAVE' | 'text' | 'image' | 'system';
     createdAt: string;
-    isRead: boolean;
+    isRead?: boolean;
+    read?: boolean;
     sender: {
         userId: string;
         username: string;
@@ -39,7 +45,7 @@ const mapBackendToFrontendMessage = (msg: BackendChatMessage): ChatMessage => {
         senderId: msg.sender?.userId || 'unknown',
         text: msg.content || '',
         timestamp: msg.createdAt || new Date().toISOString(),
-        isRead: msg.isRead || false,
+        isRead: msg.read ?? msg.isRead ?? false,
         type: messageType.toLowerCase() === 'chat' ? 'text' : (messageType.toLowerCase() as any)
     };
 };
@@ -60,15 +66,15 @@ export const chatApi = {
             }
 
             return lastMessages.map(msg => {
-                const otherUser = msg.sender.userId === userId ? msg.receiver : msg.sender;
+                const otherUser = String(msg.sender.userId) === String(userId) ? msg.receiver : msg.sender;
                 return {
-                    id: otherUser.userId, // Use other user's ID as conversation ID for simplicity in 1-1 chat
+                    id: String(otherUser.userId), // Use other user's ID as conversation ID for simplicity in 1-1 chat
                     participants: [
-                        { id: msg.sender.userId, name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
-                        { id: msg.receiver.userId, name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
+                        { id: String(msg.sender.userId), name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
+                        { id: String(msg.receiver.userId), name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
                     ],
                     lastMessage: mapBackendToFrontendMessage(msg),
-                    unreadCount: msg.isRead ? 0 : (msg.receiver.userId === userId ? 1 : 0),
+                    unreadCount: (msg.read ?? msg.isRead) ? 0 : (String(msg.receiver.userId) === String(userId) ? 1 : 0),
                     updatedAt: msg.createdAt,
                     serviceName: 'Hỗ trợ khách hàng'
                 };
@@ -97,6 +103,7 @@ export const chatApi = {
         if (USE_MOCK || localStorage.getItem('token')?.startsWith('mock-token-')) {
             return Promise.resolve();
         }
+        
         return apiClient.put(`/api/chat/mark-read/${senderId}`, {});
     },
 

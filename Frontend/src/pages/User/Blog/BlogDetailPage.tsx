@@ -12,6 +12,9 @@ import {
   Loader2,
   MessageCircle,
   Tag,
+  Heart,
+  SearchX,
+  BookOpen,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Footer from '@/components/common/layout/Footer';
@@ -147,7 +150,7 @@ const BlogDetailPage: React.FC = () => {
   if (isError || !post) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-4">
-        <div className="text-5xl">😕</div>
+        <SearchX className="w-16 h-16 text-gray-300" />
         <h2 className="text-xl font-bold text-gray-800">Không tìm thấy bài viết</h2>
         <button
           onClick={() => navigate('/blog')}
@@ -467,7 +470,7 @@ const BlogDetailPage: React.FC = () => {
             {relatedData && relatedData.posts.length > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-[15px]">
-                  <span className="text-base">📖</span>
+                  <BookOpen className="w-4 h-4 text-orange-500" />
                   Bài viết liên quan
                 </h3>
                 <div className="space-y-3">
@@ -492,7 +495,7 @@ const BlogDetailPage: React.FC = () => {
                             {rp.title}
                           </p>
                           <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-                            <span>❤️</span>
+                            <Heart className="w-3 h-3 fill-red-400 text-red-400" />
                             <span>{rp.reactionCount || rp.likeCount || 0}</span>
                           </p>
                         </div>

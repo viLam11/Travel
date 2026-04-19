@@ -1,7 +1,12 @@
 import type { Review, ReviewStats, ReviewStatus } from '@/types/review.types';
 import apiClient from '@/services/apiClient';
 
-const USE_MOCK = false;
+import { shouldUseMock } from '@/config/mockConfig';
+
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+const LOCAL_MOCK_OVERRIDE: boolean | null = false;
+const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Mock Data
 const mockReviews: Review[] = [

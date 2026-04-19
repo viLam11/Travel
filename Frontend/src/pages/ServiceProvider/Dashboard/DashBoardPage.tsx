@@ -18,7 +18,7 @@ import {
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import {
   Calendar,
-  Banknote, // Đã thay thế DollarSign bằng Banknote
+  Banknote,
   Users,
   Eye,
   Edit,
@@ -28,7 +28,10 @@ import {
   Briefcase,
   Loader2,
   Plus,
-  X
+  X,
+  Inbox,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -65,9 +68,9 @@ const STATUS_CONF: Record<string, { label: string; className: string }> = {
 function BookingDetailPanel({ booking, onClose }: { booking: Booking; onClose: () => void }) {
   const s = STATUS_CONF[booking.status];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-background rounded-xl shadow-2xl max-w-lg w-full">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40 rounded-t-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-xl shadow-2xl max-w-lg w-full border border-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/20 rounded-t-xl">
           <div>
             <h2 className="text-lg font-bold">Chi tiết đơn #{booking.id}</h2>
             <p className="text-sm text-muted-foreground">{booking.service}</p>
@@ -100,9 +103,9 @@ function BookingStatusPanel({
 }: { booking: Booking; onClose: () => void; onConfirm: () => void; onReject: () => void }) {
   const s = STATUS_CONF[booking.status];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-background rounded-xl shadow-2xl max-w-md w-full">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40 rounded-t-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-xl shadow-2xl max-w-md w-full border border-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/20 rounded-t-xl">
           <h2 className="text-lg font-bold">Xử lý đơn #{booking.id}</h2>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
         </div>
@@ -292,11 +295,11 @@ function BookingsTable({
       <div className="rounded-xl border border-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px]">
-            <thead className="bg-muted/50 border-b border-border">
+            <thead className="bg-muted/30">
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
+                <tr key={headerGroup.id} className="border-b border-border">
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="text-left px-6 py-4 font-semibold text-base text-muted-foreground">
+                    <th key={header.id} className="whitespace-nowrap text-left px-6 py-3.5 text-sm font-medium text-muted-foreground">
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
@@ -311,7 +314,7 @@ function BookingsTable({
                     className="hover:bg-muted/50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-6 py-4 text-base">
+                      <td key={cell.id} className="px-6 py-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -319,8 +322,12 @@ function BookingsTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="text-center p-10 text-lg text-muted-foreground">
-                    Không tìm thấy dữ liệu
+                  <td colSpan={columns.length} className="text-center py-16 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-3">
+                      <Inbox className="w-10 h-10 opacity-25" />
+                      <p className="text-[14px] font-medium">Không tìm thấy dữ liệu</p>
+                      <p className="text-[12px] text-muted-foreground/70">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -398,6 +405,11 @@ export default function TravelServicesDashboard() {
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [serviceInfo, setServiceInfo] = useState<any>(null);
 
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalBookings, setTotalBookings] = useState(0);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [trendsData, setTrendsData] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchServiceInfo = async () => {
       const serviceId = currentUser?.user?.serviceId;
@@ -411,6 +423,46 @@ export default function TravelServicesDashboard() {
     };
     fetchServiceInfo();
   }, [currentUser]);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      const serviceId = currentUser?.user?.serviceId;
+      if (!serviceId) return;
+
+      try {
+        let stats: any;
+        if (providerType === 'hotel') {
+          stats = await apiClient.statistics.getHotelStats(serviceId);
+        } else {
+          stats = await apiClient.statistics.getVenueStats(serviceId);
+        }
+
+        const dataArr = Array.isArray(stats) ? stats : (stats?.items || []);
+        let sumRev = 0;
+        let sumBkg = 0;
+
+        const mappedTrends = dataArr.map((day: any) => {
+           const rev = day.revenue || 0;
+           const ord = day.totalOrders || 0;
+           sumRev += rev;
+           sumBkg += ord;
+           return { date: day.date || 'unknown', bookings: ord };
+        });
+
+        setTotalRevenue(sumRev);
+        setTotalBookings(sumBkg);
+        setTrendsData(mappedTrends);
+
+        setRevenueData([
+          { service: serviceInfo?.name || 'Dịch vụ của tôi', revenue: sumRev, bookings: sumBkg }
+        ]);
+
+      } catch (error) {
+         console.error("Lỗi khi tải thống kê Dashboard:", error);
+      }
+    };
+    fetchDashboardStats();
+  }, [currentUser, providerType, serviceInfo]);
 
   useEffect(() => {
     const fetchApiBookings = async () => {
@@ -476,7 +528,7 @@ export default function TravelServicesDashboard() {
         },
         {
           title: "Check-in hôm nay",
-          value: "24",
+          value: totalBookings.toString(),
           icon: Calendar,
           color: "text-green-600 dark:text-green-400",
           iconBg: "bg-green-100 dark:bg-green-500/20",
@@ -484,8 +536,8 @@ export default function TravelServicesDashboard() {
           trend: "up",
         },
         {
-          title: "Doanh thu hôm nay",
-          value: formatCurrency(18500000),
+          title: "Tổng doanh thu",
+          value: formatCurrency(totalRevenue),
           icon: Banknote,
           color: "text-yellow-600 dark:text-yellow-400",
           iconBg: "bg-yellow-100 dark:bg-yellow-500/20",
@@ -515,7 +567,7 @@ export default function TravelServicesDashboard() {
         },
         {
           title: "Vé bán hôm nay",
-          value: "156",
+          value: totalBookings.toString(),
           icon: Calendar,
           color: "text-green-600 dark:text-green-400",
           iconBg: "bg-green-100 dark:bg-green-500/20",
@@ -523,8 +575,8 @@ export default function TravelServicesDashboard() {
           trend: "up",
         },
         {
-          title: "Doanh thu hôm nay",
-          value: formatCurrency(12400000),
+          title: "Tổng doanh thu",
+          value: formatCurrency(totalRevenue),
           icon: Banknote,
           color: "text-yellow-600 dark:text-yellow-400",
           iconBg: "bg-yellow-100 dark:bg-yellow-500/20",
@@ -563,8 +615,8 @@ export default function TravelServicesDashboard() {
           trend: "up",
         },
         {
-          title: "Doanh thu hôm nay",
-          value: formatCurrency(30900000),
+          title: "Tổng doanh thu",
+          value: formatCurrency(totalRevenue),
           icon: Banknote,
           color: "text-yellow-600 dark:text-yellow-400",
           iconBg: "bg-yellow-100 dark:bg-yellow-500/20",
@@ -653,15 +705,15 @@ export default function TravelServicesDashboard() {
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{headerText.title}</h1>
-          <p className="text-lg text-muted-foreground mt-1">{headerText.subtitle}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{headerText.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{headerText.subtitle}</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="text-base px-4 h-11" onClick={handleExportReports} disabled={isExporting}>
-            {isExporting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Calendar className="w-5 h-5 mr-2" />}
+          <Button variant="outline" className="text-sm px-4 h-9" onClick={handleExportReports} disabled={isExporting}>
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calendar className="w-4 h-4 mr-2" />}
             {isExporting ? 'Đang xử lý...' : 'Xuất báo cáo'}
           </Button>
-          <Button variant="default" onClick={() => setShowBookingModal(true)} className="bg-primary hover:bg-primary/90 text-base px-4 h-11">
+          <Button variant="default" onClick={() => setShowBookingModal(true)} className="bg-primary hover:bg-primary/90 text-sm px-4 h-9">
             {headerText.buttonText}
           </Button>
         </div>
@@ -671,12 +723,23 @@ export default function TravelServicesDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
-          const trendBg = stat.trend === 'up' ? 'bg-green-50 dark:bg-green-500/10' : 'bg-red-50 dark:bg-red-500/10';
-          const trendColor = stat.trend === 'up' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400';
+          const isUp = stat.trend === 'up';
+          const isDown = stat.trend === 'down';
+          const trendBg = isUp
+            ? 'bg-green-50 dark:bg-green-950/40'
+            : isDown
+            ? 'bg-red-50 dark:bg-red-950/40'
+            : 'bg-muted';
+          const trendColor = isUp
+            ? 'text-green-700 dark:text-green-400'
+            : isDown
+            ? 'text-red-700 dark:text-red-400'
+            : 'text-muted-foreground';
+          const TrendIcon = isUp ? TrendingUp : isDown ? TrendingDown : null;
 
           // Dynamic font size based on text length
           const valueLength = stat.value.toString().length;
-          let fontSizeClass = 'text-3xl'; // default
+          let fontSizeClass = 'text-3xl';
           if (valueLength > 15) {
             fontSizeClass = 'text-xl';
           } else if (valueLength > 10) {
@@ -684,15 +747,16 @@ export default function TravelServicesDashboard() {
           }
 
           return (
-            <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow bg-card rounded-xl overflow-hidden">
-              <CardContent className="p-6 flex justify-between items-start gap-4">
+            <Card key={index} className="shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <CardContent className="p-5 flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <div className={`${fontSizeClass} font-bold text-foreground mt-2 break-words leading-tight`}>{stat.value}</div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1 truncate">{stat.title}</p>
+                  <div className={`${fontSizeClass} font-semibold text-foreground mt-1 break-words leading-tight`}>{stat.value}</div>
                   {stat.change && (
                     <div className="mt-4 flex items-center">
-                      <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-sm font-medium ${trendBg} ${trendColor}`}>
-                        {stat.trend === 'up' ? '+' : ''}{stat.change} so với hôm qua
+                      <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-0.5 text-[11px] font-medium ${trendBg} ${trendColor}`}>
+                        {TrendIcon && <TrendIcon className="w-3 h-3" />}
+                        {isUp ? '' : isDown ? '' : ''}{stat.change} so với hôm qua
                       </span>
                     </div>
                   )}
@@ -709,10 +773,11 @@ export default function TravelServicesDashboard() {
       {/* Charts Section - Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RevenueByServiceChart data={revenueByServiceData} />
+          <RevenueByServiceChart data={revenueData.length > 0 ? revenueData : revenueByServiceData} />
         </div>
-        <div className="lg:col-span-1">
-          <BookingTrendsChart data={bookingTrendsData} />
+
+        <div>
+          <BookingTrendsChart data={trendsData.length > 0 ? trendsData : bookingTrendsData} />
         </div>
       </div>
 
@@ -735,7 +800,7 @@ export default function TravelServicesDashboard() {
       </div> */}
 
       {/* Recent Bookings Card */}
-      <Card className="border-0 shadow-sm">
+      <Card className="shadow-sm overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
           <div>
             <CardTitle className="text-xl font-semibold">{bookingsTitle.title}</CardTitle>
@@ -776,13 +841,29 @@ export default function TravelServicesDashboard() {
         <BookingStatusPanel
           booking={statusBooking}
           onClose={() => setStatusBooking(null)}
-          onConfirm={() => {
-            setLocalBookings(prev => prev.map(b => b.id === statusBooking.id ? { ...b, status: 'confirmed' } : b));
-            setStatusBooking(null);
+          onConfirm={async () => {
+            try {
+              await apiClient.orders.updateStatus(statusBooking.id, '"ACCEPTED"');
+              setLocalBookings(prev => prev.map(b => b.id === statusBooking.id ? { ...b, status: 'confirmed' } : b));
+              toast("Đã xác nhận đơn hàng " + statusBooking.id, "success");
+            } catch (err) {
+              console.error(err);
+              toast("Lỗi khi xác nhận đơn hàng " + statusBooking.id, "error");
+            } finally {
+              setStatusBooking(null);
+            }
           }}
-          onReject={() => {
-            setLocalBookings(prev => prev.map(b => b.id === statusBooking.id ? { ...b, status: 'cancelled' } : b));
-            setStatusBooking(null);
+          onReject={async () => {
+             try {
+              await apiClient.orders.updateStatus(statusBooking.id, '"CANCELLED"');
+              setLocalBookings(prev => prev.map(b => b.id === statusBooking.id ? { ...b, status: 'cancelled' } : b));
+              toast("Đã từ chối đơn hàng " + statusBooking.id, "success");
+            } catch (err) {
+              console.error(err);
+              toast("Lỗi khi từ chối đơn hàng " + statusBooking.id, "error");
+            } finally {
+              setStatusBooking(null);
+            }
           }}
         />
       )}
@@ -801,37 +882,76 @@ export default function TravelServicesDashboard() {
               </CardHeader>
               {/* Scrollable body */}
               <CardContent className="pt-6 space-y-4 overflow-y-auto flex-1 pr-5">
-                <div className="space-y-2">
-                  <Label>Tên khách hàng *</Label>
-                  <Input required placeholder="Nhập tên khách hàng" />
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Số điện thoại</Label>
-                    <Input placeholder="09xxxxxxx" />
+                    <Label>Tên khách hàng *</Label>
+                    <Input required placeholder="Nhập tên khách hàng" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Loại phòng</Label>
+                    <Label>Số điện thoại *</Label>
+                    <Input required placeholder="09xxxxxxx" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label>{providerType === 'place' ? 'Loại vé / Vị trí' : 'Loại phòng'}</Label>
                     <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                      <option>Phòng Standard</option>
-                      <option>Phòng Superior</option>
-                      <option>Phòng VIP</option>
+                      {providerType === 'place' ? (
+                        <>
+                          <option>Vé phổ thông (Người lớn)</option>
+                          <option>Vé phổ thông (Trẻ em)</option>
+                          <option>Vé VIP</option>
+                        </>
+                      ) : (
+                        <>
+                          <option>Phòng Standard (Giường đôi)</option>
+                          <option>Phòng Superior (Hướng biển)</option>
+                          <option>Phòng VIP</option>
+                        </>
+                      )}
                     </select>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Số lượng</Label>
+                    <Input type="number" min="1" defaultValue="1" required />
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Kỳ nghỉ</Label>
+                    <Label>{providerType === 'place' ? 'Ngày tham quan' : 'Nhận phòng'}</Label>
                     <Input type="date" required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Đến hết ngày</Label>
-                    <Input type="date" required />
+                    <Label>{providerType === 'place' ? 'Khung giờ' : 'Trả phòng'}</Label>
+                    {providerType === 'place' ? (
+                      <Input type="time" />
+                    ) : (
+                      <Input type="date" required />
+                    )}
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Phương thức thanh toán</Label>
+                    <select className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <option value="CASH">Tiền mặt (Offline)</option>
+                      <option value="MOMO">Momo</option>
+                      <option value="VNPAY">VNPay</option>
+                      <option value="ZALOPAY">ZaloPay</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mã giảm giá (Nếu có)</Label>
+                    <Input placeholder="Nhập mã KM" />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Ghi chú thêm</Label>
-                  <Input placeholder="Ví dụ: Khách yêu cầu giường đôi, view đẹp..." />
+                  <Input placeholder="Ví dụ: Yêu cầu đặc biệt..." />
                 </div>
               </CardContent>
               {/* Fixed footer */}

@@ -1,9 +1,15 @@
 import apiClient from '../services/apiClient';
 import type { ServiceDetail } from '../types/serviceDetail.types';
 import { mockServiceDetailApi } from '../mock/mockServiceDetailApi';
+import { shouldUseMock } from '@/config/mockConfig';
 
-// Toggle này để switch giữa mock và real API
-const USE_MOCK_API = false; // Set to false khi có backend thật
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+// Điền `true` để ép file này dùng mock.
+// Điền `false` để ép file này dùng real API.
+// Điền `null` để kế thừa từ biến GLOBAL_MOCK_ENABLED trong config.
+const LOCAL_MOCK_OVERRIDE: boolean | null = false;
+const USE_MOCK_API = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 const realApi = {
   getServiceDetail: async (

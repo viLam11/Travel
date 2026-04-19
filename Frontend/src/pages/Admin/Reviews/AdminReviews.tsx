@@ -74,56 +74,56 @@ const AdminReviews = () => {
 
             {/* Stats Cards */}
             <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-blue-100 dark:bg-blue-900/40 p-3.5 rounded-full flex-shrink-0">
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3.5 rounded-full flex-shrink-0">
                         <Flag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Tổng Báo cáo</span>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mt-1">{stats.total}</div>
+                        <span className="text-sm font-medium text-muted-foreground">Tổng Báo cáo</span>
+                        <div className="text-2xl font-bold leading-tight mt-1">{stats.total}</div>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-orange-100 dark:bg-orange-900/40 p-3.5 rounded-full flex-shrink-0">
-                        <ShieldAlert className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-amber-100 dark:bg-amber-900/30 p-3.5 rounded-full flex-shrink-0">
+                        <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Chờ xử lý</span>
-                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 leading-tight mt-1">{stats.pending}</div>
+                        <span className="text-sm font-medium text-muted-foreground">Chờ xử lý</span>
+                        <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 leading-tight mt-1">{stats.pending}</div>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-green-100 dark:bg-green-900/40 p-3.5 rounded-full flex-shrink-0">
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-3.5 rounded-full flex-shrink-0">
                         <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Đã giải quyết</span>
+                        <span className="text-sm font-medium text-muted-foreground">Đã giải quyết</span>
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400 leading-tight mt-1">{stats.resolved}</div>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-gray-100 dark:bg-gray-900 p-3.5 rounded-full flex-shrink-0">
-                        <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
+                    <div className="bg-muted p-3.5 rounded-full flex-shrink-0">
+                        <X className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <div>
-                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Đã bỏ qua</span>
-                        <div className="text-2xl font-bold text-gray-600 dark:text-gray-400 leading-tight mt-1">{stats.dismissed}</div>
+                        <span className="text-sm font-medium text-muted-foreground">Đã bỏ qua</span>
+                        <div className="text-2xl font-bold text-muted-foreground leading-tight mt-1">{stats.dismissed}</div>
                     </div>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
                 <div className="flex gap-4 items-center">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full md:w-[200px] bg-gray-50 dark:bg-gray-900 border-transparent dark:border-gray-700 cursor-pointer dark:text-white">
+                        <SelectTrigger className="w-full md:w-[220px] cursor-pointer">
                             <SelectValue placeholder="Trạng thái" />
                         </SelectTrigger>
-                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                            <SelectItem value="all" className="cursor-pointer dark:text-gray-200 hover:dark:bg-gray-700">Tất cả báo cáo</SelectItem>
-                            <SelectItem value="pending" className="cursor-pointer text-orange-600 dark:text-orange-400 font-medium hover:dark:bg-gray-700">Đang chờ xử lý</SelectItem>
-                            <SelectItem value="resolved" className="cursor-pointer text-green-600 dark:text-green-400 font-medium hover:dark:bg-gray-700">Đã xử lý (Vi phạm)</SelectItem>
-                            <SelectItem value="dismissed" className="cursor-pointer text-gray-600 dark:text-gray-400 font-medium hover:dark:bg-gray-700">Đã bỏ qua (Không vi phạm)</SelectItem>
+                        <SelectContent>
+                            <SelectItem value="all" className="cursor-pointer">Tất cả báo cáo</SelectItem>
+                            <SelectItem value="pending" className="cursor-pointer text-amber-600 font-medium">Đang chờ xử lý</SelectItem>
+                            <SelectItem value="resolved" className="cursor-pointer text-green-600 font-medium">Đã xử lý (Vi phạm)</SelectItem>
+                            <SelectItem value="dismissed" className="cursor-pointer text-muted-foreground font-medium">Đã bỏ qua (Không vi phạm)</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -132,13 +132,13 @@ const AdminReviews = () => {
             {/* Reports List */}
             <div className="space-y-4">
                 {filteredReports.length === 0 ? (
-                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-12 text-center text-gray-500 dark:text-gray-400 shadow-sm">
+                    <div className="rounded-lg border border-border bg-card py-12 text-center text-muted-foreground shadow-sm">
                         Không có báo cáo nào trong mục này
                     </div>
                 ) : (
                     filteredReports.map((report) => (
-                        <div key={report.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 overflow-hidden flex flex-col md:flex-row gap-6">
-                            
+                        <div key={report.id} className="rounded-lg border border-border bg-card shadow-sm p-6 overflow-hidden flex flex-col md:flex-row gap-6">
+
                             {/* Left Column: Report Info */}
                             <div className="flex-1 space-y-3">
                                 <div className="flex items-center gap-3">
@@ -157,18 +157,18 @@ const AdminReviews = () => {
                                 </div>
 
                                 {/* The Context: Original Comment */}
-                                <div className="mt-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                <div className="mt-4 bg-muted/50 border border-border rounded-lg p-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <Avatar className="w-8 h-8">
                                             <AvatarImage src={report.review.userAvatar} />
                                             <AvatarFallback>{report.review.userName[0]}</AvatarFallback>
                                         </Avatar>
                                         <div>
-                                            <div className="font-semibold text-sm text-gray-900 dark:text-white">{report.review.userName}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">Đã bình luận tại: <span className="font-medium text-blue-600 dark:text-blue-400">{report.review.serviceName}</span></div>
+                                            <div className="font-semibold text-sm">{report.review.userName}</div>
+                                            <div className="text-xs text-muted-foreground">Đã bình luận tại: <span className="font-medium text-primary">{report.review.serviceName}</span></div>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300 italic border-l-2 border-gray-300 dark:border-gray-600 pl-3 ml-1">
+                                    <p className="text-sm text-muted-foreground italic border-l-2 border-border pl-3 ml-1">
                                         "{report.review.comment}"
                                     </p>
                                 </div>
@@ -176,9 +176,9 @@ const AdminReviews = () => {
 
                             {/* Right Column: Actions */}
                             {report.status === 'pending' && (
-                                <div className="md:w-64 flex flex-col gap-2 justify-center border-t md:border-t-0 md:border-l border-gray-100 dark:border-gray-700 pt-4 md:pt-0 md:pl-6">
-                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Xử lý báo cáo</p>
-                                    
+                                <div className="md:w-64 flex flex-col gap-2 justify-center border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Xử lý báo cáo</p>
+
                                     <Button
                                         variant="outline"
                                         className="w-full justify-start text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -201,7 +201,7 @@ const AdminReviews = () => {
                                         variant="outline"
                                         className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50 cursor-pointer"
                                         onClick={() => {
-                                            if(window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
+                                            if (window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
                                                 handleAction(report.id, 'block', report.reporterName, report.review.userName);
                                             }
                                         }}
@@ -218,7 +218,7 @@ const AdminReviews = () => {
             </div>
 
             {/* Results count */}
-            <div className="text-sm text-gray-500 font-medium">
+            <div className="text-sm text-muted-foreground font-medium">
                 Hiển thị {filteredReports.length} / {reports.length} báo cáo
             </div>
         </div>

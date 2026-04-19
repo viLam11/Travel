@@ -8,7 +8,12 @@ import type {
 } from '@/types/blog.types';
 import { blogStore } from '@/components/page/blog/blogMockData';
 
-const USE_MOCK_DATA = false; // Đã bật lại Mock để tránh lỗi Server 500
+import { shouldUseMock } from '@/config/mockConfig';
+
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+const LOCAL_MOCK_OVERRIDE: boolean | null = false; // Đã bật lại Mock để tránh lỗi Server 500
+const USE_MOCK_DATA = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Helper function for mocking pagination
 const mockResponse = (data: any[], page: number, size: number) => {

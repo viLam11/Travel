@@ -19,6 +19,7 @@ import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 export default function EditServicePage() {
     const { id } = useParams<{ id: string }>();
@@ -226,12 +227,10 @@ export default function EditServicePage() {
 
                         <div className="space-y-2">
                             <Label htmlFor="description">Description *</Label>
-                            <Textarea
-                                id="description"
-                                rows={4}
+                            <RichTextEditor
                                 value={formData.description}
-                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                required
+                                onChange={(value) => handleInputChange('description', value)}
+                                placeholder="Mô tả chi tiết về dịch vụ..."
                             />
                         </div>
                     </CardContent>

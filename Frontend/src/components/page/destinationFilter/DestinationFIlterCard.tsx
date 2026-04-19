@@ -125,9 +125,10 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, onBook, 
               </div>
 
               {/* Description */}
-              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
-                {destination.description}
-              </p>
+              <div 
+                className="text-sm text-gray-500 line-clamp-2 leading-relaxed [&>p]:inline-block [&>p]:m-0"
+                dangerouslySetInnerHTML={{ __html: destination.description }}
+              />
             </div>
 
             {/* Tags */}

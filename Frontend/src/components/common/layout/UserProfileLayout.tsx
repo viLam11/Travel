@@ -1,7 +1,7 @@
 // src/components/layouts/UserProfileLayout.tsx
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { User, Calendar, Receipt, Heart, Settings, Bell, Menu, X } from 'lucide-react';
+import { User, Calendar, Receipt, Heart, Settings, Bell, Menu, X, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface MenuItem {
@@ -29,6 +29,12 @@ const UserProfileLayout: React.FC = () => {
       label: 'Đặt chỗ của tôi',
       path: '/user/bookings',
       icon: Calendar,
+    },
+    {
+      id: 'messages',
+      label: 'Tin nhắn',
+      path: '/user/messages',
+      icon: MessageCircle,
     },
     {
       id: 'transactions',

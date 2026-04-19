@@ -5,10 +5,12 @@ import type { ChatMessage } from '@/types/chat.types';
 const BASE_URL = import.meta.env.VITE_API_DEPLOY_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 type MessageCallback = (msg: ChatMessage) => void;
+type NotificationCallback = (noti: any) => void;
 
 class SocketService {
     private client: Client | null = null;
     private messageListeners: MessageCallback[] = [];
+    private notificationListeners: NotificationCallback[] = [];
     private statusListeners: ((status: string) => void)[] = [];
     public connectionStatus: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR' = 'DISCONNECTED';
 
@@ -56,10 +58,12 @@ class SocketService {
 
             // Subscribe to private messages for the current user
             this.client?.subscribe('/user/queue/messages', (message) => {
+                console.log(`\n================ SOCKET RECV: MESSAGE ================`);
+                console.log(`[SocketService] Topic matched: /user/queue/messages`);
                 if (message.body) {
                     try {
                         const backendMsg = JSON.parse(message.body);
-                        console.log('[SocketService] Received private message raw:', backendMsg);
+                        console.log('[SocketService] Payload (backend):', backendMsg);
                         
                         const chatMsg: ChatMessage = {
                             id: backendMsg.id || ('msg_' + Date.now()),
@@ -71,9 +75,25 @@ class SocketService {
                             isRead: backendMsg.isRead || false
                         };
                         
+                        console.log('[SocketService] Mapped (frontend):', chatMsg);
+                        console.log(`[SocketService] Broadcasting to ${this.messageListeners.length} active listeners`);
                         this.messageListeners.forEach(cb => cb(chatMsg));
+                        console.log(`======================================================\n`);
                     } catch (e) {
                         console.error('[SocketService] Error parsing message body:', e, message.body);
+                    }
+                }
+            });
+
+            // Subscribe to notifications for the current user
+            this.client?.subscribe('/user/queue/notifications', (message) => {
+                if (message.body) {
+                    try {
+                        const notification = JSON.parse(message.body);
+                        console.log('[SocketService] Received notification:', notification);
+                        this.notificationListeners.forEach(cb => cb(notification));
+                    } catch (e) {
+                        console.error('[SocketService] Error parsing notification body:', e, message.body);
                     }
                 }
             });
@@ -100,12 +120,20 @@ class SocketService {
         }
         this.updateStatus('DISCONNECTED');
         this.messageListeners = [];
+        this.notificationListeners = [];
     }
 
     onMessage(callback: MessageCallback) {
         this.messageListeners.push(callback);
         return () => {
             this.messageListeners = this.messageListeners.filter(cb => cb !== callback);
+        };
+    }
+
+    onNotification(callback: NotificationCallback) {
+        this.notificationListeners.push(callback);
+        return () => {
+            this.notificationListeners = this.notificationListeners.filter(cb => cb !== callback);
         };
     }
 
@@ -128,22 +156,32 @@ class SocketService {
             isRead: false
         };
 
+        console.log(`\n================ SOCKET SEND: START ================`);
         console.log(`[SocketService] sendMessage attempt:`, {
             status: this.connectionStatus,
             active: this.client?.active,
             connected: this.client?.connected
         });
+        console.log(`[SocketService] SENDER_ID:`, senderId);
+        console.log(`[SocketService] RECEIVER_ID:`, receiverId);
+        console.log(`[SocketService] RAW_PAYLOAD:`, backendPayload);
 
         if (this.client?.connected) {
             try {
+                const sendDestination = '/chat/chat.sendPrivateMessage';
+                const userToken = localStorage.getItem('token');
+                console.log(`[SocketService] PUBLISHING TO:`, sendDestination);
                 this.client.publish({
-                    destination: '/chat/chat.sendPrivateMessage',
+                    destination: sendDestination,
+                    headers: userToken ? { Authorization: `Bearer ${userToken}` } : undefined,
                     body: JSON.stringify(backendPayload)
                 });
-                console.log(`[SocketService] Message published successfully`);
+                console.log(`[SocketService] Message published successfully!`);
+                console.log(`======================================================\n`);
                 return frontendPayload;
             } catch (error) {
                 console.error(`[SocketService] Failed to publish message:`, error);
+                console.log(`======================================================\n`);
                 return;
             }
         } else {
@@ -159,3 +197,4 @@ class SocketService {
 }
 
 export const socketService = new SocketService();
+

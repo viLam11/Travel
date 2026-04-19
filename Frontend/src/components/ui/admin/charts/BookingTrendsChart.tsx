@@ -27,9 +27,10 @@ export default function BookingTrendsChart({ data }: BookingTrendsChartProps) {
             <CardTitle className="text-lg font-semibold">Booking Trends</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Last 7 days performance</p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
+            <p className="text-[11px] text-muted-foreground mb-0.5">Tổng đặt vé</p>
             <p className="text-2xl font-bold">{avgBookings}</p>
-            <div className={`flex items-center gap-1 text-sm ${isPositiveTrend ? 'text-chart-2' : 'text-destructive'}`}>
+            <div className={`flex items-center justify-end gap-1 text-sm ${isPositiveTrend ? 'text-chart-2' : 'text-destructive'}`}>
               <TrendingUp className="w-4 h-4" />
               <span>{isPositiveTrend ? '+' : ''}{trendPercentage}%</span>
             </div>

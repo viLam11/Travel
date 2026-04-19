@@ -1,5 +1,5 @@
 // src/pages/Admin/Services/AdminServiceList.tsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
 import {
@@ -33,7 +33,7 @@ import {
     DialogDescription,
 } from '@/components/ui/admin/dialog';
 import { Search, MoreVertical, Eye, Edit, Check, X, Trash2, Hotel, MapPin, Layers, Activity, Clock, FileText } from 'lucide-react';
-import { MOCK_SERVICES, type MockService } from '@/mocks/services';
+import { ApiClient } from '@/services/apiClient';
 import { useToast } from '@/contexts/ToastContext';
 
 const AdminServiceList = () => {
@@ -41,9 +41,36 @@ const AdminServiceList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [selectedService, setSelectedService] = useState<MockService | null>(null);
+    const [selectedService, setSelectedService] = useState<any | null>(null);
     const [dialogType, setDialogType] = useState<'view' | 'edit' | null>(null);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [services, setServices] = useState<any[]>([]);
+    
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const apiClient = new ApiClient();
+                const res = await apiClient.services.getAll();
+                const data = (Array.isArray(res) ? res : (res as any)?.items) || [];
+                const mapped = data.map((s: any) => ({
+                    id: s.serviceID || s.id,
+                    name: s.serviceName || s.name || 'Unnamed',
+                    location: s.address || 'Chưa rõ',
+                    provider: { name: 'Provider ' + (s.userID || 'Unknown') },
+                    type: s.serviceType?.toLowerCase() || 'hotel',
+                    status: s.status?.toLowerCase() || 'pending',
+                    price: s.averagePrice || 0,
+                    totalBookings: 0,
+                    rating: 0
+                }));
+                setServices(mapped);
+            } catch (error) {
+                console.error(error);
+                setServices([]);
+            }
+        };
+        fetchServices();
+    }, []);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -51,7 +78,7 @@ const AdminServiceList = () => {
 
     // Filter and search services
     const filteredServices = useMemo(() => {
-        return MOCK_SERVICES.filter(service => {
+        return services.filter(service => {
             const matchesSearch =
                 service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 service.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -62,40 +89,60 @@ const AdminServiceList = () => {
 
             return matchesSearch && matchesType && matchesStatus;
         });
-    }, [searchQuery, typeFilter, statusFilter]);
+    }, [searchQuery, typeFilter, statusFilter, services]);
 
     const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
     const paginatedServices = filteredServices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     // Stats
     const stats = useMemo(() => ({
-        total: MOCK_SERVICES.length,
-        active: MOCK_SERVICES.filter(s => s.status === 'active').length,
-        pending: MOCK_SERVICES.filter(s => s.status === 'pending').length,
-        draft: MOCK_SERVICES.filter(s => s.status === 'draft').length,
-        hotels: MOCK_SERVICES.filter(s => s.type === 'hotel').length,
-        tours: MOCK_SERVICES.filter(s => s.type === 'tour').length,
-    }), []);
+        total: services.length,
+        active: services.filter(s => s.status === 'active').length,
+        pending: services.filter(s => s.status === 'pending').length,
+        draft: services.filter(s => s.status === 'draft').length,
+        hotels: services.filter(s => s.type === 'hotel').length,
+        tours: services.filter(s => s.type === 'tour').length,
+    }), [services]);
 
     // Helper functions (removed badges as they are styled inline now)
 
-    const handleApprove = (service: MockService) => {
-        // TODO: Update service status in mock data
-        success(`Đã duyệt dịch vụ: ${service.name}`);
+    const handleApprove = async (service: any) => {
+        try {
+            const apiClient = new ApiClient();
+            await apiClient.post(`/users/${service.id}/handleServiceStatus`, "APPROVED", { headers: { 'Content-Type': 'application/json' }});
+            setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: 'approved' } : s));
+            success(`Đã duyệt dịch vụ: ${service.name}`);
+        } catch(e) {
+            console.error(e);
+        }
     };
 
-    const handleReject = (service: MockService) => {
-        info(`Đã từ chối dịch vụ: ${service.name}`);
+    const handleReject = async (service: any) => {
+        try {
+            const apiClient = new ApiClient();
+            await apiClient.post(`/users/${service.id}/handleServiceStatus`, "REJECTED", { headers: { 'Content-Type': 'application/json' }});
+            setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: 'rejected' } : s));
+            info(`Đã từ chối dịch vụ: ${service.name}`);
+        } catch(e) {
+            console.error(e);
+        }
     };
 
-    const handleDelete = (service: MockService) => {
+    const handleDelete = (service: any) => {
         setSelectedService(service);
         setIsDeleteOpen(true);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (selectedService) {
-            success(`Đã xóa dịch vụ: ${selectedService.name}`);
+            try {
+                const apiClient = new ApiClient();
+                await apiClient.services.delete(selectedService.id);
+                setServices(prev => prev.filter(s => s.id !== selectedService.id));
+                success(`Đã xóa dịch vụ: ${selectedService.name}`);
+            } catch(e) {
+                console.error(e);
+            }
             setIsDeleteOpen(false);
         }
     };
@@ -368,7 +415,7 @@ const AdminServiceList = () => {
 
             {/* Results count */}
             <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                hiển thị {filteredServices.length} trên {MOCK_SERVICES.length} dịch vụ
+                hiển thị {filteredServices.length} trên {services.length} dịch vụ
             </div>
 
             {/* Modal Dialog */}

@@ -33,7 +33,7 @@ import { useAuth } from "@/hooks/useAuth"
 const getNavItems = (currentPath: string, currentUser: any) => {
     // Get user role and provider type
     const userRole = currentUser?.user?.role?.toLowerCase() || '';
-    
+
     // Normalize provider type based on specific role or providerType field
     let providerType: 'hotel' | 'place' = 'hotel';
     if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place') {

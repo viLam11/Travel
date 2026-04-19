@@ -57,13 +57,20 @@ const UserMessagesPage: React.FC = () => {
                 return prev;
             });
 
+            // If the message is in the active conversation, mark it as read on the backend
+            if (currentActive?.id === msg.conversationId && msg.senderId !== (currentUser?.user?.userID?.toString() || 'user_123')) {
+                chatApi.markAsRead(msg.conversationId).then(() => {
+                    window.dispatchEvent(new Event('chat_read_updated'));
+                }).catch(console.error);
+            }
+
             // Update conversation list
             setConversations(prev => prev.map(conv => {
                 if (conv.id === msg.conversationId) {
                     return {
                         ...conv,
                         lastMessage: msg,
-                        unreadCount: currentActive?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
+                        unreadCount: (currentActive?.id === msg.conversationId) ? 0 : conv.unreadCount + 1,
                         updatedAt: msg.timestamp
                     };
                 }
@@ -86,6 +93,7 @@ const UserMessagesPage: React.FC = () => {
         if (conversation.unreadCount > 0) {
             await chatApi.markAsRead(conversation.id);
             setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, unreadCount: 0 } : c));
+            window.dispatchEvent(new Event('chat_read_updated'));
         }
 
         const msgs = await chatApi.getMessages(conversation.id);
@@ -140,7 +148,21 @@ const UserMessagesPage: React.FC = () => {
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex h-[600px] sm:h-[700px]">
+        <div className="w-full h-full flex flex-col min-h-[600px] max-w-6xl mx-auto px-4 py-8">
+            {/* Premium Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 shrink-0">
+                <div>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-orange-100 p-2.5 rounded-2xl shadow-sm">
+                            <MessageCircle className="w-6 h-6 text-orange-600" />
+                        </div>
+                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Tin nhắn</h1>
+                    </div>
+                    <p className="text-gray-500 font-medium tracking-wide">Trò chuyện và nhận hỗ trợ trực tiếp từ các nhà cung cấp dịch vụ</p>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden flex flex-1 max-h-[700px] min-h-[500px]">
 
             {/* Left Sidebar - Chat List */}
             <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-gray-200 ${showChatArea ? 'hidden md:flex' : 'flex'}`}>
@@ -324,6 +346,7 @@ const UserMessagesPage: React.FC = () => {
                     </div>
                 )}
             </div>
+        </div>
         </div>
     );
 };

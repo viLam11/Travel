@@ -10,8 +10,8 @@ export const userApi = {
             return [...MOCK_USERS_DATA];
         }
         try {
-            // BE might map this to GET /users or similar
-            return await apiClient.get('/users/admin/all');
+            // Backend maps this to GET /users/all
+            return await apiClient.get('/users/all');
         } catch (error) {
             console.error('Failed to get users', error);
             throw error;

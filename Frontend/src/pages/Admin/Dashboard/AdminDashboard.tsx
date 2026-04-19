@@ -51,20 +51,21 @@ function StatsCard({ stat }: { stat: any }) {
     }
 
     return (
-        <Card className="border-0 shadow-sm hover:shadow-md transition-shadow bg-card rounded-xl overflow-hidden">
+        <Card className="shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             <CardContent className="p-6 flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <div className={`${fontSizeClass} font-bold text-foreground mt-2 break-words leading-tight`}>{stat.value}</div>
+                    <div className={`${fontSizeClass} font-bold mt-2 break-words leading-tight`}>{stat.value}</div>
                     {stat.change && (
                         <div className="mt-4 flex items-center">
-                            <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-sm font-medium ${trendBg} ${trendColor}`}>
-                                {stat.trend === 'up' ? '+' : ''}{stat.change} so với tháng trước
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${trendBg} ${trendColor}`}>
+                                {stat.trend === 'up' ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                                {stat.trend === 'up' ? '+' : ''}{stat.change}
                             </span>
                         </div>
                     )}
                 </div>
-                <div className={`p-3 ${stat.iconBg} rounded-2xl`}>
+                <div className={`p-3 ${stat.iconBg} rounded-xl flex-shrink-0`}>
                     <Icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
             </CardContent>
@@ -279,7 +280,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Services Management */}
-            <Card className="border-0 shadow-sm">
+            <Card className="shadow-sm">
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
                     <div>
                         <CardTitle className="text-xl font-semibold">Yêu cầu duyệt dịch vụ mới</CardTitle>
@@ -345,8 +346,8 @@ export default function AdminDashboard() {
                                                         <Badge
                                                             className={
                                                                 service.type === 'hotel'
-                                                                    ? 'bg-blue-100 text-blue-700'
-                                                                    : 'bg-green-100 text-green-700'
+                                                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                                                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                                                             }
                                                         >
                                                             {service.type === 'hotel' ? 'Khách sạn' : 'Tham quan'}
@@ -404,7 +405,7 @@ export default function AdminDashboard() {
                     <DialogHeader>
                         <DialogTitle>Duyệt dịch vụ</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn duyệt nhanh dịch vụ <strong className="text-gray-900">{selectedService?.name}</strong>?
+                            Bạn có chắc chắn muốn duyệt nhanh dịch vụ <strong className="text-foreground">{selectedService?.name}</strong>?
                             Dịch vụ sẽ hiển thị ngay lập tức trên hệ thống.
                         </DialogDescription>
                     </DialogHeader>
@@ -423,12 +424,12 @@ export default function AdminDashboard() {
                     <DialogHeader>
                         <DialogTitle>Từ chối dịch vụ</DialogTitle>
                         <DialogDescription>
-                            Vui lòng nhập lý do từ chối dịch vụ <strong className="text-gray-900">{selectedService?.name}</strong>.
+                            Vui lòng nhập lý do từ chối dịch vụ <strong className="text-foreground">{selectedService?.name}</strong>.
                             Lý do này sẽ được gửi đến đối tác để họ khắc phục.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Lý do từ chối <span className="text-red-500">*</span></label>
+                        <label className="text-sm font-medium text-foreground">Lý do từ chối <span className="text-destructive">*</span></label>
                         <Input
                             placeholder="Nhập lý do chi tiết..."
                             value={rejectReason}

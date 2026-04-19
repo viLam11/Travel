@@ -36,7 +36,12 @@ export interface DiscountResponse {
 
 import { MOCK_DISCOUNTS } from '@/mocks/discounts';
 
-const USE_MOCK = false; // Set to false to use real backend API
+import { shouldUseMock } from '@/config/mockConfig';
+
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+const LOCAL_MOCK_OVERRIDE: boolean | null = false;
+const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 const mapMockToResponse = (mock: any): DiscountResponse => ({
     ...mock,

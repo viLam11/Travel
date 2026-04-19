@@ -1,8 +1,8 @@
 // src/components/page/blog/BlogCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
+    MoreHorizontal, Bookmark, ExternalLink, Send, Hotel, Heart, Sparkles,
     MessageCircle, Eye, Clock, MapPin, Share2,
-    MoreHorizontal, Bookmark, ExternalLink, Send, Hotel,
 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { useNavigate } from 'react-router-dom';
@@ -59,7 +59,7 @@ const ReactionSummaryRow: React.FC<{
             {/* Emojis stack */}
             <div className="flex -space-x-1.5 items-center">
                 {breakdown.length > 0 ? (
-                    breakdown.slice(0, 3).map((r, i) => {
+                    breakdown.slice(0, 3).map((r) => {
                         const opt = REACTION_OPTIONS.find(o => o.type === r.type);
                         const data = getTooltipData(r.count);
                         
@@ -365,7 +365,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                             <img src={authorAvatar} alt={authorName} className="w-4 h-4 rounded-full object-cover" />
                             <span>{authorName}</span>
                         </div>
-                        <span>❤️ {localCount}</span>
+                        <span><Heart className="w-3 h-3 fill-red-500 text-red-500 inline-block mr-1" /> {localCount}</span>
                     </div>
                 </div>
             </div>
@@ -535,7 +535,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                         )}
 
                         {inlineComments.length === 0 && commentCount === 0 && (
-                            <p className="text-xs text-gray-400 text-center py-2">Chưa có bình luận. Hãy là người đầu tiên! 🌟</p>
+                            <p className="text-xs text-gray-400 text-center py-2 flex items-center justify-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-orange-400" /> Chưa có bình luận. Hãy là người đầu tiên!</p>
                         )}
 
                         {/* Show drawer link if there are more comments */}

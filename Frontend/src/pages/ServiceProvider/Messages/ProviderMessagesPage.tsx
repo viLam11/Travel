@@ -20,6 +20,25 @@ const ProviderMessagesPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
 
+    const ADMIN_ID = '1';
+
+    const handleContactAdmin = () => {
+        let exists = conversations.find(c => c.id === ADMIN_ID);
+        if (exists) {
+            handleSelectConversation(exists);
+        } else {
+            const adminConv: Conversation = {
+                id: ADMIN_ID,
+                participants: [{ id: ADMIN_ID, name: 'Quản Trị Viên (Hỗ trợ)', role: 'admin', avatar: '' }],
+                lastMessage: undefined,
+                unreadCount: 0,
+                updatedAt: new Date().toISOString()
+            };
+            setConversations(prev => [adminConv, ...prev]);
+            handleSelectConversation(adminConv);
+        }
+    };
+
     // Mobile view state
     const [showSidebar, setShowSidebar] = useState(true);
 
@@ -62,17 +81,34 @@ const ProviderMessagesPage: React.FC = () => {
                 return prev;
             });
 
-            setConversations(prev => prev.map(conv => {
-                if (conv.id === msg.conversationId) {
-                    return {
-                        ...conv,
+            setConversations(prev => {
+                const existing = prev.find(conv => conv.id === msg.conversationId);
+                if (existing) {
+                    return prev.map(conv => {
+                        if (conv.id === msg.conversationId) {
+                            return {
+                                ...conv,
+                                lastMessage: msg,
+                                unreadCount: currentActive?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
+                                updatedAt: msg.timestamp
+                            };
+                        }
+                        return conv;
+                    }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+                } else {
+                    const newConv: Conversation = {
+                        id: msg.conversationId,
+                        participants: [
+                            { id: msg.senderId.toString(), name: msg.senderId.toString(), role: 'user', avatar: '' }
+                        ],
                         lastMessage: msg,
-                        unreadCount: currentActive?.id === msg.conversationId ? conv.unreadCount : conv.unreadCount + 1,
-                        updatedAt: msg.timestamp
+                        unreadCount: currentActive?.id === msg.conversationId ? 0 : 1,
+                        updatedAt: msg.timestamp,
+                        serviceName: 'Hỗ trợ khách hàng'
                     };
+                    return [newConv, ...prev].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
                 }
-                return conv;
-            }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+            });
         });
 
         return () => {
@@ -105,11 +141,14 @@ const ProviderMessagesPage: React.FC = () => {
         e.preventDefault();
         if (!newMessage.trim() || !activeConversation || !currentUser?.user) return;
 
+        const receiver = activeConversation.participants.find(p => p.id?.toString() !== currentUser.user.userID.toString());
+        const receiverId = receiver?.id?.toString() || activeConversation.id;
+
         const sentMsg = socketService.sendMessage(
-            activeConversation.id,
+            receiverId,
             currentUser.user.userID.toString() || 'provider_101',
             newMessage,
-            'user' // reply back to user
+            (receiver?.role === 'admin' ? 'admin' : 'user') as 'user' | 'provider'
         );
 
         if (sentMsg) {
@@ -154,13 +193,18 @@ const ProviderMessagesPage: React.FC = () => {
                 {/* Header */}
                 <div className="p-4 border-b border-gray-200 bg-white">
                     <h2 className="text-lg font-bold text-gray-800">Quản lý tin nhắn</h2>
-                    <div className="mt-4 relative">
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm khách hàng hoặc dịch vụ..."
-                            className="w-full pl-9 pr-4 py-2 bg-gray-100 border border-transparent rounded-lg text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition-all"
-                        />
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <div className="mt-4 flex gap-2 w-full">
+                        <div className="relative flex-1">
+                            <input
+                                type="text"
+                                placeholder="Tìm khách hàng..."
+                                className="w-full pl-9 pr-4 py-2 bg-gray-100 border border-transparent rounded-lg text-sm focus:border-indigo-500 focus:bg-white focus:ring-0 transition-all"
+                            />
+                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        </div>
+                        <button onClick={handleContactAdmin} title="Liên hệ Hỗ trợ" className="flex-shrink-0 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors flex items-center justify-center">
+                            Admin
+                        </button>
                     </div>
                 </div>
 
@@ -176,8 +220,8 @@ const ProviderMessagesPage: React.FC = () => {
                         </div>
                     ) : (
                         conversations.map(conv => {
-                            // Find the user participant
-                            const customer = conv.participants.find(p => p.role === 'user');
+                            // Find the non-provider participant
+                            const customer = conv.participants.find(p => p.id?.toString() !== (currentUser?.user?.userID?.toString() || 'provider_101')) || conv.participants[0];
                             const isActive = activeConversation?.id === conv.id;
 
                             return (
@@ -242,15 +286,15 @@ const ProviderMessagesPage: React.FC = () => {
                             </button>
 
                             <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-100 border border-indigo-200 flex-shrink-0">
-                                {activeConversation.participants.find(p => p.role === 'user')?.avatar ? (
-                                    <img src={activeConversation.participants.find(p => p.role === 'user')?.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                {activeConversation.participants.find(p => p.id?.toString() !== (currentUser?.user?.userID?.toString() || 'provider_101'))?.avatar ? (
+                                    <img src={activeConversation.participants.find(p => p.id?.toString() !== (currentUser?.user?.userID?.toString() || 'provider_101'))?.avatar} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <User className="w-6 h-6 text-indigo-400 m-auto mt-2" />
                                 )}
                             </div>
                             <div className="flex-1 min-w-0 ml-3">
                                 <h3 className="font-bold text-gray-800 truncate">
-                                    {activeConversation.participants.find(p => p.role === 'user')?.name || 'Khách hàng'}
+                                    {activeConversation.participants.find(p => p.id?.toString() !== (currentUser?.user?.userID?.toString() || 'provider_101'))?.name || 'Khách hàng'}
                                 </h3>
                                 <div className="flex items-center gap-2">
                                     <p className="text-xs text-green-500 font-medium">Đang trực tuyến</p>

@@ -379,7 +379,7 @@ export class ApiClient {
       sortBy?: string,
       direction?: string
     ): ApiResponse<any> => {
-      return this.get(`/comment/${serviceID}`, {
+      return this.get(`/comment/${serviceID}/all`, {
         params: { page, size, sortBy, direction },
       });
     },

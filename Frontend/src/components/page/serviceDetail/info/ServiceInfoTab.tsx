@@ -1,5 +1,6 @@
 // src/components/page/serviceDetail/info/ServiceInfoTab.tsx
 import React from 'react';
+import DOMPurify from 'dompurify';
 
 interface ServiceInfoTabProps {
     service: any;
@@ -30,9 +31,10 @@ const ServiceInfoTab: React.FC<ServiceInfoTabProps> = ({
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
                     Thông tin
                 </h3>
-                <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
-                    {service.description}
-                </p>
+                <div 
+                    className="text-gray-700 leading-relaxed text-sm sm:text-base [&>p]:mb-2"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(service.description) }}
+                />
             </div>
 
             {/* Features Grid */}
@@ -94,16 +96,27 @@ const ServiceInfoTab: React.FC<ServiceInfoTabProps> = ({
                                     {day ? (
                                         <button
                                             disabled={!day.available}
-                                            className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all ${day.available
+                                            className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all relative ${day.available
                                                 ? "bg-gray-50 hover:bg-orange-100 text-orange-600 font-medium cursor-pointer"
                                                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
                                                 }`}
                                         >
-                                            <span>{day.day}</span>
-                                            {day.price && (
-                                                <span className="text-[10px] sm:text-xs font-semibold">
-                                                    {day.price}
-                                                </span>
+                                            <span className={!day.available ? 'line-through opacity-50' : ''}>{day.day}</span>
+                                            {day.available ? (
+                                                <>
+                                                    {day.price && (
+                                                        <span className="text-[10px] sm:text-[11px] font-bold">
+                                                            {day.price.includes('đ') ? day.price : `${new Intl.NumberFormat('vi-VN').format(Number(day.price))}đ`}
+                                                        </span>
+                                                    )}
+                                                    {day.rooms !== null && (
+                                                        <span className="text-[8px] sm:text-[9px] text-orange-500 font-semibold absolute bottom-1">
+                                                            Còn {day.rooms}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase mt-0.5">Hết chỗ</span>
                                             )}
                                         </button>
                                     ) : (

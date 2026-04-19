@@ -44,7 +44,7 @@ const ProviderMyService = () => {
 
     const hasService = currentUser?.user?.hasService;
     const serviceType = currentUser?.user?.providerType || 'hotel';
-    const serviceId = currentUser?.user?.serviceId || 1;
+    const serviceId = currentUser?.user?.serviceId;
 
     // Fallback to default if not found
     const initialServiceData = {
@@ -164,7 +164,7 @@ const ProviderMyService = () => {
     const thumbnails = serviceData?.images || [];
 
     // If no service yet, show setup form (First time experience)
-    if (!hasService) {
+    if (!hasService || serviceId === undefined) {
         return <ServiceSetup />;
     }
 
@@ -262,19 +262,19 @@ const ProviderMyService = () => {
                         <div className="flex-1">
                             <div className="flex items-center justify-between gap-4 mb-2">
                                 {isEditing ? (
-                                    <div className="space-y-4 max-w-2xl">
-                                        <div>
-                                            <Label htmlFor="service-name">Tên dịch vụ</Label>
+                                    <div className="space-y-4 max-w-2xl w-full">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="service-name" className="text-sm font-semibold">Tên dịch vụ</Label>
                                             <Input
                                                 id="service-name"
                                                 value={serviceData.name}
                                                 onChange={(e) => handleInputChange('name', e.target.value)}
-                                                className="text-2xl font-bold mt-1"
+                                                className="text-2xl font-bold h-12 px-4 shadow-sm"
                                             />
                                         </div>
                                     </div>
                                 ) : (
-                                    <h1 className="text-3xl font-bold text-gray-900 relative group w-fit">
+                                    <h1 className="text-3xl font-extrabold tracking-tight text-foreground/90">
                                         {serviceData.name}
                                     </h1>
                                 )}
@@ -331,7 +331,7 @@ const ProviderMyService = () => {
                 </div>
 
                 {/* Image Gallery */}
-                <div className="mb-8 lg:mb-10 relative group bg-gray-100 rounded-xl p-1">
+                <div className="mb-8 lg:mb-10 relative group bg-muted/30 rounded-xl p-1 border border-border">
 
                     {/* Hidden file input for adding images */}
                     <input
@@ -484,9 +484,9 @@ const ProviderMyService = () => {
                             {activeTab === 'info' && (
                                 <div className="space-y-8 animate-in fade-in duration-300">
                                     {/* Description Section */}
-                                    <section className={`rounded-xl ${isEditing ? 'p-4 border border-blue-200 bg-blue-50/30' : ''}`}>
+                                    <section className={`rounded-xl ${isEditing ? 'p-6 border-2 border-primary/20 bg-primary/5' : ''}`}>
                                         <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-xl font-bold text-gray-900">Giới thiệu</h3>
+                                            <h3 className="text-xl font-bold text-foreground/90">Giới thiệu</h3>
                                         </div>
                                         {isEditing ? (
                                             <Textarea
@@ -503,9 +503,9 @@ const ProviderMyService = () => {
                                     </section>
 
                                     {/* Amenities Section */}
-                                    <section className={`rounded-xl ${isEditing ? 'p-4 border border-blue-200 bg-blue-50/30' : ''}`}>
+                                    <section className={`rounded-xl ${isEditing ? 'p-6 border-2 border-primary/20 bg-primary/5' : ''}`}>
                                         <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-xl font-bold text-gray-900">
+                                            <h3 className="text-xl font-bold text-foreground/90">
                                                 {serviceType === 'hotel' ? 'Tiện nghi khách sạn' : 'Điểm nổi bật & Dịch vụ'}
                                             </h3>
                                         </div>
@@ -619,22 +619,22 @@ const ProviderMyService = () => {
                             )}
 
                             {activeTab === 'tickets' && (
-                                <TicketsTab serviceId={serviceId} serviceType={serviceType} />
+                                <TicketsTab serviceId={serviceId as number} serviceType={serviceType} />
                             )}
 
                             {activeTab === 'pricing' && (
-                                <PricingCalendarTab serviceId={serviceId} basePrice={serviceData.price} />
+                                <PricingCalendarTab serviceId={serviceId as number} basePrice={serviceData.price} />
                             )}
 
                             {activeTab === 'promotions' && (
-                                <PromotionsTab serviceId={serviceId.toString()} />
+                                <PromotionsTab serviceId={serviceId!.toString()} />
                             )}
                         </div>
                     </div>
 
                     {/* Right Sidebar - Stats */}
                     <div className="lg:col-span-1">
-                        <Card className="sticky top-24 shadow-lg border-orange-100">
+                        <Card className="sticky top-24 shadow-md border-border">
                             <CardContent className="p-6 space-y-6">
                                 <div>
                                     <h3 className="text-lg font-semibold mb-4">Tổng quan dịch vụ</h3>

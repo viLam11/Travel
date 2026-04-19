@@ -283,8 +283,8 @@ function ActivityCard({ activity, onRemove, onEdit, onDragStart, onMobileMove }:
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
 
-function DropZone({ dayIdx, slot, activities, onDrop, onRemove, onEditActivity, onDragStartCard, onAddActivity, onMobileMove }: {
-    dayIdx: number; slot: TimeSlot; activities: Activity[];
+function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActivity, onDragStartCard, onAddActivity, onMobileMove }: {
+    dayIdx: number; slot: TimeSlot; activities?: Activity[];
     onDrop: (e: React.DragEvent, toDayIdx: number, toSlot: TimeSlot) => void;
     onRemove: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
     onEditActivity: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
@@ -726,11 +726,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 .then(res => {
                     if (res && res.length > 0) {
                         const apiWithIds = res.map(a => ({ ...a, id: a.id || uid() }));
-                        // Combine or replace? User usually wants mock for testing, 
-                        // but let's prioritize API if it returns results, or combine.
-                        // For "mock bên trái giúp t đi", they might strictly want the mock data.
-                        // I'll combine them so they see both.
-                        setLibraryActivities(prev => [...prev, ...apiWithIds]);
+                        // Ưu tiên dữ liệu thật từ API thay thế hoàn toàn mock data
+                        setLibraryActivities(apiWithIds);
                     }
                 })
                 .catch(err => {
@@ -791,8 +788,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const [pickerSlot, setPickerSlot] = useState<TimeSlot>('morning_activities');
     const dragPayload = useRef<DragPayload | null>(null);
 
-    const totalActivities = itinerary.reduce((s, d) =>
-        s + d.morning_activities.length + d.afternoon_activities.length + d.evening_activities.length, 0);
+    const totalActivities = (itinerary || []).reduce((s, d) =>
+        s + (d?.morning_activities?.length || 0) + (d?.afternoon_activities?.length || 0) + (d?.evening_activities?.length || 0), 0);
 
     const handleDragStartCard = useCallback((e: React.DragEvent, payload: DragPayload) => {
         dragPayload.current = payload;
@@ -1084,7 +1081,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 key={slot}
                                 dayIdx={dayIdx}
                                 slot={slot}
-                                activities={day[slot]}
+                                activities={day[slot] || []}
                                 onDrop={handleDrop}
                                 onRemove={handleRemove}
                                 onEditActivity={handleEditActivity}

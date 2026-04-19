@@ -1,7 +1,12 @@
 import type { Service, ServiceStats, ServiceStatus, ServiceType } from '@/types/service.types';
 import apiClient from '@/services/apiClient';
 
-const USE_MOCK = false; // Set to false to use real API
+import { shouldUseMock } from '@/config/mockConfig';
+
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+const LOCAL_MOCK_OVERRIDE: boolean | null = false;
+const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Mock Data (kept for fallback)
 const mockServices: Service[] = [

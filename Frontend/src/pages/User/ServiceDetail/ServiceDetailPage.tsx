@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  SearchX,
 } from "lucide-react";
 import BreadcrumbSection from '../../../components/common/BreadcrumbSection'
 import Footer from "../../../components/common/layout/Footer";
@@ -39,9 +40,12 @@ import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
 import apiClient from '@/services/apiClient';
 import RelatedBlogPosts from '@/components/page/blog/RelatedBlogPosts';
 
-// ─── Toggle mock / real API ───────────────────────────────────────────────────
-const USE_MOCK = false; // set true để dùng mock data, false để gọi API thật
-// ─────────────────────────────────────────────────────────────────────────────
+import { shouldUseMock } from '@/config/mockConfig';
+
+// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
+const LOCAL_MOCK_OVERRIDE: boolean | null = false;
+const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+// ──────────────────────────────────────────────────────────────────────────────
 
 const ServiceDetailPage: React.FC = () => {
   const { region, destination, serviceType: urlServiceType, idSlug, id: directId } = useParams<{
@@ -152,7 +156,48 @@ const ServiceDetailPage: React.FC = () => {
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [totalApiReviews, setTotalApiReviews] = useState(0);
 
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+
   // Load rooms/tickets from API when serviceId is available
+  const fetchFavoriteStatus = async () => {
+    if (!isAuthenticated || !id) return;
+    try {
+      const data: any = await apiClient.favorites.getAll(0, 50); // Get first 50 favorites to check
+      const list = Array.isArray(data) ? data : (data?.content || []);
+      const isFav = list.some((item: any) => item.serviceId?.toString() === id.toString());
+      setIsFavorite(isFav);
+    } catch (error) {
+      console.error("Failed to fetch favorite status", error);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      requireAuth(() => {}, 'Vui lòng đăng nhập để thêm vào danh sách yêu thích');
+      return;
+    }
+
+    if (isFavoriteLoading || !id) return;
+    setIsFavoriteLoading(true);
+
+    try {
+      if (isFavorite) {
+        await apiClient.favorites.remove(id);
+        setIsFavorite(false);
+        toast.success('Đã xóa khỏi danh sách yêu thích');
+      } else {
+        await apiClient.favorites.add(id);
+        setIsFavorite(true);
+        toast.success('Đã thêm vào danh sách yêu thích');
+      }
+    } catch (error) {
+      console.error("Favorite toggle error:", error);
+      toast.error('Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
+
   const fetchReviews = async () => {
     try {
       if (!id) return;
@@ -244,8 +289,9 @@ const ServiceDetailPage: React.FC = () => {
     if (id) {
       fetchReviews();
       fetchDiscounts();
+      fetchFavoriteStatus();
     }
-  }, [id, serviceType, resolvedProvinceID]); // Stabilize dependency array
+  }, [id, serviceType, resolvedProvinceID, isAuthenticated]); // Stabilize dependency array
 
 
   // Load service detail
@@ -562,21 +608,43 @@ const ServiceDetailPage: React.FC = () => {
     const days: (null | {
       day: number;
       price: string | null;
+      rooms: number | null;
       available: boolean;
     })[] = [];
-    const firstDay = monthKey === "2025-09" ? 1 : 0;
+    
+    // Simplistic start day calculation for mock
+    const firstDay = monthKey === "2025-09" ? 1 : monthKey === "2025-10" ? 3 : 0;
 
     for (let i = 0; i < firstDay; i++) {
       days.push(null);
     }
 
-    const maxDay = monthKey === "2025-09" ? 30 : monthKey === "2025-10" ? 5 : 0;
+    const maxDay = monthKey === "2025-09" ? 30 : monthKey === "2025-10" ? 31 : 0;
 
     for (let i = 1; i <= maxDay; i++) {
+      const val = availability[i.toString()];
+      let price: string | null = null;
+      let rooms: number | null = null;
+
+      if (typeof val === 'object' && val !== null) {
+        price = (val as any).price || null;
+        rooms = (val as any).remainingRooms || (val as any).rooms || null;
+      } else if (typeof val === 'string') {
+        // Support "price|rooms" format or just price
+        if (val.includes('|')) {
+          const parts = val.split('|');
+          price = parts[0];
+          rooms = parseInt(parts[1]);
+        } else {
+          price = val;
+        }
+      }
+
       days.push({
         day: i,
-        price: availability[i.toString()] || null,
-        available: !!availability[i.toString()],
+        price,
+        rooms,
+        available: !!val && (rooms === null || rooms > 0),
       });
     }
 
@@ -603,14 +671,19 @@ const ServiceDetailPage: React.FC = () => {
   // Format API reviews to match frontend expected structure
   const formattedApiReviews = apiReviews.map(r => ({
     id: r.id,
-    author: r.user?.fullname || r.user?.username || "Người dùng",
+    author: r.username || r.user?.fullname || r.user?.username || "Người dùng",
     date: new Date(r.createdAt).toLocaleDateString("vi-VN"),
     rating: r.rating || 5,
-    title: "", // Backend might not have title
+    title: "",
     content: r.content,
-    images: r.images?.map((img: any) => img.url) || [],
-    helpful: r.likeCount || 0,
-    notHelpful: r.dislikeCount || 0,
+    // Backend trả về `imageList` là mảng string URL, không phải object
+    images: Array.isArray(r.imageList)
+      ? r.imageList.map((img: any) => typeof img === 'string' ? img : img?.url || img?.imageUrl || '')
+      : (Array.isArray(r.images)
+        ? r.images.map((img: any) => typeof img === 'string' ? img : img?.url || img?.imageUrl || '')
+        : []),
+    helpful: r.likes || r.likeCount || 0,
+    notHelpful: r.dislikes || r.dislikeCount || 0,
     userAvatar: r.user?.avatar,
   }));
 
@@ -646,7 +719,7 @@ const ServiceDetailPage: React.FC = () => {
           style={{ height: "calc(100vh - 64px)" }}
         >
           <div className="text-center max-w-md px-4">
-            <div className="text-6xl mb-4">😔</div>
+            <SearchX className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Không tìm thấy dịch vụ
             </h2>
@@ -739,24 +812,27 @@ const ServiceDetailPage: React.FC = () => {
                 30K+ lượt khách
               </span>
             </div>
-            <div className="flex items-center gap-3 ">
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsFavorite(!isFavorite)}
-                className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-500 transition-colors cursor-pointer"
+                onClick={handleToggleFavorite}
+                disabled={isFavoriteLoading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 border shadow-sm transform active:scale-95 cursor-pointer ${
+                  isFavorite 
+                    ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100" 
+                    : "bg-white text-gray-600 border-gray-100 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100"
+                }`}
               >
-                <Heart
-                  className={`w-4 h-4 ${isFavorite ? "fill-orange-500 text-orange-500" : ""
+                {isFavoriteLoading ? (
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+                ) : (
+                  <Heart
+                    className={`w-4.5 h-4.5 transition-colors ${
+                      isFavorite ? "fill-rose-500 text-rose-500" : "text-gray-400"
                     }`}
-                />
-                Thêm vào danh sách yêu thích
+                  />
+                )}
+                <span>{isFavorite ? "Đã lưu yêu thích" : "Thêm vào yêu thích"}</span>
               </button>
-              {/*
-                <span className="text-gray-300">|</span>
-                <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-500 transition-colors">
-                    <Share2 className="w-4 h-4" />
-                    Share
-                 </button>
-                */}
             </div>
           </div>
         </div>
@@ -917,7 +993,7 @@ const ServiceDetailPage: React.FC = () => {
                 setReviewText={setReviewText}
                 reviewCost={reviewCost}
                 setReviewCost={setReviewCost}
-                reviewImages={reviewImagePreviewUrls} // Updated: use preview urls
+                reviewImages={reviewImagePreviewUrls}
                 handleImageUpload={handleImageUpload}
                 handleRemoveImage={handleRemoveImage}
                 handleSubmitReview={handleSubmitReview}
@@ -927,6 +1003,23 @@ const ServiceDetailPage: React.FC = () => {
                 totalReviews={hasRealReviews ? totalApiReviews : allReviews.length}
                 isSubmitting={isSubmittingReview}
                 isLoading={isLoadingReviews}
+                onLike={async (reviewId) => {
+                  await apiClient.comments.like(reviewId);
+                }}
+                onUndoLike={async (reviewId) => {
+                  await apiClient.comments.unlike(reviewId);
+                }}
+                onDislike={async (reviewId) => {
+                  await apiClient.comments.dislike(reviewId);
+                }}
+                onUndoDislike={async (reviewId) => {
+                  await apiClient.comments.undoDislike(reviewId);
+                }}
+                onReport={async (_reviewId, _reason) => {
+                  // ⚠️ Backend chưa có endpoint báo cáo comment riêng
+                  // Placeholder: chỉ log ra console
+                  console.log('[Report]', _reviewId, _reason);
+                }}
               />
             )}
           </div>

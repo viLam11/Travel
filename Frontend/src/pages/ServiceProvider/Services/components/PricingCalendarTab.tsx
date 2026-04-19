@@ -12,12 +12,13 @@ interface PricingCalendarTabProps {
     basePrice: number;
 }
 
-const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) => {
-    // console.log("Rendering pricing for service", serviceId);
+const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalendarTabProps) => {
+    // console.log("Rendering pricing for service", _serviceId);
     const [currentMonth, setCurrentMonth] = useState(new Date(2024, 1)); // February 2024
     const [dayPricing, setDayPricing] = useState<DayPricing[]>(MOCK_DAY_PRICING);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [customPrice, setCustomPrice] = useState('');
+    const [customRooms, setCustomRooms] = useState('');
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -39,32 +40,43 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
         return pricing ? pricing.price : null;
     };
 
+    const getRoomsForDate = (dateStr: string): number | null => {
+        const pricing = dayPricing.find(p => p.date === dateStr);
+        return pricing ? (pricing.remainingRooms ?? null) : null;
+    };
+
     const handleDateClick = (dateStr: string) => {
         setSelectedDate(dateStr);
         const existingPrice = getPriceForDate(dateStr);
+        const existingRooms = getRoomsForDate(dateStr);
         setCustomPrice(existingPrice ? existingPrice.toString() : '');
+        setCustomRooms(existingRooms ? existingRooms.toString() : '');
     };
 
-    const handleSavePrice = () => {
-        if (!selectedDate || !customPrice) return;
+    const handleSaveParams = () => {
+        if (!selectedDate) return;
 
-        const price = parseInt(customPrice);
+        const price = customPrice ? parseInt(customPrice) : basePrice;
+        const rooms = customRooms ? parseInt(customRooms) : undefined;
+        
         const existing = dayPricing.find(p => p.date === selectedDate);
 
         if (existing) {
             setDayPricing(dayPricing.map(p =>
-                p.date === selectedDate ? { ...p, price, isSpecial: true } : p
+                p.date === selectedDate ? { ...p, price, remainingRooms: rooms, isSpecial: true } : p
             ));
         } else {
             setDayPricing([...dayPricing, {
                 date: selectedDate,
                 price,
+                remainingRooms: rooms,
                 isSpecial: true
             }]);
         }
 
         setSelectedDate(null);
         setCustomPrice('');
+        setCustomRooms('');
     };
 
     const handleRemovePrice = (dateStr: string) => {
@@ -98,7 +110,7 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                 <div>
                     <h3 className="text-lg font-bold text-gray-900">Lịch & Định giá</h3>
                     <p className="text-sm text-gray-500 mt-1">
-                        Thiết lập giá vé đặc biệt cho các ngày lễ, cuối tuần
+                        Thiết lập giá và số lượng phòng/vé trống cho các ngày cụ thể
                     </p>
                 </div>
 
@@ -106,11 +118,11 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                 <div className="flex items-center gap-4 text-sm bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-white border border-gray-300 rounded-sm"></div>
-                        <span className="text-gray-600">Giá thường ({formatPrice(basePrice)})</span>
+                        <span className="text-gray-600">Mặc định</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-50 border border-green-500 rounded-sm"></div>
-                        <span className="text-gray-600">Giá đặc biệt</span>
+                        <span className="text-gray-600">Đã tùy chỉnh giá/phòng</span>
                     </div>
                 </div>
             </div>
@@ -151,6 +163,7 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                             const day = idx + 1;
                             const dateStr = formatDate(year, month, day);
                             const customPriceForDay = getPriceForDate(dateStr);
+                            const customRoomsForDay = getRoomsForDate(dateStr);
                             const isSelected = selectedDate === dateStr;
                             const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
 
@@ -162,7 +175,7 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                                         relative group min-h-[100px] p-2 text-left transition-all outline-none
                                         hover:z-10 bg-white hover:shadow-md
                                         ${isSelected ? 'ring-2 ring-inset ring-orange-500 z-10' : ''}
-                                        ${customPriceForDay ? 'bg-green-50/30' : ''}
+                                        ${(customPriceForDay || customRoomsForDay !== null) ? 'bg-green-50/30' : ''}
                                     `}
                                 >
                                     <div className="flex justify-between items-start">
@@ -173,19 +186,18 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                                         `}>
                                             {day}
                                         </span>
-                                        {customPriceForDay && (
+                                        {(customPriceForDay || customRoomsForDay !== null) && (
                                             <div className="h-2 w-2 rounded-full bg-green-500"></div>
                                         )}
                                     </div>
 
-                                    <div className="mt-2 text-right">
-                                        {customPriceForDay ? (
-                                            <div className="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold border border-green-200">
-                                                {formatPrice(customPriceForDay)}
-                                            </div>
-                                        ) : (
-                                            <div className="text-xs text-gray-300 font-medium group-hover:text-gray-400 transition-colors">
-                                                {formatPrice(basePrice)}
+                                    <div className="mt-2 space-y-1 text-right">
+                                        <div className={`text-xs font-bold ${customPriceForDay ? 'text-green-700' : 'text-gray-400'}`}>
+                                            {formatPrice(customPriceForDay || basePrice)}
+                                        </div>
+                                        {customRoomsForDay !== null && (
+                                            <div className="text-[10px] text-orange-600 font-semibold italic">
+                                                Còn {customRoomsForDay} chỗ
                                             </div>
                                         )}
                                     </div>
@@ -196,14 +208,14 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                 </CardContent>
             </Card>
 
-            {/* Edit Price Modal (Bottom Sheet style on desktop) */}
+            {/* Edit Price & Availability Modal */}
             {selectedDate && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in duration-200" onClick={() => setSelectedDate(null)}>
                     <Card className="w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <h4 className="text-lg font-bold text-gray-900">Thiết lập giá</h4>
+                                    <h4 className="text-lg font-bold text-gray-900">Thiết lập ngày cụ thể</h4>
                                     <p className="text-sm text-gray-500">Ngày {new Date(selectedDate).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                 </div>
                                 <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)} className="h-8 w-8 p-0 rounded-full">
@@ -212,28 +224,38 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                             </div>
 
                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label>Giá áp dụng (VND)</Label>
-                                    <div className="relative">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Giá áp dụng (VND)</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                value={customPrice}
+                                                onChange={(e) => setCustomPrice(e.target.value)}
+                                                placeholder={basePrice.toString()}
+                                                className="font-semibold"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Số lượng trống</Label>
                                         <Input
                                             type="number"
-                                            value={customPrice}
-                                            onChange={(e) => setCustomPrice(e.target.value)}
-                                            placeholder={basePrice.toString()}
-                                            className="pl-3 pr-12 font-semibold text-lg"
-                                            autoFocus
+                                            value={customRooms}
+                                            onChange={(e) => setCustomRooms(e.target.value)}
+                                            placeholder="Không giới hạn"
+                                            className="font-semibold"
                                         />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">VND</span>
                                     </div>
-                                    <p className="text-xs text-gray-500">Để trống để sử dụng giá mặc định ({formatPrice(basePrice)})</p>
                                 </div>
 
                                 <div className="flex gap-3 pt-2">
-                                    <Button onClick={handleSavePrice} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                                    <Button onClick={handleSaveParams} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
                                         <Check className="w-4 h-4 mr-2" />
                                         Lưu thay đổi
                                     </Button>
-                                    {getPriceForDate(selectedDate) && (
+                                    {(getPriceForDate(selectedDate) || getRoomsForDate(selectedDate) !== null) && (
                                         <Button
                                             variant="outline"
                                             onClick={() => {
@@ -243,7 +265,7 @@ const PricingCalendarTab = ({ serviceId, basePrice }: PricingCalendarTabProps) =
                                             className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100"
                                         >
                                             <Trash2 className="w-4 h-4 mr-2" />
-                                            Xóa giá riêng
+                                            Xóa tùy chỉnh
                                         </Button>
                                     )}
                                 </div>

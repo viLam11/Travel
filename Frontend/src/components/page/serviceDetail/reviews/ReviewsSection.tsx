@@ -48,6 +48,12 @@ interface ReviewsSectionProps {
   isLoggedIn: boolean;
   isSubmitting?: boolean;
   isLoading?: boolean;
+  // API callbacks
+  onLike?: (reviewId: number | string) => Promise<void>;
+  onDislike?: (reviewId: number | string) => Promise<void>;
+  onUndoLike?: (reviewId: number | string) => Promise<void>;
+  onUndoDislike?: (reviewId: number | string) => Promise<void>;
+  onReport?: (reviewId: number | string, reason: string) => Promise<void>;
 }
 
 type SortOption = 'newest' | 'helpful' | 'rating-high' | 'rating-low';
@@ -72,7 +78,12 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   totalReviews,
   isLoggedIn,
   isSubmitting = false,
-  isLoading = false
+  isLoading = false,
+  onLike,
+  onDislike,
+  onUndoLike,
+  onUndoDislike,
+  onReport,
 }) => {
   const navigate = useNavigate();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -178,37 +189,54 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     }
   };
 
-  const handleThumbsUp = (reviewId: number) => {
+  const handleThumbsUp = async (reviewId: number) => {
     if (!isLoggedIn) {
       navigate('/login');
       return;
     }
-    setReviewLikes(prev => ({
-      ...prev,
-      [reviewId]: !prev[reviewId]
-    }));
+    const wasLiked = reviewLikes[reviewId];
+    // Optimistic UI update
+    setReviewLikes(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
     if (reviewDislikes[reviewId]) {
-      setReviewDislikes(prev => ({
-        ...prev,
-        [reviewId]: false
-      }));
+      setReviewDislikes(prev => ({ ...prev, [reviewId]: false }));
+    }
+    // API call
+    try {
+      if (wasLiked) {
+        await onUndoLike?.(reviewId);
+      } else {
+        if (reviewDislikes[reviewId]) await onUndoDislike?.(reviewId);
+        await onLike?.(reviewId);
+      }
+    } catch (err) {
+      // Rollback on failure
+      console.error('Like API error:', err);
+      setReviewLikes(prev => ({ ...prev, [reviewId]: wasLiked }));
     }
   };
 
-  const handleThumbsDown = (reviewId: number) => {
+  const handleThumbsDown = async (reviewId: number) => {
     if (!isLoggedIn) {
       navigate('/login');
       return;
     }
-    setReviewDislikes(prev => ({
-      ...prev,
-      [reviewId]: !prev[reviewId]
-    }));
+    const wasDisliked = reviewDislikes[reviewId];
+    // Optimistic UI update
+    setReviewDislikes(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
     if (reviewLikes[reviewId]) {
-      setReviewLikes(prev => ({
-        ...prev,
-        [reviewId]: false
-      }));
+      setReviewLikes(prev => ({ ...prev, [reviewId]: false }));
+    }
+    // API call
+    try {
+      if (wasDisliked) {
+        await onUndoDislike?.(reviewId);
+      } else {
+        if (reviewLikes[reviewId]) await onUndoLike?.(reviewId);
+        await onDislike?.(reviewId);
+      }
+    } catch (err) {
+      console.error('Dislike API error:', err);
+      setReviewDislikes(prev => ({ ...prev, [reviewId]: wasDisliked }));
     }
   };
 
@@ -222,17 +250,21 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     setOtherReason('');
   };
 
-  const submitReport = () => {
+  const submitReport = async () => {
     if (reportingReviewId === null) return;
     if (!reportReason) {
         alert("Vui lòng chọn lý do báo cáo");
         return;
     }
+    try {
+      await onReport?.(reportingReviewId, reportReason === 'Khác' ? otherReason : reportReason);
+    } catch (err) {
+      console.error('Report API error:', err);
+    }
     setReportedReviews(prev => new Set([...prev, reportingReviewId]));
     setReportingReviewId(null);
     setReportReason('');
     setOtherReason('');
-    alert('Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét đánh giá này.');
   };
 
   const countAdditionalImages = (total: number) => {

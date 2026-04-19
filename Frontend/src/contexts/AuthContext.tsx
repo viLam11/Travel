@@ -84,7 +84,7 @@ interface User {
     avatarUrl?: string;
     providerType?: 'hotel' | 'place'; // For providers
     hasService?: boolean; // For providers - whether they have completed service setup
-    serviceId?: number; // For providers - their service ID
+    serviceId?: string | number; // For providers - their service ID
     status?: 'active' | 'blocked' | 'pending';
 }
 
@@ -138,20 +138,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const rawRole = userResponse.role?.toUpperCase() || 'USER';
             const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
 
-            // Extract serviceId safely based on current BE behavior
-            // "Mặc định chọn 7 if available"
-            const serviceIds: any[] = (userResponse as any).serviceIds || [];
-            let fetchedServiceId: number = 7; // Khởi tạo mặc định là 7 như yêu cầu
-            
-            if (serviceIds.includes('7') || serviceIds.includes(7)) {
-                fetchedServiceId = 7;
+            // Extract serviceId safely - One provider = One service
+            let fetchedServiceId: string | number | undefined = undefined;
+
+            if ((userResponse as any).serviceId) {
+                fetchedServiceId = (userResponse as any).serviceId;
             } else if (Array.isArray((userResponse as any).services) && (userResponse as any).services.length > 0) {
                 const firstService = (userResponse as any).services[0];
                 fetchedServiceId = typeof firstService === 'object' ? firstService.id : firstService;
-            } else if (serviceIds.length > 0) {
-                fetchedServiceId = Number(serviceIds[0]);
-            } else if ((userResponse as any).serviceId) {
-                fetchedServiceId = Number((userResponse as any).serviceId);
+            } else if (Array.isArray((userResponse as any).serviceIds) && (userResponse as any).serviceIds.length > 0) {
+                fetchedServiceId = (userResponse as any).serviceIds[0];
             }
 
             const user: User = {
@@ -163,8 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 address: userResponse.address,
                 avatarUrl: userResponse.avatarUrl,
                 // Derive providerType from specific provider role
-                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' : 
-                              rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' :
+                    rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
                 serviceId: fetchedServiceId,
                 hasService: !!fetchedServiceId,
                 // Add the original specific role for component-level checks if needed
@@ -259,8 +255,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Real Backend API
             const response = await apiClient.auth.login({
                 email,
-                password,
-                remember_me: true
+                password
+                // remember_me: true
             }) as unknown as LoginResponse;
             console.log("Đăng nhập thành công:", response);
 

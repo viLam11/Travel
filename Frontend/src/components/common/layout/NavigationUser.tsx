@@ -1,6 +1,6 @@
 // src/components/layout/NavigationUser.tsx
 import React, { useState } from 'react';
-import { Search, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, Menu, X, ChevronDown, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -147,7 +147,7 @@ const Navigation: React.FC<NavigationProps> = ({
                   : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200'
                 }`}
             >
-              ✨ Lập kế hoạch
+              <Sparkles className="w-4 h-4" /> Lập kế hoạch
             </button>
 
             {isAuthenticated ? (
@@ -164,7 +164,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 >
                   <button
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                    className="flex items-center gap-2 hover:bg-gray-50 rounded-full px-3 py-1.5 transition-colors"
+                    className="flex items-center gap-2 hover:bg-gray-50 rounded-full px-3 py-1.5 transition-colors cursor-pointer"
                   >
                     <Avatar
                       name={currentUser?.user?.name || 'User'}
@@ -255,15 +255,15 @@ const Navigation: React.FC<NavigationProps> = ({
             </button>
             <button
               onClick={() => { navigate('/ai-planner'); setIsMobileMenuOpen(false); }}
-              className={`block w-full text-left font-semibold transition-colors py-2 ${isActive('/ai-planner') ? 'text-orange-600' : 'text-orange-500'
+              className={`block w-full text-left font-semibold transition-colors py-2 flex items-center gap-2 ${isActive('/ai-planner') ? 'text-orange-600' : 'text-orange-500'
                 }`}
             >
-              ✨ Lập kế hoạch AI
+              <Sparkles className="w-4 h-4" /> Lập kế hoạch AI
             </button>
 
             {isAuthenticated ? (
               <>
-                <div className="py-2 flex items-center gap-2 border-t border-gray-100 pt-3">
+                <div className="py-2 flex items-center gap-2 border-t border-gray-100 pt-3 ">
                   <Avatar name={currentUser?.user?.name || 'User'} size="md" />
                   <div>
                     <p className="font-semibold text-gray-900">
@@ -294,13 +294,13 @@ const Navigation: React.FC<NavigationProps> = ({
               <>
                 <button
                   onClick={() => navigate('/register')}
-                  className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
+                  className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2 cursor-pointer"
                 >
                   Đăng ký
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-colors"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-colors cursor-pointer"
                 >
                   Đăng nhập
                 </button>

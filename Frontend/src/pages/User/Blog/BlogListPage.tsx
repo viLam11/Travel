@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   SearchX,
   CheckCircle2,
+  Heart,
+  MessageCircle,
 } from 'lucide-react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Footer from '@/components/common/layout/Footer';
@@ -72,12 +74,12 @@ const FeaturedItemSidebar: React.FC<FeaturedItemProps> = ({ post, rank, onClick 
         </p>
         <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
           <span className="flex items-center gap-0.5">
-            <span>❤️</span>
+            <Heart className="w-2.5 h-2.5 fill-red-400 text-red-400" />
             <span>{likes.toLocaleString()}</span>
           </span>
           {post.commentCount > 0 && (
             <span className="flex items-center gap-0.5">
-              <span>💬</span>
+              <MessageCircle className="w-2.5 h-2.5" />
               <span>{post.commentCount}</span>
             </span>
           )}
