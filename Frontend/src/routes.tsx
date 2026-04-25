@@ -59,8 +59,6 @@ const ProviderEditServicePage = lazy(() => import("@/pages/ServiceProvider/Servi
 const ProviderHotelListPage = lazy(() => import("@/pages/ServiceProvider/Hotels/HotelListPage"));
 const ProviderEditHotelPage = lazy(() => import("@/pages/ServiceProvider/Hotels/EditHotelPage"));
 const ProviderRoomManagementPage = lazy(() => import("@/pages/ServiceProvider/Rooms/RoomManagementPage"));
-const ProviderBookingsManagementPage = lazy(() => import("@/pages/ServiceProvider/Bookings/BookingsManagementPage"));
-const ProviderReviewsManagementPage = lazy(() => import("@/pages/ServiceProvider/Reviews/ReviewsManagementPage"));
 const ProviderMessagesPage = lazy(() => import("@/pages/ServiceProvider/Messages/ProviderMessagesPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 const AIPlannerPage = lazy(() => import("@/pages/User/AIPlanner/AIPlannerPage"));
