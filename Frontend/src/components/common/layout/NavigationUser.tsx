@@ -110,8 +110,8 @@ const Navigation: React.FC<NavigationProps> = ({
                 }
               }}
               className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/destinations')
-                  ? 'text-orange-500 font-semibold border-orange-500'
-                  : 'text-gray-700 hover:text-orange-500 border-transparent'
+                ? 'text-orange-500 font-semibold border-orange-500'
+                : 'text-gray-700 hover:text-orange-500 border-transparent'
                 }`}
             >
               Địa điểm
@@ -119,8 +119,8 @@ const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={() => navigate('/hotels')}
               className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/hotels')
-                  ? 'text-orange-500 font-semibold border-orange-500'
-                  : 'text-gray-700 hover:text-orange-500 border-transparent'
+                ? 'text-orange-500 font-semibold border-orange-500'
+                : 'text-gray-700 hover:text-orange-500 border-transparent'
                 }`}
             >
               Khách sạn
@@ -134,8 +134,8 @@ const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={() => navigate('/blog')}
               className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/blog')
-                  ? 'text-orange-500 font-semibold border-orange-500'
-                  : 'text-gray-700 hover:text-orange-500 border-transparent'
+                ? 'text-orange-500 font-semibold border-orange-500'
+                : 'text-gray-700 hover:text-orange-500 border-transparent'
                 }`}
             >
               Bài viết
@@ -143,8 +143,8 @@ const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={() => navigate('/ai-planner')}
               className={`cursor-pointer flex items-center gap-1.5 text-sm lg:text-base font-semibold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap border ${isActive('/ai-planner')
-                  ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-200'
-                  : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200'
+                ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-200'
+                : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200'
                 }`}
             >
               <Sparkles className="w-4 h-4" /> Lập kế hoạch
@@ -154,7 +154,7 @@ const Navigation: React.FC<NavigationProps> = ({
               <>
                 {/* Notification Bell */}
                 <div className="flex items-center">
-                   <NotificationBell />
+                  <NotificationBell />
                 </div>
 
                 {/* User Avatar + Name with Dropdown */}
@@ -208,106 +208,105 @@ const Navigation: React.FC<NavigationProps> = ({
         </div>
 
         {/* Mobile Search Bar */}
-        {isSearchOpen && (
-          <div className="lg:hidden pb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm địa điểm, hoạt động..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                onKeyDown={handleSearch}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-              />
-            </div>
+        <div className={`lg:hidden transition-all duration-300 ease-in-out overflow-hidden ${isSearchOpen ? 'max-h-20 opacity-100 py-4' : 'max-h-0 opacity-0'}`}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm địa điểm, hoạt động..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={handleSearch}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm shadow-sm"
+            />
           </div>
-        )}
+        </div>
 
         {/* Mobile Menu */}
-        {isMobileMenuOpen && !onFilterClick && (
-          <div className="md:hidden border-t border-gray-200 py-4 space-y-3">
+        <div className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen && !onFilterClick ? 'max-h-[80vh] opacity-100 py-6 border-t border-gray-100' : 'max-h-0 opacity-0'}`}>
+          <div className="space-y-1">
             <button
-              onClick={() => navigate('/destinations')}
-              className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/destinations') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'
-                }`}
+              onClick={() => { navigate('/destinations'); setIsMobileMenuOpen(false); }}
+              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all ${isActive('/destinations') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               Địa điểm
             </button>
             <button
-              onClick={() => navigate('/hotels')}
-              className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/hotels') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'
-                }`}
+              onClick={() => { navigate('/hotels'); setIsMobileMenuOpen(false); }}
+              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all ${isActive('/hotels') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               Khách sạn
             </button>
             <button
-              onClick={() => toast('Tính năng đang phát triển')}
-              className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
-            >
-              Hoạt động
-            </button>
-            <button
               onClick={() => { navigate('/blog'); setIsMobileMenuOpen(false); }}
-              className={`block w-full text-left font-medium transition-colors py-2 ${isActive('/blog') ? 'text-orange-500 font-semibold' : 'text-gray-700 hover:text-orange-500'}`}
+              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all ${isActive('/blog') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               Bài viết
             </button>
             <button
               onClick={() => { navigate('/ai-planner'); setIsMobileMenuOpen(false); }}
-              className={`block w-full text-left font-semibold transition-colors py-2 flex items-center gap-2 ${isActive('/ai-planner') ? 'text-orange-600' : 'text-orange-500'
-                }`}
+              className={`flex items-center gap-2 w-full px-4 py-3 rounded-xl font-semibold transition-all ${isActive('/ai-planner') ? 'bg-orange-100 text-orange-700' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}
             >
               <Sparkles className="w-4 h-4" /> Lập kế hoạch AI
             </button>
 
-            {isAuthenticated ? (
-              <>
-                <div className="py-2 flex items-center gap-2 border-t border-gray-100 pt-3 ">
-                  <Avatar name={currentUser?.user?.name || 'User'} size="md" />
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {currentUser?.user?.name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {currentUser?.user?.email}
-                    </p>
+            <div className="my-4 border-t border-gray-100 pt-4">
+              {isAuthenticated ? (
+                <div className="space-y-1">
+                  <div className="px-4 py-3 flex items-center gap-3 bg-gray-50 rounded-2xl mb-2">
+                    <Avatar name={currentUser?.user?.name || 'User'} size="md" />
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 truncate">
+                        {currentUser?.user?.name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {currentUser?.user?.email}
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => {
+                      navigate('/user/profile');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Hồ sơ của tôi
+                  </button>
+                  {currentUser?.user?.role === 'admin' && (
+                    <button
+                      onClick={() => { navigate('/admin/dashboard'); setIsMobileMenuOpen(false); }}
+                      className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all"
+                    >
+                      Admin Dashboard
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                    className="flex items-center w-full px-4 py-3 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-all"
+                  >
+                    Đăng xuất
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    navigate('/user/profile');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2"
-                >
-                  Hồ sơ của tôi
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left text-red-600 hover:text-red-700 font-medium transition-colors py-2"
-                >
-                  Đăng xuất
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigate('/register')}
-                  className="block w-full text-left text-gray-700 hover:text-orange-500 font-medium transition-colors py-2 cursor-pointer"
-                >
-                  Đăng ký
-                </button>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-medium transition-colors cursor-pointer"
-                >
-                  Đăng nhập
-                </button>
-              </>
-            )}
+              ) : (
+                <div className="grid grid-cols-2 gap-3 px-2">
+                  <button
+                    onClick={() => navigate('/register')}
+                    className="w-full px-4 py-3 text-center text-gray-700 font-bold hover:bg-gray-50 rounded-xl border border-gray-200 transition-all cursor-pointer"
+                  >
+                    Đăng ký
+                  </button>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-xl font-bold transition-all shadow-md shadow-orange-100 cursor-pointer"
+                  >
+                    Đăng nhập
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </nav>
   );

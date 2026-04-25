@@ -152,7 +152,7 @@ export default function ProviderReviews() {
                 {STAT_CARDS.map((stat, i) => {
                     const Icon = stat.icon;
                     return (
-                        <div key={i} className="relative flex items-center justify-between p-5 rounded-xl bg-background shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-border/40 overflow-hidden">
+                        <div key={i} className="relative flex items-center justify-between p-5 rounded-xl bg-card shadow-[0_2px_12px_rgb(0,0,0,0.06)] dark:shadow-none border border-border/40 overflow-hidden">
                             <div className="flex-1 min-w-0 pr-4">
                                 <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1 truncate">{stat.title}</p>
                                 <div className="text-[28px] font-semibold text-foreground leading-none mb-2 truncate">{stat.value}</div>

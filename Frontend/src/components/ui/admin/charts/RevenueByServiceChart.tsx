@@ -1,14 +1,15 @@
 // src/components/charts/RevenueByServiceChart.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
 import type { RevenueByService } from '@/data/dashboardData';
 
@@ -73,7 +74,7 @@ export default function RevenueByServiceChart({ data: initialData }: RevenueBySe
         <text x={0} y={0} dy={16} textAnchor="middle" className="text-xs font-semibold fill-foreground">
           {payload.value}
         </text>
-        
+
         {/* Dòng 2: Doanh thu (Màu đậm) */}
         <text x={0} y={0} dy={34} textAnchor="middle" className="text-xs font-bold fill-primary" style={{ fill: dataItem.fill }}>
           {formatFullCurrency(dataItem.revenue)}
@@ -101,17 +102,16 @@ export default function RevenueByServiceChart({ data: initialData }: RevenueBySe
             <CardTitle className="text-lg font-semibold whitespace-nowrap">{titles[timeRange]}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">So sánh hiệu quả kinh doanh</p>
           </div>
-          
+
           <div className="flex bg-muted/50 p-1 rounded-lg border border-border shrink-0">
             {(['week', 'month', 'year'] as const).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  timeRange === range 
-                    ? 'bg-background shadow-sm text-foreground' 
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${timeRange === range
+                    ? 'bg-background shadow-sm text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 {range === 'week' ? 'Tuần' : range === 'month' ? 'Tháng' : 'Năm'}
               </button>
@@ -121,50 +121,64 @@ export default function RevenueByServiceChart({ data: initialData }: RevenueBySe
       </CardHeader>
 
       <CardContent className="flex-1 min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%" minHeight={320}>
-          {/* Tăng margin bottom để không bị cắt chữ */}
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-            
-            <XAxis 
-              dataKey="displayService" 
-              axisLine={false}
-              tickLine={false}
-              interval={0}       // Bắt buộc hiển thị tất cả các nhãn
-              height={70}        // Tăng chiều cao trục X để chứa đủ 3 dòng chữ
-              tick={<CustomXAxisTick />} // Sử dụng component tùy chỉnh
-            />
-            
-            <YAxis 
-              tickFormatter={formatShortCurrency}
-              className="text-muted-foreground text-xs"
-              tick={{ fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-              width={60}
-            />
-            
-            <Tooltip 
-              cursor={{ fill: 'transparent' }}
-              formatter={(value: number) => [formatFullCurrency(value), 'Doanh thu']}
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--popover))',
-                color: 'hsl(var(--popover-foreground))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-              }}
-            />
-            
-            <Bar 
-              dataKey="revenue" 
-              radius={[6, 6, 0, 0]}
-              maxBarSize={80}
-              animationDuration={800}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        {chartData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-50">
+            <p className="text-sm">Chưa có dữ liệu doanh thu</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%" minHeight={320}>
+            {/* Tăng margin bottom để không bị cắt chữ */}
+            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+
+              <XAxis
+                dataKey="displayService"
+                axisLine={false}
+                tickLine={false}
+                interval={0}       // Bắt buộc hiển thị tất cả các nhãn
+                height={70}        // Tăng chiều cao trục X để chứa đủ 3 dòng chữ
+                tick={<CustomXAxisTick />} // Sử dụng component tùy chỉnh
+              />
+
+              <YAxis
+                tickFormatter={formatShortCurrency}
+                className="text-muted-foreground text-xs"
+                tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                width={60}
+              />
+
+              <Tooltip
+                cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-primary text-white shadow-lg rounded-md px-3 py-2 text-xs z-50 min-w-[150px]">
+                        <p className="font-semibold mb-1 opacity-90">{label}</p>
+                        <div className="flex gap-2 justify-between items-center">
+                          <span>Doanh thu:</span>
+                          <span className="font-bold text-sm">
+                            {formatFullCurrency(payload[0].value as number)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+
+              <Bar
+                dataKey="revenue"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={80}
+                animationDuration={800}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

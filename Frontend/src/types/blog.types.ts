@@ -50,12 +50,11 @@ export interface BlogPost {
   authorName: string;
   authorId: string;
   authorAvatarUrl?: string;
+  mediaUrls: string[];
   thumbnailUrl?: string;
-  mediaUrls?: string[];
-  status?: BlogStatus;
+  status: BlogStatus;
   reactionCount: number;
   commentCount: number;
-  likeCount?: number; // From BlogPostDocument
   createdAt: string;
   updatedAt?: string;
   taggedServiceIds?: (string | LinkedService)[];
@@ -65,8 +64,25 @@ export interface BlogPost {
   // Frontend UI extensions
   isLiked?: boolean;
   isBookmarked?: boolean;
-  summary?: string;
-  readTimeMinutes?: number;
+}
+
+/**
+ * Interface from /blog full-data or search
+ */
+export interface BlogSummaryResponse {
+  id: string;
+  title: string;
+  content: string;
+  authorName: string;
+  authorId: string;
+  authorAvatarUrl?: string;
+  mediaUrls: string[];
+  thumbnailUrl?: string;
+  status: BlogStatus;
+  reactionCount: number;
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type BlogFilterTab = 'all' | 'latest' | 'popular' | 'following';
@@ -74,10 +90,11 @@ export type BlogFilterTab = 'all' | 'latest' | 'popular' | 'following';
 export interface BlogRequest {
   title: string;
   content: string;
-  mediaUrls?: string[] | File[];
+  mediaUrls?: string[]; // Binary mapping handled in multipart
   status: BlogStatus;
   taggedServiceIds?: string[];
 }
+
 
 export interface ReportReason {
   id: string;

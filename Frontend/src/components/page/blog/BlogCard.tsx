@@ -189,7 +189,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
     });
 
     const [localCount, setLocalCount] = useState<number>(() => {
-        const val = post.reactionCount ?? post.likeCount ?? (post as any).likes ?? 0;
+        const val = post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0;
         return val > 0 ? val : 726; // MOCK DATA: Giả lập 726 lượt tương tác để test UI
     });
 
@@ -225,7 +225,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
             });
             if (reactionType && !counts[reactionType]) counts[reactionType] = 1;
             setBreakdown(counts);
-            setLocalCount(post.reactionCount || post.likeCount || (post as any).likes || post.reactions.length);
+            setLocalCount(post.reactionCount || (post as any).likeCount || (post as any).likes || post.reactions.length);
         } else {
             const reactionType = post.isLiked ? 'LIKE' as ReactionType : null;
             setLocalReaction(reactionType);
@@ -239,7 +239,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
             if (reactionType) counts[reactionType] = (counts[reactionType] ?? 0) + 1;
             setBreakdown(counts);
             
-            const realCount = post.reactionCount || post.likeCount || (post as any).likes || 0;
+            const realCount = post.reactionCount || (post as any).likeCount || (post as any).likes || 0;
             setLocalCount(realCount > 0 ? realCount : (725 + (reactionType ? 1 : 0)));
         }
     }, [post.reactions, post.isLiked, post.reactionCount, currentUser?.user?.userID]);
@@ -265,8 +265,8 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
     const authorAvatar = post.authorAvatarUrl || (post as any).author?.avatar ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=fb923c&color=fff`;
     const views = (post as any).viewCount ?? 0;
-    const readTime = post.readTimeMinutes ?? 5;
-    const summary = post.summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...' || '';
+    const readTime = (post as any).readTimeMinutes ?? 5;
+    const summary = (post as any).summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...' || '';
     const tags: string[] = (post as any).tags || [];
 
     // Linked services from mock data

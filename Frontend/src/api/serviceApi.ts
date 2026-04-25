@@ -174,14 +174,9 @@ export const serviceApi = {
         }
     },
 
-    /**
-     * Toggle trạng thái service
-     * Đã nối BE: POST /users/{serviceID}/handleServiceStatus
-     */
-    toggleServiceStatus: async (serviceId: string, status: 'active' | 'inactive'): Promise<Service> => {
+    toggleServiceStatus: async (serviceId: string, status: 'PENDING' | 'APPROVED' | 'REJECTED'): Promise<Service> => {
         try {
-            // Note: BE's endpoint is under /users/...
-            return await apiClient.post(`/users/${serviceId}/handleServiceStatus`, null, { params: { status } });
+            return await apiClient.users.handleServiceStatus(serviceId, status);
         } catch (error) {
             console.error('Error toggling service status:', error);
             throw error;

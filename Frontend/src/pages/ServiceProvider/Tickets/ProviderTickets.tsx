@@ -21,9 +21,9 @@ import { useToast } from '@/contexts/ToastContext';
 
 const ProviderTickets = () => {
     // Mock: Get current provider's tour ID (in real app, from auth context)
-    const currentTourId = 6; // Ha Long Bay Cruise
+    const currentTourId = "6"; // Ha Long Bay Cruise
     const tourName = "Ha Long Bay Cruise";
-    const { toast } = useToast();
+    const toastObj = useToast();
 
     const [tickets, setTickets] = useState<MockTicket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -36,13 +36,13 @@ const ProviderTickets = () => {
                 setTickets(data);
             } catch (error) {
                 console.error("Failed to load tickets", error);
-                toast("Lỗi tải danh sách vé", "error");
+                toastObj.error("Lỗi tải danh sách vé");
             } finally {
                 setIsLoading(false);
             }
         };
         fetchTickets();
-    }, [currentTourId, toast]);
+    }, [currentTourId, toastObj]);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingTicket, setEditingTicket] = useState<MockTicket | null>(null);
@@ -93,14 +93,14 @@ const ProviderTickets = () => {
                     description: formData.description,
                     content: formData.content,
                 };
-                await ticketApi.updateTicket(editingTicket.id, updateData);
+                await ticketApi.updateTicket(editingTicket.id.toString(), updateData);
                 
                 setTickets(prev => prev.map(ticket =>
                     ticket.id === editingTicket.id
                         ? { ...ticket, ...updateData }
                         : ticket
                 ));
-                toast(`Cập nhật thành công: ${formData.name}`, "success");
+                toastObj.success(`Cập nhật thành công: ${formData.name}`);
             } else {
                 // Add new ticket
                 const newData = {
@@ -114,24 +114,24 @@ const ProviderTickets = () => {
                 };
                 const newTicket = await ticketApi.createTicket(currentTourId, newData);
                 setTickets(prev => [...prev, newTicket]);
-                toast(`Thêm vé thành công: ${formData.name}`, "success");
+                toastObj.success(`Thêm vé thành công: ${formData.name}`);
             }
             handleCloseDialog();
         } catch (error) {
             console.error("Save failed", error);
-            toast("Thao tác thất bại", "error");
+            toastObj.error("Thao tác thất bại");
         }
     };
 
     const handleDelete = async (ticket: MockTicket) => {
         if (confirm(`Are you sure you want to delete "${ticket.name}"?`)) {
             try {
-                await ticketApi.deleteTicket(ticket.id);
+                await ticketApi.deleteTicket(ticket.id.toString());
                 setTickets(prev => prev.filter(t => t.id !== ticket.id));
-                toast(`Đã xóa vé: ${ticket.name}`, "success");
+                toastObj.success(`Đã xóa vé: ${ticket.name}`);
             } catch (error) {
                 console.error("Delete failed", error);
-                toast("Xóa thất bại", "error");
+                toastObj.error("Xóa thất bại");
             }
         }
     };

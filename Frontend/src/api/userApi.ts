@@ -4,56 +4,40 @@ import { MOCK_USERS_DATA, type MockUser } from '@/mocks/users';
 const USE_MOCK = false; // Set to false to use real backend API
 
 export const userApi = {
-    getAllUsers: async (): Promise<MockUser[]> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return [...MOCK_USERS_DATA];
-        }
+    getAllUsers: async (): Promise<any[]> => {
         try {
-            // Backend maps this to GET /users/all
-            return await apiClient.get('/users/all');
+            return await apiClient.users.getAll();
         } catch (error) {
             console.error('Failed to get users', error);
             throw error;
         }
     },
 
-    updateUserStatus: async (userId: number, status: 'active' | 'blocked' | 'pending'): Promise<void> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return;
-        }
+    toggleUserStatus: async (userId: string | number): Promise<void> => {
         try {
-            await apiClient.patch(`/users/admin/${userId}/status`, { status });
+            await apiClient.users.toggleUserStatus(userId);
         } catch (error) {
-            console.error('Failed to update user status', error);
+            console.error('Failed to toggle user status', error);
             throw error;
         }
     },
 
-    updateUserRole: async (userId: number, role: 'admin' | 'provider' | 'user'): Promise<void> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return;
-        }
+    updateUser: async (userId: string | number, data: any): Promise<void> => {
         try {
-            await apiClient.patch(`/users/admin/${userId}/role`, { role });
+            await apiClient.users.update(Number(userId), data);
         } catch (error) {
-            console.error('Failed to update user role', error);
+            console.error('Failed to update user', error);
             throw error;
         }
     },
 
-    deleteUser: async (userId: number): Promise<void> => {
-        if (USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            return;
-        }
+    deleteUser: async (userId: string | number): Promise<void> => {
         try {
-            await apiClient.delete(`/users/admin/${userId}`);
+            await apiClient.delete(`/users/${userId}`);
         } catch (error) {
             console.error('Failed to delete user', error);
             throw error;
         }
     }
 };
+

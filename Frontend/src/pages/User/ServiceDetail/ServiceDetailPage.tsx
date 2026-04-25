@@ -448,12 +448,13 @@ const ServiceDetailPage: React.FC = () => {
 
     try {
       const rooms = selectedRooms.map((roomId: string | number) => ({
-        id: roomId,
+        id: String(roomId),
         quantity: 1,
         // Backend now expects dates per item
         checkInDate: checkInDate ? `${checkInDate}T14:00:00.000Z` : new Date().toISOString(),
         checkOutDate: checkOutDate ? `${checkOutDate}T12:00:00.000Z` : new Date().toISOString(),
       }));
+
 
       const response: any = await apiClient.orders.create({
         tickets: [],
@@ -1025,7 +1026,7 @@ const ServiceDetailPage: React.FC = () => {
           </div>
 
           {/* Right Sidebar - Booking Card */}
-          <div className="lg:col-span-1">
+          <div className="hidden lg:block lg:col-span-1">
             <BookingCard
               service={serviceWithAppliedDiscounts}
               serviceType={serviceType}
@@ -1049,9 +1050,28 @@ const ServiceDetailPage: React.FC = () => {
           </div>
         </div >
       </div >
+
       {/* ── Related Blog Posts ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <RelatedBlogPosts serviceId={id} serviceName={service.name} />
+      </div>
+
+      {/* Mobile Sticky Booking Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] animate-in slide-in-from-bottom duration-300">
+        <div className="flex items-center justify-between gap-4 max-w-md mx-auto">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Tổng cộng</p>
+            <p className="text-lg font-black text-orange-500 truncate">
+              {finalPrice.toLocaleString('vi-VN')} <span className="text-xs font-bold">VNĐ</span>
+            </p>
+          </div>
+          <button
+            onClick={serviceType === 'hotel' ? () => handleRoomBookNow() : handleBookNow}
+            className="flex-1 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md shadow-orange-100 uppercase tracking-widest"
+          >
+            {serviceType === 'hotel' ? 'Đặt ngay' : 'Đặt vé ngay'}
+          </button>
+        </div>
       </div>
 
       <Footer />

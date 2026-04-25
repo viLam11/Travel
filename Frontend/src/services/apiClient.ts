@@ -167,10 +167,9 @@ export class ApiClient {
     },
 
     update: (serviceID: number | string, updatedServiceRequest: any): ApiResponse<any> => {
-      // API expects the payload as a query param (perhaps incorrectly, but we follow swagger)
-      // or if it's actually body, we pass it as body. Let's pass it as params and DTO in body just to be safe.
-      return this.patch(`/services/${serviceID}`, updatedServiceRequest, {
-        params: { updatedServiceRequest: JSON.stringify(updatedServiceRequest) },
+      // Backend (Spring Boot) often expects fields as individual query params when @ModelAttribute/@ParameterObject is used
+      return this.patch(`/services/${serviceID}`, {}, {
+        params: updatedServiceRequest,
         headers: { "Content-Type": "application/json" }
       });
     },
@@ -551,8 +550,14 @@ export class ApiClient {
     search: (keyword: string): ApiResponse<any> => {
       return this.get("/users/search", { params: { keyword } });
     },
-    handleServiceStatus: (serviceId: string | number, status: string): ApiResponse<any> => {
-      return this.post(`/users/${serviceId}/handleServiceStatus`, null, { params: { status } });
+    handleServiceStatus: (serviceId: string | number, status: 'PENDING' | 'APPROVED' | 'REJECTED'): ApiResponse<any> => {
+      return this.post(`/users/${serviceId}/handleServiceStatus`, status, {
+        headers: { "Content-Type": "application/json" }
+      });
+    },
+
+    toggleUserStatus: (userID: string | number): ApiResponse<any> => {
+      return this.post(`/users/${userID}/toggleStatus`, {});
     },
   };
 
@@ -638,6 +643,57 @@ export class ApiClient {
     },
   };
 
+  // Discount endpoints
+  discounts = {
+    getAll: (): ApiResponse<any[]> => {
+      return this.get("/api/discounts");
+    },
+    getById: (id: string): ApiResponse<any> => {
+      return this.get(`/api/discounts/${id}`);
+    },
+    create: (data: any): ApiResponse<any> => {
+      return this.post("/api/discounts", data);
+    },
+    update: (id: string, data: any): ApiResponse<any> => {
+      return this.put(`/api/discounts/${id}`, data);
+    },
+    delete: (id: string): ApiResponse<any> => {
+      return this.delete(`/api/discounts/${id}`);
+    },
+    apply: (serviceID: string, placeCode: string): ApiResponse<any[]> => {
+      return this.get("/api/discounts/apply", { params: { serviceID, placeCode } });
+    },
+  };
+
+
+
+  // AI Plan Recommendation endpoints
+  aiPlans = {
+    generate: (data: { place: string; numberOfDays: number; additionalInformation?: string }): ApiResponse<any> => {
+      return this.post("/api/plan-recommend/generate", data);
+    },
+    getMyPlans: (): ApiResponse<any[]> => {
+      return this.get("/api/plan-recommend/my-plans");
+    },
+    getMySharedPlans: (): ApiResponse<any[]> => {
+      return this.get("/api/plan-recommend/my-shared-plans");
+    },
+    getById: (id: string): ApiResponse<any> => {
+      return this.get(`/api/plan-recommend/${id}`);
+    },
+    delete: (id: string): ApiResponse<any> => {
+      return this.delete(`/api/plan-recommend/${id}`, { params: { planID: id } });
+    },
+    share: (id: string, memberId: string, permission: 'EDIT' | 'READ_ONY'): ApiResponse<any> => {
+      return this.post(`/api/plan-recommend/${id}/share`, { memberId, permission });
+    },
+    handleInvitation: (collabID: string, status: 'ACCEPTED' | 'DENIED'): ApiResponse<any> => {
+      return this.post(`/api/plan-recommend/collab/${collabID}/handle`, status, {
+        headers: { "Content-Type": "application/json" }
+      });
+    },
+  };
+
   // Province endpoints
   provinces = {
     search: (query: string): ApiResponse<any[]> => {
@@ -699,6 +755,9 @@ export class ApiClient {
 
   // Notification endpoints
   notifications = {
+    getUserNotifications: (page = 0, size = 10): ApiResponse<any> => {
+      return this.get("/api/notifications", { params: { page, size } });
+    },
     getAll: (page = 0, size = 10): ApiResponse<any> => {
       return this.get("/api/notifications", { params: { page, size } });
     },
@@ -711,18 +770,27 @@ export class ApiClient {
     markAllAsRead: (): ApiResponse<void> => {
       return this.put("/api/notifications/read-all", {});
     },
+    delete: (id: string): ApiResponse<void> => {
+      return this.delete(`/api/notifications/${id}`);
+    },
   };
 
   // Statistics and Admin endpoints
   statistics = {
-    getTopCities: (): ApiResponse<any> => {
-      return this.get("/statistics/top-cities");
+    getSystemRevenue: (startDate?: string, endDate?: string): ApiResponse<any> => {
+      return this.get("/statistics/revenue", { params: { startDate, endDate } });
     },
-    getTopVenues: (): ApiResponse<any> => {
-      return this.get("/statistics/top-10-venues");
+    getRevenue: (startDate: string, endDate: string): ApiResponse<any> => {
+      return this.get("/statistics/revenue", { params: { startDate, endDate } });
     },
-    getTopHotels: (): ApiResponse<any> => {
-      return this.get("/statistics/top-10-hotels");
+    getTopCities: (startDate?: string, endDate?: string): ApiResponse<any> => {
+      return this.get("/statistics/top-cities", { params: { startDate, endDate } });
+    },
+    getTopVenues: (startDate?: string, endDate?: string): ApiResponse<any> => {
+      return this.get("/statistics/top-10-venues", { params: { startDate, endDate } });
+    },
+    getTopHotels: (startDate?: string, endDate?: string): ApiResponse<any> => {
+      return this.get("/statistics/top-10-hotels", { params: { startDate, endDate } });
     },
     getVenueStats: (venueId?: string | number): ApiResponse<any> => {
       if (venueId) return this.get(`/statistics/ticketVenues/${venueId}`);
@@ -732,9 +800,6 @@ export class ApiClient {
       if (hotelId) return this.get(`/statistics/hotels/${hotelId}`);
       return this.get("/statistics/hotels");
     },
-    getSystemRevenue: (startDate?: string, endDate?: string): ApiResponse<any> => {
-      return this.get("/statistics/revenue", { params: { startDate, endDate } });
-    }
   };
 
   /**

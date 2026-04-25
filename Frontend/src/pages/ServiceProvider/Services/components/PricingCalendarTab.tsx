@@ -106,7 +106,7 @@ const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalenda
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 className="text-lg font-bold text-gray-900">Lịch & Định giá</h3>
                     <p className="text-sm text-gray-500 mt-1">
@@ -115,14 +115,14 @@ const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalenda
                 </div>
 
                 {/* Legend */}
-                <div className="flex items-center gap-4 text-sm bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 text-[10px] sm:text-sm bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 self-start sm:self-auto">
+                    <div className="flex items-center gap-1.5">
                         <div className="w-3 h-3 bg-white border border-gray-300 rounded-sm"></div>
                         <span className="text-gray-600">Mặc định</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         <div className="w-3 h-3 bg-green-50 border border-green-500 rounded-sm"></div>
-                        <span className="text-gray-600">Đã tùy chỉnh giá/phòng</span>
+                        <span className="text-gray-600">Đã tùy chỉnh</span>
                     </div>
                 </div>
             </div>
@@ -130,22 +130,22 @@ const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalenda
             <Card className="shadow-sm border-gray-200 overflow-hidden">
                 <CardContent className="p-0">
                     {/* Calendar Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white">
-                        <Button variant="ghost" size="sm" onClick={prevMonth} className="hover:bg-gray-100">
-                            <ChevronLeft className="w-5 h-5 text-gray-600" />
+                    <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 bg-white">
+                        <Button variant="ghost" size="sm" onClick={prevMonth} className="h-8 w-8 p-0 hover:bg-gray-100">
+                            <ChevronLeft className="w-4 h-4 text-gray-600" />
                         </Button>
-                        <h4 className="text-lg font-bold text-gray-900 capitalize">
+                        <h4 className="text-base sm:text-lg font-bold text-gray-900 capitalize">
                             {monthNames[month]} {year}
                         </h4>
-                        <Button variant="ghost" size="sm" onClick={nextMonth} className="hover:bg-gray-100">
-                            <ChevronRight className="w-5 h-5 text-gray-600" />
+                        <Button variant="ghost" size="sm" onClick={nextMonth} className="h-8 w-8 p-0 hover:bg-gray-100">
+                            <ChevronRight className="w-4 h-4 text-gray-600" />
                         </Button>
                     </div>
 
                     {/* Day Names Header */}
                     <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/50">
                         {dayNames.map((day) => (
-                            <div key={day} className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider py-3">
+                            <div key={day} className="text-center text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 sm:py-3">
                                 {day}
                             </div>
                         ))}
@@ -155,7 +155,7 @@ const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalenda
                     <div className="grid grid-cols-7 bg-gray-100 gap-px border-b border-gray-200">
                         {/* Empty cells */}
                         {Array.from({ length: startingDayOfWeek }).map((_, idx) => (
-                            <div key={`empty-${idx}`} className="bg-white min-h-[100px]" />
+                            <div key={`empty-${idx}`} className="bg-white min-h-[70px] sm:min-h-[100px]" />
                         ))}
 
                         {/* Days */}
@@ -172,7 +172,7 @@ const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalenda
                                     key={day}
                                     onClick={() => handleDateClick(dateStr)}
                                     className={`
-                                        relative group min-h-[100px] p-2 text-left transition-all outline-none
+                                        relative group min-h-[70px] sm:min-h-[100px] p-1.5 sm:p-2 text-left transition-all outline-none
                                         hover:z-10 bg-white hover:shadow-md
                                         ${isSelected ? 'ring-2 ring-inset ring-orange-500 z-10' : ''}
                                         ${(customPriceForDay || customRoomsForDay !== null) ? 'bg-green-50/30' : ''}
@@ -180,24 +180,24 @@ const PricingCalendarTab = ({ serviceId: _serviceId, basePrice }: PricingCalenda
                                 >
                                     <div className="flex justify-between items-start">
                                         <span className={`
-                                            text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full
+                                            text-[10px] sm:text-sm font-medium w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full
                                             ${isToday ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-700'}
                                             ${isSelected && !isToday ? 'bg-orange-100 text-orange-700' : ''}
                                         `}>
                                             {day}
                                         </span>
                                         {(customPriceForDay || customRoomsForDay !== null) && (
-                                            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500"></div>
                                         )}
                                     </div>
 
-                                    <div className="mt-2 space-y-1 text-right">
-                                        <div className={`text-xs font-bold ${customPriceForDay ? 'text-green-700' : 'text-gray-400'}`}>
+                                    <div className="mt-1 sm:mt-2 space-y-0.5 sm:space-y-1 text-right">
+                                        <div className={`text-[8px] sm:text-xs font-bold ${customPriceForDay ? 'text-green-700' : 'text-gray-400'}`}>
                                             {formatPrice(customPriceForDay || basePrice)}
                                         </div>
                                         {customRoomsForDay !== null && (
-                                            <div className="text-[10px] text-orange-600 font-semibold italic">
-                                                Còn {customRoomsForDay} chỗ
+                                            <div className="text-[7px] sm:text-[10px] text-orange-600 font-semibold italic">
+                                                Còn {customRoomsForDay}
                                             </div>
                                         )}
                                     </div>

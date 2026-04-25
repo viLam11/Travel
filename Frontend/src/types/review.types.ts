@@ -2,27 +2,31 @@
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
+/**
+ * Interface cho Comment/Review từ Backend (CommentResponseDTO)
+ */
 export interface Review {
     id: string;
-    user: {
-        id: string;
-        name: string;
-        avatar?: string;
-    };
-    service: {
-        id: string;
-        name: string;
-        type: 'hotel' | 'place';
-    };
+    content: string;
     rating: number;
-    comment: string;
-    images?: string[];
-    status: ReviewStatus;
-    reply?: string;
-    repliedAt?: string;
+    likes: number;
+    dislikes: number;
     createdAt: string;
-    updatedAt: string;
+    userID: string;
+    username: string;
+    serviceID: string;
+    serviceName?: string;
+    imageList: string[];
+    parentID?: string;
+    replies?: any[]; 
 }
+
+export interface CreateCommentDTO {
+    content: string;
+    rating: number;
+    photos?: File[];
+}
+
 
 export interface ReviewStats {
     total: number;

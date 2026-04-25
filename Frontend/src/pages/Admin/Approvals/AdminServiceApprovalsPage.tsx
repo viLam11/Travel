@@ -195,9 +195,45 @@ export const AdminServiceApprovalsPage: React.FC = () => {
             </Card>
 
             <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left Side: Request List */}
-                <Card className="flex-1 overflow-hidden">
-                    <div className="overflow-x-auto">
+                {/* Table/Card View */}
+                <Card className="flex-1 overflow-hidden border-border shadow-sm">
+                    {/* Mobile Card View */}
+                    <div className="block lg:hidden divide-y divide-border bg-card">
+                        {isLoading ? (
+                            <div className="p-12 text-center text-muted-foreground">Đang tải dữ liệu...</div>
+                        ) : filteredRequests.length > 0 ? (
+                            filteredRequests.map(req => (
+                                <div 
+                                    key={req.id} 
+                                    className={`p-4 space-y-4 hover:bg-muted/30 transition-colors ${selectedReq?.id === req.id ? 'bg-primary/5' : ''}`}
+                                    onClick={() => setSelectedReq(req)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono font-bold text-sm">#{req.id}</span>
+                                                {getStatusBadge(req.status)}
+                                            </div>
+                                            <h4 className="font-bold text-base">{req.serviceName}</h4>
+                                            <p className="text-xs text-muted-foreground">{req.providerName}</p>
+                                        </div>
+                                        <button className="p-2 bg-primary/10 text-primary rounded-lg">
+                                            <Eye className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-2 border-t border-dashed border-border">
+                                        <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Ngày gửi</div>
+                                        <div className="text-sm font-medium">{new Date(req.submittedAt).toLocaleDateString('vi-VN')}</div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-12 text-center text-muted-foreground">Không có yêu cầu nào phù hợp.</div>
+                        )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden lg:block overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="border-b border-border bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider">

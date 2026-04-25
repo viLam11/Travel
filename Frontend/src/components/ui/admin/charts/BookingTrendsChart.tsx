@@ -9,15 +9,45 @@ interface BookingTrendsChartProps {
   data: BookingTrend[];
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-primary text-white shadow-lg rounded-md px-3 py-2 text-xs z-50 min-w-[120px]">
+        <p className="font-semibold mb-1 opacity-90">{label}</p>
+        <div className="flex gap-2 justify-between items-center">
+          <span>Tổng đặt vé:</span>
+          <span className="font-bold text-sm">{payload[0].value}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function BookingTrendsChart({ data }: BookingTrendsChartProps) {
   // Calculate average and trend
-  const avgBookings = Math.round(data.reduce((acc, curr) => acc + curr.bookings, 0) / data.length);
-  const firstHalf = data.slice(0, Math.ceil(data.length / 2));
-  const secondHalf = data.slice(Math.ceil(data.length / 2));
-  const firstAvg = firstHalf.reduce((acc, curr) => acc + curr.bookings, 0) / firstHalf.length;
-  const secondAvg = secondHalf.reduce((acc, curr) => acc + curr.bookings, 0) / secondHalf.length;
-  const trendPercentage = ((secondAvg - firstAvg) / firstAvg * 100).toFixed(1);
-  const isPositiveTrend = parseFloat(trendPercentage) > 0;
+  const hasData = data && data.length > 0;
+  const avgBookings = hasData
+    ? Math.round(data.reduce((acc, curr) => acc + curr.bookings, 0) / data.length)
+    : 0;
+
+  let trendPercentage = "0.0";
+  let isPositiveTrend = true;
+
+  if (hasData && data.length >= 2) {
+    const firstHalf = data.slice(0, Math.ceil(data.length / 2));
+    const secondHalf = data.slice(Math.ceil(data.length / 2));
+    const firstAvg = firstHalf.reduce((acc, curr) => acc + curr.bookings, 0) / firstHalf.length;
+    const secondAvg = secondHalf.reduce((acc, curr) => acc + curr.bookings, 0) / secondHalf.length;
+
+    if (firstAvg > 0) {
+      trendPercentage = ((secondAvg - firstAvg) / firstAvg * 100).toFixed(1);
+    } else if (secondAvg > 0) {
+      trendPercentage = "100.0";
+    }
+    isPositiveTrend = parseFloat(trendPercentage) >= 0;
+  }
+
 
   return (
     <Card className="border-0 shadow-sm">
@@ -41,29 +71,23 @@ export default function BookingTrendsChart({ data }: BookingTrendsChartProps) {
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis 
-              dataKey="date" 
+            <XAxis
+              dataKey="date"
               className="text-muted-foreground text-xs"
               tick={{ fontSize: 12 }}
             />
-            <YAxis 
+            <YAxis
               className="text-muted-foreground text-xs"
               tick={{ fontSize: 12 }}
             />
-            <Tooltip 
-              formatter={(value: number) => [value, 'Bookings']}
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--popover))',
-                color: 'hsl(var(--popover-foreground))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                padding: '8px 12px'
-              }}
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
             />
-            <Line 
-              type="monotone" 
-              dataKey="bookings" 
-              stroke="rgb(30, 157, 241)" 
+            <Line
+              type="monotone"
+              dataKey="bookings"
+              stroke="rgb(30, 157, 241)"
               strokeWidth={3}
               dot={{ fill: 'rgb(30, 157, 241)', r: 4 }}
               activeDot={{ r: 6 }}

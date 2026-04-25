@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
 import { Label } from '@/components/ui/admin/label';
-import { Textarea } from '@/components/ui/admin/textarea';
 import {
     Select,
     SelectContent,
@@ -38,6 +37,8 @@ export default function EditServicePage() {
         location: '',
         description: '',
         basePrice: '',
+        provinceCode: '',
+        contactNumber: '',
         // Hotel specific
         starRating: '',
         checkInTime: '',
@@ -57,21 +58,26 @@ export default function EditServicePage() {
 
     useEffect(() => {
         if (service) {
-            setServiceType(service.type as 'hotel' | 'tour');
-            setImages(service.images || []);
+            // Map types carefully
+            const beType = service.serviceType || service.type;
+            setServiceType(beType === 'HOTEL' ? 'hotel' : 'tour');
+            
+            setImages(service.imageList?.map((img: any) => img.imageUrl) || service.images || []);
             setFormData({
                 name: service.serviceName || '',
-                location: service.location || '',
+                location: service.address || service.location || '',
                 description: service.description || '',
-                basePrice: service.price ? service.price.toString() : '',
-                starRating: service.starRating ? service.starRating.toString() : '',
-                checkInTime: '14:00', // Mock default
-                checkOutTime: '12:00', // Mock default
+                basePrice: (service.averagePrice || service.price || 0).toString(),
+                provinceCode: service.province?.code || '',
+                contactNumber: service.contactNumber || '',
+                starRating: (service.starRating ?? service.rating ?? '').toString(),
+                checkInTime: '14:00', 
+                checkOutTime: '12:00', 
                 amenities: service.amenities || [],
                 duration: service.duration || '',
                 difficulty: service.difficulty || 'moderate',
                 groupSize: service.groupSize ? service.groupSize.toString() : '',
-                includedItems: [], // Mock default
+                includedItems: [], 
             });
         }
     }, [service]);
@@ -109,14 +115,17 @@ export default function EditServicePage() {
 
         setIsSaving(true);
         try {
-            // 1. Update basic info
+            // 1. Update basic info matching UpdatedServiceRequest DTO
             await serviceApi.updateService(id, {
                 serviceName: formData.name,
                 description: formData.description,
-                location: formData.location,
-                price: Number(formData.basePrice),
-                starRating: Number(formData.starRating),
-                amenities: formData.amenities
+                address: formData.location,
+                averagePrice: Number(formData.basePrice),
+                provinceCode: formData.provinceCode,
+                contactNumber: formData.contactNumber,
+                serviceType: serviceType === 'hotel' ? 'HOTEL' : 'TICKET_VENUE',
+                rating: Number(formData.starRating),
+                tags: service?.tags || ""
             });
 
             // 2. Upload new images if any
@@ -204,7 +213,7 @@ export default function EditServicePage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="location">Location *</Label>
+                                <Label htmlFor="location">Address *</Label>
                                 <Input
                                     id="location"
                                     value={formData.location}
@@ -214,15 +223,25 @@ export default function EditServicePage() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="basePrice">Base Price (VND) *</Label>
-                            <Input
-                                id="basePrice"
-                                type="number"
-                                value={formData.basePrice}
-                                onChange={(e) => handleInputChange('basePrice', e.target.value)}
-                                required
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="contactNumber">Contact Number</Label>
+                                <Input
+                                    id="contactNumber"
+                                    value={formData.contactNumber}
+                                    onChange={(e) => handleInputChange('contactNumber', e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="basePrice">Average Price (VND) *</Label>
+                                <Input
+                                    id="basePrice"
+                                    type="number"
+                                    value={formData.basePrice}
+                                    onChange={(e) => handleInputChange('basePrice', e.target.value)}
+                                    required
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">

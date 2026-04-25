@@ -16,6 +16,7 @@ import {
     Eye,
     CheckCircle,
     XCircle,
+    Inbox,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import {
@@ -308,38 +309,108 @@ export default function AdminDashboard() {
                         />
                     </div>
 
-                    {/* Services Table */}
-                    <div className="rounded-lg border border-border overflow-hidden">
-                        <div className="overflow-x-auto">
-                            {isLoading ? (
-                                <div className="flex flex-col items-center justify-center py-12">
-                                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-                                    <p className="text-muted-foreground text-sm font-medium">Đang tải dữ liệu hệ thống...</p>
+                    {/* Services Table/Card View */}
+                    <div className="rounded-xl border border-border overflow-hidden">
+                        {isLoading ? (
+                            <div className="flex flex-col items-center justify-center py-12">
+                                <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+                                <p className="text-muted-foreground text-sm font-medium">Đang tải dữ liệu hệ thống...</p>
+                            </div>
+                        ) : pendingServices.length === 0 ? (
+                            <div className="text-center p-12 text-muted-foreground bg-muted/10">
+                                <Inbox className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                <p className="font-medium">Không có yêu cầu duyệt dịch vụ mới nào.</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Mobile View (Cards) */}
+                                <div className="block sm:hidden divide-y divide-border">
+                                    {pendingServices.map((service) => (
+                                        <div key={service.id} className="p-4 space-y-4 hover:bg-muted/30 transition-colors">
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <h4 className="font-bold text-base leading-tight">{service.name}</h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge
+                                                            className={
+                                                                service.type === 'hotel'
+                                                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                                                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                            }
+                                                        >
+                                                            {service.type === 'hotel' ? 'Khách sạn' : 'Tham quan'}
+                                                        </Badge>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {new Date(service.createdAt).toLocaleDateString('vi-VN')}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}
+                                                        className="p-2 bg-muted rounded-lg text-muted-foreground"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4 text-sm pt-2">
+                                                <div>
+                                                    <p className="text-muted-foreground text-xs uppercase tracking-wider font-bold">Nhà cung cấp</p>
+                                                    <p className="font-medium mt-1 truncate">{service.provider}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-muted-foreground text-xs uppercase tracking-wider font-bold">Địa điểm</p>
+                                                    <div className="flex items-center gap-1 mt-1 font-medium truncate">
+                                                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                                                        {service.location}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2 pt-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1 bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                                                    onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsApproveOpen(true); }}
+                                                >
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    Duyệt
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                                    onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsRejectOpen(true); setRejectReason(''); }}
+                                                >
+                                                    <XCircle className="w-4 h-4 mr-2" />
+                                                    Từ chối
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ) : (
-                                <table className="w-full min-w-[900px]">
-                                    <thead className="bg-muted">
-                                        <tr className="border-b border-border">
-                                            <th className="text-left p-4 font-semibold text-sm">Tên dịch vụ</th>
-                                            <th className="text-left p-4 font-semibold text-sm">Loại hình</th>
-                                            <th className="text-left p-4 font-semibold text-sm">Nhà cung cấp</th>
-                                            <th className="text-left p-4 font-semibold text-sm">Địa điểm</th>
-                                            <th className="text-left p-4 font-semibold text-sm">Thời gian gửi</th>
-                                            <th className="text-right p-4 font-semibold text-sm">Thao tác nhanh</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {pendingServices.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} className="text-center p-8 text-muted-foreground">
-                                                    Không có yêu cầu duyệt dịch vụ mới nào.
-                                                </td>
+
+                                {/* Desktop View (Table) */}
+                                <div className="hidden sm:block overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-muted/50">
+                                            <tr className="border-b border-border">
+                                                <th className="text-left p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Tên dịch vụ</th>
+                                                <th className="text-left p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Loại hình</th>
+                                                <th className="text-left p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Nhà cung cấp</th>
+                                                <th className="text-left p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Địa điểm</th>
+                                                <th className="text-left p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Thời gian gửi</th>
+                                                <th className="text-right p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Thao tác</th>
                                             </tr>
-                                        ) : (
-                                            pendingServices.map((service) => (
+                                        </thead>
+                                        <tbody>
+                                            {pendingServices.map((service) => (
                                                 <tr
                                                     key={service.id}
-                                                    className="border-b border-border hover:bg-muted/50 transition-colors"
+                                                    className="border-b border-border hover:bg-muted/30 transition-colors"
                                                 >
                                                     <td className="p-4 text-sm font-medium">{service.name}</td>
                                                     <td className="p-4 text-sm">
@@ -368,7 +439,7 @@ export default function AdminDashboard() {
                                                             <button
                                                                 onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}
                                                                 className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                                                                title="Xem chi tiết để duyệt"
+                                                                title="Xem chi tiết"
                                                             >
                                                                 <Eye className="w-4 h-4 text-muted-foreground" />
                                                             </button>
@@ -389,12 +460,12 @@ export default function AdminDashboard() {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </CardContent>
             </Card>

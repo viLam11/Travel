@@ -6,22 +6,28 @@ export type ServiceStatus = 'active' | 'inactive' | 'pending' | 'rejected';
 export interface Service {
     id: string;
     serviceName: string;
-    type: ServiceType;
+    type?: ServiceType; // Legacy or UI-side
+    serviceType?: string; // Backend-side (HOTEL, TICKET_VENUE, etc.)
     status: ServiceStatus;
     thumbnailUrl?: string; // Main image
-    images?: string[]; // Additional images
+    images?: string[]; // Additional images (Legacy)
+    imageList?: any[]; // Additional images (Backend)
     province: {
         id: string;
+        code?: string;
         fullName: string;
     };
+    provinceCode?: string; // Added for flat update requests
     location?: string; // Short location name if diff from province
     address: string;
+    contactNumber?: string;
     description: string;
+    tags?: string;
 
     // Price
-    averagePrice?: number; // For list view or general
-    price?: number; // Base price for service
-    minPrice?: number; // For hotel
+    averagePrice?: number; // Backend preferred
+    price?: number; // UI/Legacy fallback
+    minPrice?: number; 
 
     // Ratings
     rating?: number;
@@ -47,7 +53,7 @@ export interface Service {
         fullname?: string;
         avatarUrl?: string;
     };
-    providerId?: string; // Optional direct field if BE decides to expose it this way
+    providerId?: string; 
 }
 
 export interface ServiceStats {

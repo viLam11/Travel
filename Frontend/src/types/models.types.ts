@@ -6,8 +6,10 @@
  */
 
 import type { components } from "./api.types";
+import type { User } from "./user.types";
 
 export type GenericResponse = components["schemas"]["GenericResponse"];
+
 
 /**
  * Auth types
@@ -29,7 +31,8 @@ export interface UserPermissions {
 /**
  * User types
  */
-export type User = components["schemas"]["User"];
+export * from "./user.types";
+
 
 /**
  * Auth context types

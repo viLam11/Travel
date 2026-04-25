@@ -23,7 +23,7 @@ const ProviderRoomTypes = () => {
     // Mock: Get current provider's hotel ID (in real app, from auth context)
     const currentHotelId = 1; // Grand Hotel Saigon
     const hotelName = "Grand Hotel Saigon";
-    const { toast } = useToast();
+    const toastObj = useToast();
 
     const [roomTypes, setRoomTypes] = useState<MockRoomType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,13 +35,13 @@ const ProviderRoomTypes = () => {
                 setRoomTypes(data);
             } catch (error) {
                 console.error("Failed to load rooms", error);
-                toast("Lỗi tải danh sách phòng", "error");
+                toastObj.error("Lỗi tải danh sách phòng");
             } finally {
                 setIsLoading(false);
             }
         };
         fetchRooms();
-    }, [currentHotelId, toast]);
+    }, [currentHotelId, toastObj]);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<MockRoomType | null>(null);
@@ -108,7 +108,7 @@ const ProviderRoomTypes = () => {
                         ? { ...room, ...updateData }
                         : room
                 ));
-                toast(`Đã cập nhật: ${formData.name}`, "success");
+                toastObj.success(`Đã cập nhật: ${formData.name}`);
             } else {
                 // Add new room
                 const newData = {
@@ -123,12 +123,12 @@ const ProviderRoomTypes = () => {
                 };
                 const newRoom = await roomApi.createRoom(currentHotelId, newData);
                 setRoomTypes(prev => [...prev, newRoom]);
-                toast(`Tạo mới thành công: ${formData.name}`, "success");
+                toastObj.success(`Tạo mới thành công: ${formData.name}`);
             }
             handleCloseDialog();
         } catch (error) {
             console.error("Save failed", error);
-            toast("Thao tác thất bại", "error");
+            toastObj.error("Thao tác thất bại");
         }
     };
 
@@ -137,10 +137,10 @@ const ProviderRoomTypes = () => {
             try {
                 await roomApi.deleteRoom(room.id);
                 setRoomTypes(prev => prev.filter(r => r.id !== room.id));
-                toast(`Đã xóa: ${room.name}`, "success");
+                toastObj.success(`Đã xóa: ${room.name}`);
             } catch (error) {
                 console.error("Delete failed", error);
-                toast("Xóa thất bại", "error");
+                toastObj.error("Xóa thất bại");
             }
         }
     };
