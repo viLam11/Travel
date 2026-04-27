@@ -17,9 +17,10 @@ interface Room {
 interface RoomsTabProps {
     rooms?: Room[];
     onRoomBookNow?: (room: Room) => void;
+    isLoading?: boolean;
 }
 
-const RoomsTab: React.FC<RoomsTabProps> = ({ rooms: propRooms = [], onRoomBookNow }) => {
+const RoomsTab: React.FC<RoomsTabProps> = ({ rooms: propRooms = [], onRoomBookNow, isLoading = false }) => {
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -103,7 +104,27 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ rooms: propRooms = [], onRoomBookNo
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayRooms.map((room: Room) => (
+                    {isLoading ? (
+                        // Skeleton for rooms
+                        [1, 2, 3].map((i) => (
+                            <div key={i} className="border border-gray-100 rounded-xl overflow-hidden animate-pulse">
+                                <div className="h-48 bg-gray-200"></div>
+                                <div className="p-4 space-y-3">
+                                    <div className="flex gap-3">
+                                        <div className="w-10 h-10 bg-gray-100 rounded-lg"></div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                            <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                                        </div>
+                                    </div>
+                                    <div className="pt-3 border-t border-gray-50 flex justify-between items-center">
+                                        <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                                        <div className="h-4 bg-gray-100 rounded w-1/4"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : displayRooms.map((room: Room) => (
                         <div
                             key={room.id}
                             onClick={() => handleRoomClick(room)}

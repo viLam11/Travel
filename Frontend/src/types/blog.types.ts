@@ -60,6 +60,7 @@ export interface BlogPost {
   taggedServiceIds?: (string | LinkedService)[];
   reactions?: PostReaction[];
   comments?: BlogComment[];
+  tags?: string;
   
   // Frontend UI extensions
   isLiked?: boolean;
@@ -83,6 +84,7 @@ export interface BlogSummaryResponse {
   commentCount: number;
   createdAt: string;
   updatedAt: string;
+  tags?: string;
 }
 
 export type BlogFilterTab = 'all' | 'latest' | 'popular' | 'following';
@@ -90,9 +92,10 @@ export type BlogFilterTab = 'all' | 'latest' | 'popular' | 'following';
 export interface BlogRequest {
   title: string;
   content: string;
-  mediaUrls?: string[]; // Binary mapping handled in multipart
+  mediaUrls?: (string | File)[]; // Binary mapping handled in multipart
   status: BlogStatus;
   taggedServiceIds?: string[];
+  tags?: string;
 }
 
 

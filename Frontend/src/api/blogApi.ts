@@ -151,7 +151,7 @@ export const blogApi = {
       }
       
       if (params.sortBy === 'reactionCount') {
-        allPosts.sort((a, b) => (b.reactionCount ?? b.likeCount ?? 0) - (a.reactionCount ?? a.likeCount ?? 0));
+        allPosts.sort((a, b) => (b.reactionCount ?? (b as any).likeCount ?? 0) - (a.reactionCount ?? (a as any).likeCount ?? 0));
       }
 
       return mockResponse(allPosts, params.page || 0, params.size || 10);
@@ -192,7 +192,8 @@ export const blogApi = {
         commentCount: 0,
         createdAt: new Date().toISOString(),
         status: blogRequest.status,
-        taggedServiceIds: blogRequest.taggedServiceIds
+        taggedServiceIds: blogRequest.taggedServiceIds,
+        mediaUrls: (blogRequest.mediaUrls || []).filter(m => typeof m === 'string') as string[]
       };
       blogStore.addPost(newPost);
       return newPost;
@@ -220,6 +221,10 @@ export const blogApi = {
           blogRequest.taggedServiceIds.forEach(id => {
             formData.append('taggedServiceIds', id);
           });
+        }
+
+        if (blogRequest.tags) {
+          formData.append('tags', blogRequest.tags);
         }
 
         return await apiClient.post('/blog', formData, {

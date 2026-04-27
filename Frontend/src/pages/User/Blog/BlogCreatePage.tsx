@@ -211,6 +211,7 @@ const BlogCreatePage: React.FC = () => {
         mediaUrls: mediaUrl ? [mediaUrl] : [],
         status: 'PUBLISHED' as BlogStatus,
         taggedServiceIds: linkedServices.map((s) => s.id),
+        tags: tags.join(','),
       };
       await blogApi.createPost(blogReq);
       toast.success('Bài viết đã được đăng tải thành công!');

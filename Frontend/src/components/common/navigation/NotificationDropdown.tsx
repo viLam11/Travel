@@ -93,7 +93,17 @@ export const NotificationDropdown = () => {
 
                 const response = await aiPlannerApi.getUserNotifications(0, 10);
                 if (response && response.content) {
-                    const mappedList = response.content.map(mapBackendNoti);
+                    const isNotifyEnabled = localStorage.getItem('chat_notify_enabled') !== 'false';
+                    
+                    const mappedList = response.content
+                        .map(mapBackendNoti)
+                        .filter((n: NotificationInfo) => {
+                            // Nếu tắt thông báo tin nhắn, lọc bỏ các thông báo loại CHAT/MESSAGE
+                            if (!isNotifyEnabled && (n.type === 'CHAT' || n.type === 'MESSAGE' || n.type === 'NEW_MESSAGE')) {
+                                return false;
+                            }
+                            return true;
+                        });
                     setNotifications(mappedList);
                 }
             } else {
@@ -147,19 +157,56 @@ export const NotificationDropdown = () => {
     useEffect(() => {
         fetchNotifications();
 
-        let unsubscribe = () => {};
+        let unsubscribeNoti = () => {};
+        let unsubscribeMsg = () => {};
 
         if (NOTIFICATION_MODE === 'SOCKET') {
-            unsubscribe = socketService.onNotification((noti) => {
+            // Lắng nghe thông báo hệ thống/plan/order
+            unsubscribeNoti = socketService.onNotification((noti) => {
                 console.log('[NotificationDropdown] Received real-time notification:', noti);
                 handleNewIncomingNotification(noti);
+            });
+
+            // Lắng nghe tin nhắn chat để hiển thị ở thông báo tổng (nếu bật)
+            unsubscribeMsg = socketService.onMessage((msg) => {
+                const isNotifyEnabled = localStorage.getItem('chat_notify_enabled') !== 'false';
+                
+                // Chỉ hiển thị ở thông báo tổng nếu người dùng BẬT tính năng này
+                if (isNotifyEnabled && msg.senderId !== currentUser?.user?.userID?.toString()) {
+                    console.log('[NotificationDropdown] Received real-time message to show in general notifications:', msg);
+                    
+                    const chatNoti: NotificationInfo = {
+                        id: msg.id || Date.now(),
+                        senderName: 'Tin nhắn mới', // Hoặc lấy tên người gửi nếu có trong msg
+                        message: msg.text,
+                        targetUrl: (currentUser?.user?.role || '').toLowerCase().includes('provider') ? '/provider/messages' : '/user/messages',
+                        isRead: false,
+                        createdAt: msg.timestamp || new Date().toISOString(),
+                        type: 'CHAT'
+                    };
+
+                    setNotifications(prev => [chatNoti, ...prev].slice(0, 20));
+                    setUnreadCount(prev => prev + 1);
+
+                    toast.success(
+                        <div className="flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-blue-500" />
+                            <div>
+                                <p className="font-bold text-xs">Tin nhắn mới</p>
+                                <p className="text-[10px] line-clamp-1">{msg.text}</p>
+                            </div>
+                        </div>,
+                        { duration: 4000, position: 'top-right' }
+                    );
+                }
             });
         }
 
         return () => {
-            unsubscribe();
+            unsubscribeNoti();
+            unsubscribeMsg();
         };
-    }, []);
+    }, [currentUser]);
 
     const handleRead = async (notif: NotificationInfo) => {
         setNotifications(prev => 

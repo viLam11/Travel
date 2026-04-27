@@ -48,12 +48,12 @@ const FeaturedItemSidebar: React.FC<FeaturedItemProps> = ({ post, rank, onClick 
     post.thumbnailUrl ||
     (post as any).coverImage ||
     'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400';
-  const likes = post.reactionCount ?? post.likeCount ?? (post as any).likes ?? 0;
+  const likes = post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0;
 
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-orange-50 transition-all group text-left"
+      className="cursor-pointer w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-orange-50 transition-all group text-left"
     >
       {/* Rank Badge */}
       <div
@@ -286,9 +286,35 @@ const BlogListPage: React.FC = () => {
 
             {/* Loading / Error / Empty */}
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-24">
-                <Loader2 className="w-10 h-10 text-orange-500 animate-spin mb-4" />
-                <p className="text-gray-400 font-medium text-sm">Đang tải bài viết...</p>
+              <div className="flex flex-col gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 animate-pulse">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                        <div className="h-3 bg-gray-100 rounded w-1/3"></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3 mb-4">
+                      <div className="flex gap-2">
+                        <div className="h-4 bg-gray-100 rounded-full w-16"></div>
+                        <div className="h-4 bg-gray-100 rounded-full w-16"></div>
+                      </div>
+                      <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-100 rounded w-full"></div>
+                      <div className="h-4 bg-gray-100 rounded w-5/6"></div>
+                    </div>
+                    <div className="h-48 bg-gray-200 rounded-xl w-full"></div>
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-50">
+                      <div className="h-4 bg-gray-100 rounded w-24"></div>
+                      <div className="flex gap-4">
+                        <div className="h-4 bg-gray-100 rounded w-12"></div>
+                        <div className="h-4 bg-gray-100 rounded w-12"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : isError ? (
               <div className="text-center py-20 bg-white rounded-2xl border border-red-100 shadow-sm">
@@ -338,24 +364,37 @@ const BlogListPage: React.FC = () => {
           <aside className="lg:w-[280px] xl:w-[300px] flex-shrink-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
 
             {/* 🔥 Trending This Week (Compact Minimalist) */}
-            {featuredPosts.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="font-extrabold text-gray-900 mb-3.5 flex items-center gap-2 text-sm">
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  Nổi bật tuần này
-                </h3>
-                <div className="space-y-1.5">
-                  {featuredPosts.map((post, i) => (
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <h3 className="font-extrabold text-gray-900 mb-3.5 flex items-center gap-2 text-sm">
+                <Flame className="w-4 h-4 text-orange-500" />
+                Nổi bật tuần này
+              </h3>
+              <div className="space-y-1.5">
+                {isLoading ? (
+                  [1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-start gap-3 p-2.5 animate-pulse">
+                      <div className="w-7 h-7 rounded-lg bg-gray-200 flex-shrink-0"></div>
+                      <div className="w-14 h-14 rounded-lg bg-gray-200 flex-shrink-0"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-200 rounded w-full"></div>
+                        <div className="h-3 bg-gray-100 rounded w-2/3"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : featuredPosts.length > 0 ? (
+                  featuredPosts.map((post, i) => (
                     <FeaturedItemSidebar
                       key={post.id}
                       post={post}
                       rank={i + 1}
                       onClick={() => navigate(`/blog/${post.id}`)}
                     />
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-4">Chưa có bài viết nổi bật</p>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Popular Tags (Compact) */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">

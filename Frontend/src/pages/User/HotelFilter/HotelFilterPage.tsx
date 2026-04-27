@@ -231,8 +231,40 @@ const HotelFilterPage: React.FC = () => {
 
                         <div className="space-y-4">
                             {isLoading ? (
-                                <div className="flex justify-center py-20">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+                                <div className="space-y-4">
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col sm:flex-row h-auto animate-pulse">
+                                            {/* Image Skeleton */}
+                                            <div className="w-full sm:w-64 h-52 sm:h-auto bg-gray-200"></div>
+                                            
+                                            {/* Content Skeleton */}
+                                            <div className="flex-1 p-5 flex flex-col justify-between space-y-4">
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                                                        <div className="h-6 bg-gray-100 rounded w-12"></div>
+                                                    </div>
+                                                    <div className="h-3 bg-gray-100 rounded w-16"></div>
+                                                    <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+                                                    <div className="flex gap-2">
+                                                        <div className="h-6 bg-gray-100 rounded-full w-16"></div>
+                                                        <div className="h-6 bg-gray-100 rounded-full w-16"></div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex justify-between items-end pt-4 border-t border-gray-50">
+                                                    <div className="h-3 bg-gray-100 rounded w-20"></div>
+                                                    <div className="flex items-end gap-3">
+                                                        <div className="space-y-1">
+                                                            <div className="h-3 bg-gray-100 rounded w-8 ml-auto"></div>
+                                                            <div className="h-6 bg-gray-200 rounded w-24"></div>
+                                                        </div>
+                                                        <div className="h-10 bg-gray-200 rounded w-28"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             ) : pagedHotels.length === 0 ? (
                                 <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">

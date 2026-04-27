@@ -267,7 +267,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
     const views = (post as any).viewCount ?? 0;
     const readTime = (post as any).readTimeMinutes ?? 5;
     const summary = (post as any).summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...' || '';
-    const tags: string[] = (post as any).tags || [];
+    const tags = post.tags ? post.tags.split(',').filter(t => t.trim()) : [];
 
     // Linked services from mock data
     const linkedPlaces: any[] = (post as any).linkedPlaces || [];

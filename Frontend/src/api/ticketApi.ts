@@ -10,9 +10,12 @@ export const ticketApi = {
             return MOCK_TICKETS.filter((t: any) => t.tourId === serviceId);
         }
         try {
-            return await apiClient.get(`/services/${serviceId}/tickets`);
+            const id = serviceId?.toString();
+            const response: any = await apiClient.get(`/services/${id}/tickets`);
+            const data = response?.data?.result || response?.data?.data || response?.data || response;
+            return Array.isArray(data) ? data : (data?.content || []);
         } catch (error) {
-            console.error('Error fetching tickets', error);
+            console.error('Error fetching tickets:', error);
             throw error;
         }
     },

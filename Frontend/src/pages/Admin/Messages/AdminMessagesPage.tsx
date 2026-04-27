@@ -1,149 +1,256 @@
-import React, { useState } from 'react';
-import { Search, Send, User, AlertCircle, Clock, CheckCircle } from 'lucide-react';
-
-interface SupportTicket {
-    id: string;
-    providerName: string;
-    subject: string;
-    lastMessage: string;
-    timestamp: string;
-    status: 'open' | 'closed';
-    avatar?: string;
-}
-
-const mockTickets: SupportTicket[] = [
-    {
-        id: 'TICK-101',
-        providerName: 'Khách sạn Majestic',
-        subject: 'Hỗ trợ thay đổi thông tin pháp lý',
-        lastMessage: 'Chào Admin, tôi cần hỗ trợ thay đổi Giấy phép kinh doanh...',
-        timestamp: '2026-03-10T09:30:00Z',
-        status: 'open',
-    },
-    {
-        id: 'TICK-102',
-        providerName: 'Hà Nội Tours',
-        subject: 'Lỗi không hiển thị hình ảnh tour',
-        lastMessage: 'Đã giải quyết, hình ảnh đã hiển thị bình thường. Cảm ơn.',
-        timestamp: '2026-03-09T15:20:00Z',
-        status: 'closed',
-    }
-];
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Send, User, MessageSquare, ShieldCheck } from 'lucide-react';
+import { chatApi } from '@/api/chatApi';
+import { socketService } from '@/services/socketService';
+import { useAuth } from '@/hooks/useAuth';
+import { Input } from '@/components/ui/admin/input';
+import { Button } from '@/components/ui/admin/button';
+import type { ChatMessage, Conversation } from '@/types/chat.types';
 
 export const AdminMessagesPage: React.FC = () => {
-    const [tickets] = useState<SupportTicket[]>(mockTickets);
-    const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
+    const { currentUser } = useAuth();
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+    const activeConversationRef = useRef<Conversation | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [replyText, setReplyText] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [loadingMessages, setLoadingMessages] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const formatTime = (isoString: string) => {
+    useEffect(() => {
+        activeConversationRef.current = activeConversation;
+    }, [activeConversation]);
+
+    useEffect(() => {
+        const fetchInbox = async () => {
+            setLoading(true);
+            const data = await chatApi.getAdminInbox();
+            setConversations(data);
+            setLoading(false);
+            if (data.length > 0 && window.innerWidth >= 768) {
+                handleSelectConversation(data[0]);
+            }
+        };
+
+        fetchInbox();
+
+        // Socket setup
+        const token = localStorage.getItem('token') || '';
+        if (token) {
+            socketService.connect(token);
+        }
+
+        const destroyListener = socketService.onMessage((msg) => {
+            const currentActive = activeConversationRef.current;
+            
+            if (currentActive?.id === msg.conversationId) {
+                setMessages(prev => [...prev, msg]);
+                setTimeout(() => scrollToBottom(), 100);
+            }
+
+            setConversations(prev => prev.map(conv => {
+                if (conv.id === msg.conversationId) {
+                    return {
+                        ...conv,
+                        lastMessage: msg,
+                        unreadCount: (currentActive?.id === msg.conversationId) ? 0 : conv.unreadCount + 1,
+                        updatedAt: msg.timestamp
+                    };
+                }
+                return conv;
+            }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+        });
+
+        return () => destroyListener();
+    }, []);
+
+    const handleSelectConversation = async (conv: Conversation) => {
+        setActiveConversation(conv);
+        setLoadingMessages(true);
+        const msgs = await chatApi.getMessages(conv.id);
+        setMessages(msgs);
+        setLoadingMessages(false);
+        setTimeout(() => scrollToBottom(), 100);
+    };
+
+    const handleSendMessage = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!replyText.trim() || !activeConversation || !currentUser?.user) return;
+
+        const sentMsg = socketService.sendMessage(
+            activeConversation.id,
+            currentUser.user.userID.toString(),
+            replyText,
+            'user' // In this context, admin is replying to a provider
+        );
+
+        if (sentMsg) {
+            setMessages(prev => [...prev, sentMsg]);
+            setReplyText('');
+            scrollToBottom();
+        }
+    };
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const formatTime = (isoString?: string) => {
+        if (!isoString) return '';
         const date = new Date(isoString);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString();
     };
 
     return (
-        <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex h-[calc(100vh-140px)] min-h-[500px]">
-                {/* Left Sidebar - Ticket List */}
-                <div className="w-full md:w-96 flex flex-col border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                        <h2 className="text-lg font-bold text-gray-800 dark:text-white">Hỗ trợ Chủ dịch vụ</h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Quản lý các yêu cầu hỗ trợ (Tickets)</p>
-                        <div className="mt-4 relative">
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm ticket..."
-                                className="w-full pl-9 pr-4 py-2 bg-gray-100 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-lg text-sm focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800 focus:ring-0 transition-all dark:text-white"
+        <div className="w-full max-w-7xl mx-auto space-y-8 pb-8 animate-in fade-in duration-500 p-6">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="bg-primary/10 p-3 rounded-xl text-primary">
+                        <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Hỗ trợ đối tác</h1>
+                        <p className="text-sm text-muted-foreground mt-1">Kênh chat chung dành cho Quản trị viên hỗ trợ Nhà cung cấp</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-card border border-border/40 rounded-xl shadow-sm overflow-hidden flex h-[calc(100vh-220px)] min-h-[550px]">
+                {/* Left Sidebar */}
+                <div className="w-full md:w-80 flex flex-col border-r border-border/40 bg-muted/10">
+                    <div className="p-4 bg-background border-b border-border/40">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                            <Input
+                                placeholder="Tìm kiếm đối tác..."
+                                className="pl-10 h-10 rounded-lg bg-muted border-none"
                             />
-                            <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
                         </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
-                        {tickets.map(ticket => (
-                            <button
-                                key={ticket.id}
-                                onClick={() => setActiveTicket(ticket)}
-                                className={`w-full text-left p-4 hover:bg-white dark:hover:bg-gray-800/50 flex flex-col gap-2 transition-colors border-l-4 cursor-pointer ${activeTicket?.id === ticket.id ? 'bg-white dark:bg-gray-800 border-l-blue-600 shadow-sm' : 'border-l-transparent border-b border-gray-100 dark:border-gray-700'}`}
-                            >
-                                <div className="flex justify-between items-start w-full">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
-                                            <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        {loading ? (
+                            <div className="p-8 text-center text-gray-400 animate-pulse">Đang tải danh sách...</div>
+                        ) : conversations.length === 0 ? (
+                            <div className="p-8 text-center text-gray-400">Không có yêu cầu hỗ trợ nào.</div>
+                        ) : (
+                            conversations.map(conv => {
+                                const provider = conv.participants.find(p => p.role === 'provider');
+                                const isActive = activeConversation?.id === conv.id;
+                                return (
+                                    <button
+                                        key={conv.id}
+                                        onClick={() => handleSelectConversation(conv)}
+                                        className={`w-full text-left p-4 hover:bg-muted/50 flex gap-3 transition-all border-b border-border/40 cursor-pointer ${isActive ? 'bg-background shadow-sm z-10' : ''}`}
+                                    >
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+                                                {provider?.avatar ? (
+                                                    <img src={provider.avatar} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User className="w-5 h-5 text-primary" />
+                                                )}
+                                            </div>
+                                            {conv.unreadCount > 0 && (
+                                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                                                    {conv.unreadCount}
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{ticket.providerName}</span>
-                                    </div>
-                                    <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{formatTime(ticket.timestamp)}</span>
-                                </div>
-                                <div className="pl-10">
-                                    <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">{ticket.subject}</h4>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{ticket.lastMessage}</p>
-                                    <div className="mt-2 flex items-center gap-1">
-                                        {ticket.status === 'open' ? (
-                                            <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-400 text-[10px] rounded-full font-medium">
-                                                <Clock className="w-3 h-3" /> Đang xử lý
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400 text-[10px] rounded-full font-medium">
-                                                <CheckCircle className="w-3 h-3" /> Đã đóng
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </button>
-                        ))}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-baseline mb-1">
+                                                <h4 className={`text-sm truncate pr-2 ${conv.unreadCount > 0 ? 'font-bold text-primary' : 'font-semibold text-foreground'}`}>
+                                                    {provider?.name || 'Nhà cung cấp'}
+                                                </h4>
+                                                <span className="text-[10px] text-gray-400 flex-shrink-0">{formatTime(conv.updatedAt).split(' ')[0]}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                {conv.lastMessage?.text || 'Bắt đầu cuộc trò chuyện'}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
 
-                {/* Right Area - Ticket Detail */}
-                <div className="flex-1 flex flex-col bg-slate-50 dark:bg-gray-900/20">
-                    {activeTicket ? (
+                {/* Right Area */}
+                <div className="flex-1 flex flex-col bg-muted/5">
+                    {activeConversation ? (
                         <>
-                            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col shadow-sm z-10">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">Mã: {activeTicket.id}</span>
-                                    <button className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                                        Đóng Ticket
-                                    </button>
+                            <div className="p-4 border-b border-border/40 bg-background flex items-center justify-between shadow-sm z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100/50">
+                                        <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 dark:text-white leading-none mb-1">
+                                            {activeConversation.participants.find(p => p.role === 'provider')?.name}
+                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                            <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Trực tuyến</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{activeTicket.subject}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
-                                    Yêu cầu từ: <strong className="text-gray-800 dark:text-gray-200">{activeTicket.providerName}</strong>
-                                </p>
+                                <button className="text-xs font-bold text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors border border-red-100">
+                                    Kết thúc hỗ trợ
+                                </button>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-                                {/* Mock Ticket Messages History */}
-                                <div className="flex justify-start">
-                                    <div className="max-w-[70%] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm text-sm text-gray-800 dark:text-gray-200 rounded-tl-none">
-                                        <p>{activeTicket.lastMessage}</p>
-                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 block">{formatTime(activeTicket.timestamp)}</span>
+                                {loadingMessages ? (
+                                    <div className="flex-1 flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
                                     </div>
-                                </div>
+                                ) : messages.map((msg, idx) => {
+                                    const isMe = msg.senderId === currentUser?.user?.userID?.toString();
+                                    return (
+                                        <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${isMe 
+                                                ? 'bg-blue-600 text-white rounded-tr-none' 
+                                                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                                            }`}>
+                                                <p>{msg.text}</p>
+                                                <span className={`text-[9px] mt-1 block ${isMe ? 'text-blue-100' : 'text-gray-400'}`}>
+                                                    {formatTime(msg.timestamp)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div ref={messagesEndRef} />
                             </div>
 
-                            <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                                <div className="flex items-center gap-3">
-                                    <input
+                            <div className="p-4 bg-background border-t border-border/40">
+                                <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                                    <Input
                                         type="text"
                                         value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                        placeholder="Soạn phản hồi hỗ trợ cho Chủ dịch vụ..."
-                                        className="flex-1 bg-gray-100 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-lg px-4 py-3 text-sm focus:border-blue-500 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none dark:text-white"
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReplyText(e.target.value)}
+                                        placeholder="Gửi phản hồi cho đối tác..."
+                                        className="flex-1 h-11 bg-muted border-none rounded-xl"
                                     />
-                                    <button
-                                        className="bg-blue-600 dark:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center justify-center hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm font-medium gap-2 cursor-pointer"
+                                    <Button
+                                        type="submit"
+                                        disabled={!replyText.trim()}
+                                        className="h-11 px-6 rounded-xl font-semibold flex items-center gap-2"
                                     >
                                         Gửi <Send className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                    </Button>
+                                </form>
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-                            <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
-                                <AlertCircle className="w-8 h-8 text-blue-300 dark:text-blue-500/50" />
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 px-8 text-center">
+                            <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center mb-6 rotate-12">
+                                <MessageSquare className="w-10 h-10 text-blue-300 dark:text-blue-500/50" />
                             </div>
-                            <p>Chọn một Ticket để bắt đầu hỗ trợ</p>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Hộp thư chung Quản trị viên</h3>
+                            <p className="text-sm max-w-xs">Chọn một cuộc trò chuyện từ danh sách bên trái để bắt đầu hỗ trợ đối tác của bạn.</p>
                         </div>
                     )}
                 </div>

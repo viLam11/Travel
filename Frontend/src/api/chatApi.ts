@@ -128,5 +128,40 @@ export const chatApi = {
 
     updateMessageContent: async (messageId: string, newContent: string): Promise<BackendChatMessage> => {
         return apiClient.patch(`/api/chat/update-content/${messageId}`, { content: newContent });
+    },
+
+    // Multi-admin: Fetch all provider conversations for the admin inbox
+    getAdminInbox: async (): Promise<Conversation[]> => {
+        if (USE_MOCK) {
+            return mockConversations;
+        }
+
+        try {
+            const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/admin/inbox`);
+            
+            if (!Array.isArray(lastMessages)) {
+                return [];
+            }
+
+            return lastMessages.map(msg => {
+                // In the shared inbox, we care about the provider (sender or receiver depending on context)
+                // but usually the "otherUser" is the provider if we are an admin
+                const otherUser = msg.sender; // Providers are typically the initiators or primary subject
+                return {
+                    id: String(otherUser.userId),
+                    participants: [
+                        { id: String(msg.sender.userId), name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'provider' },
+                        { id: String(msg.receiver.userId), name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'admin' }
+                    ],
+                    lastMessage: mapBackendToFrontendMessage(msg),
+                    unreadCount: msg.read ? 0 : 1,
+                    updatedAt: msg.createdAt,
+                    serviceName: 'Hỗ trợ Đối tác'
+                };
+            });
+        } catch (error) {
+            console.error('Failed to fetch admin inbox:', error);
+            return [];
+        }
     }
 };

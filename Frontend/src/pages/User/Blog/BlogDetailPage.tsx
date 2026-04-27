@@ -57,7 +57,7 @@ const BlogDetailPage: React.FC = () => {
   useEffect(() => {
     if (post) {
       setLocalReaction(post.isLiked ? 'LIKE' : null);
-      setLocalCount(post.reactionCount ?? post.likeCount ?? (post as any).likes ?? 0);
+      setLocalCount(post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0);
     }
   }, [post]);
 
@@ -141,8 +141,33 @@ const BlogDetailPage: React.FC = () => {
   // ── Loading / Error ────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+      <div className="min-h-screen bg-gray-50 animate-pulse">
+        {/* Hero Skeleton */}
+        <div className="h-[58vh] min-h-[380px] bg-gray-200"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex-1 space-y-6">
+              {/* Action Bar Skeleton */}
+              <div className="h-14 bg-white rounded-2xl border border-gray-100"></div>
+              
+              {/* Content Skeleton */}
+              <div className="space-y-4">
+                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-100 rounded w-full"></div>
+                <div className="h-4 bg-gray-100 rounded w-full"></div>
+                <div className="h-4 bg-gray-100 rounded w-5/6"></div>
+                <div className="h-64 bg-gray-200 rounded-2xl w-full mt-8"></div>
+              </div>
+            </div>
+            
+            {/* Sidebar Skeleton */}
+            <div className="lg:w-64 xl:w-72 space-y-4">
+              <div className="h-40 bg-white rounded-2xl border border-gray-100"></div>
+              <div className="h-40 bg-white rounded-2xl border border-gray-100"></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -175,10 +200,10 @@ const BlogDetailPage: React.FC = () => {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=fb923c&color=fff`;
   const authorBio = (post as any).author?.bio || '';
   const viewsCount = (post as any).viewCount ?? 0;
-  const readTime = post.readTimeMinutes ?? 5;
+  const readTime = (post as any).readTimeMinutes ?? 5;
   const summary =
-    post.summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...';
-  const tags = (post as any).tags || [];
+    (post as any).summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...';
+  const tags = post.tags ? post.tags.split(',').filter(t => t.trim()) : [];
   const linkedServices = post.taggedServiceIds || [];
 
   // ── Reaction data ──────────────────────────────────────────────────────────
@@ -496,7 +521,7 @@ const BlogDetailPage: React.FC = () => {
                           </p>
                           <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
                             <Heart className="w-3 h-3 fill-red-400 text-red-400" />
-                            <span>{rp.reactionCount || rp.likeCount || 0}</span>
+                            <span>{rp.reactionCount || (rp as any).likeCount || 0}</span>
                           </p>
                         </div>
                       </button>

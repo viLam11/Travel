@@ -24,6 +24,7 @@ export interface ServiceDetail {
     avatarUrl?: string;
   };
   providerId?: string;
+  tags?: string;
 }
 
 export interface TicketType {

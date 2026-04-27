@@ -1,4 +1,5 @@
 import apiClient from '@/services/apiClient';
+import api from '@/services/api';
 
 export const roomApi = {
     /**
@@ -6,7 +7,16 @@ export const roomApi = {
      */
     getRoomsByHotelId: async (hotelId: string | number) => {
         try {
-            return await apiClient.rooms.getByHotelId(hotelId);
+            const id = hotelId?.toString();
+            console.log(`Fetching rooms from: /services/${id}/rooms (with empty body workaround)`);
+            // Use api.request to force an empty body {} even for GET
+            const response: any = await api.request({
+                method: 'get',
+                url: `/services/${id}/rooms`,
+                data: {}
+            });
+            const data = response?.data?.result || response?.data?.data || response?.data;
+            return Array.isArray(data) ? data : (data?.roomList || data?.content || []);
         } catch (error) {
             console.error('Error fetching rooms:', error);
             throw error;

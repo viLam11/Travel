@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   MapPin, 
   Clock, 
-  Filter, 
   ChevronRight, 
   Trophy, 
-  Star,
   Search,
-  Loader2,
   Package,
-  History,
   TrendingUp,
   Tag
 } from 'lucide-react';
@@ -25,7 +22,7 @@ interface BookingDisplay {
   location: string;
   checkIn: string;
   checkOut: string;
-  status: 'upcoming' | 'completed' | 'cancelled' | 'pending';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'pending' | string;
   totalPrice: number;
   image: string;
   bookingCode: string;
@@ -33,103 +30,85 @@ interface BookingDisplay {
 
 const UserBookingsPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'upcoming' | 'completed' | 'cancelled' | 'pending'>('all');
-  const [bookings, setBookings] = useState<BookingDisplay[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      setIsLoading(true);
-      try {
-        const data: any = await apiClient.orders.getAll();
-        console.log("Raw orders data:", data);
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ['userBookings'],
+    queryFn: async () => {
+      const data: any = await apiClient.orders.getAll();
+      const list: any[] = Array.isArray(data) ? data : (data?.content ?? data?.orders ?? []);
+
+      return list.map((item: any) => {
+        const isOrderedTicket = !!item.order;
         
-        // Handle both Array of Orders or Array of OrderedTickets
-        const list: any[] = Array.isArray(data) ? data : (data?.content ?? data?.orders ?? []);
+        let status: BookingDisplay['status'] = 'pending';
+        const rawStatus = (isOrderedTicket ? item.order?.status : item.status) || 'PENDING';
+        const s = rawStatus.toUpperCase();
+        
+        if (s === 'SUCCESS' || s === 'COMPLETED' || s === 'DONE') {
+          status = 'completed';
+        } else if (s === 'CANCELLED' || s === 'CANCELED' || s === 'FAILED') {
+          status = 'cancelled';
+        } else if (s === 'PENDING') {
+          status = 'pending';
+        }
 
-        const mapped: BookingDisplay[] = list.map((item: any) => {
-          // Check if it's an OrderedTicket (original BE) or Order (my previous refactor)
-          const isOrderedTicket = !!item.order;
-          
-          let status: BookingDisplay['status'] = 'pending';
-          const rawStatus = (isOrderedTicket ? item.order?.status : item.status) || 'PENDING';
-          const s = rawStatus.toUpperCase();
-          
-          if (s === 'SUCCESS' || s === 'COMPLETED' || s === 'DONE') {
-            status = 'completed';
-          } else if (s === 'CANCELLED' || s === 'CANCELED' || s === 'FAILED') {
-            status = 'cancelled';
-          } else if (s === 'PENDING') {
-            status = 'pending';
+        let serviceName = 'Dịch vụ';
+        let location = '';
+        let serviceId = '';
+        let type = 'activity';
+        let image = 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600';
+        let checkIn = '';
+        let checkOut = '';
+
+        if (isOrderedTicket) {
+          const ticket = item.ticket;
+          const venue = ticket?.ticketVenue;
+          if (venue) {
+            serviceName = venue.serviceName || ticket.name || 'Vé tham quan';
+            location = venue.province?.name || '';
+            serviceId = venue.id || '';
+            type = (venue.serviceType || 'activity').toLowerCase();
+            image = venue.thumbnailUrl || image;
           }
-
-          // Extraction logic
-          let serviceName = 'Dịch vụ';
-          let location = '';
-          let serviceId = '';
-          let type = 'activity';
-          let image = 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600';
-          let checkIn = '';
-          let checkOut = '';
-
-          if (isOrderedTicket) {
-            // It's an OrderedTicket
-            const ticket = item.ticket;
-            const venue = ticket?.ticketVenue;
-            if (venue) {
-              serviceName = venue.serviceName || ticket.name || 'Vé tham quan';
-              location = venue.province?.name || '';
-              serviceId = venue.id || '';
-              type = (venue.serviceType || 'activity').toLowerCase();
-              image = venue.thumbnailUrl || image;
-            }
-            checkIn = item.validStart || item.order?.createdAt || '';
-            checkOut = item.validEnd || '';
-          } else {
-            // It's an Order (with nested tickets/rooms)
-            const firstTicket = item.orderedTickets?.[0];
-            const firstRoom = item.orderedRooms?.[0];
-            const service = firstTicket?.ticket?.ticketVenue || firstRoom?.room?.hotel;
-            
-            if (service) {
-              serviceName = service.serviceName || 'Dịch vụ';
-              location = service.province?.name || '';
-              serviceId = service.id || '';
-              type = (service.serviceType || (firstRoom ? 'hotel' : 'activity')).toLowerCase();
-              image = service.thumbnailUrl || image;
-            }
-            checkIn = item.createdAt || firstTicket?.validStart || firstRoom?.startDate || '';
-            checkOut = firstTicket?.validEnd || firstRoom?.endDate || '';
+          checkIn = item.validStart || item.order?.createdAt || '';
+          checkOut = item.validEnd || '';
+        } else {
+          const firstTicket = item.orderedTickets?.[0];
+          const firstRoom = item.orderedRooms?.[0];
+          const service = firstTicket?.ticket?.ticketVenue || firstRoom?.room?.hotel;
+          
+          if (service) {
+            serviceName = service.serviceName || 'Dịch vụ';
+            location = service.province?.name || '';
+            serviceId = service.id || '';
+            type = (service.serviceType || (firstRoom ? 'hotel' : 'activity')).toLowerCase();
+            image = service.thumbnailUrl || image;
           }
+          checkIn = item.createdAt || firstTicket?.validStart || firstRoom?.startDate || '';
+          checkOut = firstTicket?.validEnd || firstRoom?.endDate || '';
+        }
 
-          return {
-            id: String(item.id || item.orderID || Math.random()),
-            serviceId: String(serviceId),
-            type,
-            name: serviceName,
-            location,
-            checkIn: checkIn ? checkIn.split('T')[0] : '',
-            checkOut: checkOut ? checkOut.split('T')[0] : '',
-            status,
-            totalPrice: item.price || item.totalPrice || 0,
-            image,
-            bookingCode: (item.order?.orderID || item.orderID || 'N/A').substring(0, 8).toUpperCase(),
-          };
-        });
-
-        setBookings(mapped);
-      } catch (err) {
-        console.error('Failed to load orders', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, []);
+        return {
+          id: String(item.id || item.orderID || Math.random()),
+          serviceId: String(serviceId),
+          type,
+          name: serviceName,
+          location,
+          checkIn: checkIn ? checkIn.split('T')[0] : '',
+          checkOut: checkOut ? checkOut.split('T')[0] : '',
+          status,
+          totalPrice: item.price || item.totalPrice || 0,
+          image,
+          bookingCode: (item.order?.orderID || item.orderID || 'N/A').substring(0, 8).toUpperCase(),
+        };
+      });
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+  });
 
   const filteredBookings = bookings.filter(b => {
     const matchesStatus = selectedStatus === 'all' || b.status === selectedStatus;
@@ -172,7 +151,7 @@ const UserBookingsPage: React.FC = () => {
         dot: 'bg-rose-500'
       },
     };
-    return configs[status] || configs.pending;
+    return configs[status as keyof typeof configs] || configs.pending;
   };
 
   const formatDate = (date: string) => {
@@ -259,9 +238,24 @@ const UserBookingsPage: React.FC = () => {
 
       {/* Bookings Content */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-24 bg-white/50 backdrop-blur-sm rounded-3xl border border-gray-50">
-          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-          <p className="text-gray-500 font-medium animate-pulse">Đang tải hành trình của bạn...</p>
+        <div className="grid gap-6 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white border border-gray-100 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-56 h-48 bg-gray-100 rounded-2xl"></div>
+              <div className="flex-1 space-y-4">
+                <div className="flex justify-between">
+                  <div className="h-6 bg-gray-100 rounded-full w-24"></div>
+                  <div className="h-4 bg-gray-100 rounded w-16"></div>
+                </div>
+                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+                <div className="flex gap-4 pt-4 border-t border-gray-50">
+                  <div className="h-10 bg-gray-100 rounded-xl w-32"></div>
+                  <div className="h-10 bg-gray-200 rounded-xl w-32 ml-auto"></div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredBookings.length === 0 ? (
         <div className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm px-6">

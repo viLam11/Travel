@@ -154,6 +154,7 @@ const ServiceDetailPage: React.FC = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [totalApiReviews, setTotalApiReviews] = useState(0);
 
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
@@ -236,52 +237,78 @@ const ServiceDetailPage: React.FC = () => {
       if (!id) return;
 
       if (USE_MOCK) {
-        setAllRooms(MOCK_ROOMS);
+        setIsLoadingItems(true);
+        setTimeout(() => {
+          setAllRooms(MOCK_ROOMS);
+          setIsLoadingItems(false);
+        }, 800);
         return;
       }
 
+      setIsLoadingItems(true);
+      const realId = service?.id || id;
+      const effectiveType = service?.type || serviceType;
+
+      // If we don't have a numeric ID yet and the service hasn't loaded, 
+      // the ID might be a slug from the URL which the sub-resource APIs (tickets/rooms) might not accept.
+      // We should wait for the service detail to load the real numeric ID.
+      const isNumericId = /^\d+$/.test(realId);
+      if (!isNumericId && !service) {
+        console.log(`Skipping items fetch for non-numeric ID "${realId}" until service detail loads.`);
+        setIsLoadingItems(false);
+        return;
+      }
+      
+      console.log(`Loading items for service type: ${effectiveType}, ID: ${realId} (original: ${id})`);
+      
       try {
-        let data: any[] = [];
-        if (serviceType === 'hotel') {
-          data = await roomApi.getRoomsByHotelId(id);
-        } else {
-          try {
-            data = await ticketApi.getTicketsByService(id);
-          } catch (e) {
-            data = await apiClient.tickets.getByServiceId(id);
-          }
-        }
+        let data: any = effectiveType === 'hotel' 
+          ? await roomApi.getRoomsByHotelId(realId)
+          : await ticketApi.getTicketsByService(realId);
+
+        console.log('Items API Response:', data);
+
+        // Robust extraction of items from wrapped or direct responses
+        const items = Array.isArray(data) 
+          ? data 
+          : (data?.result || data?.data || data?.roomList || data?.content || []);
+        
+        console.log(`Extracted ${items.length} items`);
 
         // Map backend ticket/room response to UI shape
-        const mapped = (Array.isArray(data) ? data : []).map((item: any) => ({
-          id: item.id || item.roomID, // RoomResponseDTO has 'id', fallback to roomID
-          name: item.name ?? item.roomName ?? `Room ${item.id || item.roomID}`,
-          // RoomResponseDTO sends type as enum (SINGLE, DOUBLE...), tickets send ticketType or name
+        const mapped = items.map((item: any) => ({
+          id: item.id || item.roomID || item.ticketID, 
+          name: item.name ?? item.roomName ?? item.ticketName ?? `Item ${item.id}`,
           type: item.type ?? item.roomType ?? item.ticketType ?? item.term ?? '',
           price: item.price ? parseFloat(item.price) : (item.pricePerNight ?? 0),
           capacity: item.capacity ?? item.maxGuests ?? 2,
           amenities: item.amenities ?? [],
           available: item.available ?? item.isAvailable ?? true,
           currentBookings: item.currentBookings ?? [],
-          description: item.description ?? '',
+          description: item.description ?? item.term ?? '',
           quantity: item.quantity ?? item.remainingQuantity ?? 0,
           image: item.roomImgUrl || (item.images && item.images[0]) || '',
           count: 0 // Initialize count for UI
         }));
 
-        if (serviceType === 'hotel') {
+        if (effectiveType === 'hotel') {
           setAllRooms(mapped);
+          setTicketList([]);
         } else {
           setTicketList(mapped);
           setAllRooms([]);
         }
       } catch (err) {
         console.error('Failed to load rooms/tickets', err);
-        if (serviceType === 'hotel') {
+        if (effectiveType === 'hotel') {
           setAllRooms(MOCK_ROOMS);
+          setTicketList([]);
         } else {
           setTicketList([]);
+          setAllRooms([]);
         }
+      } finally {
+        setIsLoadingItems(false);
       }
     };
 
@@ -291,8 +318,26 @@ const ServiceDetailPage: React.FC = () => {
       fetchDiscounts();
       fetchFavoriteStatus();
     }
-  }, [id, serviceType, resolvedProvinceID, isAuthenticated]); // Stabilize dependency array
+  }, [id, serviceType, service?.type, resolvedProvinceID, isAuthenticated]); // Added service?.type to dependencies
 
+
+  // Pre-fill user data for RoomBookingModal and ServiceBookingModal
+  useEffect(() => {
+    if (isAuthenticated && currentUser?.user) {
+      const user = currentUser.user;
+      const name = user.name || (user as any).fullname || (user as any).username || "";
+      const email = user.email || "";
+      const phone = (user as any).phone || user.phoneNumber || "";
+
+      setRoomFirstName(prev => prev || name);
+      setRoomEmail(prev => prev || email);
+      setRoomPhone(prev => prev || phone);
+
+      setCustomerName(prev => prev || name);
+      setCustomerEmail(prev => prev || email);
+      setCustomerPhone(prev => prev || phone);
+    }
+  }, [isAuthenticated, currentUser]);
 
   // Load service detail
   useEffect(() => {
@@ -686,6 +731,7 @@ const ServiceDetailPage: React.FC = () => {
     helpful: r.likes || r.likeCount || 0,
     notHelpful: r.dislikes || r.dislikeCount || 0,
     userAvatar: r.user?.avatar,
+    userId: r.userId || r.user?.id || r.user?.userID || r.user?.username,
   }));
 
   const allReviews = hasRealReviews
@@ -695,15 +741,72 @@ const ServiceDetailPage: React.FC = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        {/* <Navigation isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} /> */}
-        <div
-          className="flex items-center justify-center"
-          style={{ height: "calc(100vh - 64px)" }}
-        >
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto mb-4"></div>
-            <p className="text-gray-600 text-lg">Đang tải dữ liệu...</p>
+      <div className="min-h-screen bg-white animate-pulse">
+        {/* Breadcrumb Section Placeholder */}
+        <div className="h-14 bg-gray-50 border-b border-gray-100 flex items-center px-4 sm:px-8">
+           <div className="h-4 bg-gray-200 rounded w-48"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          {/* Title Section Placeholder */}
+          <div className="mb-6">
+            <div className="h-10 bg-gray-200 rounded-xl w-3/4 mb-4"></div>
+            <div className="flex items-center gap-4">
+               <div className="h-5 bg-gray-100 rounded-lg w-32"></div>
+               <div className="h-5 bg-gray-100 rounded-lg w-40"></div>
+               <div className="h-5 bg-gray-100 rounded-lg w-24 ml-auto"></div>
+            </div>
+          </div>
+
+          {/* Image Gallery Placeholder */}
+          <div className="mb-8 lg:mb-10">
+            <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
+              <div className="order-2 lg:order-1 lg:w-[120px] xl:w-[140px] flex lg:flex-col gap-3">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="aspect-square bg-gray-100 rounded-xl"></div>
+                ))}
+              </div>
+              <div className="order-1 lg:order-2 flex-1 aspect-[16/10] bg-gray-200 rounded-2xl"></div>
+            </div>
+          </div>
+
+          {/* Main Layout Grid Placeholder */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Content Placeholder */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Tabs Placeholder */}
+              <div className="flex gap-4 border-b border-gray-100 pb-px">
+                <div className="h-10 bg-gray-100 rounded-t-lg w-24"></div>
+                <div className="h-10 bg-gray-100 rounded-t-lg w-24"></div>
+                <div className="h-10 bg-gray-100 rounded-t-lg w-24"></div>
+              </div>
+
+              {/* Content Block Placeholder */}
+              <div className="space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-1/4 mb-6"></div>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="h-4 bg-gray-50 rounded w-full"></div>
+                ))}
+                <div className="h-4 bg-gray-50 rounded w-2/3"></div>
+              </div>
+            </div>
+
+            {/* Right Sidebar (Booking Card) Placeholder */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-24 h-[500px] bg-white rounded-3xl border border-gray-100 shadow-xl p-6 space-y-6">
+                <div className="h-8 bg-gray-100 rounded-xl w-1/2"></div>
+                <div className="space-y-3">
+                  <div className="h-12 bg-gray-50 rounded-xl w-full"></div>
+                  <div className="h-12 bg-gray-50 rounded-xl w-full"></div>
+                </div>
+                <div className="h-px bg-gray-100 w-full my-6"></div>
+                <div className="flex justify-between">
+                  <div className="h-6 bg-gray-100 rounded w-20"></div>
+                  <div className="h-6 bg-gray-200 rounded w-32"></div>
+                </div>
+                <div className="h-14 bg-gray-200 rounded-2xl w-full mt-auto"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -809,32 +912,50 @@ const ServiceDetailPage: React.FC = () => {
                 <MapPin className="w-4 h-4 text-orange-500" />
                 <span>{service.location}</span>
               </div>
-              <span className="text-orange-500 font-medium">
+            <span className="text-orange-500 font-medium">
                 30K+ lượt khách
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleToggleFavorite}
-                disabled={isFavoriteLoading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 border shadow-sm transform active:scale-95 cursor-pointer ${
-                  isFavorite 
-                    ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100" 
-                    : "bg-white text-gray-600 border-gray-100 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100"
-                }`}
-              >
-                {isFavoriteLoading ? (
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
-                ) : (
-                  <Heart
-                    className={`w-4.5 h-4.5 transition-colors ${
-                      isFavorite ? "fill-rose-500 text-rose-500" : "text-gray-400"
-                    }`}
-                  />
-                )}
-                <span>{isFavorite ? "Đã lưu yêu thích" : "Thêm vào yêu thích"}</span>
-              </button>
-            </div>
+
+            {/* Tags Badges */}
+            {service.tags && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {service.tags.split(',').filter((t: string) => t.trim()).map((tag: string, idx: number) => (
+                  <span 
+                    key={idx} 
+                    className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[10px] sm:text-xs font-bold rounded-full border border-orange-100 flex items-center gap-1 shadow-sm"
+                  >
+                    <span className="opacity-60 text-[8px]">#</span>
+                    {tag.trim()}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {isAuthenticated && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={isFavoriteLoading}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 border shadow-sm transform active:scale-95 cursor-pointer ${
+                    isFavorite 
+                      ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100" 
+                      : "bg-white text-gray-600 border-gray-100 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100"
+                  }`}
+                >
+                  {isFavoriteLoading ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+                  ) : (
+                    <Heart
+                      className={`w-4.5 h-4.5 transition-colors ${
+                        isFavorite ? "fill-rose-500 text-rose-500" : "text-gray-400"
+                      }`}
+                    />
+                  )}
+                  <span>{isFavorite ? "Đã lưu yêu thích" : "Thêm vào yêu thích"}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -955,6 +1076,7 @@ const ServiceDetailPage: React.FC = () => {
             {activeTab === "rooms" && (
               serviceType === 'hotel' ? (
                 <RoomsTab
+                  isLoading={isLoadingItems}
                   rooms={allRooms.map(r => ({
                     id: r.id.toString(),
                     title: r.name,
@@ -970,6 +1092,7 @@ const ServiceDetailPage: React.FC = () => {
                 />
               ) : (
                 <TicketsTab
+                  isLoading={isLoadingItems}
                   tickets={ticketList.map(t => ({
                     id: t.id.toString(),
                     title: t.name,
@@ -1021,6 +1144,17 @@ const ServiceDetailPage: React.FC = () => {
                   // Placeholder: chỉ log ra console
                   console.log('[Report]', _reviewId, _reason);
                 }}
+                currentUserInfo={currentUser?.user}
+                onEditReview={async (reviewId, content, rating) => {
+                  await apiClient.comments.update(reviewId, content, rating);
+                  toast.success("Cập nhật đánh giá thành công");
+                  fetchReviews();
+                }}
+                onDeleteReview={async (reviewId) => {
+                  await apiClient.comments.delete(reviewId);
+                  toast.success("Xóa đánh giá thành công");
+                  fetchReviews();
+                }}
               />
             )}
           </div>
@@ -1028,6 +1162,7 @@ const ServiceDetailPage: React.FC = () => {
           {/* Right Sidebar - Booking Card */}
           <div className="hidden lg:block lg:col-span-1">
             <BookingCard
+              isLoading={isLoadingItems}
               service={serviceWithAppliedDiscounts}
               serviceType={serviceType}
               adultCount={adultCount}
@@ -1046,6 +1181,7 @@ const ServiceDetailPage: React.FC = () => {
               setGuestCount={setGuestCount}
               ticketList={ticketList}
               setTicketList={setTicketList}
+              isLoggedIn={isAuthenticated}
             />
           </div>
         </div >
@@ -1067,9 +1203,15 @@ const ServiceDetailPage: React.FC = () => {
           </div>
           <button
             onClick={serviceType === 'hotel' ? () => handleRoomBookNow() : handleBookNow}
-            className="flex-1 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md shadow-orange-100 uppercase tracking-widest"
+            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-md uppercase tracking-widest active:scale-95 ${
+              isAuthenticated 
+                ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100" 
+                : "bg-orange-50 text-orange-600 border border-orange-200"
+            }`}
           >
-            {serviceType === 'hotel' ? 'Đặt ngay' : 'Đặt vé ngay'}
+            {isAuthenticated 
+              ? (serviceType === 'hotel' ? 'Đặt ngay' : 'Đặt vé ngay') 
+              : 'Đăng nhập'}
           </button>
         </div>
       </div>
@@ -1158,7 +1300,7 @@ const ServiceDetailPage: React.FC = () => {
 
 
       {/* Floating Chat Widget */}
-      {service && (
+      {service && isAuthenticated && (
         <ServiceChatWidget
           providerId={service.providerId || (service as any).providerID || service.provider?.userID || `provider_${service.id}`}
           providerName={(service as any).providerName || service.provider?.fullname || `Nhà cung cấp: ${service.name}`}

@@ -1,5 +1,4 @@
 // src/components/charts/MonthlyRevenueChart.tsx
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp } from 'lucide-react';
@@ -11,13 +10,20 @@ interface MonthlyRevenueChartProps {
 
 export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) {
   const formatCurrency = (value: number) => {
-    return `$${(value / 1000).toFixed(0)}k`;
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
   };
 
+  const chartData = data.map(item => ({
+    ...item,
+    month: item.month,
+    revenue: item.revenue || 0,
+    previousYear: item.previousYear || 0
+  }));
+
   // Calculate growth
-  const latestMonth = data[data.length - 1];
-  const growth = latestMonth ? 
-    ((latestMonth.revenue - latestMonth.previousYear) / latestMonth.previousYear * 100).toFixed(1) : 0;
+  const latestMonth = chartData[chartData.length - 1];
+  const growth = (latestMonth && latestMonth.previousYear > 0) ? 
+    ((latestMonth.revenue - latestMonth.previousYear) / latestMonth.previousYear * 100).toFixed(1) : "0.0";
 
   return (
     <Card className="border-0 shadow-sm">
@@ -30,7 +36,7 @@ export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) 
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Current Month</p>
-              <p className="text-xl font-bold">{formatCurrency(latestMonth.revenue)}</p>
+              <p className="text-xl font-bold">{formatCurrency(latestMonth?.revenue || 0)}</p>
             </div>
             <div className="flex items-center gap-1 text-chart-2">
               <TrendingUp className="w-4 h-4" />
@@ -41,7 +47,7 @@ export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) 
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="rgb(30, 157, 241)" stopOpacity={0.3}/>
@@ -57,14 +63,22 @@ export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) 
               dataKey="month" 
               className="text-muted-foreground text-xs"
               tick={{ fontSize: 12 }}
+              tickFormatter={(val) => {
+                try {
+                  const date = new Date(val);
+                  return isNaN(date.getTime()) ? val : `${date.getDate()}/${date.getMonth() + 1}`;
+                } catch {
+                  return val;
+                }
+              }}
             />
             <YAxis 
-              tickFormatter={formatCurrency}
+              tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`}
               className="text-muted-foreground text-xs"
               tick={{ fontSize: 12 }}
             />
             <Tooltip 
-              formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+              formatter={(value: number) => [formatCurrency(value), '']}
               contentStyle={{ 
                 backgroundColor: 'hsl(var(--popover))',
                 color: 'hsl(var(--popover-foreground))',
@@ -76,8 +90,8 @@ export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) 
             <Legend 
               wrapperStyle={{ paddingTop: '20px' }}
               formatter={(value: string) => {
-                if (value === 'revenue') return 'Current Year';
-                if (value === 'previousYear') return 'Previous Year';
+                if (value === 'revenue') return 'Năm hiện tại';
+                if (value === 'previousYear') return 'Năm trước';
                 return value;
               }}
             />
@@ -103,19 +117,19 @@ export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) 
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-4 border-t border-border">
           <div className="text-center">
-            <p className="text-xs text-muted-foreground">Total Revenue (6M)</p>
+            <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
             <p className="text-lg font-bold text-chart-1">
-              ${data.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}
+              {formatCurrency(chartData.reduce((acc, curr) => acc + curr.revenue, 0))}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-muted-foreground">Previous Year (6M)</p>
+            <p className="text-xs text-muted-foreground">Năm trước</p>
             <p className="text-lg font-bold text-muted-foreground">
-              ${data.reduce((acc, curr) => acc + curr.previousYear, 0).toLocaleString()}
+              {formatCurrency(chartData.reduce((acc, curr) => acc + curr.previousYear, 0))}
             </p>
           </div>
           <div className="text-center col-span-2 md:col-span-1">
-            <p className="text-xs text-muted-foreground">Overall Growth</p>
+            <p className="text-xs text-muted-foreground">Tăng trưởng chung</p>
             <p className="text-lg font-bold text-chart-2">+{growth}%</p>
           </div>
         </div>

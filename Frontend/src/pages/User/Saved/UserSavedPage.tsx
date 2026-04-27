@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Heart, 
@@ -7,7 +8,6 @@ import {
   Trash2, 
   Grid3x3, 
   List,
-  Loader2,
   Bookmark,
   ChevronRight,
   TrendingUp,
@@ -32,48 +32,39 @@ interface SavedItem {
 }
 
 const UserSavedPage: React.FC = () => {
-  const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<'all' | 'hotel' | 'destination'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchSaved = async () => {
-      try {
-        setLoading(true);
-        const data: any = await apiClient.favorites.getAll();
-        const list = Array.isArray(data) ? data : (data?.content || []);
-        
-        const mapped: SavedItem[] = list.map((item: any) => ({
-          id: item.serviceId,
-          type: item.serviceType?.toLowerCase() === 'hotel' ? 'hotel' : 'destination',
-          name: item.serviceName,
-          location: item.provinceName,
-          rating: item.rating || 0,
-          reviewCount: item.reviewCount || 0,
-          price: item.averagePrice,
-          priceUnit: item.serviceType?.toLowerCase() === 'hotel' ? '/đêm' : '/vé',
-          image: item.thumbnailUrl || 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400',
-          savedDate: new Date().toISOString(),
-          description: '', 
-        }));
-        
-        setSavedItems(mapped);
-      } catch (error) {
-        console.error("Lỗi fetch favorites:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSaved();
-  }, []);
+  const { data: savedItems = [], isLoading: loading } = useQuery({
+    queryKey: ['userSavedItems'],
+    queryFn: async () => {
+      const data: any = await apiClient.favorites.getAll();
+      const list = Array.isArray(data) ? data : (data?.content || []);
+      
+      return list.map((item: any) => ({
+        id: item.serviceId,
+        type: item.serviceType?.toLowerCase() === 'hotel' ? 'hotel' : 'destination',
+        name: item.serviceName,
+        location: item.provinceName,
+        rating: item.rating || 0,
+        reviewCount: item.reviewCount || 0,
+        price: item.averagePrice,
+        priceUnit: item.serviceType?.toLowerCase() === 'hotel' ? '/đêm' : '/vé',
+        image: item.thumbnailUrl || 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400',
+        savedDate: new Date().toISOString(),
+        description: '', 
+      }));
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+  });
 
   const filteredItems = selectedType === 'all' 
     ? savedItems 
-    : savedItems.filter(item => item.type === selectedType);
+    : savedItems.filter((item: SavedItem) => item.type === selectedType);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
@@ -89,7 +80,9 @@ const UserSavedPage: React.FC = () => {
   const handleRemove = async (id: string) => {
     try {
       await apiClient.favorites.remove(id);
-      setSavedItems(prev => prev.filter(item => item.id !== id));
+      queryClient.setQueryData(['userSavedItems'], (old: SavedItem[] | undefined) => 
+        old ? old.filter(item => item.id !== id) : []
+      );
       toast.success('Đã xóa khỏi danh sách yêu thích');
     } catch (error) {
       toast.error('Không thể xóa mục này');
@@ -106,9 +99,24 @@ const UserSavedPage: React.FC = () => {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-24">
-      <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-      <p className="text-gray-500 font-bold uppercase tracking-widest text-xs animate-pulse">Khám phá tâm hồn của bạn...</p>
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="h-20 bg-gray-50 rounded-2xl mb-10 animate-pulse"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-pulse">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm">
+            <div className="aspect-[16/10] bg-gray-100"></div>
+            <div className="p-6 space-y-4">
+              <div className="h-4 bg-gray-100 rounded w-1/4"></div>
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+              <div className="pt-5 border-t border-gray-50 flex justify-between items-center">
+                <div className="h-8 bg-gray-200 rounded w-32"></div>
+                <div className="h-10 bg-gray-100 rounded-2xl w-10"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -146,8 +154,8 @@ const UserSavedPage: React.FC = () => {
       <div className="flex gap-3 mb-8 overflow-x-auto pb-4 no-scrollbar">
         {[
           { value: 'all', label: 'Tất cả', count: savedItems.length, icon: Map },
-          { value: 'hotel', label: 'Khách sạn', count: savedItems.filter(i => i.type === 'hotel').length, icon: Hotel },
-          { value: 'destination', label: 'Địa điểm', count: savedItems.filter(i => i.type === 'destination').length, icon: MapPin },
+          { value: 'hotel', label: 'Khách sạn', count: savedItems.filter((i: SavedItem) => i.type === 'hotel').length, icon: Hotel },
+          { value: 'destination', label: 'Địa điểm', count: savedItems.filter((i: SavedItem) => i.type === 'destination').length, icon: MapPin },
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -188,7 +196,7 @@ const UserSavedPage: React.FC = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {currentItems.map((item) => (
+          {currentItems.map((item: SavedItem) => (
             <div
               key={item.id}
               onClick={() => navigate(`/service/${item.id}`)}
@@ -253,7 +261,7 @@ const UserSavedPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {currentItems.map((item) => (
+          {currentItems.map((item: SavedItem) => (
             <div
               key={item.id}
               onClick={() => navigate(`/service/${item.id}`)}

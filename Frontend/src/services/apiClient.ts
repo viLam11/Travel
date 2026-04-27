@@ -68,6 +68,18 @@ export interface ResourceAdapter<
  */
 export class ApiClient {
   private rateLimitInfo: RateLimitInfo | null = null;
+
+  constructor() {
+    // Debug logging for all requests
+    api.interceptors.request.use((config) => {
+      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+        params: config.params,
+        headers: config.headers
+      });
+      return config;
+    });
+  }
+
   public static readonly USE_MOCK = false; // Bật fallback sang mock khi API lỗi
 
   // Auth endpoints
@@ -239,10 +251,14 @@ export class ApiClient {
       signal?: AbortSignal;
     }): Promise<any> => {
       try {
+        const { signal, ...restParams } = params;
         const self = (this as any);
-        console.log("Fetching real API services/search", params);
+        console.log("Fetching real API services/search", restParams);
 
-        const response: any = await self.get("/services/search", { params });
+        const response: any = await self.get("/services/search", { 
+          params: restParams,
+          signal 
+        });
 
         // Backend returns PageResponse containing "content" array
         // We ensure data is extracted correctly from the API client response
@@ -410,6 +426,15 @@ export class ApiClient {
       return this.delete(`/comment/${commentID}`);
     },
 
+    update: (commentID: string | number, content: string, rating: number): ApiResponse<any> => {
+      const formData = new FormData();
+      formData.append("content", content);
+      formData.append("rating", rating.toString());
+      return this.put(`/comment/${commentID}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+
     like: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/like/${commentID}`, {});
     },
@@ -558,6 +583,18 @@ export class ApiClient {
 
     toggleUserStatus: (userID: string | number): ApiResponse<any> => {
       return this.post(`/users/${userID}/toggleStatus`, {});
+    },
+
+    updateUserStatus: (userID: string | number, status: string): ApiResponse<any> => {
+      return this.patch(`/users/${userID}/status`, status, {
+        headers: { "Content-Type": "application/json" }
+      });
+    },
+
+    updateUserRole: (userID: string | number, role: string): ApiResponse<any> => {
+      return this.patch(`/users/${userID}/role`, role, {
+        headers: { "Content-Type": "application/json" }
+      });
     },
   };
 
@@ -792,13 +829,13 @@ export class ApiClient {
     getTopHotels: (startDate?: string, endDate?: string): ApiResponse<any> => {
       return this.get("/statistics/top-10-hotels", { params: { startDate, endDate } });
     },
-    getVenueStats: (venueId?: string | number): ApiResponse<any> => {
-      if (venueId) return this.get(`/statistics/ticketVenues/${venueId}`);
-      return this.get("/statistics/ticketVenues");
+    getVenueStats: (venueId?: string | number, startDate?: string, endDate?: string): ApiResponse<any> => {
+      if (venueId) return this.get(`/statistics/ticketVenues/${venueId}`, { params: { startDate, endDate } });
+      return this.get("/statistics/ticketVenues", { params: { startDate, endDate } });
     },
-    getHotelStats: (hotelId?: string | number): ApiResponse<any> => {
-      if (hotelId) return this.get(`/statistics/hotels/${hotelId}`);
-      return this.get("/statistics/hotels");
+    getHotelStats: (hotelId?: string | number, startDate?: string, endDate?: string): ApiResponse<any> => {
+      if (hotelId) return this.get(`/statistics/hotels/${hotelId}`, { params: { startDate, endDate } });
+      return this.get("/statistics/hotels", { params: { startDate, endDate } });
     },
   };
 
@@ -949,7 +986,7 @@ export class ApiClient {
 
   public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await api.get<T>(url, config);
+      const response = await api.get<T>(url, { ...config, data: null });
       this.handleRateLimit(response);
       return response.data;
     } catch (error) {

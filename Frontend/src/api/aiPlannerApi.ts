@@ -180,7 +180,10 @@ export const aiPlannerApi = {
         if (planId.startsWith('mock-')) {
             return { isPublic, shareUrl: `https://travollo.com/share/${planId}` };
         }
-        return apiClient.patch<{ isPublic: boolean; shareUrl?: string }>(`/api/plan-recommend/${planId}`, { isPublic });
+        // Theo API docs, PATCH có thể đang mong đợi query params thay vì body
+        return apiClient.patch<{ isPublic: boolean; shareUrl?: string }>(`/api/plan-recommend/${planId}`, null, {
+            params: { isPublic }
+        });
     },
 
     getUserPlans: async (): Promise<PlanOverallResponse[]> => {

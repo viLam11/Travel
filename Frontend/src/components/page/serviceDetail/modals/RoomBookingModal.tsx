@@ -675,7 +675,9 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                 <h3 className="text-base font-bold text-gray-900 mb-3">Hình thức thanh toán</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* MoMo */}
-                  <label className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                  <label 
+                    onClick={() => setRoomPaymentMethod('MOMO')}
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                     roomPaymentMethod === 'MOMO' 
                       ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20' 
                       : 'border-gray-100 bg-gray-50 hover:border-pink-300 hover:bg-white'
@@ -699,7 +701,9 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                   </label>
 
                   {/* VNPAY */}
-                  <label className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                  <label 
+                    onClick={() => setRoomPaymentMethod('VNPAY')}
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                     roomPaymentMethod === 'VNPAY' 
                       ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' 
                       : 'border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-white'
@@ -723,7 +727,9 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                   </label>
 
                   {/* ZaloPay */}
-                  <label className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                  <label 
+                    onClick={() => setRoomPaymentMethod('ZALOPAY')}
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                     roomPaymentMethod === 'ZALOPAY' 
                       ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500/20' 
                       : 'border-gray-100 bg-gray-50 hover:border-teal-300 hover:bg-white'

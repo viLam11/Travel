@@ -23,14 +23,16 @@ import {
     Sun,
     Moon,
     ImagePlus,
-    Star as StarIcon
+    Star as StarIcon,
+    Loader2
 } from 'lucide-react';
 import ServiceSetup from './ServiceSetup';
 import { Card, CardContent } from '@/components/ui/admin/card';
-import { serviceDetailApi } from '@/api/serviceDetailApi';
+import { serviceApi } from '@/api/serviceApi';
 import TicketsTab from './components/TicketsTab';
 import PricingCalendarTab from './components/PricingCalendarTab';
 import PromotionsTab from './components/PromotionsTab';
+import { toast } from 'sonner';
 
 const ProviderMyService = () => {
     const { currentUser } = useAuthContext();
@@ -62,35 +64,51 @@ const ProviderMyService = () => {
         attributes: [],
         policies: {
             cancellation: "",
-            notes: ""
-        }
+            notes: "",
+            checkIn: "14:00",
+            checkOut: "12:00"
+        },
+        tags: ""
     };
 
     const [serviceData, setServiceData] = useState<any>(initialServiceData);
+    const [backupData, setBackupData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         const fetchServiceData = async () => {
             if (!serviceId) return;
             setIsLoading(true);
             try {
-                // We use '' for destination/type for this provider page
-                const data = await serviceDetailApi.getServiceDetail('', '', serviceId.toString());
+                const data = await serviceApi.getServiceById(serviceId.toString());
                 if (data) {
-                    // Adapt ServiceDetail to the page's structure
-                    setServiceData({
+                    const mappedData = {
                         ...data,
-                        status: 'active' as const, // Default for now
-                        attributes: data.features || [],
-                        images: data.images || [],
+                        name: data.serviceName || (data as any).name || "Dịch vụ của tôi",
+                        status: 'active' as const,
+                        attributes: data.amenities?.map((f: string) => ({ label: f })) || [],
+                        images: [
+                            ...(Array.isArray((data as any).imageList) ? (data as any).imageList : []),
+                            ...(Array.isArray(data.images) ? data.images : []),
+                            ...(data.thumbnailUrl ? [data.thumbnailUrl] : [])
+                        ].filter(img => typeof img === 'string' && img.length > 0),
+                        rating: data.rating || 0,
+                        reviews: data.reviewCount || (data as any).reviews || 0,
                         policies: {
                             cancellation: "Chính sách hủy linh hoạt.",
-                            notes: "Nên mang theo giày đi bộ."
-                        }
-                    });
+                            notes: (data as any).note || "Vui lòng tuân thủ quy định tại địa điểm.",
+                            checkIn: data.checkInTime || (data as any).openingHours || "08:00",
+                            checkOut: data.checkOutTime || (data as any).duration || "17:00"
+                        },
+                        tags: data.tags || ""
+                    };
+                    setServiceData(mappedData);
+                    setBackupData(mappedData);
                 }
             } catch (error) {
                 console.error("Failed to fetch service detail for provider:", error);
+                toast.error("Không thể tải thông tin dịch vụ");
             } finally {
                 setIsLoading(false);
             }
@@ -114,10 +132,28 @@ const ProviderMyService = () => {
         setServiceData((prev: any) => ({ ...prev, attributes: prev.attributes.filter((_: any, i: number) => i !== index) }));
     };
 
-    const handleSave = () => {
-        console.log("Saving service data:", serviceData);
-        alert("Đã lưu thay đổi thành công!");
-        setIsEditing(false);
+    const handleSave = async () => {
+        if (!serviceId) return;
+        setIsSaving(true);
+        try {
+            await serviceApi.updateService(serviceId.toString(), {
+                serviceName: serviceData.name,
+                address: serviceData.address,
+                location: serviceData.location,
+                description: serviceData.description,
+                tags: serviceData.tags,
+                amenities: serviceData.attributes.map((a: any) => a.label)
+            });
+            
+            setBackupData(serviceData);
+            toast.success("Đã lưu thay đổi thành công!");
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Failed to save service data:", error);
+            toast.error("Lỗi khi lưu thông tin dịch vụ");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handlePrevImage = () => {
@@ -170,10 +206,46 @@ const ProviderMyService = () => {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-background">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]"></div>
-                    <p className="text-lg font-medium animate-pulse bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">Đang tải thông tin dịch vụ...</p>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 animate-pulse">
+                {/* Header Skeleton */}
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+                    <div className="flex-1 space-y-4">
+                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-xl w-3/4"></div>
+                        <div className="flex gap-4">
+                            <div className="h-5 bg-gray-100 dark:bg-gray-800 rounded-lg w-32"></div>
+                            <div className="h-5 bg-gray-100 dark:bg-gray-800 rounded-lg w-40"></div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-full w-24"></div>
+                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-xl w-32"></div>
+                    </div>
+                </div>
+
+                {/* Main Content Area */}
+                <div className="flex flex-col lg:flex-row gap-8 mb-8">
+                    {/* Left: Image Gallery Skeleton */}
+                    <div className="flex-1 flex flex-col lg:flex-row gap-4">
+                        <div className="flex-1 aspect-[16/9] lg:aspect-auto lg:h-[500px] bg-gray-200 dark:bg-gray-700 rounded-3xl"></div>
+                        <div className="lg:w-[140px] flex lg:flex-col gap-3 overflow-hidden">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-2xl w-full"></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabs & Details Skeleton */}
+                <div className="space-y-6">
+                    <div className="h-14 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 w-full"></div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="h-80 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700"></div>
+                        </div>
+                        <div className="space-y-6">
+                            <div className="h-64 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -241,13 +313,17 @@ const ProviderMyService = () => {
                         </span>
                         <div className="flex gap-2">
                             <Button variant="outline" onClick={() => {
-                                setServiceData(initialServiceData); // Reset changes
+                                if (backupData) {
+                                    setServiceData(backupData);
+                                } else {
+                                    setServiceData(initialServiceData);
+                                }
                                 setIsEditing(false);
                             }}>
                                 Hủy bỏ
                             </Button>
-                            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-                                <Save className="w-4 h-4 mr-2" />
+                            <Button onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                                 Lưu thay đổi
                             </Button>
                         </div>
@@ -480,9 +556,9 @@ const ProviderMyService = () => {
                         </div>
 
                         {/* Tab Content */}
-                        <div className="min-h-[300px]">
+                        <div className="mt-8">
                             {activeTab === 'info' && (
-                                <div className="space-y-8 animate-in fade-in duration-300">
+                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                     {/* Description Section */}
                                     <section className={`rounded-xl ${isEditing ? 'p-6 border-2 border-primary/20 bg-primary/5' : ''}`}>
                                         <div className="flex justify-between items-center mb-4">
@@ -499,6 +575,42 @@ const ProviderMyService = () => {
                                             <p className="text-gray-600 leading-relaxed whitespace-pre-line text-justify">
                                                 {serviceData.description}
                                             </p>
+                                        )}
+                                    </section>
+
+                                    {/* Tags Section */}
+                                    <section className={`rounded-xl ${isEditing ? 'p-6 border-2 border-primary/20 bg-primary/5' : ''}`}>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xl font-bold text-foreground/90">Tags & SEO</h3>
+                                        </div>
+                                        {isEditing ? (
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-medium">Thêm tags (cách nhau bởi dấu phẩy)</Label>
+                                                <Input 
+                                                    value={serviceData.tags}
+                                                    onChange={(e) => handleInputChange('tags', e.target.value)}
+                                                    placeholder="Ví dụ: Luxury, Beach, Family, WiFi"
+                                                    className="bg-white"
+                                                />
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    {(serviceData.tags || "").split(',').filter((t: string) => t.trim()).map((tag: string, idx: number) => (
+                                                        <Badge key={idx} variant="secondary" className="px-3 py-1">
+                                                            {tag.trim()}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-2">
+                                                {(serviceData.tags || "").split(',').filter((t: string) => t.trim()).map((tag: string, idx: number) => (
+                                                    <Badge key={idx} variant="outline" className="bg-orange-50 text-orange-600 border-orange-100 px-3 py-1 text-sm font-medium">
+                                                        #{tag.trim()}
+                                                    </Badge>
+                                                ))}
+                                                {(!serviceData.tags || serviceData.tags.trim() === "") && (
+                                                    <span className="text-gray-400 text-sm italic">Chưa có tags nào.</span>
+                                                )}
+                                            </div>
                                         )}
                                     </section>
 
@@ -532,7 +644,6 @@ const ProviderMyService = () => {
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                 {serviceData.attributes.map((attr: any, idx: number) => (
                                                     <div key={idx} className="bg-orange-50/50 p-3 rounded-lg flex items-center gap-3 border border-orange-100">
-                                                        {/* Icon placeholder - in real app would map icon name to component */}
                                                         <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                                                         <span className="text-gray-700 font-medium text-sm">{attr.label}</span>
                                                     </div>
@@ -666,8 +777,8 @@ const ProviderMyService = () => {
                                         Cập nhật thông tin
                                     </Button>
                                 ) : (
-                                    <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSave}>
-                                        <Save className="w-4 h-4 mr-2" />
+                                    <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSave} disabled={isSaving}>
+                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                                         Lưu thay đổi
                                     </Button>
                                 )}

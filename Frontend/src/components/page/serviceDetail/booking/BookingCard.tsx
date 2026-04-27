@@ -22,6 +22,8 @@ interface BookingCardProps {
   setGuestCount?: (count: number) => void;
   ticketList: any[];
   setTicketList: (tickets: any[]) => void;
+  isLoggedIn: boolean;
+  isLoading?: boolean;
 }
 
 const BookingCard: React.FC<BookingCardProps> = ({
@@ -41,7 +43,9 @@ const BookingCard: React.FC<BookingCardProps> = ({
   guestCount,
   setGuestCount,
   ticketList,
-  setTicketList
+  setTicketList,
+  isLoggedIn,
+  isLoading = false
 }) => {
   const isHotel = serviceType === 'hotel';
   const [showAllServices, setShowAllServices] = useState(false);
@@ -137,7 +141,22 @@ const BookingCard: React.FC<BookingCardProps> = ({
             <div className="space-y-4">
               <h4 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Số lượng</h4>
               <div className="space-y-3">
-                {ticketList.length > 0 ? (
+                {isLoading ? (
+                  // Skeleton for tickets
+                  [1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 animate-pulse">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-gray-100"></div>
+                        <div className="w-5 h-4 bg-gray-100 rounded"></div>
+                        <div className="w-7 h-7 rounded-full bg-gray-100"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : ticketList.length > 0 ? (
                   ticketList.map((ticket, idx) => (
                     <div key={ticket.id || idx} className="flex items-center justify-between gap-3 group">
                       <div className="flex-1 min-w-0">
@@ -302,15 +321,25 @@ const BookingCard: React.FC<BookingCardProps> = ({
         <div className="mb-4">
           <div className="flex items-center justify-between">
             <span className="font-bold text-gray-900 text-sm uppercase tracking-wider">Thành tiền:</span>
-            <span className="font-extrabold text-orange-500 text-xl tracking-tight">{(finalPrice || 0).toLocaleString()} <span className="text-xs">VNĐ</span></span>
+            {isLoading ? (
+              <div className="h-8 bg-gray-200 rounded w-32 animate-pulse"></div>
+            ) : (
+              <span className="font-extrabold text-orange-500 text-xl tracking-tight">{(finalPrice || 0).toLocaleString()} <span className="text-xs">VNĐ</span></span>
+            )}
           </div>
         </div>
 
         <button
           onClick={isHotel ? () => onRoomBookNow?.() : onBookNow}
-          className="cursor-pointer w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-widest"
+          className={`cursor-pointer w-full py-3 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-widest ${
+            isLoggedIn 
+              ? "bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white" 
+              : "bg-orange-50 text-orange-600 border-2 border-orange-200 hover:bg-orange-100"
+          }`}
         >
-          {isHotel ? 'Đặt phòng ngay' : 'Đặt vé ngay'}
+          {isLoggedIn 
+            ? (isHotel ? 'Đặt phòng ngay' : 'Đặt vé ngay') 
+            : 'Đăng nhập để đặt'}
         </button>
       </div>
     </div>

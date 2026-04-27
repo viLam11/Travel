@@ -38,6 +38,24 @@ export const userApi = {
             console.error('Failed to delete user', error);
             throw error;
         }
+    },
+
+    updateUserStatus: async (userId: string | number, status: string): Promise<void> => {
+        try {
+            await apiClient.users.updateUserStatus(userId, `"${status}"`);
+        } catch (error) {
+            console.error('Failed to update user status', error);
+            throw error;
+        }
+    },
+
+    updateUserRole: async (userId: string | number, role: string): Promise<void> => {
+        try {
+            await apiClient.users.updateUserRole(userId, `"${role.toUpperCase()}"`);
+        } catch (error) {
+            console.error('Failed to update user role', error);
+            throw error;
+        }
     }
 };
 

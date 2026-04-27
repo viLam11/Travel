@@ -9,8 +9,27 @@ import {
     SelectValue,
 } from '@/components/ui/admin/select';
 import { Check, X, ShieldAlert, Flag, Trash2, Ban } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/admin/card';
 import { MOCK_REPORTS, type MockReport } from '@/mocks/reports';
 import { toast } from 'sonner';
+
+// --- Stats Card Component ---
+function StatsCard({ title, value, subValue, icon: Icon, color, bg }: any) {
+    return (
+        <Card className="bg-card border border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-5 flex justify-between items-start gap-4">
+                <div className="flex-1 space-y-1">
+                    <p className="text-sm text-muted-foreground font-medium uppercase tracking-tight">{title}</p>
+                    <h3 className="text-2xl font-bold text-foreground">{value}</h3>
+                    {subValue && <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">{subValue}</p>}
+                </div>
+                <div className={`p-3 rounded-xl ${bg} ${color} shrink-0`}>
+                    <Icon className="w-6 h-6" />
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 const AdminReviews = () => {
     const [statusFilter, setStatusFilter] = useState<string>('pending');
@@ -63,159 +82,134 @@ const AdminReviews = () => {
     };
 
     return (
-        <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quản lý Báo cáo & Đánh giá</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                    Xử lý các đánh giá/bình luận bị báo cáo vi phạm tiêu chuẩn cộng đồng
-                </p>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3.5 rounded-full flex-shrink-0">
-                        <Flag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                        <span className="text-sm font-medium text-muted-foreground">Tổng Báo cáo</span>
-                        <div className="text-2xl font-bold leading-tight mt-1">{stats.total}</div>
-                    </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-amber-100 dark:bg-amber-900/30 p-3.5 rounded-full flex-shrink-0">
-                        <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div>
-                        <span className="text-sm font-medium text-muted-foreground">Chờ xử lý</span>
-                        <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 leading-tight mt-1">{stats.pending}</div>
-                    </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-green-100 dark:bg-green-900/30 p-3.5 rounded-full flex-shrink-0">
-                        <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                        <span className="text-sm font-medium text-muted-foreground">Đã giải quyết</span>
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 leading-tight mt-1">{stats.resolved}</div>
-                    </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-muted p-3.5 rounded-full flex-shrink-0">
-                        <X className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    <div>
-                        <span className="text-sm font-medium text-muted-foreground">Đã bỏ qua</span>
-                        <div className="text-2xl font-bold text-muted-foreground leading-tight mt-1">{stats.dismissed}</div>
-                    </div>
+        <div className="w-full max-w-7xl mx-auto space-y-8 pb-8 animate-in fade-in duration-500 p-6">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Quản lý Báo cáo & Đánh giá</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Xử lý các đánh giá hoặc bình luận bị báo cáo vi phạm tiêu chuẩn cộng đồng.</p>
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-                <div className="flex gap-4 items-center">
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full md:w-[220px] cursor-pointer">
-                            <SelectValue placeholder="Trạng thái" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all" className="cursor-pointer">Tất cả báo cáo</SelectItem>
-                            <SelectItem value="pending" className="cursor-pointer text-amber-600 font-medium">Đang chờ xử lý</SelectItem>
-                            <SelectItem value="resolved" className="cursor-pointer text-green-600 font-medium">Đã xử lý (Vi phạm)</SelectItem>
-                            <SelectItem value="dismissed" className="cursor-pointer text-muted-foreground font-medium">Đã bỏ qua (Không vi phạm)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard title="Tổng báo cáo" value={stats.total} icon={Flag} color="text-blue-600" bg="bg-blue-100" />
+                <StatsCard title="Chờ xử lý" value={stats.pending} icon={ShieldAlert} color="text-amber-600" bg="bg-amber-100" />
+                <StatsCard title="Đã xử lý" value={stats.resolved} icon={Check} color="text-emerald-600" bg="bg-emerald-100" />
+                <StatsCard title="Đã bỏ qua" value={stats.dismissed} icon={X} color="text-gray-600" bg="bg-gray-100" />
             </div>
 
-            {/* Reports List */}
-            <div className="space-y-4">
+            <Card className="shadow-sm border-border/40">
+                <CardContent className="p-4">
+                    <div className="flex gap-4 items-center">
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full md:w-[240px] h-10">
+                                <SelectValue placeholder="Lọc theo trạng thái" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tất cả báo cáo</SelectItem>
+                                <SelectItem value="pending">Đang chờ xử lý</SelectItem>
+                                <SelectItem value="resolved">Đã xử lý (Vi phạm)</SelectItem>
+                                <SelectItem value="dismissed">Đã bỏ qua (Hợp lệ)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-6">
                 {filteredReports.length === 0 ? (
-                    <div className="rounded-lg border border-border bg-card py-12 text-center text-muted-foreground shadow-sm">
+                    <Card className="py-16 text-center text-muted-foreground border-dashed">
                         Không có báo cáo nào trong mục này
-                    </div>
+                    </Card>
                 ) : (
                     filteredReports.map((report) => (
-                        <div key={report.id} className="rounded-lg border border-border bg-card shadow-sm p-6 overflow-hidden flex flex-col md:flex-row gap-6">
+                        <Card key={report.id} className="shadow-sm border-border/40 hover:border-primary/20 transition-colors overflow-hidden">
+                            <div className="p-5 flex flex-col lg:flex-row gap-6">
 
-                            {/* Left Column: Report Info */}
-                            <div className="flex-1 space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-2 rounded-lg flex items-center gap-2 border border-red-100 dark:border-red-900/50">
-                                        <ShieldAlert className="w-4 h-4" />
-                                        <span className="font-semibold text-sm">Lý do báo cáo: {report.reason}</span>
-                                    </div>
-                                    {getStatusBadge(report.status)}
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                    <span>Được báo cáo bởi:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-200">{report.reporterName}</span>
-                                    <span className="text-gray-400 dark:text-gray-500">({report.reporterType === 'provider' ? 'Chủ dịch vụ' : 'Khách hàng'})</span>
-                                    <span className="text-gray-400 dark:text-gray-500 mx-2">•</span>
-                                    <span>{new Date(report.createdAt).toLocaleString('vi-VN')}</span>
-                                </div>
-
-                                {/* The Context: Original Comment */}
-                                <div className="mt-4 bg-muted/50 border border-border rounded-lg p-4">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Avatar className="w-8 h-8">
-                                            <AvatarImage src={report.review.userAvatar} />
-                                            <AvatarFallback>{report.review.userName[0]}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <div className="font-semibold text-sm">{report.review.userName}</div>
-                                            <div className="text-xs text-muted-foreground">Đã bình luận tại: <span className="font-medium text-primary">{report.review.serviceName}</span></div>
+                                {/* Left Column: Report Info */}
+                                <div className="flex-1 space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-2 rounded-lg flex items-center gap-2 border border-red-100 dark:border-red-900/50">
+                                            <ShieldAlert className="w-4 h-4" />
+                                            <span className="font-semibold text-sm">Lý do báo cáo: {report.reason}</span>
                                         </div>
+                                        {getStatusBadge(report.status)}
                                     </div>
-                                    <p className="text-sm text-muted-foreground italic border-l-2 border-border pl-3 ml-1">
-                                        "{report.review.comment}"
-                                    </p>
+                                    
+                                    <div className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                            <span>Người báo cáo:</span>
+                                            <span className="font-semibold text-foreground">{report.reporterName}</span>
+                                            <span className="px-2 py-0.5 bg-muted rounded-md text-[10px] uppercase font-bold text-muted-foreground">{report.reporterType === 'provider' ? 'Chủ dịch vụ' : 'Khách hàng'}</span>
+                                        </div>
+                                        <span className="text-muted-foreground text-xs">{new Date(report.createdAt).toLocaleString('vi-VN')}</span>
+                                    </div>
+
+                                    {/* The Context: Original Comment */}
+                                    <div className="mt-4 bg-muted/30 border border-border rounded-xl p-4">
+                                        <div className="flex items-center gap-3 mb-3 pb-3 border-b border-border/50">
+                                            <Avatar className="w-8 h-8 rounded-lg shadow-sm">
+                                                <AvatarImage src={report.review.userAvatar} />
+                                                <AvatarFallback className="rounded-lg">{report.review.userName[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="font-bold text-sm text-foreground">{report.review.userName}</div>
+                                                <div className="text-xs text-muted-foreground">Đã bình luận tại: <span className="font-semibold text-primary">{report.review.serviceName}</span></div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-foreground leading-relaxed">
+                                            {report.review.comment}
+                                        </p>
+                                    </div>
                                 </div>
+
+                                {/* Right Column: Actions */}
+                                {report.status === 'pending' && (
+                                    <div className="lg:w-64 flex flex-col gap-2 justify-center lg:border-l border-t lg:border-t-0 border-border pt-4 lg:pt-0 lg:pl-6">
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Thao tác xử lý</p>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full justify-start text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-semibold"
+                                            onClick={() => handleAction(report.id, 'dismiss', report.reporterName, report.review.userName)}
+                                        >
+                                            <X className="w-4 h-4 mr-2" />
+                                            Bỏ qua (Giữ nguyên)
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full justify-start text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-200 dark:border-orange-900/50 cursor-pointer font-semibold"
+                                            onClick={() => handleAction(report.id, 'delete', report.reporterName, report.review.userName)}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Gỡ bỏ bình luận
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50 cursor-pointer font-semibold"
+                                            onClick={() => {
+                                                if (window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
+                                                    handleAction(report.id, 'block', report.reporterName, report.review.userName);
+                                                }
+                                            }}
+                                        >
+                                            <Ban className="w-4 h-4 mr-2" />
+                                            Gỡ bỏ & Khóa User
+                                        </Button>
+                                    </div>
+                                )}
+
                             </div>
-
-                            {/* Right Column: Actions */}
-                            {report.status === 'pending' && (
-                                <div className="md:w-64 flex flex-col gap-2 justify-center border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Xử lý báo cáo</p>
-
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                        onClick={() => handleAction(report.id, 'dismiss', report.reporterName, report.review.userName)}
-                                    >
-                                        <X className="w-4 h-4 mr-2" />
-                                        Bỏ qua (Giữ nguyên)
-                                    </Button>
-
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-200 dark:border-orange-900/50 cursor-pointer"
-                                        onClick={() => handleAction(report.id, 'delete', report.reporterName, report.review.userName)}
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Gỡ bỏ bình luận
-                                    </Button>
-
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50 cursor-pointer"
-                                        onClick={() => {
-                                            if (window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
-                                                handleAction(report.id, 'block', report.reporterName, report.review.userName);
-                                            }
-                                        }}
-                                    >
-                                        <Ban className="w-4 h-4 mr-2" />
-                                        Gỡ bỏ & Khóa User
-                                    </Button>
-                                </div>
-                            )}
-
-                        </div>
-                    ))
-                )}
-            </div>
+                    </Card>
+                ))
+            )}
+        </div>
 
             {/* Results count */}
             <div className="text-sm text-muted-foreground font-medium">

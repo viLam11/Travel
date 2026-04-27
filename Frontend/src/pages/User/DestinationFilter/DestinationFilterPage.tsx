@@ -271,8 +271,33 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
 
             {/* Loading / Empty / List */}
             {isLoading ? (
-              <div className="flex justify-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+              <div className="space-y-5">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col sm:flex-row h-auto animate-pulse">
+                    {/* Image Skeleton */}
+                    <div className="w-full sm:w-64 h-48 sm:h-52 bg-gray-200"></div>
+                    
+                    {/* Content Skeleton */}
+                    <div className="flex-1 p-5 flex flex-col justify-between space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-6 bg-gray-100 rounded w-12"></div>
+                        </div>
+                        <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+                        <div className="h-4 bg-gray-100 rounded w-2/3"></div>
+                      </div>
+                      
+                      <div className="flex justify-between items-end pt-4 border-t border-gray-50">
+                        <div className="space-y-2">
+                          <div className="h-3 bg-gray-100 rounded w-16"></div>
+                          <div className="h-6 bg-gray-200 rounded w-24"></div>
+                        </div>
+                        <div className="h-10 bg-gray-200 rounded w-28"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : destinations.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 px-4">

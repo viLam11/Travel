@@ -1,54 +1,153 @@
 // src/pages/ServiceProvider/Services/components/TicketsTab.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
 import { Textarea } from '@/components/ui/admin/textarea';
 import { Label } from '@/components/ui/admin/label';
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { Badge } from '@/components/ui/admin/badge';
-import { Plus, Edit, Trash2, Check, X, Ticket } from 'lucide-react';
-import { getTicketsByTour, type MockTicket } from '@/mocks/tickets';
+import { Plus, Edit, Trash2, X, Ticket as TicketIcon, Loader2, Bed } from 'lucide-react';
+import { ticketApi } from '@/api/ticketApi';
+import { roomApi } from '@/api/roomApi';
+import { toast } from 'sonner';
 
 interface TicketsTabProps {
-    serviceId: number;
-    serviceType: 'hotel' | 'place';
+    serviceId: string | number;
+    serviceType: 'hotel' | 'place' | 'RESTAURANT' | 'TICKET_VENUE' | 'ALL' | string;
+}
+
+interface CommonData {
+    id: string;
+    name: string;
+    price: number;
+    description: string;
+    type?: string; // For rooms
+    quantity?: number; // For rooms
 }
 
 const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
-    const [tickets, setTickets] = useState<MockTicket[]>(getTicketsByTour(serviceId));
+    const isHotel = serviceType.toLowerCase().includes('hotel');
+    const [items, setItems] = useState<CommonData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [newTicket, setNewTicket] = useState({
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [formData, setFormData] = useState({
         name: '',
         price: '',
         description: '',
-        content: '',
-        maxQuantity: '',
+        type: 'SINGLE', // For rooms
+        quantity: '1', // For rooms
     });
 
-    const handleAddTicket = () => {
-        if (!newTicket.name || !newTicket.price) return;
-
-        const ticket: MockTicket = {
-            id: Math.max(...tickets.map(t => t.id), 0) + 1,
-            tourId: serviceId,
-            tourName: serviceType === 'hotel' ? 'Hotel Room' : 'Tour Package',
-            name: newTicket.name,
-            price: parseInt(newTicket.price),
-            description: newTicket.description,
-            content: newTicket.content,
-            maxQuantity: parseInt(newTicket.maxQuantity) || 100,
-            available: parseInt(newTicket.maxQuantity) || 100,
-        };
-
-        setTickets([...tickets, ticket]);
-        setNewTicket({ name: '', price: '', description: '', content: '', maxQuantity: '' });
-        setIsAdding(false);
+    const fetchData = async () => {
+        if (!serviceId) return;
+        setIsLoading(true);
+        try {
+            let data;
+            if (isHotel) {
+                const response: any = await roomApi.getRoomsByHotelId(serviceId.toString());
+                const data = response?.result || response?.data || response;
+                const items = Array.isArray(data) ? data : (data?.roomList || data?.content || []);
+                
+                // Map RoomResponseDTO to CommonData
+                setItems(items.map((r: any) => ({
+                    id: r.id,
+                    name: r.name,
+                    price: r.price,
+                    description: r.description,
+                    type: r.type,
+                    quantity: r.quantity
+                })));
+            } else {
+                const response: any = await ticketApi.getTicketsByService(serviceId.toString());
+                const data = response?.result || response?.data || response;
+                const items = Array.isArray(data) ? data : (data?.content || []);
+                
+                // Map TicketResponse to CommonData
+                setItems(items.map((t: any) => ({
+                    id: t.id,
+                    name: t.name,
+                    price: t.price,
+                    description: t.term
+                })));
+            }
+        } catch (error) {
+            console.error('Failed to fetch data:', error);
+            toast.error(`Không thể tải danh sách ${isHotel ? 'phòng' : 'vé'}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleDeleteTicket = (id: number) => {
-        if (confirm('Bạn có chắc muốn xóa loại vé này?')) {
-            setTickets(tickets.filter(t => t.id !== id));
+    useEffect(() => {
+        fetchData();
+    }, [serviceId, isHotel]);
+
+    const handleSave = async () => {
+        if (!formData.name || !formData.price) {
+            toast.warning('Vui lòng nhập đầy đủ thông tin bắt buộc');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            if (isHotel) {
+                const roomData = {
+                    name: formData.name,
+                    price: Number(formData.price),
+                    description: formData.description,
+                    type: formData.type,
+                    quantity: Number(formData.quantity)
+                };
+                if (editingId) {
+                    await roomApi.updateRoom(editingId, roomData);
+                    toast.success('Cập nhật phòng thành công');
+                } else {
+                    await roomApi.createRoom(serviceId, roomData);
+                    toast.success('Thêm phòng mới thành công');
+                }
+            } else {
+                const ticketData = {
+                    name: formData.name,
+                    price: Number(formData.price),
+                    term: formData.description,
+                };
+                if (editingId) {
+                    await ticketApi.updateTicket(editingId, ticketData);
+                    toast.success('Cập nhật vé thành công');
+                } else {
+                    await ticketApi.createTicket(serviceId.toString(), ticketData);
+                    toast.success('Thêm vé mới thành công');
+                }
+            }
+
+            setIsAdding(false);
+            setEditingId(null);
+            setFormData({ name: '', price: '', description: '', type: 'SINGLE', quantity: '1' });
+            fetchData();
+        } catch (error) {
+            console.error('Failed to save:', error);
+            toast.error('Lỗi khi lưu thông tin');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm(`Bạn có chắc muốn xóa ${isHotel ? 'loại phòng' : 'loại vé'} này?`)) return;
+
+        try {
+            if (isHotel) {
+                await roomApi.deleteRoom(id);
+            } else {
+                await ticketApi.deleteTicket(id);
+            }
+            toast.success('Đã xóa thành công');
+            fetchData();
+        } catch (error) {
+            console.error('Failed to delete:', error);
+            toast.error('Không thể xóa');
         }
     };
 
@@ -58,96 +157,103 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-bold text-gray-900">
-                        {serviceType === 'hotel' ? 'Các loại phòng' : 'Các loại vé tham quan'}
+                        {isHotel ? 'Quản lý phòng khách sạn' : 'Các loại vé tham quan'}
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">
-                        Lựa chọn loại vé phù hợp với nhu cầu của bạn
+                        Thiết lập các tùy chọn dịch vụ cho khách hàng
                     </p>
                 </div>
-                <Button onClick={() => setIsAdding(true)} className="bg-orange-500 hover:bg-orange-600 shadow-sm transition-all hover:shadow-md">
+                <Button 
+                    onClick={() => {
+                        setIsAdding(true);
+                        setEditingId(null);
+                        setFormData({ name: '', price: '', description: '', type: 'SINGLE', quantity: '1' });
+                    }} 
+                    className="bg-orange-500 hover:bg-orange-600 shadow-sm transition-all hover:shadow-md"
+                >
                     <Plus className="w-4 h-4 mr-2" />
-                    Thêm {serviceType === 'hotel' ? 'loại phòng' : 'loại vé'}
+                    Thêm {isHotel ? 'loại phòng' : 'loại vé'}
                 </Button>
             </div>
 
-            {/* Add/Edit Modal (Overlay) */}
             {isAdding && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <Card className="w-full max-w-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
                                 <h4 className="text-xl font-bold text-gray-900">
-                                    {editingId ? 'Chỉnh sửa' : 'Thêm mới'} {serviceType === 'hotel' ? 'loại phòng' : 'loại vé'}
+                                    {editingId ? 'Chỉnh sửa' : 'Thêm mới'} {isHotel ? 'phòng' : 'vé'}
                                 </h4>
-                                <Button variant="ghost" size="sm" onClick={() => { setIsAdding(false); setEditingId(null); }} className="hover:bg-gray-100 rounded-full w-8 h-8 p-0">
+                                <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)} className="hover:bg-gray-100 rounded-full w-8 h-8 p-0">
                                     <X className="w-5 h-5 text-gray-500" />
                                 </Button>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="text-gray-700 font-medium">Tên {serviceType === 'hotel' ? 'phòng' : 'vé'} <span className="text-red-500">*</span></Label>
+                                    <Label className="text-gray-700 font-medium">Tên gọi <span className="text-red-500">*</span></Label>
                                     <Input
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
-                                        placeholder={serviceType === 'hotel' ? 'VD: Phòng Deluxe' : 'VD: Vé Người Lớn'}
-                                        value={newTicket.name}
-                                        onChange={(e) => setNewTicket({ ...newTicket, name: e.target.value })}
+                                        className="border-gray-300"
+                                        placeholder={isHotel ? "VD: Phòng Deluxe hướng biển" : "VD: Vé Người Lớn"}
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-gray-700 font-medium">Giá {serviceType === 'hotel' ? '(VND/đêm)' : '(VND/vé)'} <span className="text-red-500">*</span></Label>
-                                    <div className="relative">
-                                        <Input
-                                            type="number"
-                                            className="pl-3 pr-12 border-gray-300 focus:border-orange-500 focus:ring-orange-200"
-                                            placeholder="2500000"
-                                            value={newTicket.price}
-                                            onChange={(e) => setNewTicket({ ...newTicket, price: e.target.value })}
-                                        />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">VND</span>
-                                    </div>
-                                </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-gray-700 font-medium">Mô tả ngắn</Label>
-                                    <Input
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
-                                        placeholder={serviceType === 'hotel' ? 'Phòng cao cấp với view đẹp' : 'Vé vào cổng tham quan toàn khu vực'}
-                                        value={newTicket.description}
-                                        onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                                    />
-                                </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-gray-700 font-medium">Tiện ích bao gồm (ngăn cách bằng dấu phẩy)</Label>
-                                    <Textarea
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200 min-h-[100px]"
-                                        placeholder="VD: Bao gồm vé vào cổng, Buffet trưa, Nước uống..."
-                                        value={newTicket.content}
-                                        onChange={(e) => setNewTicket({ ...newTicket, content: e.target.value })}
-                                    />
-                                    <p className="text-xs text-gray-500">Mỗi tiện ích cách nhau bởi dấu phẩy (,)</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-gray-700 font-medium">Số lượng tối đa</Label>
+                                    <Label className="text-gray-700 font-medium">Giá niêm yết (VND) <span className="text-red-500">*</span></Label>
                                     <Input
                                         type="number"
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-200"
-                                        placeholder="100"
-                                        value={newTicket.maxQuantity}
-                                        onChange={(e) => setNewTicket({ ...newTicket, maxQuantity: e.target.value })}
+                                        className="border-gray-300"
+                                        value={formData.price}
+                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                    />
+                                </div>
+                                
+                                {isHotel && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label className="text-gray-700 font-medium">Loại phòng</Label>
+                                            <select 
+                                                className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                value={formData.type}
+                                                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                            >
+                                                <option value="SINGLE">Phòng Đơn</option>
+                                                <option value="DOUBLE">Phòng Đôi</option>
+                                                <option value="SUITE">Phòng Suite</option>
+                                                <option value="DELUXE">Phòng Deluxe</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-gray-700 font-medium">Số lượng phòng hiện có</Label>
+                                            <Input
+                                                type="number"
+                                                className="border-gray-300"
+                                                value={formData.quantity}
+                                                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label className="text-gray-700 font-medium">Mô tả / Tiện ích</Label>
+                                    <Textarea
+                                        className="border-gray-300 min-h-[100px]"
+                                        placeholder="Thông tin chi tiết..."
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     />
                                 </div>
                             </div>
 
                             <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-                                <Button variant="outline" onClick={() => { setIsAdding(false); setEditingId(null); }} className="hover:bg-gray-50 border-gray-300">
-                                    Hủy bỏ
-                                </Button>
-                                <Button onClick={handleAddTicket} className="bg-orange-600 hover:bg-orange-700 text-white shadow-sm px-6">
-                                    {editingId ? 'Cập nhật' : 'Thêm mới'}
+                                <Button variant="outline" onClick={() => setIsAdding(false)}>Hủy bỏ</Button>
+                                <Button onClick={handleSave} disabled={isSaving} className="bg-orange-600 hover:bg-orange-700 text-white min-w-[120px]">
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (editingId ? 'Cập nhật' : 'Thêm mới')}
                                 </Button>
                             </div>
                         </CardContent>
@@ -155,101 +261,73 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                 </div>
             )}
 
-            {/* Tickets List - User UI Style */}
             <div className="space-y-4">
-                {tickets.map((ticket) => (
-                    <Card key={ticket.id} className="group overflow-hidden border border-gray-200 hover:border-orange-300 hover:shadow-lg transition-all duration-300 rounded-xl bg-white">
-                        <div className="flex flex-col md:flex-row">
-                            {/* Left decoration bar */}
-                            <div className="hidden md:block w-2 bg-orange-100 group-hover:bg-orange-400 transition-colors"></div>
-
-                            <CardContent className="flex-1 p-5 md:p-6">
-                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                    {/* Ticket Content */}
-                                    <div className="flex-1 space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-                                                <Ticket className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
-                                                    {ticket.name}
-                                                </h4>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Badge variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-200 font-normal text-xs">
-                                                        {ticket.available}/{ticket.maxQuantity} vé
-                                                    </Badge>
-                                                    {ticket.available === 0 && (
-                                                        <Badge variant="destructive" className="text-xs">Hết vé</Badge>
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                        <p>Đang tải dữ liệu...</p>
+                    </div>
+                ) : items.length > 0 ? (
+                    items.map((item) => (
+                        <Card key={item.id} className="group overflow-hidden border border-gray-200 hover:border-orange-300 hover:shadow-lg transition-all duration-300 rounded-xl bg-white">
+                            <div className="flex flex-col md:flex-row">
+                                <div className={`hidden md:block w-2 transition-colors ${isHotel ? 'bg-blue-100 group-hover:bg-blue-400' : 'bg-orange-100 group-hover:bg-orange-400'}`}></div>
+                                <CardContent className="flex-1 p-5 md:p-6">
+                                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                        <div className="flex-1 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-lg ${isHotel ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                                    {isHotel ? <Bed className="w-5 h-5" /> : <TicketIcon className="w-5 h-5" />}
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
+                                                        {item.name}
+                                                    </h4>
+                                                    {isHotel && (
+                                                        <div className="flex gap-2 mt-1">
+                                                            <Badge variant="secondary" className="font-normal text-[10px]">{item.type}</Badge>
+                                                            <Badge variant="outline" className="font-normal text-[10px]">Còn {item.quantity} phòng</Badge>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
+                                            <div className="text-sm text-gray-600 pl-1 whitespace-pre-wrap">{item.description}</div>
                                         </div>
 
-                                        <p className="text-sm text-gray-600 pl-1">{ticket.description}</p>
-
-                                        {/* Features List with Check Icons */}
-                                        {ticket.content && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4 mt-3 pt-3 border-t border-dashed border-gray-100">
-                                                {ticket.content.split(',').map((item, idx) => (
-                                                    <div key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                                                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                                        <span className="line-clamp-1">{item.trim()}</span>
-                                                    </div>
-                                                ))}
+                                        <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 md:pl-6 md:border-l border-gray-100 min-w-[140px]">
+                                            <div className="text-right">
+                                                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-0.5">Giá niêm yết</p>
+                                                <p className="text-xl md:text-2xl font-bold text-orange-600">{formatPrice(item.price)}</p>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Price & Actions */}
-                                    <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 md:pl-6 md:border-l border-gray-100 min-w-[140px]">
-                                        <div className="text-right">
-                                            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-0.5">Giá vé</p>
-                                            <p className="text-xl md:text-2xl font-bold text-orange-600">{formatPrice(ticket.price)}</p>
-                                        </div>
-
-                                        <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="outline" size="sm" onClick={() => {
-                                                setNewTicket({
-                                                    name: ticket.name,
-                                                    price: ticket.price.toString(),
-                                                    description: ticket.description,
-                                                    content: ticket.content,
-                                                    maxQuantity: ticket.maxQuantity.toString()
-                                                });
-                                                setEditingId(ticket.id);
-                                                setIsAdding(true);
-                                            }} className="h-8 w-8 p-0 border-gray-200 hover:border-orange-500 hover:text-orange-600 hover:bg-orange-50">
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleDeleteTicket(ticket.id)}
-                                                className="h-8 w-8 p-0 border-gray-200 hover:border-red-500 hover:text-red-600 hover:bg-red-50"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" size="sm" onClick={() => {
+                                                    setFormData({
+                                                        name: item.name,
+                                                        price: item.price.toString(),
+                                                        description: item.description || '',
+                                                        type: item.type || 'SINGLE',
+                                                        quantity: (item.quantity || 1).toString(),
+                                                    });
+                                                    setEditingId(item.id);
+                                                    setIsAdding(true);
+                                                }} className="h-8 w-8 p-0">
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                                <Button variant="outline" size="sm" onClick={() => handleDelete(item.id)} className="h-8 w-8 p-0 hover:border-red-500 hover:text-red-600">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </div>
-                    </Card>
-                ))}
-
-                {tickets.length === 0 && !isAdding && (
-                    <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 hover:border-orange-200 transition-colors">
-                        <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4">
-                            <Ticket className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại vé nào</h3>
-                        <p className="text-gray-500 px-6 max-w-sm mx-auto mb-6">
-                            Tạo các loại vé khác nhau để khách hàng có nhiều lựa chọn (VD: Vé người lớn, Vé trẻ em, Combo...)
-                        </p>
-                        <Button onClick={() => setIsAdding(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Thêm loại vé đầu tiên
+                                </CardContent>
+                            </div>
+                        </Card>
+                    ))
+                ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                        <p className="text-gray-500 mb-6">Chưa có {isHotel ? 'loại phòng' : 'loại vé'} nào được thiết lập.</p>
+                        <Button onClick={() => setIsAdding(true)} className="bg-orange-500 hover:bg-orange-600">
+                            <Plus className="w-4 h-4 mr-2" /> Thêm {isHotel ? 'loại phòng' : 'loại vé'} đầu tiên
                         </Button>
                     </div>
                 )}

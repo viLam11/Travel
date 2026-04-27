@@ -165,7 +165,7 @@ const PopularDestinations: React.FC = () => {
 
           <button
             onClick={onViewAll}
-            className="text-orange-500 hover:text-orange-600 font-medium text-sm underline transition-colors"
+            className="cursor-pointer text-orange-500 hover:text-orange-600 font-medium text-sm underline transition-colors"
           >
             Xem tất cả
           </button>
@@ -175,7 +175,30 @@ const PopularDestinations: React.FC = () => {
         {isLoading && items.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="bg-white h-80 rounded-lg shadow animate-pulse"></div>
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col sm:flex-row h-auto animate-pulse">
+                {/* Image Skeleton */}
+                <div className="w-full sm:w-[40%] h-48 sm:h-40 bg-gray-200"></div>
+                
+                {/* Content Skeleton */}
+                <div className="w-full sm:w-[60%] p-4 flex flex-col justify-between space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-100 rounded w-10"></div>
+                    </div>
+                    <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-100 rounded w-2/3"></div>
+                  </div>
+                  
+                  <div className="flex justify-between items-end pt-2">
+                    <div className="space-y-1">
+                      <div className="h-3 bg-gray-100 rounded w-12"></div>
+                      <div className="h-5 bg-gray-200 rounded w-20"></div>
+                    </div>
+                    <div className="h-10 bg-gray-200 rounded w-24"></div>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         ) : (

@@ -1,22 +1,26 @@
 // src/components/charts/BookingTrendsChart.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp } from 'lucide-react';
-import type { BookingTrend } from '@/data/dashboardData';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { MapPin } from 'lucide-react';
+
+interface CityTraffic {
+  cityName: string;
+  totalVisits: number;
+}
 
 interface BookingTrendsChartProps {
-  data: BookingTrend[];
+  data: CityTraffic[];
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-primary text-white shadow-lg rounded-md px-3 py-2 text-xs z-50 min-w-[120px]">
-        <p className="font-semibold mb-1 opacity-90">{label}</p>
-        <div className="flex gap-2 justify-between items-center">
-          <span>Tổng đặt vé:</span>
-          <span className="font-bold text-sm">{payload[0].value}</span>
+      <div className="bg-gray-900 text-white shadow-xl rounded-xl px-4 py-3 text-xs z-50 border-none">
+        <p className="font-black mb-2 uppercase tracking-widest text-[10px] text-gray-400">{label}</p>
+        <div className="flex gap-4 justify-between items-center">
+          <span className="font-medium">Lượt truy cập:</span>
+          <span className="font-black text-sm text-orange-400">{payload[0].value.toLocaleString()}</span>
         </div>
       </div>
     );
@@ -25,74 +29,64 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function BookingTrendsChart({ data }: BookingTrendsChartProps) {
-  // Calculate average and trend
-  const hasData = data && data.length > 0;
-  const avgBookings = hasData
-    ? Math.round(data.reduce((acc, curr) => acc + curr.bookings, 0) / data.length)
-    : 0;
+  const chartData = data.map(item => ({
+    name: item.cityName,
+    value: item.totalVisits
+  })).sort((a, b) => b.value - a.value);
 
-  let trendPercentage = "0.0";
-  let isPositiveTrend = true;
+  const totalVisits = chartData.reduce((acc, curr) => acc + curr.value, 0);
 
-  if (hasData && data.length >= 2) {
-    const firstHalf = data.slice(0, Math.ceil(data.length / 2));
-    const secondHalf = data.slice(Math.ceil(data.length / 2));
-    const firstAvg = firstHalf.reduce((acc, curr) => acc + curr.bookings, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((acc, curr) => acc + curr.bookings, 0) / secondHalf.length;
-
-    if (firstAvg > 0) {
-      trendPercentage = ((secondAvg - firstAvg) / firstAvg * 100).toFixed(1);
-    } else if (secondAvg > 0) {
-      trendPercentage = "100.0";
-    }
-    isPositiveTrend = parseFloat(trendPercentage) >= 0;
-  }
+  const COLORS = ['#F97316', '#3B82F6', '#10B981', '#6366F1', '#8B5CF6', '#EC4899'];
 
 
   return (
     <Card className="border-0 shadow-sm">
-      <CardHeader>
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg font-semibold">Booking Trends</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Last 7 days performance</p>
+            <CardTitle className="text-lg font-bold">Lưu lượng theo thành phố</CardTitle>
+            <p className="text-xs font-medium text-muted-foreground mt-1">Phân bố người dùng theo khu vực</p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[11px] text-muted-foreground mb-0.5">Tổng đặt vé</p>
-            <p className="text-2xl font-bold">{avgBookings}</p>
-            <div className={`flex items-center justify-end gap-1 text-sm ${isPositiveTrend ? 'text-chart-2' : 'text-destructive'}`}>
-              <TrendingUp className="w-4 h-4" />
-              <span>{isPositiveTrend ? '+' : ''}{trendPercentage}%</span>
+            <p className="text-[10px] font-black uppercase text-muted-foreground mb-0.5 tracking-widest">Tổng lượt truy cập</p>
+            <p className="text-2xl font-black text-gray-900">{totalVisits.toLocaleString()}</p>
+            <div className={`flex items-center justify-end gap-1 text-xs font-bold text-blue-600`}>
+              <MapPin className="w-3 h-3" />
+              <span>{chartData.length} Thành phố</span>
             </div>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
             <XAxis
-              dataKey="date"
-              className="text-muted-foreground text-xs"
-              tick={{ fontSize: 12 }}
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              className="text-gray-400 font-bold text-[10px] uppercase tracking-wider"
+              tick={{ dy: 10 }}
             />
             <YAxis
-              className="text-muted-foreground text-xs"
-              tick={{ fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+              className="text-gray-400 font-bold text-[10px]"
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+              cursor={{ fill: '#F8FAFC' }}
             />
-            <Line
-              type="monotone"
-              dataKey="bookings"
-              stroke="rgb(30, 157, 241)"
-              strokeWidth={3}
-              dot={{ fill: 'rgb(30, 157, 241)', r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
+            <Bar
+              dataKey="value"
+              radius={[6, 6, 0, 0]}
+              barSize={40}
+            >
+               {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

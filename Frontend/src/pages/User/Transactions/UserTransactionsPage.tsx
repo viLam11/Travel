@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Receipt, Clock, CheckCircle, XCircle, 
   Calendar, Search, Loader2, ChevronRight, 
@@ -32,39 +33,28 @@ interface OrderedTicket {
 }
 
 const UserTransactionsPage: React.FC = () => {
-  const [dataList, setDataList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'CANCELLED'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        setLoading(true);
-        const data: any = await apiClient.orders.getAll(); 
-        console.log("Transactions data:", data);
-        
-        let list: any[] = [];
-        if (Array.isArray(data)) {
-          list = data;
-        } else if (data?.content) {
-          list = data.content;
-        } else if (data?.orders) {
-          list = data.orders;
-        }
-        
-        setDataList(list.filter(item => item && (item.order || item.orderID)));
-      } catch (error) {
-        console.error("Lỗi fetch:", error);
-      } finally {
-        setLoading(false);
+  const { data: dataList = [], isLoading: loading } = useQuery({
+    queryKey: ['userTransactions'],
+    queryFn: async () => {
+      const data: any = await apiClient.orders.getAll(); 
+      let list: any[] = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data?.content) {
+        list = data.content;
+      } else if (data?.orders) {
+        list = data.orders;
       }
-    };
-    fetchHistory();
-  }, []);
+      return list.filter(item => item && (item.order || item.orderID));
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+  });
 
   const filteredTransactions = useMemo(() => {
     return dataList.filter(item => {
@@ -125,12 +115,20 @@ const UserTransactionsPage: React.FC = () => {
   const formatVND = (val: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-24">
-      <div className="relative">
-         <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-         <div className="absolute inset-0 bg-orange-500/10 blur-xl rounded-full animate-pulse" />
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="h-20 bg-gray-50 rounded-2xl mb-10 animate-pulse"></div>
+      <div className="space-y-4 animate-pulse">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white border border-gray-100 rounded-2xl p-5 flex gap-4">
+            <div className="w-12 h-12 bg-gray-100 rounded-2xl"></div>
+            <div className="flex-1 space-y-3">
+              <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-gray-100 rounded w-1/4"></div>
+              <div className="h-10 bg-gray-50 rounded-xl w-full"></div>
+            </div>
+          </div>
+        ))}
       </div>
-      <p className="mt-6 text-gray-500 font-bold tracking-wide animate-pulse uppercase text-xs">Đang lấy dữ liệu giao dịch...</p>
     </div>
   );
 

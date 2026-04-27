@@ -5,12 +5,13 @@ import type { TicketType } from '@/types/serviceDetail.types';
 interface TicketsTabProps {
     tickets?: TicketType[];
     onTicketBookNow?: (ticketId: string) => void;
+    isLoading?: boolean;
 }
 
-const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow }) => {
+const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow, isLoading = false }) => {
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
 
-    if (!tickets || tickets.length === 0) {
+    if (!isLoading && (!tickets || tickets.length === 0)) {
         return (
             <div className="bg-orange-50 rounded-xl p-6 text-center">
                 <p className="text-gray-600">Hiện chưa có thông tin về các loại vé cho địa điểm này.</p>
@@ -29,7 +30,31 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow }
                 </p>
 
                 <div className="grid grid-cols-1 gap-4">
-                    {tickets.map((ticket) => (
+                    {isLoading ? (
+                        // Skeleton for tickets
+                        [1, 2].map((i) => (
+                            <div key={i} className="border border-gray-100 rounded-xl p-5 animate-pulse">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+                                    <div className="flex-1 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-gray-100 rounded-lg w-9 h-9"></div>
+                                            <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+                                        </div>
+                                        <div className="h-4 bg-gray-100 rounded w-3/4"></div>
+                                        <div className="flex gap-2">
+                                            <div className="h-7 bg-gray-100 rounded w-20"></div>
+                                            <div className="h-7 bg-gray-100 rounded w-24"></div>
+                                        </div>
+                                    </div>
+                                    <div className="w-full sm:w-32 space-y-2">
+                                        <div className="h-3 bg-gray-100 rounded w-1/2 ml-auto"></div>
+                                        <div className="h-8 bg-gray-200 rounded w-full"></div>
+                                        <div className="h-10 bg-gray-100 rounded w-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : tickets.map((ticket) => (
                         <div
                             key={ticket.id}
                             className={`border rounded-xl p-4 sm:p-5 transition-all cursor-pointer ${selectedTicket === ticket.id

@@ -25,6 +25,7 @@ interface Review {
   userLiked?: boolean;
   userDisliked?: boolean;
   verified?: boolean;
+  userId?: number | string;
 }
 
 interface ReviewsSectionProps {
@@ -54,6 +55,9 @@ interface ReviewsSectionProps {
   onUndoLike?: (reviewId: number | string) => Promise<void>;
   onUndoDislike?: (reviewId: number | string) => Promise<void>;
   onReport?: (reviewId: number | string, reason: string) => Promise<void>;
+  currentUserInfo?: any;
+  onEditReview?: (reviewId: number | string, content: string, rating: number) => Promise<void>;
+  onDeleteReview?: (reviewId: number | string) => Promise<void>;
 }
 
 type SortOption = 'newest' | 'helpful' | 'rating-high' | 'rating-low';
@@ -84,6 +88,9 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   onUndoLike,
   onUndoDislike,
   onReport,
+  currentUserInfo,
+  onEditReview,
+  onDeleteReview,
 }) => {
   const navigate = useNavigate();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -101,6 +108,11 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const [reportingReviewId, setReportingReviewId] = useState<number | null>(null);
   const [reportReason, setReportReason] = useState<string>('');
   const [otherReason, setOtherReason] = useState<string>('');
+
+  // Edit Review State
+  const [editingReviewId, setEditingReviewId] = useState<number | string | null>(null);
+  const [editContent, setEditContent] = useState<string>('');
+  const [editRating, setEditRating] = useState<number>(0);
 
   const REPORT_REASONS = [
     "Nội dung rác (Spam) / Quảng cáo",
@@ -272,6 +284,40 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     return total > shown ? `+${total - shown}` : '';
   };
 
+  const handleEditClick = (review: Review) => {
+    setEditingReviewId(review.id);
+    setEditContent(review.content);
+    setEditRating(review.rating);
+  };
+
+  const submitEdit = async () => {
+    if (editingReviewId === null) return;
+    if (!editContent.trim()) {
+      alert("Nội dung không được để trống");
+      return;
+    }
+    if (editRating === 0) {
+      alert("Vui lòng chọn số sao");
+      return;
+    }
+    try {
+      await onEditReview?.(editingReviewId, editContent, editRating);
+      setEditingReviewId(null);
+    } catch (err) {
+      console.error('Edit API error:', err);
+    }
+  };
+
+  const handleDeleteClick = async (reviewId: number | string) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) {
+      try {
+        await onDeleteReview?.(reviewId);
+      } catch (err) {
+        console.error('Delete API error:', err);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Reviews Header */}
@@ -279,218 +325,220 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
         <h3 className="text-xl font-bold text-gray-900">Viết đánh giá</h3>
       </div>
 
-      {/* Write Review Form */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-900 mb-2">Dịch vụ</label>
-              <input
-                type="text"
-                value={serviceName}
-                disabled
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600"
-              />
+      {/* Write Review Form - Only show if logged in */}
+      {isLoggedIn && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Dịch vụ</label>
+                <input
+                  type="text"
+                  value={serviceName}
+                  disabled
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Chi phí</label>
+                <input
+                  type="text"
+                  value={reviewCost}
+                  onChange={(e) => setReviewCost(e.target.value)}
+                  placeholder="Nhập chi phí..."
+                  disabled={!isLoggedIn}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
+                />
+              </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Chi phí</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Đánh giá sao <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    disabled={!isLoggedIn}
+                    className={`transition-all ${!isLoggedIn ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110'}`}
+                  >
+                    <Star
+                      className={`w-8 h-8 ${
+                        star <= reviewRating
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              {reviewRating > 0 && (
+                <p className="text-sm text-gray-600 mt-1">
+                  {reviewRating === 1 && 'Rất tệ'}
+                  {reviewRating === 2 && 'Tệ'}
+                  {reviewRating === 3 && 'Bình thường'}
+                  {reviewRating === 4 && 'Tốt'}
+                  {reviewRating === 5 && 'Tuyệt vời'}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Tiêu đề đánh giá <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
-                value={reviewCost}
-                onChange={(e) => setReviewCost(e.target.value)}
-                placeholder="Nhập chi phí..."
+                value={reviewTitle}
+                onChange={(e) => setReviewTitle(e.target.value)}
+                placeholder="Vd: Dịch vụ tuyệt vời!"
                 disabled={!isLoggedIn}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Đánh giá sao <span className="text-red-500">*</span>
-            </label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setReviewRating(star)}
-                  disabled={!isLoggedIn}
-                  className={`transition-all ${!isLoggedIn ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110'}`}
-                >
-                  <Star
-                    className={`w-8 h-8 ${
-                      star <= reviewRating
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                </button>
-              ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Nội dung đánh giá <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={6}
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder={isLoggedIn ? "Chia sẻ trải nghiệm của bạn..." : "Vui lòng đăng nhập để viết đánh giá"}
+                disabled={!isLoggedIn}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
+              />
             </div>
-            {reviewRating > 0 && (
-              <p className="text-sm text-gray-600 mt-1">
-                {reviewRating === 1 && 'Rất tệ'}
-                {reviewRating === 2 && 'Tệ'}
-                {reviewRating === 3 && 'Bình thường'}
-                {reviewRating === 4 && 'Tốt'}
-                {reviewRating === 5 && 'Tuyệt vời'}
-              </p>
+
+            {/* Image Preview */}
+            {reviewImages.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-900">Hình ảnh ({reviewImages.length}/12)</p>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                  {reviewImages.map((img, idx) => (
+                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group">
+                      <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => handleRemoveImage(idx)}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Tiêu đề đánh giá <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={reviewTitle}
-              onChange={(e) => setReviewTitle(e.target.value)}
-              placeholder="Vd: Dịch vụ tuyệt vời!"
-              disabled={!isLoggedIn}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
-          </div>
+            {/* Image Upload Section - Desktop only */}
+            {showImageUploader && !isMobile && (
+              <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div
+                  ref={dragAreaRef}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    dragActive
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-300 bg-white'
+                  }`}
+                >
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">Kéo ảnh vào đây</p>
+                  <p className="text-xs text-gray-600">hoặc</p>
+                </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Nội dung đánh giá <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              rows={6}
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              placeholder={isLoggedIn ? "Chia sẻ trải nghiệm của bạn..." : "Vui lòng đăng nhập để viết đánh giá"}
-              disabled={!isLoggedIn}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
-            />
-          </div>
+                <label className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg cursor-pointer transition-colors mt-3 bg-orange-500 hover:bg-orange-600 text-white">
+                  <ImageIcon className="w-4 h-4" />
+                  <span className="text-sm font-medium">Chọn từ thiết bị</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    disabled={!isLoggedIn}
+                    className="hidden"
+                  />
+                </label>
 
-          {/* Image Preview */}
-          {reviewImages.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-900">Hình ảnh ({reviewImages.length}/12)</p>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                {reviewImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group">
-                    <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => handleRemoveImage(idx)}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                <button
+                  onClick={() => setShowImageUploader(false)}
+                  className="w-full text-gray-600 hover:text-gray-900 text-sm font-medium mt-3 cursor-pointer"
+                >
+                  Đóng
+                </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Image Upload Section - Desktop only */}
-          {showImageUploader && !isMobile && (
-            <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-              <div
-                ref={dragAreaRef}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  dragActive
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-300 bg-white'
-                }`}
-              >
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900 mb-1">Kéo ảnh vào đây</p>
-                <p className="text-xs text-gray-600">hoặc</p>
-              </div>
-
-              <label className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg cursor-pointer transition-colors mt-3 bg-orange-500 hover:bg-orange-600 text-white">
-                <ImageIcon className="w-4 h-4" />
-                <span className="text-sm font-medium">Chọn từ thiết bị</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  disabled={!isLoggedIn}
-                  className="hidden"
-                />
-              </label>
-
-              <button
-                onClick={() => setShowImageUploader(false)}
-                className="w-full text-gray-600 hover:text-gray-900 text-sm font-medium mt-3 cursor-pointer"
-              >
-                Đóng
-              </button>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            {isMobile ? (
-              <label className={`flex-1 border-2 border-orange-500 py-2.5 rounded-lg font-semibold text-sm text-center transition-colors ${
-                isLoggedIn && reviewImages.length < 12
-                  ? 'text-orange-500 hover:bg-orange-50 cursor-pointer'
-                  : 'text-gray-400 border-gray-300 cursor-not-allowed'
-              }`}>
-                Thêm ảnh ({reviewImages.length}/12)
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  disabled={!isLoggedIn || reviewImages.length >= 12}
-                  className="hidden"
-                />
-              </label>
-            ) : (
-              <button
-                onClick={() => setShowImageUploader(!showImageUploader)}
-                disabled={!isLoggedIn || reviewImages.length >= 12}
-                className={`flex-1 border-2 border-orange-500 py-2.5 rounded-lg font-semibold text-sm text-center transition-colors ${
+            <div className="flex gap-3 pt-2">
+              {isMobile ? (
+                <label className={`flex-1 border-2 border-orange-500 py-2.5 rounded-lg font-semibold text-sm text-center transition-colors ${
                   isLoggedIn && reviewImages.length < 12
                     ? 'text-orange-500 hover:bg-orange-50 cursor-pointer'
                     : 'text-gray-400 border-gray-300 cursor-not-allowed'
-                }`}
-              >
-                Thêm ảnh ({reviewImages.length}/12)
-              </button>
-            )}
-            <button 
-              onClick={handleSubmitReview}
-              disabled={!isLoggedIn || reviewRating === 0 || !reviewTitle.trim() || !reviewText.trim() || isSubmitting}
-              className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>ĐANG GỬI...</span>
-                </>
+                }`}>
+                  Thêm ảnh ({reviewImages.length}/12)
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    disabled={!isLoggedIn || reviewImages.length >= 12}
+                    className="hidden"
+                  />
+                </label>
               ) : (
-                'Thêm bình luận'
+                <button
+                  onClick={() => setShowImageUploader(!showImageUploader)}
+                  disabled={!isLoggedIn || reviewImages.length >= 12}
+                  className={`flex-1 border-2 border-orange-500 py-2.5 rounded-lg font-semibold text-sm text-center transition-colors ${
+                    isLoggedIn && reviewImages.length < 12
+                      ? 'text-orange-500 hover:bg-orange-50 cursor-pointer'
+                      : 'text-gray-400 border-gray-300 cursor-not-allowed'
+                  }`}
+                >
+                  Thêm ảnh ({reviewImages.length}/12)
+                </button>
               )}
-            </button>
-          </div>
-
-          {!isLoggedIn && (
-            <p className="text-sm text-orange-600 text-center">
-              Vui lòng{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="underline font-medium hover:text-orange-700 cursor-pointer"
+              <button 
+                onClick={handleSubmitReview}
+                disabled={!isLoggedIn || reviewRating === 0 || !reviewTitle.trim() || !reviewText.trim() || isSubmitting}
+                className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
               >
-                đăng nhập
-              </button>{' '}
-              để viết đánh giá
-            </p>
-          )}
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>ĐANG GỬI...</span>
+                  </>
+                ) : (
+                  'Thêm bình luận'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Login Prompt - Only show if NOT logged in */}
+      {!isLoggedIn && (
+        <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 text-center">
+          <p className="text-orange-800 font-medium mb-3">Bạn cần đăng nhập để viết đánh giá</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="inline-flex items-center justify-center px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition-all transform active:scale-95 shadow-md shadow-orange-100 cursor-pointer"
+          >
+            Đăng nhập ngay
+          </button>
+        </div>
+      )}
 
       {/* Rating Distribution */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
@@ -532,9 +580,27 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
       {/* Reviews List */}
       <div className="space-y-6 mt-8">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 bg-white border border-gray-200 rounded-xl">
-            <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-500 font-medium">Đang tải đánh giá...</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 animate-pulse">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-32"></div>
+                    <div className="h-3 bg-gray-100 rounded w-24"></div>
+                  </div>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <div key={s} className="w-4 h-4 bg-gray-100 rounded"></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-100 rounded w-full"></div>
+                  <div className="h-3 bg-gray-100 rounded w-5/6"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : sortedReviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 bg-white border border-gray-100 rounded-xl text-center px-4">
@@ -609,6 +675,51 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit Form */}
+                {editingReviewId === review.id && (
+                  <div className="mb-4 p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                    <h5 className="font-semibold text-gray-900 mb-2">Chỉnh sửa đánh giá</h5>
+                    <div className="flex gap-2 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setEditRating(star)}
+                          className="cursor-pointer hover:scale-110"
+                        >
+                          <Star
+                            className={`w-6 h-6 ${
+                              star <= editRating
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3 resize-none focus:ring-orange-500 focus:border-orange-500"
+                      rows={3}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => setEditingReviewId(null)}
+                        className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        onClick={submitEdit}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 cursor-pointer"
+                      >
+                        Lưu thay đổi
+                      </button>
                     </div>
                   </div>
                 )}
@@ -696,6 +807,22 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                     <Flag className="w-4 h-4" />
                     <span>{reportedReviews.has(review.id) ? 'Đã báo cáo' : 'Báo cáo'}</span>
                   </button>
+                  {currentUserInfo && currentUserInfo.id && review.userId && String(currentUserInfo.id) === String(review.userId) && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditClick(review)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(review.id)}
+                        className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors cursor-pointer"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

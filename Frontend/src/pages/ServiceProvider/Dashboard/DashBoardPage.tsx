@@ -37,7 +37,7 @@ import { useToast } from '@/contexts/ToastContext';
 
 // Import Chart Components
 import RevenueByServiceChart from '@/components/ui/admin/charts/RevenueByServiceChart';
-import BookingTrendsChart from '@/components/ui/admin/charts/BookingTrendsChart';
+import ProviderDailyTrendsChart from '@/components/ui/admin/charts/ProviderDailyTrendsChart';
 
 // Import Data
 import {
@@ -47,6 +47,7 @@ import {
   type Booking,
 } from '@/data/dashboardData';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/services/apiClient';
 import { serviceDetailApi } from '@/api/serviceDetailApi';
 import { discountApi } from '@/api/discountApi';
@@ -449,10 +450,11 @@ export default function TravelServicesDashboard() {
   const USE_MOCK = shouldUseMock(null);
 
   const [isExporting, setIsExporting] = useState(false);
+  const queryClient = useQueryClient();
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [statusBooking, setStatusBooking] = useState<Booking | null>(null);
-  const [localBookings, setLocalBookings] = useState<Booking[]>(USE_MOCK ? bookingsData : []);
+
 
   // --- Walk-in Booking State ---
   const [walkInName, setWalkInName] = useState('');
@@ -463,8 +465,7 @@ export default function TravelServicesDashboard() {
   const [walkInCheckOut, setWalkInCheckOut] = useState('');
   const [walkInPaymentMethod, setWalkInPaymentMethod] = useState<'CASH' | 'MOMO' | 'VNPAY' | 'ZALOPAY'>('CASH');
   const [walkInNote, setWalkInNote] = useState('');
-  const [availableItems, setAvailableItems] = useState<any[]>([]);
-  const [availableDiscounts, setAvailableDiscounts] = useState<any[]>([]);
+
   const [walkInDiscountId, setWalkInDiscountId] = useState('');
   const [isSubmittingWalkIn, setIsSubmittingWalkIn] = useState(false);
 
@@ -491,149 +492,116 @@ export default function TravelServicesDashboard() {
     providerType = 'hotel';
   }
 
-  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
-  const [serviceInfo, setServiceInfo] = useState<any>(null);
-
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [totalBookings, setTotalBookings] = useState(0);
-  const [revenueData, setRevenueData] = useState<any[]>([]);
-  const [trendsData, setTrendsData] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!showBookingModal) return;
-    const fetchItems = async () => {
+  const { data: { availableItems, availableDiscounts } = { availableItems: [], availableDiscounts: [] } } = useQuery({
+    queryKey: ['walkInItems', providerType, currentUser?.user?.serviceId],
+    queryFn: async () => {
       const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return;
-      try {
-        if (providerType === 'hotel') {
-          const rooms: any = await apiClient.rooms.getByHotelId(serviceId);
-          setAvailableItems(Array.isArray(rooms) ? rooms : rooms?.content || []);
-        } else {
-          const tickets: any = await apiClient.tickets.getByServiceId(serviceId);
-          setAvailableItems(Array.isArray(tickets) ? tickets : tickets?.content || []);
-        }
-
-        // Fetch discounts
-        const discounts = await discountApi.getSatisfiedDiscounts(serviceId.toString(), "ALL");
-        setAvailableDiscounts(Array.isArray(discounts) ? discounts : []);
-      } catch (err) {
-        console.error("Failed to fetch available items/discounts for walk-in booking", err);
+      if (!serviceId) return { availableItems: [], availableDiscounts: [] };
+      let items = [];
+      if (providerType === 'hotel') {
+        const rooms: any = await apiClient.rooms.getByHotelId(serviceId);
+        items = Array.isArray(rooms) ? rooms : (rooms?.roomList || rooms?.content || []);
+      } else {
+        const tickets: any = await apiClient.tickets.getByServiceId(serviceId);
+        items = Array.isArray(tickets) ? tickets : tickets?.content || [];
       }
-    };
-    fetchItems();
-  }, [showBookingModal, providerType, currentUser]);
+      const discounts = await discountApi.getSatisfiedDiscounts(serviceId.toString(), "ALL");
+      return {
+        availableItems: items,
+        availableDiscounts: Array.isArray(discounts) ? discounts : []
+      };
+    },
+    enabled: !!currentUser?.user?.serviceId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    const fetchServiceInfo = async () => {
+  const { data: serviceInfo } = useQuery({
+    queryKey: ['serviceInfo', currentUser?.user?.serviceId],
+    queryFn: async () => {
       const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return;
-      try {
-        const data = await serviceDetailApi.getServiceDetail('', '', serviceId.toString());
-        setServiceInfo(data);
-      } catch (err) {
-        console.error("Failed to fetch service info for dashboard:", err);
-      }
-    };
-    fetchServiceInfo();
-  }, [currentUser]);
+      if (!serviceId) return null;
+      return await serviceDetailApi.getServiceDetail('', '', serviceId.toString());
+    },
+    enabled: !!currentUser?.user?.serviceId,
+    staleTime: 60 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    const fetchDashboardStats = async () => {
+  const { data: statsData, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['dashboardStats', providerType, currentUser?.user?.serviceId, USE_MOCK],
+    queryFn: async () => {
       const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return;
-
-      if (USE_MOCK) {
-        setTotalRevenue(156000000);
-        setTotalBookings(45);
-        setTrendsData(bookingTrendsData);
-        setRevenueData(revenueByServiceData);
-        return;
-      }
-
-      try {
-        let stats: any;
-        if (providerType === 'hotel') {
-          stats = await apiClient.statistics.getHotelStats(serviceId);
-        } else {
-          stats = await apiClient.statistics.getVenueStats(serviceId);
-        }
-
-        const dataArr = Array.isArray(stats) ? stats : (stats?.items || []);
-        let sumRev = 0;
-        let sumBkg = 0;
-
-        const mappedTrends = dataArr.map((day: any) => {
-           const rev = day.revenue || 0;
-           const ord = day.totalOrders || 0;
-           sumRev += rev;
-           sumBkg += ord;
-           return { date: day.date || 'unknown', bookings: ord };
-        });
-
-        setTotalRevenue(sumRev);
-        setTotalBookings(sumBkg);
-        setTrendsData(mappedTrends);
-
-        setRevenueData([
-          { service: serviceInfo?.name || 'Dịch vụ của tôi', revenue: sumRev, bookings: sumBkg }
-        ]);
-
-      } catch (error) {
-         console.error("Lỗi khi tải thống kê Dashboard:", error);
-      }
-    };
-    fetchDashboardStats();
-  }, [currentUser, providerType, serviceInfo, USE_MOCK]);
-
-  useEffect(() => {
-    const fetchApiBookings = async () => {
-      const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return;
+      if (!serviceId || USE_MOCK) return { totalRevenue: 156000000, totalBookings: 45, trendsData: bookingTrendsData, revenueData: revenueByServiceData };
       
-      if (USE_MOCK) {
-        setLocalBookings(bookingsData);
-        return;
-      }
+      const endDate = new Date().toISOString().split('.')[0];
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('.')[0];
+      
+      let stats: any = providerType === 'hotel' 
+        ? await apiClient.statistics.getHotelStats(serviceId, startDate, endDate)
+        : await apiClient.statistics.getVenueStats(serviceId, startDate, endDate);
+        
+      const dataArr = Array.isArray(stats) ? stats : (stats?.items || []);
+      let sumRev = 0, sumBkg = 0;
+      
+      const mappedTrends = dataArr.map((day: any) => {
+         const rev = day.revenue || 0;
+         const ord = day.totalOrders || 0;
+         sumRev += rev;
+         sumBkg += ord;
+         let label = day.date || 'unknown';
+         if (day.date && day.date.includes('-')) {
+           const parts = day.date.split('-');
+           if (parts.length >= 3) label = `${parts[2]}/${parts[1]}`;
+         }
+         return { date: label, bookings: ord };
+      });
+      return {
+        totalRevenue: sumRev,
+        totalBookings: sumBkg,
+        trendsData: mappedTrends,
+        revenueData: [{ service: serviceInfo?.name || 'Dịch vụ của tôi', revenue: sumRev, bookings: sumBkg }]
+      };
+    },
+    enabled: !!currentUser?.user?.serviceId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      setIsLoadingBookings(true);
-      try {
-        let response: any;
-        if (providerType === 'hotel') {
-          response = await apiClient.orders.getHotelOrders(serviceId);
-        } else {
-          response = await apiClient.orders.getTicketVenueOrders(serviceId);
-        }
-        
-        const fetchedOrders = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
-        
-        // Mapped always, even if length is 0, to clear the state/mock data
-        const mappedBookings = fetchedOrders.map((o: any) => ({
-          id: o.orderID || o.id,
-          guest: o.user?.fullname || o.guestPhone || `Khách #${o.orderID || o.id}`,
-          guests: (o.orderedRooms?.length || 0) + (o.orderedTickets?.length || 0),
-          checkIn: o.orderedRooms?.[0]?.startDate || o.createdAt,
-          checkOut: o.orderedRooms?.[0]?.endDate || o.createdAt,
-          service: o.orderedRooms?.[0]?.room?.hotel?.serviceName || o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName || "Dịch vụ của bạn",
-          serviceType: providerType,
-          amount: o.finalPrice || o.totalPrice || 0,
-          status: o.status === 'SUCCESS' ? 'completed' : 
-                  (o.status === 'ACCEPTED' || o.status === 'CONFIRMED') ? 'confirmed' : 
-                  (o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'FAILED') ? 'cancelled' : 'pending'
-        }));
-        setLocalBookings(mappedBookings);
-      } catch (error) {
-        console.error("Lỗi khi tải đơn hàng của nhà cung cấp:", error);
-        setLocalBookings([]); // Clear on error if not in mock mode
-      } finally {
-        setIsLoadingBookings(false);
-      }
-    };
-    
-    fetchApiBookings();
-  }, [currentUser, providerType, USE_MOCK]);
+  const totalRevenue = statsData?.totalRevenue || 0;
+  const totalBookings = statsData?.totalBookings || 0;
+  const trendsData = statsData?.trendsData || [];
+  const revenueData = statsData?.revenueData || [];
+
+  const { data: localBookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
+    queryFn: async () => {
+      const serviceId = currentUser?.user?.serviceId;
+      if (!serviceId) return [];
+      if (USE_MOCK) return bookingsData;
+
+      let response: any = providerType === 'hotel' 
+        ? await apiClient.orders.getHotelOrders(serviceId)
+        : await apiClient.orders.getTicketVenueOrders(serviceId);
+      
+      const fetchedOrders = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
+      return fetchedOrders.map((o: any) => ({
+        id: o.orderID || o.id,
+        guest: o.user?.fullname || o.guestPhone || `Khách #${o.orderID || o.id}`,
+        guests: (o.orderedRooms?.length || 0) + (o.orderedTickets?.length || 0),
+        checkIn: o.orderedRooms?.[0]?.startDate || o.createdAt,
+        checkOut: o.orderedRooms?.[0]?.endDate || o.createdAt,
+        service: o.orderedRooms?.[0]?.room?.hotel?.serviceName || o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName || "Dịch vụ của bạn",
+        serviceType: providerType,
+        amount: o.finalPrice || o.totalPrice || 0,
+        status: o.status === 'SUCCESS' ? 'completed' : 
+                (o.status === 'ACCEPTED' || o.status === 'CONFIRMED') ? 'confirmed' : 
+                (o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'FAILED') ? 'cancelled' : 'pending'
+      }));
+    },
+    enabled: !!currentUser?.user?.serviceId,
+    staleTime: 0, // No stale time to always fetch fresh bookings while keeping cache for instant UI
+  });
 
   // Filter bookings by providerType
-  const filteredBookings = localBookings.filter(b => {
+  const filteredBookings = localBookings.filter((b: Booking) => {
     if (providerType === 'hotel') return b.serviceType === 'hotel';
     if (providerType === 'place') return b.serviceType === 'ticket';
     return true; // admin / other → all
@@ -644,13 +612,13 @@ export default function TravelServicesDashboard() {
     if (providerType === 'hotel') {
       return [
         {
-          title: "Tỷ lệ lấp đầy",
-          value: "78%",
+          title: "Số phòng hoạt động",
+          value: availableItems.length > 0 ? availableItems.length.toString() : "—",
           icon: Briefcase,
           color: "text-blue-600 dark:text-blue-400",
           iconBg: "bg-blue-50 dark:bg-blue-950/40",
-          change: "+5%",
-          trend: "up",
+          change: null,
+          trend: "neutral",
         },
         {
           title: "Check-in hôm nay",
@@ -683,13 +651,13 @@ export default function TravelServicesDashboard() {
     } else if (providerType === 'place') {
       return [
         {
-          title: "Dịch vụ hoạt động",
-          value: "12",
+          title: "Số loại vé",
+          value: availableItems.length > 0 ? availableItems.length.toString() : "—",
           icon: Briefcase,
           color: "text-blue-600 dark:text-blue-400",
           iconBg: "bg-blue-50 dark:bg-blue-950/40",
-          change: "+2",
-          trend: "up",
+          change: null,
+          trend: "neutral",
         },
         {
           title: "Vé bán hôm nay",
@@ -908,7 +876,20 @@ export default function TravelServicesDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
+        {isLoadingStats ? (
+          [1, 2, 3, 4].map((i) => (
+            <Card key={i} className="bg-card border border-border/40 rounded-xl animate-pulse">
+              <CardContent className="p-5 flex justify-between items-start gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="h-3 bg-muted rounded w-20"></div>
+                  <div className="h-8 bg-muted rounded w-24"></div>
+                  <div className="h-6 bg-muted rounded w-32"></div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-muted shrink-0"></div>
+              </CardContent>
+            </Card>
+          ))
+        ) : stats.map((stat, index) => {
           const Icon = stat.icon;
           const isUp = stat.trend === 'up';
           const isDown = stat.trend === 'down';
@@ -960,31 +941,13 @@ export default function TravelServicesDashboard() {
       {/* Charts Section - Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RevenueByServiceChart data={revenueData.length > 0 ? revenueData : revenueByServiceData} />
+          <RevenueByServiceChart data={revenueData} />
         </div>
 
         <div>
-          <BookingTrendsChart data={trendsData.length > 0 ? trendsData : bookingTrendsData} />
+          <ProviderDailyTrendsChart data={trendsData} providerType={providerType} />
         </div>
       </div>
-
-      {/* Charts Section - Row 2
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-        <div className="xl:col-span-2">
-          <TopProvidersChart data={topProvidersData} />
-        </div>
-        <div className="xl:col-span-1">
-          <BookingStatusChart data={bookingStatusData} />
-        </div>
-        <div className="xl:col-span-1">
-          <PopularDestinationsChart data={popularDestinationsData} />
-        </div>
-      </div> */}
-
-      {/* Charts Section - Row 3
-      <div className="grid grid-cols-1">
-        <MonthlyRevenueChart data={monthlyRevenueData} />
-      </div> */}
 
       {/* Recent Bookings Card */}
       <Card className="shadow-sm overflow-hidden">
@@ -1004,9 +967,15 @@ export default function TravelServicesDashboard() {
         </CardHeader>
         <CardContent>
           {isLoadingBookings ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-              <p className="text-muted-foreground text-sm font-medium">Đang tải danh sách đơn hàng...</p>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-4 py-4 animate-pulse border-b border-border last:border-0">
+                  <div className="h-4 bg-muted rounded w-16"></div>
+                  <div className="flex-1 h-4 bg-muted rounded"></div>
+                  <div className="h-4 bg-muted rounded w-24"></div>
+                  <div className="h-6 bg-muted rounded w-20"></div>
+                </div>
+              ))}
             </div>
           ) : (
             <BookingsTable
@@ -1031,7 +1000,10 @@ export default function TravelServicesDashboard() {
           onConfirm={async () => {
             try {
               await apiClient.orders.updateStatus(statusBooking.id, '"ACCEPTED"');
-              setLocalBookings(prev => prev.map(b => b.id === statusBooking.id ? { ...b, status: 'confirmed' } : b));
+              queryClient.setQueryData(
+                ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
+                (old: Booking[] | undefined) => old ? old.map((b: Booking) => b.id === statusBooking.id ? { ...b, status: 'confirmed' } : b) : []
+              );
               toastObj.success("Đã xác nhận đơn hàng " + statusBooking.id);
             } catch (err) {
               console.error(err);
@@ -1043,7 +1015,10 @@ export default function TravelServicesDashboard() {
           onReject={async () => {
              try {
               await apiClient.orders.updateStatus(statusBooking.id, '"CANCELLED"');
-              setLocalBookings(prev => prev.map(b => b.id === statusBooking.id ? { ...b, status: 'cancelled' } : b));
+              queryClient.setQueryData(
+                ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
+                (old: Booking[] | undefined) => old ? old.map((b: Booking) => b.id === statusBooking.id ? { ...b, status: 'cancelled' } : b) : []
+              );
               toastObj.success("Đã từ chối đơn hàng " + statusBooking.id);
             } catch (err) {
               console.error(err);
@@ -1092,7 +1067,7 @@ export default function TravelServicesDashboard() {
                       className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     >
                       <option value="">-- Chọn dịch vụ --</option>
-                      {availableItems.map(item => (
+                      {(availableItems as any[]).map((item: any) => (
                         <option key={item.id || item.roomID} value={item.id || item.roomID}>
                           {item.name || item.roomName || item.ticketType || `Dịch vụ #${item.id || item.roomID}`} - {formatCurrency(item.price || item.pricePerNight || 0)}
                         </option>

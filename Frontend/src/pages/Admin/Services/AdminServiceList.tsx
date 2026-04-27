@@ -1,15 +1,9 @@
 // src/pages/Admin/Services/AdminServiceList.tsx
 import { useState, useMemo, useEffect } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/admin/table';
+import { Badge } from '@/components/ui/admin/badge';
 import {
     Select,
     SelectContent,
@@ -32,9 +26,55 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/components/ui/admin/dialog';
-import { Search, MoreVertical, Eye, Edit, Check, X, Trash2, Hotel, MapPin, Layers, Activity, Clock, FileText } from 'lucide-react';
-import { ApiClient } from '@/services/apiClient';
+import { 
+    Search, 
+    Eye, 
+    Edit, 
+    Check, 
+    X, 
+    Trash2, 
+    Hotel, 
+    MapPin, 
+    Layers, 
+    Activity, 
+    Clock, 
+    FileText, 
+    Star, 
+    MoreHorizontal,
+    Map,
+    Loader2,
+    XCircle,
+    CheckCircle,
+    Ban,
+    Building2
+} from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
+import apiClient from '@/services/apiClient';
+
+// --- Stats Card Component ---
+function StatsCard({ title, value, icon: Icon, color, bg, trend }: any) {
+    return (
+        <Card className="bg-card border border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+            <CardContent className="p-5 flex justify-between items-start gap-4">
+                <div className="flex-1 space-y-1">
+                    <p className="text-sm text-muted-foreground font-medium uppercase tracking-tight">{title}</p>
+                    <h3 className="text-2xl font-bold text-foreground">{value}</h3>
+                    {trend && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-green-600">
+                                {trend}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-tighter">vs tháng trước</span>
+                        </div>
+                    )}
+                </div>
+                <div className={`p-3 rounded-xl ${bg} ${color} shrink-0`}>
+                    <Icon className="w-6 h-6" />
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 const AdminServiceList = () => {
     const { success, info } = useToast();
@@ -42,31 +82,38 @@ const AdminServiceList = () => {
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [selectedService, setSelectedService] = useState<any | null>(null);
-    const [dialogType, setDialogType] = useState<'view' | 'edit' | null>(null);
-    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [dialogType, setDialogType] = useState<'view' | 'edit' | 'delete' | null>(null);
+    const [isActionLoading, setIsActionLoading] = useState(false);
     const [services, setServices] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
         const fetchServices = async () => {
+            setIsLoading(true);
             try {
-                const apiClient = new ApiClient();
                 const res = await apiClient.services.getAll();
-                const data = (Array.isArray(res) ? res : (res as any)?.items) || [];
+                const data = Array.isArray(res) ? res : [];
                 const mapped = data.map((s: any) => ({
-                    id: s.serviceID || s.id,
-                    name: s.serviceName || s.name || 'Unnamed',
-                    location: s.address || 'Chưa rõ',
-                    provider: { name: 'Provider ' + (s.userID || 'Unknown') },
+                    id: s.id,
+                    name: s.serviceName || 'Unnamed',
+                    location: s.address || s.province?.name || 'Chưa rõ',
+                    provider: { 
+                        name: s.provider?.fullname || s.provider?.username || 'Chưa rõ',
+                        email: s.provider?.email 
+                    },
                     type: s.serviceType?.toLowerCase() || 'hotel',
                     status: s.status?.toLowerCase() || 'pending',
                     price: s.averagePrice || 0,
                     totalBookings: 0,
-                    rating: 0
+                    rating: s.rating || 0,
+                    image: s.thumbnailUrl
                 }));
                 setServices(mapped);
             } catch (error) {
                 console.error(error);
                 setServices([]);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchServices();
@@ -97,383 +144,346 @@ const AdminServiceList = () => {
     // Stats
     const stats = useMemo(() => ({
         total: services.length,
-        active: services.filter(s => s.status === 'active').length,
+        active: services.filter(s => s.status === 'approved' || s.status === 'active').length,
         pending: services.filter(s => s.status === 'pending').length,
-        draft: services.filter(s => s.status === 'draft').length,
         hotels: services.filter(s => s.type === 'hotel').length,
         tours: services.filter(s => s.type === 'tour').length,
     }), [services]);
 
-    // Helper functions (removed badges as they are styled inline now)
+    const getStatusBadge = (status: string) => {
+        const configs: Record<string, { label: string; className: string; icon: any }> = {
+            pending: { label: 'Chờ duyệt', className: 'bg-amber-100 text-amber-700', icon: Clock },
+            active: { label: 'Hoạt động', className: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+            approved: { label: 'Hoạt động', className: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+            rejected: { label: 'Từ chối', className: 'bg-rose-100 text-rose-700', icon: XCircle },
+            inactive: { label: 'Ngưng', className: 'bg-gray-100 text-gray-700', icon: Ban },
+        };
+        const config = (configs as any)[status] || configs.pending;
+        const Icon = config.icon;
+        return (
+            <Badge className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border-none flex items-center gap-1 w-fit ${config.className}`}>
+                <Icon className="w-3 h-3" /> {config.label}
+            </Badge>
+        );
+    };
 
     const handleApprove = async (service: any) => {
+        setIsActionLoading(true);
         try {
-            const apiClient = new ApiClient();
             await apiClient.post(`/users/${service.id}/handleServiceStatus`, "APPROVED", { headers: { 'Content-Type': 'application/json' }});
             setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: 'approved' } : s));
             success(`Đã duyệt dịch vụ: ${service.name}`);
         } catch(e) {
             console.error(e);
+        } finally {
+            setIsActionLoading(false);
         }
     };
 
     const handleReject = async (service: any) => {
+        setIsActionLoading(true);
         try {
-            const apiClient = new ApiClient();
             await apiClient.post(`/users/${service.id}/handleServiceStatus`, "REJECTED", { headers: { 'Content-Type': 'application/json' }});
             setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: 'rejected' } : s));
             info(`Đã từ chối dịch vụ: ${service.name}`);
         } catch(e) {
             console.error(e);
+        } finally {
+            setIsActionLoading(false);
         }
     };
 
-    const handleDelete = (service: any) => {
-        setSelectedService(service);
-        setIsDeleteOpen(true);
-    };
-
     const confirmDelete = async () => {
-        if (selectedService) {
-            try {
-                const apiClient = new ApiClient();
-                await apiClient.services.delete(selectedService.id);
-                setServices(prev => prev.filter(s => s.id !== selectedService.id));
-                success(`Đã xóa dịch vụ: ${selectedService.name}`);
-            } catch(e) {
-                console.error(e);
-            }
-            setIsDeleteOpen(false);
+        if (!selectedService) return;
+        setIsActionLoading(true);
+        try {
+            await apiClient.services.delete(selectedService.id);
+            setServices(prev => prev.filter(s => s.id !== selectedService.id));
+            success(`Đã xóa dịch vụ: ${selectedService.name}`);
+            setDialogType(null);
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setIsActionLoading(false);
         }
     };
 
     return (
-        <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quản lý Dịch vụ</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                    Xem xét và quản lý các dịch vụ do nhà cung cấp tạo
-                </p>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex flex-col justify-between h-[120px] hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tổng Dịch vụ</span>
-                        <div className="p-2 bg-blue-50 dark:bg-blue-900/40 rounded-lg text-blue-600 dark:text-blue-400">
-                            <Layers className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white mt-2 relative z-10">{stats.total}</span>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-full opacity-0 group-hover:opacity-50 pointer-events-none group-hover:scale-150 transition-all duration-500 ease-out"></div>
+        <div className="w-full max-w-7xl mx-auto space-y-8 pb-8 animate-in fade-in duration-500">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Danh mục dịch vụ</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Quản lý và kiểm soát toàn bộ dịch vụ (Khách sạn, Tour, Điểm đến) trên nền tảng.</p>
                 </div>
-
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex flex-col justify-between h-[120px] hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hoạt động</span>
-                        <div className="p-2 bg-green-50 dark:bg-green-900/40 rounded-lg text-green-600 dark:text-green-400">
-                            <Activity className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white mt-2 relative z-10">{stats.active}</span>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-full opacity-0 group-hover:opacity-50 pointer-events-none group-hover:scale-150 transition-all duration-500 ease-out"></div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex flex-col justify-between h-[120px] hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Chờ xử lý</span>
-                        <div className="p-2 bg-orange-50 dark:bg-orange-900/40 rounded-lg text-orange-600 dark:text-orange-400">
-                            <Clock className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white mt-2 relative z-10">{stats.pending}</span>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-orange-50 dark:bg-orange-900/20 rounded-full opacity-0 group-hover:opacity-50 pointer-events-none group-hover:scale-150 transition-all duration-500 ease-out"></div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex flex-col justify-between h-[120px] hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Nháp</span>
-                        <div className="p-2 bg-red-50 dark:bg-red-900/40 rounded-lg text-red-600 dark:text-red-400">
-                            <FileText className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white mt-2 relative z-10">{stats.draft}</span>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full opacity-0 group-hover:opacity-50 pointer-events-none group-hover:scale-150 transition-all duration-500 ease-out"></div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex flex-col justify-between h-[120px] hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Khách sạn</span>
-                        <div className="p-2 bg-indigo-50 dark:bg-indigo-900/40 rounded-lg text-indigo-600 dark:text-indigo-400">
-                            <Hotel className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white mt-2 relative z-10">{stats.hotels}</span>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-full opacity-0 group-hover:opacity-50 pointer-events-none group-hover:scale-150 transition-all duration-500 ease-out"></div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm flex flex-col justify-between h-[120px] hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tour</span>
-                        <div className="p-2 bg-teal-50 dark:bg-teal-900/40 rounded-lg text-teal-600 dark:text-teal-400">
-                            <MapPin className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white mt-2 relative z-10">{stats.tours}</span>
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-teal-50 dark:bg-teal-900/20 rounded-full opacity-0 group-hover:opacity-50 pointer-events-none group-hover:scale-150 transition-all duration-500 ease-out"></div>
+                <div className="flex gap-3">
+                    <Button variant="outline" className="text-sm h-9">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Xuất báo cáo
+                    </Button>
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
-                <div className="flex flex-col md:flex-row gap-4 items-center">
-                    <div className="flex-1 relative w-full">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
-                        <Input
-                            placeholder="Tìm kiếm theo tên, địa điểm, hoặc nhà cung cấp..."
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="pl-9 bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 transition-colors dark:text-white"
-                        />
-                    </div>
-                    <div className="flex gap-4 w-full md:w-auto">
-                        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
-                            <SelectTrigger className="w-full md:w-[150px] bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 dark:text-white">
-                                <SelectValue placeholder="Tất cả loại" />
-                            </SelectTrigger>
-                            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                                <SelectItem value="all" className="dark:text-gray-200 dark:focus:bg-gray-700">Tất cả loại</SelectItem>
-                                <SelectItem value="hotel" className="dark:text-gray-200 dark:focus:bg-gray-700">Khách sạn</SelectItem>
-                                <SelectItem value="tour" className="dark:text-gray-200 dark:focus:bg-gray-700">Tour</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
-                            <SelectTrigger className="w-full md:w-[160px] bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 dark:text-white">
-                                <SelectValue placeholder="Tất cả trạng thái" />
-                            </SelectTrigger>
-                            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                                <SelectItem value="all" className="dark:text-gray-200 dark:focus:bg-gray-700">Tất cả trạng thái</SelectItem>
-                                <SelectItem value="active" className="dark:text-gray-200 dark:focus:bg-gray-700">Hoạt động</SelectItem>
-                                <SelectItem value="pending" className="dark:text-gray-200 dark:focus:bg-gray-700">Chờ xử lý</SelectItem>
-                                <SelectItem value="inactive" className="dark:text-gray-200 dark:focus:bg-gray-700">Không hoạt động</SelectItem>
-                                <SelectItem value="draft" className="dark:text-gray-200 dark:focus:bg-gray-700">Nháp</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard 
+                    title="Tổng dịch vụ" 
+                    value={stats.total} 
+                    icon={Layers} 
+                    color="text-blue-600" 
+                    bg="bg-blue-100" 
+                    trend="+5.2%"
+                />
+                <StatsCard 
+                    title="Đang hoạt động" 
+                    value={stats.active} 
+                    icon={Activity} 
+                    color="text-emerald-600" 
+                    bg="bg-emerald-100" 
+                    trend="+12%"
+                />
+                <StatsCard 
+                    title="Chờ kiểm duyệt" 
+                    value={stats.pending} 
+                    icon={Clock} 
+                    color="text-amber-600" 
+                    bg="bg-amber-100" 
+                />
+                <StatsCard 
+                    title="Khách sạn & Tour" 
+                    value={`${stats.hotels} | ${stats.tours}`} 
+                    icon={Map} 
+                    color="text-indigo-600" 
+                    bg="bg-indigo-100" 
+                />
             </div>
 
-            {/* Services Table */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                <div className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="border-b border-gray-200 dark:border-gray-700 hover:bg-transparent">
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Dịch vụ</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Loại</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Nhà cung cấp</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Địa điểm</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Giá</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Trạng thái</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Đặt chỗ</TableHead>
-                                <TableHead className="font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Đánh giá</TableHead>
-                                <TableHead className="text-right font-semibold text-gray-800 dark:text-gray-300 whitespace-nowrap">Hành động</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {paginatedServices.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground dark:text-gray-400">
-                                        Không tìm thấy dịch vụ nào
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                paginatedServices.map((service) => (
-                                    <TableRow key={service.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                                        <TableCell className="font-semibold text-gray-900 dark:text-white">{service.name}</TableCell>
-                                        <TableCell>
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm text-gray-700 dark:text-gray-300">
-                                                {service.type === 'hotel' ? <Hotel className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-                                                {service.type === 'hotel' ? 'Hotel' : 'Tour'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                                            {service.provider.name}
-                                        </TableCell>
-                                        <TableCell className="text-sm text-gray-600 dark:text-gray-400">{service.location}</TableCell>
-                                        <TableCell className="font-semibold text-gray-900 dark:text-white">
-                                            {service.price.toLocaleString('vi-VN')} ₫
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${service.status === 'active' ? 'bg-[#3b82f6] text-white dark:bg-blue-600' :
-                                                service.status === 'pending' ? 'bg-[#1e293b] text-white dark:bg-slate-700' :
-                                                    service.status === 'inactive' ? 'bg-white border dark:bg-transparent dark:border-gray-600 text-gray-600 dark:text-gray-400' :
-                                                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400'
-                                                }`}>
-                                                {service.status === 'active' ? 'Hoạt động' :
-                                                    service.status === 'pending' ? 'Chờ xử lý' :
-                                                        service.status === 'inactive' ? 'Không hoạt động' : 'Nháp'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-medium">{service.totalBookings}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-1.5 font-medium text-sm text-gray-700 dark:text-gray-300">
-                                                <span className="text-yellow-400 text-sm">★</span>
-                                                <span className="mt-0.5">{service.rating}</span>
+            <Card className="shadow-sm overflow-hidden border-border/40">
+                <CardHeader className="bg-muted/20 border-b border-border/40 p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div className="flex items-center gap-2">
+                             <h2 className="text-lg font-bold text-foreground">Danh sách dịch vụ</h2>
+                             <Badge variant="secondary" className="rounded-full">{filteredServices.length}</Badge>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input 
+                                    placeholder="Tìm tên, địa điểm, provider..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10 h-10 w-full md:w-64 rounded-lg bg-background border-border"
+                                />
+                            </div>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="h-10 w-full md:w-[160px] rounded-lg bg-background border-border cursor-pointer">
+                                    <SelectValue placeholder="Trạng thái" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Mọi trạng thái</SelectItem>
+                                    <SelectItem value="approved">Hoạt động</SelectItem>
+                                    <SelectItem value="pending">Chờ duyệt</SelectItem>
+                                    <SelectItem value="rejected">Từ chối</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-muted/30 text-muted-foreground font-semibold text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th className="px-6 py-4">Dịch vụ</th>
+                                    <th className="px-6 py-4">Loại hình</th>
+                                    <th className="px-6 py-4">Nhà cung cấp</th>
+                                    <th className="px-6 py-4">Địa điểm</th>
+                                    <th className="px-6 py-4">Giá TB</th>
+                                    <th className="px-6 py-4">Trạng thái</th>
+                                    <th className="px-6 py-4 text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {isLoading ? (
+                                    [1, 2, 3, 4, 5].map(i => (
+                                        <tr key={i} className="animate-pulse">
+                                            <td colSpan={7} className="px-6 py-4"><div className="h-8 bg-muted rounded w-full" /></td>
+                                        </tr>
+                                    ))
+                                ) : paginatedServices.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-20 text-center">
+                                            <div className="flex flex-col items-center gap-2 opacity-50">
+                                                <Layers className="w-12 h-12 text-muted-foreground" />
+                                                <p className="text-lg font-medium text-muted-foreground">Không tìm thấy dịch vụ nào</p>
                                             </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="dark:hover:bg-gray-700 cursor-pointer">
-                                                        <MoreVertical className="w-4 h-4 dark:text-gray-300" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                                    <DropdownMenuLabel className="font-semibold text-gray-800 dark:text-gray-200">Hành động</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator className="dark:bg-gray-700" />
-                                                    <DropdownMenuItem
-                                                        className="gap-2 focus:bg-gray-100 dark:focus:bg-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
-                                                        onClick={() => { setSelectedService(service); setDialogType('view'); }}>
-                                                        <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                                                        Xem chi tiết
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="gap-2 focus:bg-gray-100 dark:focus:bg-gray-700 dark:text-gray-200 cursor-pointer transition-colors"
-                                                        onClick={() => { setSelectedService(service); setDialogType('edit'); }}>
-                                                        <Edit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                                                        Chỉnh sửa
-                                                    </DropdownMenuItem>
-                                                    {service.status === 'pending' && (
-                                                        <>
-                                                            <DropdownMenuSeparator className="dark:bg-gray-700" />
-                                                            <DropdownMenuItem
-                                                                className="gap-2 text-green-600 focus:text-green-700 focus:bg-green-50 dark:focus:bg-green-900/20 dark:text-green-500 cursor-pointer transition-colors"
-                                                                onClick={() => handleApprove(service)}
-                                                            >
-                                                                <Check className="w-4 h-4" />
-                                                                Duyệt
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="gap-2 text-yellow-600 focus:text-yellow-700 focus:bg-yellow-50 dark:focus:bg-yellow-900/20 dark:text-yellow-500 cursor-pointer transition-colors"
-                                                                onClick={() => handleReject(service)}
-                                                            >
-                                                                <X className="w-4 h-4" />
-                                                                Từ chối
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                    <DropdownMenuSeparator className="dark:bg-gray-700" />
-                                                    <DropdownMenuItem
-                                                        className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-900/20 dark:text-red-500 cursor-pointer transition-colors"
-                                                        onClick={() => handleDelete(service)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Xóa
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                {filteredServices.length > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Hiển thị <span className="font-medium text-gray-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="font-medium text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, filteredServices.length)}</span> trong <span className="font-medium text-gray-900 dark:text-white">{filteredServices.length}</span> kết quả
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                className="h-8 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white border-gray-200 dark:border-gray-700 cursor-pointer disabled:cursor-not-allowed"
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    paginatedServices.map((service) => (
+                                        <tr key={service.id} className="hover:bg-muted/50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div>
+                                                    <div className="text-sm font-semibold text-foreground">{service.name}</div>
+                                                    <div className="flex items-center gap-1 mt-1 text-muted-foreground text-xs">
+                                                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                                        <span>{service.rating} ({service.totalBookings} lượt đặt)</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <Badge variant="outline" className="px-2 py-0.5 rounded text-[10px] font-medium border-border">
+                                                    {service.type === 'hotel' ? 'Khách sạn' : 'Tour'}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-sm text-muted-foreground">{service.provider.name}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-muted-foreground">
+                                                {service.location}
+                                            </td>
+                                            <td className="px-6 py-4 font-semibold text-sm">
+                                                {service.price.toLocaleString('vi-VN')} ₫
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {getStatusBadge(service.status)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
+                                                            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48">
+                                                        <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Tùy chọn</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={() => { setSelectedService(service); setDialogType('view'); }}>
+                                                            <Eye className="w-4 h-4 mr-2" /> Xem chi tiết
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setSelectedService(service); setDialogType('edit'); }}>
+                                                            <Edit className="w-4 h-4 mr-2" /> Chỉnh sửa
+                                                        </DropdownMenuItem>
+                                                        
+                                                        {(service.status === 'pending' || service.status === 'inactive') && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem className="text-green-600 focus:text-green-600" onClick={() => handleApprove(service)}>
+                                                                    <Check className="w-4 h-4 mr-2" /> Duyệt dịch vụ
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-amber-600 focus:text-amber-600" onClick={() => handleReject(service)}>
+                                                                    <X className="w-4 h-4 mr-2" /> Từ chối
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => { setSelectedService(service); setDialogType('delete'); }}>
+                                                            <Trash2 className="w-4 h-4 mr-2" /> Xóa dịch vụ
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="p-4 border-t border-border flex items-center justify-between bg-muted/20">
+                         <span className="text-xs text-muted-foreground">Hiển thị {paginatedServices.length} / {filteredServices.length} dịch vụ</span>
+                         <div className="flex gap-2">
+                             <Button 
+                                variant="outline" 
+                                size="sm" 
                                 disabled={currentPage === 1}
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            >
-                                Trang trước
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="h-8 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white border-gray-200 dark:border-gray-700 cursor-pointer disabled:cursor-not-allowed"
+                            >Trước</Button>
+                             <Button 
+                                variant="outline" 
+                                size="sm" 
                                 disabled={currentPage >= totalPages}
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            >
-                                Trang sau
-                            </Button>
-                        </div>
+                            >Tiếp theo</Button>
+                         </div>
                     </div>
-                )}
-            </div>
+                </CardContent>
+            </Card>
 
-            {/* Results count */}
-            <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                hiển thị {filteredServices.length} trên {services.length} dịch vụ
-            </div>
-
-            {/* Modal Dialog */}
+            {/* Modal Dialogs */}
             <Dialog open={!!dialogType} onOpenChange={(open) => !open && setDialogType(null)}>
-                <DialogContent className="sm:max-w-[425px] dark:bg-gray-800 dark:border-gray-700 dark:text-white">
-                    <DialogHeader>
-                        <DialogTitle className="dark:text-white">
-                            {dialogType === 'view' ? 'Chi tiết Dịch vụ' : 'Chỉnh sửa Dịch vụ'}
-                        </DialogTitle>
-                        <DialogDescription className="dark:text-gray-400">
-                            {selectedService?.name}
-                        </DialogDescription>
-                    </DialogHeader>
-                    {dialogType === 'view' && selectedService && (
-                        <div className="space-y-3 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            <p><strong className="font-semibold text-gray-900 dark:text-gray-100">Nhà cung cấp:</strong> {selectedService.provider.name}</p>
-                            <p><strong className="font-semibold text-gray-900 dark:text-gray-100">Loại hình:</strong> {selectedService.type === 'hotel' ? 'Khách sạn' : 'Tour'}</p>
-                            <p><strong className="font-semibold text-gray-900 dark:text-gray-100">Địa điểm:</strong> {selectedService.location}</p>
-                            <p><strong className="font-semibold text-gray-900 dark:text-gray-100">Trạng thái:</strong> {selectedService.status === 'active' ? 'Hoạt động' : selectedService.status === 'pending' ? 'Chờ xử lý' : 'Ngưng hoạt động'}</p>
-                            <p><strong className="font-semibold text-gray-900 dark:text-gray-100">Đánh giá chung:</strong> {selectedService.rating} Sao</p>
-                            <p><strong className="font-semibold text-gray-900 dark:text-gray-100">Số lượt đặt:</strong> {selectedService.totalBookings}</p>
-                        </div>
-                    )}
-                    {dialogType === 'edit' && selectedService && (
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tên dịch vụ</label>
-                                <Input defaultValue={selectedService.name} className="dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Địa điểm</label>
-                                <Input defaultValue={selectedService.location} className="dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
-                            </div>
+                <DialogContent className="max-w-lg">
+                    {dialogType === 'delete' ? (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="text-xl">Xác nhận xóa</DialogTitle>
+                                <DialogDescription>
+                                    Bạn có chắc chắn muốn xóa dịch vụ <span className="font-semibold text-foreground">"{selectedService?.name}"</span>?
+                                </DialogDescription>
+                            </DialogHeader>
                             <div className="flex justify-end gap-3 mt-4">
-                                <Button variant="outline" className="dark:border-gray-700 dark:text-gray-300 cursor-pointer" onClick={() => setDialogType(null)}>Hủy</Button>
-                                <Button className="cursor-pointer" onClick={() => { success('Đã lưu các thay đổi!'); setDialogType(null); }}>Lưu thay đổi</Button>
+                                <Button variant="outline" onClick={() => setDialogType(null)}>Hủy</Button>
+                                <Button variant="destructive" onClick={confirmDelete} disabled={isActionLoading}>
+                                    {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận xóa'}
+                                </Button>
                             </div>
-                        </div>
+                        </>
+                    ) : dialogType === 'view' ? (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="text-xl">{selectedService?.name}</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                                        <p className="text-[10px] uppercase text-muted-foreground mb-1">Giá trung bình</p>
+                                        <p className="text-lg font-bold">{selectedService?.price.toLocaleString('vi-VN')} ₫</p>
+                                    </div>
+                                    <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                                        <p className="text-[10px] uppercase text-muted-foreground mb-1">Đánh giá</p>
+                                        <div className="flex items-center gap-1.5">
+                                            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                            <p className="text-lg font-bold">{selectedService?.rating}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Building2 className="w-4 h-4" /> Provider: <span className="text-foreground font-semibold">{selectedService?.provider.name}</span>
+                                    </p>
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <MapPin className="w-4 h-4" /> Địa điểm: <span className="text-foreground font-semibold">{selectedService?.location}</span>
+                                    </p>
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Activity className="w-4 h-4" /> Tổng lượt đặt: <span className="text-foreground font-semibold">{selectedService?.totalBookings}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <Button onClick={() => setDialogType(null)} className="w-full mt-2">Đóng</Button>
+                        </>
+                    ) : (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="text-xl">Chỉnh sửa dịch vụ</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase text-muted-foreground ml-1">Tên dịch vụ</label>
+                                    <Input defaultValue={selectedService?.name} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase text-muted-foreground ml-1">Địa điểm</label>
+                                    <Input defaultValue={selectedService?.location} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase text-muted-foreground ml-1">Giá trung bình</label>
+                                    <Input defaultValue={selectedService?.price} type="number" />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 mt-2">
+                                <Button variant="outline" onClick={() => setDialogType(null)}>Hủy</Button>
+                                <Button onClick={() => { success('Đã lưu thay đổi!'); setDialogType(null); }}>Lưu thay đổi</Button>
+                            </div>
+                        </>
                     )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Modal Dialog */}
-            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
-                    <DialogHeader>
-                        <DialogTitle className="dark:text-white">Xóa Dịch Vụ</DialogTitle>
-                        <DialogDescription className="dark:text-gray-400">
-                            Bạn có chắc chắn muốn xóa dịch vụ <strong className="text-gray-900 dark:text-white">{selectedService?.name}</strong> không?
-                            Hành động này không thể hoàn tác.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex justify-end gap-3 mt-4">
-                        <Button variant="outline" className="dark:border-gray-700 dark:text-gray-300 cursor-pointer" onClick={() => setIsDeleteOpen(false)}>Hủy</Button>
-                        <Button variant="destructive" className="cursor-pointer" onClick={confirmDelete}>
-                            Xóa ngay
-                        </Button>
-                    </div>
                 </DialogContent>
             </Dialog>
         </div>

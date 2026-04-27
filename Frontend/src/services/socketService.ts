@@ -38,9 +38,8 @@ class SocketService {
         console.log('[SocketService] Starting connection to:', connectionUrl);
         this.updateStatus('CONNECTING');
 
-        const socket = new SockJS(connectionUrl);
         this.client = new Client({
-            webSocketFactory: () => socket,
+            webSocketFactory: () => new SockJS(connectionUrl),
             connectHeaders: {
                 Authorization: `Bearer ${userToken}`
             },
@@ -53,20 +52,21 @@ class SocketService {
         });
 
         this.client.onConnect = (frame) => {
-            console.log('[SocketService] Successfully connected!', frame);
+            console.log('[SocketService] Connected to server');
             this.updateStatus('CONNECTED');
 
             // Subscribe to private messages for the current user
             this.client?.subscribe('/user/queue/messages', (message) => {
-                console.log(`\n================ SOCKET RECV: MESSAGE ================`);
-                console.log(`[SocketService] Topic matched: /user/queue/messages`);
                 if (message.body) {
                     try {
                         const backendMsg = JSON.parse(message.body);
-                        console.log('[SocketService] Payload (backend):', backendMsg);
                         
                         const chatMsg: ChatMessage = {
                             id: backendMsg.id || ('msg_' + Date.now()),
+                            // conversationId = senderId of this message, because:
+                            // - conv.id = otherUser.userId
+                            // - When provider replies to user → senderId = providerID → conversationId = providerID ✅
+                            // - When user sends to provider → senderId = userID, but this msg goes to provider's queue
                             conversationId: backendMsg.senderId?.toString() || 'unknown',
                             senderId: backendMsg.senderId?.toString() || 'unknown',
                             text: backendMsg.content || backendMsg.text || '',
@@ -156,28 +156,19 @@ class SocketService {
             isRead: false
         };
 
-        console.log(`\n================ SOCKET SEND: START ================`);
-        console.log(`[SocketService] sendMessage attempt:`, {
-            status: this.connectionStatus,
-            active: this.client?.active,
-            connected: this.client?.connected
-        });
-        console.log(`[SocketService] SENDER_ID:`, senderId);
-        console.log(`[SocketService] RECEIVER_ID:`, receiverId);
-        console.log(`[SocketService] RAW_PAYLOAD:`, backendPayload);
+
 
         if (this.client?.connected) {
             try {
                 const sendDestination = '/chat/chat.sendPrivateMessage';
                 const userToken = localStorage.getItem('token');
-                console.log(`[SocketService] PUBLISHING TO:`, sendDestination);
+
                 this.client.publish({
                     destination: sendDestination,
                     headers: userToken ? { Authorization: `Bearer ${userToken}` } : undefined,
                     body: JSON.stringify(backendPayload)
                 });
-                console.log(`[SocketService] Message published successfully!`);
-                console.log(`======================================================\n`);
+
                 return frontendPayload;
             } catch (error) {
                 console.error(`[SocketService] Failed to publish message:`, error);

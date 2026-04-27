@@ -8,6 +8,7 @@ import {
     DialogDescription,
 } from '@/components/ui/admin/dialog';
 import { Button } from '@/components/ui/admin/button';
+import { Card, CardContent } from '@/components/ui/admin/card';
 import { Input } from '@/components/ui/admin/input';
 import { useToast } from '@/contexts/ToastContext';
 import { discountApi, type DiscountResponse, type DiscountRequest } from '@/api/discountApi';
@@ -208,51 +209,55 @@ export const AdminPromotionsPage: React.FC = () => {
     };
 
     return (
-        <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="w-full max-w-7xl mx-auto space-y-8 pb-8 animate-in fade-in duration-500 p-6">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quản lý Ưu đãi hệ thống</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Tạo và quản lý các mã giảm giá áp dụng chung trên toàn hệ thống Travello.</p>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Quản lý ưu đãi hệ thống</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Tạo và quản lý các mã giảm giá áp dụng chung trên toàn hệ thống Travello.</p>
                 </div>
                 <Button
                     onClick={openCreateDialog}
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-sm">
-                    <Plus className="w-5 h-5" />
+                    className="h-10 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg shadow-sm flex items-center gap-2"
+                >
+                    <Plus className="w-4 h-4" />
                     Tạo mã ưu đãi
                 </Button>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 items-center justify-between">
-                <div className="relative w-full md:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
-                    <Input
-                        type="text"
-                        placeholder="Tìm kiếm theo mã giảm giá/tên..."
-                        className="pl-9"
-                        value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setCurrentPage(1); // Reset to page 1 on search
-                        }}
-                    />
-                </div>
-            </div>
+            <Card className="shadow-sm border-border/40">
+                <CardContent className="p-4">
+                    <div className="relative w-full md:w-80">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                        <Input
+                            type="text"
+                            placeholder="Tìm kiếm mã hoặc tên..."
+                            className="pl-10 h-10 rounded-lg"
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <Card className="shadow-sm overflow-hidden border-border/40 rounded-xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-gray-50 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
-                                <th className="p-4 font-semibold">Mã ưu đãi</th>
-                                <th className="p-4 font-semibold">Mô tả</th>
-                                <th className="p-4 font-semibold">Mức giảm</th>
-                                <th className="p-4 font-semibold">Thời gian áp dụng</th>
-                                <th className="p-4 font-semibold">Số lượng</th>
-                                <th className="p-4 font-semibold">Trạng thái</th>
-                                <th className="p-4 font-semibold text-right">Thao tác</th>
+                    <table className="w-full text-left">
+                        <thead className="bg-muted/30 text-muted-foreground font-semibold text-xs uppercase tracking-wider">
+                            <tr>
+                                <th className="px-6 py-4">Mã ưu đãi</th>
+                                <th className="px-6 py-4">Mô tả</th>
+                                <th className="px-6 py-4">Mức giảm</th>
+                                <th className="px-6 py-4">Thời gian</th>
+                                <th className="px-6 py-4">Số lượng</th>
+                                <th className="px-6 py-4">Trạng thái</th>
+                                <th className="px-6 py-4 text-right">Thao tác</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-border">
                             {isLoading ? (
                                 <tr>
                                     <td colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -263,52 +268,58 @@ export const AdminPromotionsPage: React.FC = () => {
                                 paginatedPromotions.map(promo => {
                                     const statusObj = getStatusTextAndStyle(promo.startDate, promo.endDate);
                                     return (
-                                        <tr key={promo.id} className="border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Tag className="w-4 h-4 text-blue-500" />
+                                        <tr key={promo.id} className="hover:bg-muted/30 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                                        <Tag className="w-4 h-4" />
+                                                    </div>
                                                     <div>
-                                                        <span className="font-bold text-gray-900 dark:text-white block">{promo.code}</span>
-                                                        <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/50 mt-1 inline-block">
-                                                            Áp dụng: {getApplyToText(promo.applyType)}
+                                                        <span className="font-bold text-foreground block">{promo.code}</span>
+                                                        <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium mt-1 inline-block uppercase">
+                                                            {getApplyToText(promo.applyType)}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{promo.name}</td>
-                                            <td className="p-4">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">{promo.discountType === 'Percentage' ? `${promo.percentage}%` : `${promo.fixedPrice}đ`}</div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">Giảm tối đa: {promo.maxDiscountAmount?.toLocaleString()}đ</div>
+                                            <td className="px-6 py-4 text-sm text-muted-foreground">{promo.name}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-semibold text-foreground">{promo.discountType === 'Percentage' ? `${promo.percentage}%` : `${promo.fixedPrice}đ`}</div>
+                                                <div className="text-[10px] text-muted-foreground">Tối đa: {promo.maxDiscountAmount?.toLocaleString()}đ</div>
                                             </td>
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
-                                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                    <Calendar className="w-3.5 h-3.5" />
                                                     <span>{promo.startDate ? new Date(promo.startDate).toLocaleDateString() : ''} - {promo.endDate ? new Date(promo.endDate).toLocaleDateString() : ''}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-4">
-                                                <div className="text-sm text-gray-900 dark:text-white font-medium">
-                                                    {promo.quantity}
-                                                </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">Tối thiểu: {promo.minSpend?.toLocaleString()}đ</div>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-foreground font-medium">{promo.quantity}</div>
+                                                <div className="text-[10px] text-muted-foreground">Tối thiểu: {promo.minSpend?.toLocaleString()}đ</div>
                                             </td>
-                                            <td className="p-4">
-                                                <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusObj.style}`}>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${statusObj.style.replace('bg-green-100 text-green-800', 'bg-green-100 text-green-700').replace('bg-blue-100 text-blue-800', 'bg-blue-100 text-blue-700').replace('bg-gray-100 text-gray-800', 'bg-muted text-muted-foreground')}`}>
                                                     {statusObj.text}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
                                                         onClick={() => openEditDialog(promo)}
-                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 rounded-lg transition-colors cursor-pointer">
+                                                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                    >
                                                         <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
                                                         onClick={() => { setSelectedPromo(promo); setIsDeleteOpen(true); }}
-                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-lg transition-colors cursor-pointer">
+                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    >
                                                         <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -326,31 +337,31 @@ export const AdminPromotionsPage: React.FC = () => {
                 </div>
 
                 {filteredPromotions.length > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Hiển thị <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredPromotions.length)}</span> trong <span className="font-medium">{filteredPromotions.length}</span> kết quả
+                    <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-t border-border/40">
+                        <div className="text-sm text-muted-foreground">
+                            Hiển thị <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredPromotions.length)}</span> trên <span className="font-medium">{filteredPromotions.length}</span>
                         </div>
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
-                                className="h-8 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                                size="sm"
                                 disabled={currentPage === 1}
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                             >
-                                Trang trước
+                                Trước
                             </Button>
                             <Button
                                 variant="outline"
-                                className="h-8 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                                size="sm"
                                 disabled={currentPage >= totalPages}
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                             >
-                                Trang sau
+                                Sau
                             </Button>
                         </div>
                     </div>
                 )}
-            </div>
+            </Card>
 
             {/* Create Promo Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

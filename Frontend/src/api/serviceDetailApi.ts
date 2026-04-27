@@ -1,15 +1,5 @@
 import apiClient from '../services/apiClient';
 import type { ServiceDetail } from '../types/serviceDetail.types';
-import { mockServiceDetailApi } from '../mock/mockServiceDetailApi';
-import { shouldUseMock } from '@/config/mockConfig';
-
-// ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
-// Điền `true` để ép file này dùng mock.
-// Điền `false` để ép file này dùng real API.
-// Điền `null` để kế thừa từ biến GLOBAL_MOCK_ENABLED trong config.
-const LOCAL_MOCK_OVERRIDE: boolean | null = false;
-const USE_MOCK_API = shouldUseMock(LOCAL_MOCK_OVERRIDE);
-// ──────────────────────────────────────────────────────────────────────────────
 
 const realApi = {
   getServiceDetail: async (
@@ -18,12 +8,11 @@ const realApi = {
     id: string
   ): Promise<ServiceDetail> => {
     try {
-      console.log(`Fetching real service detail for ID: ${id}`);
-      // Fetch real data using centralized apiClient
-      let backendData: any = await apiClient.get(`/services/${id}`);
+      const idStr = id?.toString();
+      console.log(`Fetching service detail from: /services/${idStr}`);
+      let backendData: any = await apiClient.get(`/services/${idStr}`);
       backendData = backendData?.result || backendData?.data || backendData;
 
-      // Ensure backendData is an object
       if (typeof backendData === 'string' && backendData.trim().startsWith('{')) {
         try {
           backendData = JSON.parse(backendData);
@@ -32,78 +21,87 @@ const realApi = {
         }
       }
 
-      console.log('--- Debug Data Start ---');
-      console.log('ID:', id);
-      console.log('Raw Backend UserToken-Data:', backendData);
-      console.log('serviceName Field:', backendData.serviceName);
+      console.log('Backend Data received:', backendData);
 
-      // Get mock data for this service to fill missing fields
-      const mockData = await mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
-      console.log('Mock Data for Fallback:', mockData);
+      // Helper to map backend serviceType to frontend type
+      const mapServiceType = (bt: string): 'hotel' | 'place' | 'restaurant' | 'event' => {
+        const type = bt?.toUpperCase();
+        if (type === 'HOTEL') return 'hotel';
+        if (type === 'RESTAURANT') return 'restaurant';
+        if (type === 'TICKET_VENUE') return 'place';
+        return 'place';
+      };
 
-      // Merge: Use backend data where available, fall back to mock for missing fields
+      // Helper to format opening hours
+      const formatTime = (time: string | undefined) => {
+        if (!time) return '';
+        // If it's already in HH:mm:ss format, just return HH:mm
+        if (time.includes(':')) {
+          const parts = time.split(':');
+          return `${parts[0]}:${parts[1]}`;
+        }
+        // If it's a date-time string
+        try {
+          const date = new Date(time);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+          }
+        } catch (e) {}
+        return time;
+      };
+
+      const openingHours = backendData.startTime && backendData.endTime 
+        ? `${formatTime(backendData.startTime)} - ${formatTime(backendData.endTime)}`
+        : (backendData.openingHours || '08:00 - 22:00');
+
       const reviewCount = backendData.commentList?.length || backendData.reviewCount || 0;
+      
+      const images = backendData.imageList?.length > 0
+        ? backendData.imageList.map((img: any) => img.imageUrl || img.url)
+        : (backendData.thumbnailUrl || backendData.thumbnail)
+          ? [backendData.thumbnailUrl || backendData.thumbnail]
+          : [];
 
-      const mergedData: ServiceDetail = {
-        id: backendData.id?.toString() || mockData.id,
-        name: backendData.serviceName || backendData.name || mockData.name,
-        // Backend Province entity uses snake_case: full_name, not fullName
-        location: backendData.province?.full_name || backendData.province?.fullName || backendData.province?.name || backendData.address || mockData.location,
-        rating: (backendData.rating !== undefined && backendData.rating !== null) ? backendData.rating.toString() : mockData.rating,
-        reviews: reviewCount ? reviewCount.toString() : mockData.reviews,
-        description: backendData.description || mockData.description,
-        address: backendData.address || mockData.address,
-
-        // Provider info for socket/chat
+      const mappedData: ServiceDetail = {
+        id: backendData.id?.toString() || id,
+        name: backendData.serviceName || backendData.name || 'Dịch vụ chưa rõ tên',
+        type: mapServiceType(backendData.serviceType || serviceType || ''),
+        location: backendData.province?.full_name || backendData.province?.fullName || backendData.province?.name || backendData.address || 'Việt Nam',
+        rating: (backendData.rating !== undefined && backendData.rating !== null) ? Number(backendData.rating) : 0,
+        reviews: Number(reviewCount),
+        description: backendData.description || 'Chưa có mô tả cho dịch vụ này.',
+        address: backendData.address || '',
+        
         provider: backendData.provider ? {
           userID: backendData.provider.userID || backendData.provider.id,
-          fullname: backendData.provider.fullname || backendData.provider.username,
+          fullname: backendData.provider.fullname || backendData.provider.username || backendData.provider.email,
           avatarUrl: backendData.provider.avatarUrl
         } : undefined,
         providerId: backendData.provider?.userID || backendData.provider?.id,
 
-        // Use mock data for fields not in backend
-        // Combined photos from thumbnail and imageList
-        images: (backendData.imageList?.length > 0
-          ? backendData.imageList.map((img: any) => img.imageUrl || img.url)
-          : (backendData.thumbnailUrl || backendData.thumbnail)
-            ? [backendData.thumbnailUrl || backendData.thumbnail]
-            : (mockData.images && mockData.images.length > 0) ? mockData.images : []),
-        thumbnails: (backendData.imageList?.length > 0
-          ? backendData.imageList.slice(0, 4).map((img: any) => img.imageUrl)
-          : (backendData.thumbnailUrl || backendData.thumbnail)
-            ? [backendData.thumbnailUrl || backendData.thumbnail, backendData.thumbnailUrl || backendData.thumbnail, backendData.thumbnailUrl || backendData.thumbnail, backendData.thumbnailUrl || backendData.thumbnail]
-            : mockData.thumbnails),
+        images: images,
+        thumbnails: images.length > 0 ? images.slice(0, 4) : [],
 
-        priceAdult: backendData.averagePrice || backendData.average_price || mockData.priceAdult,
-        priceChild: Math.floor((backendData.averagePrice || backendData.average_price || mockData.priceChild) * 0.7),
+        priceAdult: backendData.averagePrice || backendData.minPrice || 0,
+        priceChild: Math.floor((backendData.averagePrice || backendData.minPrice || 0) * 0.7),
+        tags: backendData.tags || '',
 
-        // Mock data for features not in backend yet
-        type: mockData.type,
-        openingHours: mockData.openingHours,
-        duration: mockData.duration,
-        features: mockData.features,
-        additionalServices: mockData.additionalServices,
-        discounts: mockData.discounts,
-        availability: mockData.availability,
+        openingHours: openingHours,
+        duration: backendData.duration || '1 ngày',
+        features: backendData.features || [
+          { icon: 'mapPin', title: 'Điểm tham quan', desc: 'Vị trí thuận tiện' },
+          { icon: 'clock', title: 'Thời gian lý tưởng', desc: 'Quanh năm' },
+          { icon: 'users', title: 'Đối tượng', desc: 'Mọi lứa tuổi' }
+        ],
+        additionalServices: backendData.additionalServices || [],
+        discounts: backendData.discounts || [],
+        availability: backendData.availability || {},
       };
 
-      console.log('Final Merged Data:', mergedData);
-      console.log('--- Debug Data End ---');
-
-      return mergedData;
+      return mappedData;
     } catch (error) {
-      console.error('Error fetching service detail:', error);
-
-      // If mock is explicitly allowed, return mock
-      if (USE_MOCK_API) {
-        return mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
-      }
-
-      // Otherwise, return mock but it's better to show the error or a better fallback
-      // For now, let's keep falling back to mock so the app doesn't crash, 
-      // but the log above will tell us WHY it failed.
-      return mockServiceDetailApi.getServiceDetail(destination || '', serviceType || '', id);
+      console.error('Error in realApi.getServiceDetail:', error);
+      throw error;
     }
   },
 
@@ -113,9 +111,10 @@ const realApi = {
     endDate: string
   ): Promise<Record<string, string>> => {
     try {
-      return await apiClient.get(`/services/${serviceId}/availability`, {
+      const response: any = await apiClient.get(`/services/${serviceId}/availability`, {
         params: { start: startDate, end: endDate }
       });
+      return response?.result || response?.data || response || {};
     } catch (error) {
       console.error('Error checking availability:', error);
       throw error;
@@ -127,10 +126,11 @@ const realApi = {
     placeCode: string
   ): Promise<any[]> => {
     try {
-      const data: any = await apiClient.get('/api/discounts/apply', { // Added /api
+      const response: any = await apiClient.get('/api/discounts/apply', {
         params: { serviceID, placeCode }
       });
-      return Array.isArray(data) ? data : []; // Ensure it's an array
+      const data = response?.result || response?.data || response;
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error fetching satisfied discounts:', error);
       return [];
@@ -138,5 +138,4 @@ const realApi = {
   }
 };
 
-// Export API dựa trên USE_MOCK_API flag
-export const serviceDetailApi = USE_MOCK_API ? mockServiceDetailApi : realApi;
+export const serviceDetailApi = realApi;

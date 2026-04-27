@@ -276,7 +276,19 @@ const ProviderBookings = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
-                {STAT_CARDS.map((stat, i) => {
+                {isLoading ? (
+                    // Skeleton stats
+                    [1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="relative flex items-center justify-between p-5 rounded-xl bg-card border border-border/40 overflow-hidden animate-pulse">
+                            <div className="flex-1 space-y-2">
+                                <div className="h-3 bg-muted rounded w-16"></div>
+                                <div className="h-8 bg-muted rounded w-12"></div>
+                                <div className="h-3 bg-muted rounded w-20"></div>
+                            </div>
+                            <div className="w-14 h-14 rounded-full bg-muted shrink-0"></div>
+                        </div>
+                    ))
+                ) : STAT_CARDS.map((stat, i) => {
                     const Icon = stat.icon;
                     return (
                         <div key={i} className="relative flex items-center justify-between p-5 rounded-xl bg-card shadow-[0_2px_12px_rgb(0,0,0,0.06)] dark:shadow-none border border-border/40 overflow-hidden">
@@ -345,7 +357,33 @@ const ProviderBookings = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
-                            {filtered.length === 0 ? (
+                            {isLoading ? (
+                                // Skeleton rows
+                                [1, 2, 3, 4, 5].map((i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td className="px-6 py-4"><div className="h-4 bg-muted rounded w-12"></div></td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="h-4 bg-muted rounded w-24"></div>
+                                                <div className="h-3 bg-muted rounded w-32"></div>
+                                            </div>
+                                        </td>
+                                        {serviceType === 'hotel' ? (
+                                            <>
+                                                <td className="px-6 py-4"><div className="h-4 bg-muted rounded w-20"></div></td>
+                                                <td className="px-6 py-4"><div className="h-4 bg-muted rounded w-20"></div></td>
+                                            </>
+                                        ) : (
+                                            <td className="px-6 py-4"><div className="h-4 bg-muted rounded w-20"></div></td>
+                                        )}
+                                        <td className="px-6 py-4"><div className="h-4 bg-muted rounded w-8"></div></td>
+                                        <td className="px-6 py-4"><div className="h-4 bg-muted rounded w-24"></div></td>
+                                        <td className="px-6 py-4"><div className="h-6 bg-muted rounded w-16"></div></td>
+                                        <td className="px-6 py-4"><div className="h-6 bg-muted rounded w-20"></div></td>
+                                        <td className="px-6 py-4 text-right"><div className="h-8 bg-muted rounded w-8 ml-auto"></div></td>
+                                    </tr>
+                                ))
+                            ) : filtered.length === 0 ? (
                                 <tr>
                                     <td colSpan={serviceType === 'hotel' ? 9 : 8} className="text-center py-20 text-muted-foreground text-[14px]">
                                         Chưa có thông tin phù hợp
