@@ -160,18 +160,28 @@ const RoomsTab: React.FC<RoomsTabProps> = ({ rooms: propRooms = [], onRoomBookNo
                                     </div>
                                 </div>
 
-                                {/* Price */}
-                                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                                    <div>
-                                        <p className="text-xs text-gray-500">Từ</p>
-                                        <p className="text-lg font-bold text-orange-500">
-                                            {(room.price / 1000000).toFixed(1)}M
+                                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                     <div>
+                                         <p className="text-xs text-gray-500">Giá phòng/đêm</p>
+                                         <p className="text-lg font-bold text-orange-500">
+                                             {(room.price).toLocaleString()} <span className="text-[10px]">đ</span>
+                                         </p>
+                                     </div>
+                                     <div className="flex flex-col items-end gap-1">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (onRoomBookNow) onRoomBookNow(room);
+                                            }}
+                                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+                                        >
+                                            Đặt ngay
+                                        </button>
+                                        <p className="text-[10px] text-gray-400 font-medium group-hover:text-orange-500 transition-colors">
+                                            Xem chi tiết →
                                         </p>
-                                    </div>
-                                    <button className="text-sm text-orange-500 font-medium hover:text-orange-600 cursor-pointer">
-                                        Xem chi tiết →
-                                    </button>
-                                </div>
+                                     </div>
+                                 </div>
                             </div>
                         </div>
                     ))}

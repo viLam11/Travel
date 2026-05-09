@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Ticket, CheckCircle2 } from 'lucide-react';
+import { Ticket, CheckCircle2, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import type { TicketType } from '@/types/serviceDetail.types';
 
 interface TicketsTabProps {
@@ -10,6 +10,12 @@ interface TicketsTabProps {
 
 const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow, isLoading = false }) => {
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
+    const [expandedTickets, setExpandedTickets] = useState<Record<string, boolean>>({});
+
+    const toggleExpand = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedTickets(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
     if (!isLoading && (!tickets || tickets.length === 0)) {
         return (
@@ -73,9 +79,27 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow, 
                                             {ticket.title}
                                         </h4>
                                     </div>
-                                    <p className="text-gray-600 text-sm mb-3">
-                                        {ticket.description}
-                                    </p>
+                                    <div className="text-gray-600 text-sm mb-3">
+                                        <p className="inline">
+                                            {expandedTickets[ticket.id]
+                                                ? ticket.description
+                                                : (ticket.description.length > 120
+                                                    ? `${ticket.description.slice(0, 120)}...`
+                                                    : ticket.description)}
+                                        </p>
+                                        {ticket.description.length > 120 && (
+                                            <button
+                                                onClick={(e) => toggleExpand(ticket.id, e)}
+                                                className="ml-1 text-orange-500 font-bold hover:text-orange-600 inline-flex items-center gap-0.5"
+                                            >
+                                                {expandedTickets[ticket.id] ? (
+                                                    <>Rút gọn <ChevronUp className="w-3 h-3" /></>
+                                                ) : (
+                                                    <>Xem thêm <ChevronDown className="w-3 h-3" /></>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
 
                                     <div className="flex flex-wrap gap-2 sm:gap-4">
                                         {ticket.inclusions?.map((item, idx) => (
@@ -94,16 +118,16 @@ const TicketsTab: React.FC<TicketsTabProps> = ({ tickets = [], onTicketBookNow, 
                                             {(ticket.price || 0).toLocaleString()} đ
                                         </p>
                                     </div>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (onTicketBookNow) onTicketBookNow(ticket.id);
-                                        }}
-                                        className="cursor-pointer mt-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto cursor-pointer"
-                                    >
-                                        Đặt ngay
-                                    </button>
-                                </div>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (onTicketBookNow) onTicketBookNow(ticket.id);
+                                            }}
+                                            className="cursor-pointer mt-2 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 px-6 py-2.5 rounded-lg transition-all shadow-sm active:scale-95 w-full sm:w-auto"
+                                        >
+                                            Đặt ngay
+                                        </button>
+                                    </div>
                             </div>
                         </div>
                     ))}

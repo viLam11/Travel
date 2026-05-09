@@ -41,12 +41,6 @@ interface RoomBookingModalProps {
   setRoomEmail: (email: string) => void;
   roomPhone: string;
   setRoomPhone: (phone: string) => void;
-  roomAddress: string;
-  setRoomAddress: (address: string) => void;
-  roomCity: string;
-  setRoomCity: (city: string) => void;
-  roomCountry: string;
-  setRoomCountry: (country: string) => void;
   specialRequests: string;
   setSpecialRequests: (requests: string) => void;
   allRooms: Room[];
@@ -80,12 +74,6 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
   setRoomEmail,
   roomPhone,
   setRoomPhone,
-  roomAddress,
-  setRoomAddress,
-  roomCity,
-  setRoomCity,
-  roomCountry,
-  setRoomCountry,
   specialRequests,
   setSpecialRequests,
   allRooms,
@@ -117,7 +105,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
       }
       if (room.capacity < guestCount) return false;
       if (checkInDate && checkOutDate && room.currentBookings) {
-        const hasConflict = room.currentBookings.some(booking => 
+        const hasConflict = room.currentBookings.some(booking =>
           datesOverlap(checkInDate, checkOutDate, booking.checkIn, booking.checkOut)
         );
         if (hasConflict) return false;
@@ -146,24 +134,23 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
   };
 
   const calculateTotal = () => {
-    if (!checkInDate || !checkOutDate) return { nights: 0, subtotal: 0, tax: 0, total: 0 };
-    
+    if (!checkInDate || !checkOutDate) return { nights: 0, subtotal: 0, total: 0 };
+
     const nights = Math.ceil(
       (new Date(checkOutDate).getTime() - new Date(checkInDate).getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     const subtotal = selectedRooms.reduce((sum: number, id) => {
       const room = allRooms.find(r => r.id === id);
       return sum + (room ? room.price * nights : 0);
     }, 0);
-    
-    const tax = subtotal * 0.1;
-    const total = subtotal + tax;
-    
-    return { nights, subtotal, tax, total };
+
+    const total = subtotal;
+
+    return { nights, subtotal, total };
   };
 
-  const { nights, subtotal, tax, total } = calculateTotal();
+  const { nights, subtotal, total } = calculateTotal();
 
   // Kiểm tra điều kiện ưu đãi
   const isDiscountEligible = (discount: Discount): boolean => {
@@ -185,7 +172,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     const fetchDiscountsFromAPI = async () => {
       // Skip if discounts are provided via props
       if (propDiscounts && propDiscounts.length > 0) return;
-      
+
       try {
         const data = await serviceDetailApi.getSatisfiedDiscounts(serviceId, provinceCode || '');
         setAvailableDiscounts(data);
@@ -196,7 +183,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     if (isOpen && serviceId) {
       fetchDiscountsFromAPI();
     }
-  }, [isOpen, serviceId, provinceCode, propDiscounts]); 
+  }, [isOpen, serviceId, provinceCode, propDiscounts]);
 
   // Auto-select best eligible discounts (1 system + 1 service)
   React.useEffect(() => {
@@ -206,15 +193,15 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
         const bestSystem = eligible
           .filter(d => d.isSystem)
           .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
-        
+
         const bestService = eligible
           .filter(d => !d.isSystem)
           .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
-        
+
         const autoSelected = [];
         if (bestSystem) autoSelected.push(bestSystem.id);
         if (bestService) autoSelected.push(bestService.id);
-        
+
         if (autoSelected.length > 0) {
           setSelectedDiscounts(autoSelected);
         }
@@ -272,12 +259,13 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
     label: `${n} khách`
   }));
 
-  const roomTypeOptions = [
-    { value: 'Bất kỳ phòng trống', label: 'Bất kỳ phòng trống' },
-    { value: 'Tiêu chuẩn', label: 'Tiêu chuẩn' },
-    { value: 'Cao cấp', label: 'Cao cấp' },
-    { value: 'Suite', label: 'Suite' }
-  ];
+  const roomTypeOptions = useMemo(() => {
+    const types = Array.from(new Set(allRooms.map(r => r.type).filter(Boolean)));
+    return [
+      { value: 'Bất kỳ phòng trống', label: 'Bất kỳ phòng trống' },
+      ...types.map(t => ({ value: t, label: t }))
+    ];
+  }, [allRooms]);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -371,90 +359,51 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                   className="flex md:hidden items-center justify-between w-full text-left mb-3"
                 >
                   <h3 className="text-base font-bold text-gray-900">Thông tin khách hàng</h3>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`w-5 h-5 text-gray-900 transition-transform ${showGuestInfo ? 'rotate-180' : ''}`}
                   />
                 </button>
-                
+
                 <h3 className="hidden md:block text-base font-bold text-gray-900 mb-3">Thông tin khách hàng</h3>
-                
-                <div className={`space-y-3 ${showGuestInfo ? 'block' : 'hidden md:block'}`}>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Họ và tên
-                    </label>
-                    <input
-                      type="text"
-                      value={roomFirstName}
-                      onChange={(e) => setRoomFirstName(e.target.value)}
-                      placeholder="Nhập họ và tên..."
-                      className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={roomEmail}
-                      onChange={(e) => setRoomEmail(e.target.value)}
-                      placeholder="guest@email.com"
-                      className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Số điện thoại
-                    </label>
-                    <input
-                      type="tel"
-                      value={roomPhone}
-                      onChange={(e) => setRoomPhone(e.target.value)}
-                      placeholder="+84 123 456 789"
-                      className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Địa chỉ
-                    </label>
-                    <input
-                      type="text"
-                      value={roomAddress}
-                      onChange={(e) => setRoomAddress(e.target.value)}
-                      placeholder="Địa chỉ đường phố"
-                      className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Thành phố
+                <div className={`space-y-4 ${showGuestInfo ? 'block' : 'hidden md:block'}`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                        Họ và tên
                       </label>
                       <input
                         type="text"
-                        value={roomCity}
-                        onChange={(e) => setRoomCity(e.target.value)}
-                        placeholder="Thành phố"
-                        className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
+                        value={roomFirstName}
+                        onChange={(e) => setRoomFirstName(e.target.value)}
+                        placeholder="Nhập họ và tên..."
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Quốc gia
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                        Số điện thoại
                       </label>
                       <input
-                        type="text"
-                        value={roomCountry}
-                        onChange={(e) => setRoomCountry(e.target.value)}
-                        placeholder="Quốc gia"
-                        className="w-full px-3 md:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
+                        type="tel"
+                        value={roomPhone}
+                        onChange={(e) => setRoomPhone(e.target.value)}
+                        placeholder="+84 123 456 789"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                        Email (Nhận mã QR)
+                      </label>
+                      <input
+                        type="email"
+                        value={roomEmail}
+                        onChange={(e) => setRoomEmail(e.target.value)}
+                        placeholder="guest@email.com"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all"
                       />
                     </div>
                   </div>
@@ -479,7 +428,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                     <ChevronDown className="w-4 h-4 rotate-180" />
                     Thu gọn
                   </button>
-                  
+
                 </div>
               </div>
             </div>
@@ -496,7 +445,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                     </span>
                   )}
                 </h3>
-                
+
                 {paginatedRooms.length > 0 ? (
                   <>
                     <div className="space-y-3">
@@ -506,11 +455,10 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                           <div
                             key={room.id}
                             onClick={() => toggleRoomSelection(room.id)}
-                            className={`border-2 rounded-lg p-3 md:p-4 transition-all cursor-pointer ${
-                              isSelected
+                            className={`border-2 rounded-lg p-3 md:p-4 transition-all cursor-pointer ${isSelected
                                 ? 'border-orange-500 bg-orange-50'
                                 : 'border-gray-200 hover:border-orange-300'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -523,7 +471,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                                 </span>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-bold text-gray-900">${room.price}/đêm</p>
+                                <p className="text-sm font-bold text-gray-900">{room.price.toLocaleString()} đ/đêm</p>
                                 <span className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700">
                                   Trống
                                 </span>
@@ -585,7 +533,7 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                   className="flex items-center justify-between w-full text-left"
                 >
                   <h3 className="text-base font-bold text-gray-900">Ưu đãi</h3>
-                  <Plus 
+                  <Plus
                     className={`w-5 h-5 text-gray-900 transition-transform ${showDiscountSection ? 'rotate-45' : ''}`}
                   />
                 </button>
@@ -596,19 +544,18 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                       sortedDiscounts.map((discount) => {
                         const isEligible = isDiscountEligible(discount);
                         const isSelected = selectedDiscounts.includes(discount.id);
-                        
+
                         return (
                           <button
                             key={discount.id}
                             onClick={() => toggleDiscount(discount.id)}
                             disabled={!isEligible}
-                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                              isSelected && isEligible
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${isSelected && isEligible
                                 ? 'border-orange-500 bg-orange-50'
                                 : isEligible
-                                ? 'border-gray-200 hover:border-orange-300 bg-white'
-                                : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                            }`}
+                                  ? 'border-gray-200 hover:border-orange-300 bg-white'
+                                  : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1">
@@ -620,9 +567,8 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                                   ) : (
                                     <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
                                   )}
-                                  <span className={`text-sm font-semibold ${
-                                    isEligible ? 'text-gray-900' : 'text-gray-400'
-                                  }`}>
+                                  <span className={`text-sm font-semibold ${isEligible ? 'text-gray-900' : 'text-gray-400'
+                                    }`}>
                                     {discount.code}
                                   </span>
                                   {discount.isSystem && (
@@ -644,10 +590,9 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                                 )}
                               </div>
                               <div className="text-right">
-                                <p className={`text-sm font-bold ${
-                                  isEligible ? 'text-orange-500' : 'text-gray-400'
-                                }`}>
-                                  {discount.percentage 
+                                <p className={`text-sm font-bold ${isEligible ? 'text-orange-500' : 'text-gray-400'
+                                  }`}>
+                                  {discount.percentage
                                     ? `-${discount.percentage}%`
                                     : `-${(discount.fixedPrice || 0).toLocaleString()} VNĐ`}
                                 </p>
@@ -675,13 +620,12 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                 <h3 className="text-base font-bold text-gray-900 mb-3">Hình thức thanh toán</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* MoMo */}
-                  <label 
+                  <label
                     onClick={() => setRoomPaymentMethod('MOMO')}
-                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    roomPaymentMethod === 'MOMO' 
-                      ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20' 
-                      : 'border-gray-100 bg-gray-50 hover:border-pink-300 hover:bg-white'
-                  }`}>
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${roomPaymentMethod === 'MOMO'
+                        ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20'
+                        : 'border-gray-100 bg-gray-50 hover:border-pink-300 hover:bg-white'
+                      }`}>
                     <input
                       type="radio"
                       name="roomPayment"
@@ -691,9 +635,8 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                       className="w-4 h-4 text-pink-600 focus:ring-pink-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                        roomPaymentMethod === 'MOMO' ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-600'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${roomPaymentMethod === 'MOMO' ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-600'
+                        }`}>
                         <span className="text-xs font-bold font-sans">M</span>
                       </div>
                       <span className="text-xs font-bold text-gray-800">MoMo</span>
@@ -701,13 +644,12 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                   </label>
 
                   {/* VNPAY */}
-                  <label 
+                  <label
                     onClick={() => setRoomPaymentMethod('VNPAY')}
-                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    roomPaymentMethod === 'VNPAY' 
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' 
-                      : 'border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-white'
-                  }`}>
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${roomPaymentMethod === 'VNPAY'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20'
+                        : 'border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-white'
+                      }`}>
                     <input
                       type="radio"
                       name="roomPayment"
@@ -717,9 +659,8 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                       className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                        roomPaymentMethod === 'VNPAY' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${roomPaymentMethod === 'VNPAY' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
+                        }`}>
                         <span className="text-xs font-bold font-sans">V</span>
                       </div>
                       <span className="text-xs font-bold text-gray-800">VNPAY</span>
@@ -727,13 +668,12 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                   </label>
 
                   {/* ZaloPay */}
-                  <label 
+                  <label
                     onClick={() => setRoomPaymentMethod('ZALOPAY')}
-                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    roomPaymentMethod === 'ZALOPAY' 
-                      ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500/20' 
-                      : 'border-gray-100 bg-gray-50 hover:border-teal-300 hover:bg-white'
-                  }`}>
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${roomPaymentMethod === 'ZALOPAY'
+                        ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500/20'
+                        : 'border-gray-100 bg-gray-50 hover:border-teal-300 hover:bg-white'
+                      }`}>
                     <input
                       type="radio"
                       name="roomPayment"
@@ -743,9 +683,8 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                       className="w-4 h-4 text-teal-600 focus:ring-teal-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                        roomPaymentMethod === 'ZALOPAY' ? 'bg-teal-500 text-white' : 'bg-teal-100 text-teal-600'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${roomPaymentMethod === 'ZALOPAY' ? 'bg-teal-500 text-white' : 'bg-teal-100 text-teal-600'
+                        }`}>
                         <span className="text-xs font-bold font-sans">Z</span>
                       </div>
                       <span className="text-xs font-bold text-gray-800">ZaloPay</span>
@@ -765,31 +704,27 @@ const RoomBookingModal: React.FC<RoomBookingModalProps> = ({
                       return (
                         <div key={id} className="flex items-center justify-between">
                           <span className="text-gray-700">
-                            {room.name} - {nights} đêm
+                            {room.name} ({room.type}) x {nights} đêm
                           </span>
-                          <span className="font-semibold">${(room.price * nights).toFixed(2)}</span>
+                          <span className="font-semibold">{(room.price * nights).toLocaleString()} VNĐ</span>
                         </div>
                       );
                     })}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-300">
-                      <span className="text-gray-700">Phí phụ thu</span>
-                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700">Thuế & Phí (10%)</span>
-                      <span className="font-semibold">${tax.toFixed(2)}</span>
+                      <span className="text-gray-700 font-bold">Tổng tiền phòng</span>
+                      <span className="font-bold text-gray-900">{subtotal.toLocaleString()} VNĐ</span>
                     </div>
                     {totalDiscount > 0 && (
                       <div className="flex items-center justify-between text-orange-600">
                         <span>Ưu đãi ({selectedDiscounts.length})</span>
                         <span className="font-semibold">
-                          -${totalDiscount.toFixed(2)}
+                          -{totalDiscount.toLocaleString()} VNĐ
                         </span>
                       </div>
                     )}
                     <div className="pt-3 border-t border-gray-300 flex items-center justify-between">
                       <span className="font-bold text-gray-900">Tổng cộng</span>
-                      <span className="font-bold text-orange-500 text-lg">${finalTotal.toFixed(2)}</span>
+                      <span className="font-bold text-orange-500 text-lg">{finalTotal.toLocaleString()} VNĐ</span>
                     </div>
                   </div>
                 </div>

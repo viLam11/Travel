@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DestinationCard from '../../common/DestinationCard';
+import { ChevronRight } from 'lucide-react';
 import apiClient from '@/services/apiClient';
 
 interface Destination {
@@ -140,11 +141,11 @@ const PopularDestinations: React.FC = () => {
   };
 
   const handleViewAllDestinations = () => {
-    navigate('/destinations?serviceType=TICKET_VENUE');
+    navigate('/destinations?serviceType=place');
   };
 
   const handleViewAllHotels = () => {
-    navigate('/destinations?serviceType=HOTEL');
+    navigate('/hotels');
   };
 
   const renderSection = (
@@ -165,9 +166,10 @@ const PopularDestinations: React.FC = () => {
 
           <button
             onClick={onViewAll}
-            className="cursor-pointer text-orange-500 hover:text-orange-600 font-medium text-sm underline transition-colors"
+            className="group flex items-center gap-1.5 px-4 py-2 text-orange-500 hover:text-orange-600 font-semibold text-sm sm:text-base bg-orange-50/50 hover:bg-orange-100/80 rounded-full transition-all duration-300 cursor-pointer"
           >
-            Xem tất cả
+            <span>Xem tất cả</span>
+            <ChevronRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
           </button>
         </div>
 

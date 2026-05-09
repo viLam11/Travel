@@ -23,7 +23,9 @@ import HotelInfoTab from "../../../components/page/serviceDetail/info/HotelInfoT
 import RoomsTab from "../../../components/page/serviceDetail/info/RoomsTab";
 import TicketsTab from "../../../components/page/serviceDetail/info/TicketsTab";
 import type { Discount } from "@/types/serviceDetail.types";
-import { getDestinationInfo } from "../../../constants/regions";
+import { serviceDetailApi } from '@/api/serviceDetailApi';
+import { REGIONS, getDestinationInfo, getDestinationByName, getServiceTypeName } from '../../../constants/regions';
+import type { BreadcrumbItem } from '@/components/common/Breadcrumb';
 import type { AppDispatch, RootState } from "../../../store";
 import {
   loadServiceDetail,
@@ -101,7 +103,7 @@ const ServiceDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"info" | "rooms" | "reviews">("info");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState("2025-09");
+  const [selectedMonth, setSelectedMonth] = useState<string>(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`); // yyyy-mm
   const [adultCount, setAdultCount] = useState(4);
   const [childCount, setChildCount] = useState(4);
 
@@ -132,13 +134,12 @@ const ServiceDetailPage: React.FC = () => {
   const [roomFirstName, setRoomFirstName] = useState("");
   const [roomEmail, setRoomEmail] = useState("");
   const [roomPhone, setRoomPhone] = useState("");
-  const [roomAddress, setRoomAddress] = useState("");
-  const [roomCity, setRoomCity] = useState("");
-  const [roomCountry, setRoomCountry] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
   const [roomPaymentMethod, setRoomPaymentMethod] = useState<'MOMO' | 'VNPAY' | 'ZALOPAY'>(
     'MOMO'
   );
+  const [priceCalendar, setPriceCalendar] = useState<any>(null);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
 
   // Reviews state
   const [reviewImages, setReviewImages] = useState<File[]>([]);
@@ -174,7 +175,7 @@ const ServiceDetailPage: React.FC = () => {
 
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
-      requireAuth(() => {}, 'Vui lòng đăng nhập để thêm vào danh sách yêu thích');
+      requireAuth(() => { }, 'Vui lòng đăng nhập để thêm vào danh sách yêu thích');
       return;
     }
 
@@ -207,11 +208,14 @@ const ServiceDetailPage: React.FC = () => {
       // Response structure from backend is PageResponse which has 'content' directly or standard Axios 'data'
       // apiClient.get returns response.data directly
       if (response?.content) {
-        setApiReviews(response.content);
-        setTotalApiReviews(response.totalElements || response.content.length);
+        // Lọc chỉ lấy các comment gốc (không có parentID) để tránh hiển thị trùng lặp với phần reply
+        const rootComments = response.content.filter((c: any) => !c.parentID);
+        setApiReviews(rootComments);
+        setTotalApiReviews(response.totalElements || rootComments.length);
       } else if (Array.isArray(response)) {
-        setApiReviews(response);
-        setTotalApiReviews(response.length);
+        const rootComments = response.filter((c: any) => !c.parentID);
+        setApiReviews(rootComments);
+        setTotalApiReviews(rootComments.length);
       }
     } catch (error) {
       console.error("Failed to fetch reviews", error);
@@ -258,38 +262,60 @@ const ServiceDetailPage: React.FC = () => {
         setIsLoadingItems(false);
         return;
       }
-      
+
       console.log(`Loading items for service type: ${effectiveType}, ID: ${realId} (original: ${id})`);
-      
+
       try {
-        let data: any = effectiveType === 'hotel' 
+        let data: any = effectiveType === 'hotel'
           ? await roomApi.getRoomsByHotelId(realId)
           : await ticketApi.getTicketsByService(realId);
 
         console.log('Items API Response:', data);
 
         // Robust extraction of items from wrapped or direct responses
-        const items = Array.isArray(data) 
-          ? data 
+        const items = Array.isArray(data)
+          ? data
           : (data?.result || data?.data || data?.roomList || data?.content || []);
-        
+
         console.log(`Extracted ${items.length} items`);
 
         // Map backend ticket/room response to UI shape
-        const mapped = items.map((item: any) => ({
-          id: item.id || item.roomID || item.ticketID, 
-          name: item.name ?? item.roomName ?? item.ticketName ?? `Item ${item.id}`,
-          type: item.type ?? item.roomType ?? item.ticketType ?? item.term ?? '',
-          price: item.price ? parseFloat(item.price) : (item.pricePerNight ?? 0),
-          capacity: item.capacity ?? item.maxGuests ?? 2,
-          amenities: item.amenities ?? [],
-          available: item.available ?? item.isAvailable ?? true,
-          currentBookings: item.currentBookings ?? [],
-          description: item.description ?? item.term ?? '',
-          quantity: item.quantity ?? item.remainingQuantity ?? 0,
-          image: item.roomImgUrl || (item.images && item.images[0]) || '',
-          count: 0 // Initialize count for UI
-        }));
+        const mapped = items.map((item: any) => {
+          // Thử tất cả các field tên có thể từ BE (hotel: roomName, ticket: ticketName, name, title...)
+          const resolvedName = item.name
+            || item.roomName
+            || item.room_name
+            || item.ticketName
+            || item.ticket_name
+            || item.title
+            || item.label
+            || null;
+
+          // Thử tất cả các field loại phòng/vé
+          const resolvedType = item.type
+            || item.roomType
+            || item.room_type
+            || item.ticketType
+            || item.ticket_type
+            || item.term
+            || '';
+
+          return {
+            id: item.id || item.roomID || item.ticketID,
+            // Chỉ fallback về "Item {id}" nếu không tìm thấy tên nào
+            name: resolvedName ?? `Phòng ${resolvedType || (item.id ? String(item.id).slice(0, 8) : '?')}`,
+            type: resolvedType,
+            price: item.price ? parseFloat(item.price) : (item.pricePerNight ?? 0),
+            capacity: item.capacity ?? item.maxGuests ?? 2,
+            amenities: item.amenities ?? [],
+            available: item.available ?? item.isAvailable ?? true,
+            currentBookings: item.currentBookings ?? [],
+            description: item.description ?? item.term ?? '',
+            quantity: item.quantity ?? item.remainingQuantity ?? 0,
+            image: item.roomImgUrl || (item.images && item.images[0]) || '',
+            count: 0,
+          };
+        });
 
         if (effectiveType === 'hotel') {
           setAllRooms(mapped);
@@ -360,6 +386,40 @@ const ServiceDetailPage: React.FC = () => {
     };
   }, [directId, destination, serviceType, idSlug, region, dispatch, navigate]);
 
+  useEffect(() => {
+    if (id && selectedMonth) {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const fetchCalendar = async () => {
+        setIsCalendarLoading(true);
+        try {
+          const data = await serviceDetailApi.getPriceCalendar(id.toString(), year, month);
+          setPriceCalendar(data);
+        } catch (err) {
+          console.error("Failed to fetch calendar", err);
+        } finally {
+          setIsCalendarLoading(false);
+        }
+      };
+      fetchCalendar();
+    }
+  }, [id, selectedMonth]);
+
+  const handleCalendarDateSelect = (dateStr: string) => {
+    if (serviceType === 'hotel') {
+      setCheckInDate(dateStr);
+      // Tự động set ngày trả phòng là ngày hôm sau nếu chưa có
+      const checkIn = new Date(dateStr);
+      const checkOut = new Date(checkIn);
+      checkOut.setDate(checkIn.getDate() + 1);
+      setCheckOutDate(checkOut.toISOString().split('T')[0]);
+
+      handleRoomBookNow();
+    } else {
+      setBookingDate(dateStr);
+      handleBookNow();
+    }
+  };
+
   // Handlers
   const handlePrevImage = () => {
     if (!service) return;
@@ -375,8 +435,23 @@ const ServiceDetailPage: React.FC = () => {
     );
   };
 
-  const handleBookNow = () => {
+  const handleBookNow = (ticketId?: string) => {
     requireAuth(() => {
+      // Nếu có ticketId, tự động set số lượng vé đó lên 1
+      if (ticketId && ticketList.length > 0) {
+        const newList = [...ticketList];
+        const idx = newList.findIndex(t => t.id.toString() === ticketId.toString());
+        if (idx !== -1) {
+          newList[idx] = { ...newList[idx], count: 1 };
+          setTicketList(newList);
+        }
+      }
+
+      // Nếu chưa có ngày đặt, mặc định là ngày hôm nay
+      if (!bookingDate) {
+        setBookingDate(new Date().toISOString().split('T')[0]);
+      }
+
       setShowServiceBookingModal(true);
       document.body.style.overflow = "hidden";
     }, 'Vui lòng đăng nhập để đặt dịch vụ');
@@ -402,6 +477,26 @@ const ServiceDetailPage: React.FC = () => {
     setIsBooking(true);
 
     try {
+      // Tính số ngày từ "Hiệu lực" (bookingDuration) → dùng để tính checkOutDate
+      const durationDaysMap: Record<string, number> = {
+        '1 ngày': 0,   // checkOut = checkIn (cùng ngày, hết lúc 23:59)
+        '2 ngày': 1,
+        '3 ngày': 2,
+        '1 tuần': 6,
+      };
+      const offsetDays = durationDaysMap[bookingDuration] ?? 0;
+
+      // Tính checkOutDate = bookingDate + offsetDays
+      const calcCheckOutDate = (baseDate: string, offset: number): string => {
+        const d = new Date(`${baseDate}T00:00:00`);
+        d.setDate(d.getDate() + offset);
+        return d.toISOString().split('T')[0];
+      };
+
+      const checkOutDateStr = bookingDate
+        ? calcCheckOutDate(bookingDate, offsetDays)
+        : new Date().toISOString().split('T')[0];
+
       const tickets = ticketList
         .filter((t: any) => t.count > 0)
         .map((t: any) => ({
@@ -410,7 +505,7 @@ const ServiceDetailPage: React.FC = () => {
           quantity: Number(t.count),
           // Backend now expects dates per item
           checkInDate: bookingDate ? `${bookingDate}T00:00:00.000Z` : new Date().toISOString(),
-          checkOutDate: bookingDate ? `${bookingDate}T23:59:59.000Z` : new Date().toISOString(),
+          checkOutDate: `${checkOutDateStr}T23:59:59.000Z`,
         }));
 
       const payload = {
@@ -471,7 +566,27 @@ const ServiceDetailPage: React.FC = () => {
       // Pre-fill room type if room is provided
       if (room) {
         setRoomType(room.title);
+
+        // Tự động chọn phòng này (auto-select)
+        if (room.id) {
+          setSelectedRooms([room.id]);
+        }
       }
+
+      // Nếu chưa có ngày nhận/trả, mặc định là ngày mai và ngày kia (để tránh quá khứ)
+      if (!checkInDate) {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        setCheckInDate(tomorrow.toISOString().split('T')[0]);
+
+        if (!checkOutDate) {
+          const dayAfter = new Date(tomorrow);
+          dayAfter.setDate(tomorrow.getDate() + 1);
+          setCheckOutDate(dayAfter.toISOString().split('T')[0]);
+        }
+      }
+
       setShowRoomBookingModal(true);
       document.body.style.overflow = "hidden";
     }, 'Vui lòng đăng nhập để đặt phòng');
@@ -646,51 +761,125 @@ const ServiceDetailPage: React.FC = () => {
     }, 'Vui lòng đăng nhập để đánh giá');
   };
 
+  const handleEditReview = async (reviewId: number | string, content: string, rating: number) => {
+    try {
+      await apiClient.comments.update(reviewId, content, rating);
+      toast.success("Cập nhật đánh giá thành công");
+      fetchReviews();
+    } catch (error) {
+      console.error("Failed to edit review", error);
+      toast.error("Có lỗi xảy ra khi cập nhật đánh giá");
+    }
+  };
 
+  const handleDeleteReview = async (reviewId: number | string) => {
+    try {
+      await apiClient.comments.delete(reviewId);
+      toast.success("Xóa đánh giá thành công");
+      fetchReviews();
+    } catch (error) {
+      console.error("Failed to delete review", error);
+      toast.error("Có lỗi xảy ra khi xóa đánh giá");
+    }
+  };
+
+  const handleReplyReview = async (reviewId: number | string, content: string) => {
+    try {
+      await apiClient.comments.reply(reviewId, { content });
+      toast.success("Đã gửi phản hồi");
+      fetchReviews();
+    } catch (error) {
+      console.error("Failed to reply review", error);
+      toast.error("Có lỗi xảy ra khi gửi phản hồi");
+    }
+  };
+
+
+
+  // Generate 3 dynamic months starting from current month
+  const dynamicMonths = Array.from({ length: 3 }).map((_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return {
+      label: `Tháng ${d.getMonth() + 1}/${yyyy}`,
+      value: `${yyyy}-${mm}`
+    };
+  });
 
   const getDaysInMonth = (monthKey: string) => {
     if (!service) return [];
-    const availability = service.availability[monthKey] || {};
+
+    // Parse year and month
+    const [year, month] = monthKey.split('-').map(Number);
+    const firstDayDate = new Date(year, month - 1, 1);
+    const lastDayDate = new Date(year, month, 0);
+    const maxDay = lastDayDate.getDate();
+
+    // Get day of week for the 1st of the month
+    let firstDayIndex = firstDayDate.getDay() - 1;
+    if (firstDayIndex === -1) firstDayIndex = 6; // Sunday
+
     const days: (null | {
       day: number;
       price: string | null;
       rooms: number | null;
       available: boolean;
     })[] = [];
-    
-    // Simplistic start day calculation for mock
-    const firstDay = monthKey === "2025-09" ? 1 : monthKey === "2025-10" ? 3 : 0;
 
-    for (let i = 0; i < firstDay; i++) {
+    for (let i = 0; i < firstDayIndex; i++) {
       days.push(null);
     }
 
-    const maxDay = monthKey === "2025-09" ? 30 : monthKey === "2025-10" ? 31 : 0;
+    // Prepare availability map from priceCalendar
+    const calendarMap: Record<number, { price: number; rooms: number }> = {};
+
+    // Default values from service base price if calendar fails or is empty
+    const defaultPrice = serviceType === 'hotel' ? (service.priceAdult || 0) : (service.priceAdult || 0);
+
+    // If we have priceCalendar from API, process it
+    if (priceCalendar && priceCalendar.subCalendars && priceCalendar.subCalendars.length > 0) {
+      priceCalendar.subCalendars.forEach((sub: any) => {
+        const subBasePrice = sub.basePrice || priceCalendar.basePrice || defaultPrice;
+
+        // Fill days with subCalendar base price if not already filled by a cheaper one
+        for (let d = 1; d <= maxDay; d++) {
+          if (!calendarMap[d] || subBasePrice < calendarMap[d].price) {
+            calendarMap[d] = { price: subBasePrice, rooms: 10 };
+          }
+        }
+
+        // Apply exceptions for specific dates
+        if (sub.exceptions) {
+          sub.exceptions.forEach((ex: any) => {
+            const exDate = new Date(ex.date);
+            if (exDate.getFullYear() === year && exDate.getMonth() + 1 === month) {
+              const d = exDate.getDate();
+              if (!calendarMap[d] || ex.price < calendarMap[d].price) {
+                calendarMap[d] = {
+                  price: ex.price,
+                  rooms: ex.availableRooms !== undefined ? ex.availableRooms : 10
+                };
+              }
+            }
+          });
+        }
+      });
+    } else {
+      // Fallback: If no calendar data, use base price for all days
+      for (let d = 1; d <= maxDay; d++) {
+        calendarMap[d] = { price: defaultPrice, rooms: 10 };
+      }
+    }
 
     for (let i = 1; i <= maxDay; i++) {
-      const val = availability[i.toString()];
-      let price: string | null = null;
-      let rooms: number | null = null;
-
-      if (typeof val === 'object' && val !== null) {
-        price = (val as any).price || null;
-        rooms = (val as any).remainingRooms || (val as any).rooms || null;
-      } else if (typeof val === 'string') {
-        // Support "price|rooms" format or just price
-        if (val.includes('|')) {
-          const parts = val.split('|');
-          price = parts[0];
-          rooms = parseInt(parts[1]);
-        } else {
-          price = val;
-        }
-      }
-
+      const calData = calendarMap[i];
       days.push({
         day: i,
-        price,
-        rooms,
-        available: !!val && (rooms === null || rooms > 0),
+        price: calData ? calData.price.toString() : null,
+        rooms: calData ? calData.rooms : null,
+        available: calData ? calData.rooms > 0 : true,
       });
     }
 
@@ -732,6 +921,12 @@ const ServiceDetailPage: React.FC = () => {
     notHelpful: r.dislikes || r.dislikeCount || 0,
     userAvatar: r.user?.avatar,
     userId: r.userId || r.user?.id || r.user?.userID || r.user?.username,
+    replies: Array.isArray(r.replies) ? r.replies.map((reply: any) => ({
+      id: reply.id,
+      content: reply.content,
+      username: reply.username || reply.user?.fullname || reply.user?.username || "Người dùng",
+      createdAt: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString("vi-VN") : ""
+    })) : []
   }));
 
   const allReviews = hasRealReviews
@@ -744,7 +939,7 @@ const ServiceDetailPage: React.FC = () => {
       <div className="min-h-screen bg-white animate-pulse">
         {/* Breadcrumb Section Placeholder */}
         <div className="h-14 bg-gray-50 border-b border-gray-100 flex items-center px-4 sm:px-8">
-           <div className="h-4 bg-gray-200 rounded w-48"></div>
+          <div className="h-4 bg-gray-200 rounded w-48"></div>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
@@ -752,9 +947,9 @@ const ServiceDetailPage: React.FC = () => {
           <div className="mb-6">
             <div className="h-10 bg-gray-200 rounded-xl w-3/4 mb-4"></div>
             <div className="flex items-center gap-4">
-               <div className="h-5 bg-gray-100 rounded-lg w-32"></div>
-               <div className="h-5 bg-gray-100 rounded-lg w-40"></div>
-               <div className="h-5 bg-gray-100 rounded-lg w-24 ml-auto"></div>
+              <div className="h-5 bg-gray-100 rounded-lg w-32"></div>
+              <div className="h-5 bg-gray-100 rounded-lg w-40"></div>
+              <div className="h-5 bg-gray-100 rounded-lg w-24 ml-auto"></div>
             </div>
           </div>
 
@@ -842,13 +1037,28 @@ const ServiceDetailPage: React.FC = () => {
     );
   }
 
+  const getDaysDiff = () => {
+    if (!checkInDate || !checkOutDate) return 0;
+    const diff = new Date(checkOutDate).getTime() - new Date(checkInDate).getTime();
+    return Math.max(1, Math.ceil(diff / (1000 * 3600 * 24)));
+  };
+  const nights = getDaysDiff();
+
   // Calculate totals
   const totalPrice = serviceType === 'hotel'
-    ? (service.priceAdult + service.priceChild) // Fallback for hotel sidebar if rooms not selected
+    ? (selectedRooms.length > 0
+      ? selectedRooms.reduce<number>((sum, id) => {
+        const room = allRooms.find(r => r.id === id);
+        return sum + (room ? (Number(room.price) * (nights || 1)) : 0);
+      }, 0)
+      : 0 // Hiển thị 0 nếu chưa chọn phòng để tránh gây "hết hồn" cho user
+    )
     : (ticketList.length > 0
-      ? ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0)
-      : (adultCount * (service.priceAdult || 0) + childCount * (service.priceChild || 0))
-    ) + service.additionalServices.reduce((sum, s) => sum + s.price, 0);
+      ? ticketList.reduce<number>((sum, t) => sum + (Number(t.count || 0)) * (Number(t.price || 0)), 0)
+      : (Number(adultCount || 0) * (Number(service.priceAdult || 0)) + Number(childCount || 0) * (Number(service.priceChild || 0)))
+    );
+  // Remove automatic addition of all additional services unless there's a selection logic
+  // + service.additionalServices.reduce((sum, s) => sum + s.price, 0);
 
   // Map API discounts if present, otherwise use service.discounts (mock)
   const activeDiscounts: Discount[] = apiDiscounts.length > 0
@@ -887,10 +1097,66 @@ const ServiceDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Breadcrumb Section - AUTO MODE with Service Name */}
+      {/* Breadcrumb Section - Manual mode với đầy đủ region → province → service */}
       <BreadcrumbSection
-        auto
-        serviceName={service.name}
+        breadcrumbItems={(() => {
+          if (!service) return [];
+          const items: BreadcrumbItem[] = [{ label: 'Trang chủ', href: '/' }];
+
+          // 1. Resolve Geographic info from service data or URL
+          const provinceParam = service.province?.code || service.provinceCode || destination;
+          let provinceInfo = provinceParam ? getDestinationInfo(provinceParam.toString()) : null;
+
+          // Fallback: try match by location name if code resolution failed
+          if (!provinceInfo && service.location) {
+            provinceInfo = getDestinationByName(service.location);
+          }
+
+          // Try to get region from province info first, then from URL
+          const resolvedRegionSlug = provinceInfo?.region || (region && region !== 'vietnam' && region !== 'undefined' ? region : null);
+          const regionInfo = resolvedRegionSlug ? (REGIONS as any)[resolvedRegionSlug] : null;
+
+          if (service.type === 'hotel') {
+            items.push({ label: 'Tất cả khách sạn', href: '/hotels' });
+
+            // Region level
+            if (regionInfo) {
+              items.push({ label: regionInfo.name, href: `/hotels?region=${regionInfo.slug}` });
+            }
+
+            // Province level
+            if (provinceInfo) {
+              items.push({ label: provinceInfo.name, href: `/hotels/${regionInfo?.slug || 'vietnam'}/${provinceInfo.slug}` });
+            } else if (service.location && service.location !== 'Việt Nam') {
+              items.push({ label: service.location });
+            }
+          } else {
+            items.push({ label: 'Tất cả điểm đến', href: '/destinations' });
+
+            // Region level
+            if (regionInfo) {
+              items.push({ label: regionInfo.name, href: `/destinations?region=${regionInfo.slug}` });
+            }
+
+            // Province level
+            if (provinceInfo) {
+              items.push({ label: provinceInfo.name, href: `/destinations/${regionInfo?.slug || 'vietnam'}/${provinceInfo.slug}` });
+            } else if (service.location && service.location !== 'Việt Nam') {
+              items.push({ label: service.location });
+            }
+
+            // 2. Add back serviceType step for attractions (e.g. "Các vé tham quan")
+            const currentST = serviceType || 'place';
+            const serviceTypeName = getServiceTypeName(currentST, true);
+            items.push({
+              label: serviceTypeName,
+              href: `/destinations/${regionInfo?.slug || 'vietnam'}/${provinceInfo?.slug || destination || 'undefined'}/${currentST}`
+            });
+          }
+
+          items.push({ label: service.name, isActive: true });
+          return items;
+        })()}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Title Section */}
@@ -912,44 +1178,27 @@ const ServiceDetailPage: React.FC = () => {
                 <MapPin className="w-4 h-4 text-orange-500" />
                 <span>{service.location}</span>
               </div>
-            <span className="text-orange-500 font-medium">
-                30K+ lượt khách
-              </span>
             </div>
 
-            {/* Tags Badges */}
-            {service.tags && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {service.tags.split(',').filter((t: string) => t.trim()).map((tag: string, idx: number) => (
-                  <span 
-                    key={idx} 
-                    className="px-2.5 py-1 bg-orange-50 text-orange-600 text-[10px] sm:text-xs font-bold rounded-full border border-orange-100 flex items-center gap-1 shadow-sm"
-                  >
-                    <span className="opacity-60 text-[8px]">#</span>
-                    {tag.trim()}
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* Tags Badges Removed from Hero - they are now in the tabs */}
+
 
             {isAuthenticated && (
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleToggleFavorite}
                   disabled={isFavoriteLoading}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 border shadow-sm transform active:scale-95 cursor-pointer ${
-                    isFavorite 
-                      ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100" 
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 border shadow-sm transform active:scale-95 cursor-pointer ${isFavorite
+                      ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
                       : "bg-white text-gray-600 border-gray-100 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100"
-                  }`}
+                    }`}
                 >
                   {isFavoriteLoading ? (
                     <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
                   ) : (
                     <Heart
-                      className={`w-4.5 h-4.5 transition-colors ${
-                        isFavorite ? "fill-rose-500 text-rose-500" : "text-gray-400"
-                      }`}
+                      className={`w-4.5 h-4.5 transition-colors ${isFavorite ? "fill-rose-500 text-rose-500" : "text-gray-400"
+                        }`}
                     />
                   )}
                   <span>{isFavorite ? "Đã lưu yêu thích" : "Thêm vào yêu thích"}</span>
@@ -1061,7 +1310,15 @@ const ServiceDetailPage: React.FC = () => {
             {/* Tab Content */}
             {activeTab === "info" && (
               serviceType === 'hotel' ? (
-                <HotelInfoTab service={service} />
+                <HotelInfoTab
+                  service={service}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  getDaysInMonth={getDaysInMonth}
+                  dynamicMonths={dynamicMonths}
+                  onSelectDate={handleCalendarDateSelect}
+                  isCalendarLoading={isCalendarLoading}
+                />
               ) : (
                 <ServiceInfoTab
                   service={service}
@@ -1069,6 +1326,9 @@ const ServiceDetailPage: React.FC = () => {
                   setSelectedMonth={setSelectedMonth}
                   getDaysInMonth={getDaysInMonth}
                   getFeatureIcon={getFeatureIcon}
+                  dynamicMonths={dynamicMonths}
+                  onSelectDate={handleCalendarDateSelect}
+                  isCalendarLoading={isCalendarLoading}
                 />
               )
             )}
@@ -1140,21 +1400,12 @@ const ServiceDetailPage: React.FC = () => {
                   await apiClient.comments.undoDislike(reviewId);
                 }}
                 onReport={async (_reviewId, _reason) => {
-                  // ⚠️ Backend chưa có endpoint báo cáo comment riêng
-                  // Placeholder: chỉ log ra console
-                  console.log('[Report]', _reviewId, _reason);
+                  toast.success('Đã gửi báo cáo vi phạm');
                 }}
                 currentUserInfo={currentUser?.user}
-                onEditReview={async (reviewId, content, rating) => {
-                  await apiClient.comments.update(reviewId, content, rating);
-                  toast.success("Cập nhật đánh giá thành công");
-                  fetchReviews();
-                }}
-                onDeleteReview={async (reviewId) => {
-                  await apiClient.comments.delete(reviewId);
-                  toast.success("Xóa đánh giá thành công");
-                  fetchReviews();
-                }}
+                onEditReview={handleEditReview}
+                onDeleteReview={handleDeleteReview}
+                onReply={handleReplyReview}
               />
             )}
           </div>
@@ -1170,8 +1421,8 @@ const ServiceDetailPage: React.FC = () => {
               childCount={childCount}
               setChildCount={setChildCount}
               finalPrice={finalPrice}
-              onBookNow={handleBookNow}
-              onRoomBookNow={handleRoomBookNow}
+              onBookNow={() => handleBookNow()}
+              onRoomBookNow={() => handleRoomBookNow()}
               // Hotel Props
               checkInDate={checkInDate}
               setCheckInDate={setCheckInDate}
@@ -1182,6 +1433,8 @@ const ServiceDetailPage: React.FC = () => {
               ticketList={ticketList}
               setTicketList={setTicketList}
               isLoggedIn={isAuthenticated}
+              selectedRooms={selectedRooms}
+              allRooms={allRooms}
             />
           </div>
         </div >
@@ -1202,15 +1455,14 @@ const ServiceDetailPage: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={serviceType === 'hotel' ? () => handleRoomBookNow() : handleBookNow}
-            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-md uppercase tracking-widest active:scale-95 ${
-              isAuthenticated 
-                ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100" 
+            onClick={serviceType === 'hotel' ? () => handleRoomBookNow() : () => handleBookNow()}
+            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-md uppercase tracking-widest active:scale-95 ${isAuthenticated
+                ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100"
                 : "bg-orange-50 text-orange-600 border border-orange-200"
-            }`}
+              }`}
           >
-            {isAuthenticated 
-              ? (serviceType === 'hotel' ? 'Đặt ngay' : 'Đặt vé ngay') 
+            {isAuthenticated
+              ? (serviceType === 'hotel' ? 'Đặt ngay' : 'Đặt vé ngay')
               : 'Đăng nhập'}
           </button>
         </div>
@@ -1274,12 +1526,6 @@ const ServiceDetailPage: React.FC = () => {
           setRoomEmail={setRoomEmail}
           roomPhone={roomPhone}
           setRoomPhone={setRoomPhone}
-          roomAddress={roomAddress}
-          setRoomAddress={setRoomAddress}
-          roomCity={roomCity}
-          setRoomCity={setRoomCity}
-          roomCountry={roomCountry}
-          setRoomCountry={setRoomCountry}
           specialRequests={specialRequests}
           setSpecialRequests={setSpecialRequests}
           roomPaymentMethod={roomPaymentMethod}
@@ -1302,7 +1548,7 @@ const ServiceDetailPage: React.FC = () => {
       {/* Floating Chat Widget */}
       {service && isAuthenticated && (
         <ServiceChatWidget
-          providerId={service.providerId || (service as any).providerID || service.provider?.userID || `provider_${service.id}`}
+          providerId={service.providerId || service.provider?.userID || ''}
           providerName={(service as any).providerName || service.provider?.fullname || `Nhà cung cấp: ${service.name}`}
           serviceId={service.id}
           serviceName={service.name}

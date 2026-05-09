@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, UserPlus, ShoppingBag, Info, MessageSquare, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Bell, UserPlus, MessageSquare, CheckCircle2, AlertCircle, Heart, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/admin/button";
@@ -58,10 +58,13 @@ export const NotificationDropdown = () => {
                 const defaultOrderUrl = uRole === 'admin' ? '/admin/bookings' : (isP ? '/provider/bookings' : '/user/bookings');
                 url = (noti.targetUrl && noti.targetUrl !== '/') ? noti.targetUrl : defaultOrderUrl;
                 break;
-            case 'NEW_MESSAGE':
             case 'CHAT':
             case 'MESSAGE':
                 url = (noti.targetUrl && noti.targetUrl !== '/') ? noti.targetUrl : defaultChatUrl;
+                break;
+            case 'BLOG_LIKE':
+            case 'BLOG_COMMENT':
+                url = (noti.targetUrl && noti.targetUrl !== '/') ? noti.targetUrl : '/user/profile/blogs';
                 break;
             default:
                 const content = (noti.content || '').toLowerCase();
@@ -246,10 +249,11 @@ export const NotificationDropdown = () => {
             case 'ORDER_CREATED':
             case 'NEW_ORDER': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
             case 'REPORT': return <AlertCircle className="w-4 h-4 text-orange-500" />;
-            case 'CHAT':
             case 'MESSAGE':
             case 'NEW_MESSAGE': return <MessageSquare className="w-4 h-4 text-blue-500" />;
             case 'PLAN_INVITATION': return <UserPlus className="w-4 h-4 text-purple-500" />;
+            case 'BLOG_LIKE': return <Heart className="w-4 h-4 text-red-500 fill-current" />;
+            case 'BLOG_COMMENT': return <MessageCircle className="w-4 h-4 text-orange-500" />;
             default: return <Bell className="w-4 h-4 text-blue-500" />;
         }
     };

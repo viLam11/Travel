@@ -224,36 +224,47 @@ const AdminServiceList = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatsCard 
-                    title="Tổng dịch vụ" 
-                    value={stats.total} 
-                    icon={Layers} 
-                    color="text-blue-600" 
-                    bg="bg-blue-100" 
-                    trend="+5.2%"
-                />
-                <StatsCard 
-                    title="Đang hoạt động" 
-                    value={stats.active} 
-                    icon={Activity} 
-                    color="text-emerald-600" 
-                    bg="bg-emerald-100" 
-                    trend="+12%"
-                />
-                <StatsCard 
-                    title="Chờ kiểm duyệt" 
-                    value={stats.pending} 
-                    icon={Clock} 
-                    color="text-amber-600" 
-                    bg="bg-amber-100" 
-                />
-                <StatsCard 
-                    title="Khách sạn & Tour" 
-                    value={`${stats.hotels} | ${stats.tours}`} 
-                    icon={Map} 
-                    color="text-indigo-600" 
-                    bg="bg-indigo-100" 
-                />
+                {isLoading ? (
+                    [1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-[120px] bg-muted/40 border border-border/40 animate-pulse rounded-xl p-5 flex flex-col justify-between">
+                            <div className="w-24 h-4 bg-muted-foreground/20 rounded animate-pulse" />
+                            <div className="w-16 h-6 bg-muted-foreground/30 rounded animate-pulse" />
+                        </div>
+                    ))
+                ) : (
+                    <>
+                        <StatsCard 
+                            title="Tổng dịch vụ" 
+                            value={stats.total} 
+                            icon={Layers} 
+                            color="text-blue-600" 
+                            bg="bg-blue-100" 
+                            trend="+5.2%"
+                        />
+                        <StatsCard 
+                            title="Đang hoạt động" 
+                            value={stats.active} 
+                            icon={Activity} 
+                            color="text-emerald-600" 
+                            bg="bg-emerald-100" 
+                            trend="+12%"
+                        />
+                        <StatsCard 
+                            title="Chờ kiểm duyệt" 
+                            value={stats.pending} 
+                            icon={Clock} 
+                            color="text-amber-600" 
+                            bg="bg-amber-100" 
+                        />
+                        <StatsCard 
+                            title="Khách sạn & Tour" 
+                            value={`${stats.hotels} | ${stats.tours}`} 
+                            icon={Map} 
+                            color="text-indigo-600" 
+                            bg="bg-indigo-100" 
+                        />
+                    </>
+                )}
             </div>
 
             <Card className="shadow-sm overflow-hidden border-border/40">
@@ -297,7 +308,7 @@ const AdminServiceList = () => {
                                     <th className="px-6 py-4">Loại hình</th>
                                     <th className="px-6 py-4">Nhà cung cấp</th>
                                     <th className="px-6 py-4">Địa điểm</th>
-                                    <th className="px-6 py-4">Giá TB</th>
+                                    <th className="px-6 py-4">Giá niêm yết</th>
                                     <th className="px-6 py-4">Trạng thái</th>
                                     <th className="px-6 py-4 text-right">Thao tác</th>
                                 </tr>
@@ -473,11 +484,7 @@ const AdminServiceList = () => {
                                     <label className="text-xs uppercase text-muted-foreground ml-1">Địa điểm</label>
                                     <Input defaultValue={selectedService?.location} />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs uppercase text-muted-foreground ml-1">Giá trung bình</label>
-                                    <Input defaultValue={selectedService?.price} type="number" />
                                 </div>
-                            </div>
                             <div className="flex justify-end gap-3 mt-2">
                                 <Button variant="outline" onClick={() => setDialogType(null)}>Hủy</Button>
                                 <Button onClick={() => { success('Đã lưu thay đổi!'); setDialogType(null); }}>Lưu thay đổi</Button>

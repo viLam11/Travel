@@ -23,10 +23,11 @@ const HotelFilterPage: React.FC = () => {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<string>('popular');
 
-    const destination = searchParams.get('destination') || '';
+    const destinationParam = searchParams.get('destination') || '';
+    const queryProvinceCode = searchParams.get('provinceCode') || '';
 
     // Resolve slug/code to numeric ID for backend filter
-    const resolvedProvinceID = getDestinationInfo(destination || '')?.id || destination;
+    const resolvedProvinceID = queryProvinceCode || getDestinationInfo(destinationParam || '')?.id || (destinationParam && !isNaN(Number(destinationParam)) ? destinationParam : '');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [apiHotels, setApiHotels] = useState<HotelListItem[]>([]);
     const [totalItems, setTotalItems] = useState(0);
@@ -106,7 +107,7 @@ const HotelFilterPage: React.FC = () => {
             rating: service.rating || 0,
             reviews: service.reviewCount || 0,
             price: rawPrice,
-            stars: stars > 0 ? stars : 4, // Default to 4 if unknown
+            stars: stars, // Do not default to 4 if unknown, keep 0 to show "Chưa có đánh giá"
             image: service.thumbnailUrl || 'https://via.placeholder.com/600x400',
             amenities: ['wifi', 'parking'], // Basic amenities if not from backend
             discount: service.discounts?.[0]
@@ -159,11 +160,10 @@ const HotelFilterPage: React.FC = () => {
             controller.abort();
             clearTimeout(timeoutId);
         };
-    }, [destination, priceRange, selectedStars, sortBy, currentPage]);
+    }, [destinationParam, queryProvinceCode, priceRange, selectedStars, sortBy, currentPage]);
 
-    // Final hotels list: use API if results found, otherwise mock (as requested)
     const hotelsToShow = apiHotels.length > 0 ? apiHotels : mockHotels.filter(h => {
-        if (destination && !h.location.toLowerCase().includes(destination.toLowerCase())) return false;
+        if (destinationParam && !h.location.toLowerCase().includes(destinationParam.toLowerCase())) return false;
         if (h.price < priceRange[0] || h.price > priceRange[1]) return false;
         if (selectedStars.length > 0 && !selectedStars.includes(h.stars)) return false;
         return true;
@@ -187,7 +187,7 @@ const HotelFilterPage: React.FC = () => {
         <div className="min-h-screen bg-gray-50">
             <BreadcrumbSection
                 auto
-                title={destination || 'Tất cả khách sạn'}
+                title={destinationParam || 'Tất cả khách sạn'}
                 subtitle={`Tìm thấy ${effectiveHotelsCount} khách sạn`}
             />
 

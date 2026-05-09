@@ -19,6 +19,7 @@ import { ROUTES } from '@/constants/routes';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import RichTextEditor from '@/components/ui/RichTextEditor';
+import MapPicker from '@/components/common/map/MapPicker';
 
 export default function EditServicePage() {
     const { id } = useParams<{ id: string }>();
@@ -49,6 +50,8 @@ export default function EditServicePage() {
         difficulty: '',
         groupSize: '',
         includedItems: [] as string[],
+        latitude: '',
+        longitude: '',
     });
 
     const [images, setImages] = useState<string[]>([]);
@@ -78,6 +81,8 @@ export default function EditServicePage() {
                 difficulty: service.difficulty || 'moderate',
                 groupSize: service.groupSize ? service.groupSize.toString() : '',
                 includedItems: [], 
+                latitude: service.latitude || '',
+                longitude: service.longitude || '',
             });
         }
     }, [service]);
@@ -125,7 +130,9 @@ export default function EditServicePage() {
                 contactNumber: formData.contactNumber,
                 serviceType: serviceType === 'hotel' ? 'HOTEL' : 'TICKET_VENUE',
                 rating: Number(formData.starRating),
-                tags: service?.tags || ""
+                tags: service?.tags || "",
+                latitude: formData.latitude,
+                longitude: formData.longitude,
             });
 
             // 2. Upload new images if any
@@ -250,6 +257,16 @@ export default function EditServicePage() {
                                 value={formData.description}
                                 onChange={(value) => handleInputChange('description', value)}
                                 placeholder="Mô tả chi tiết về dịch vụ..."
+                            />
+                        </div>
+
+                        {/* Map Integration */}
+                        <div className="pt-2">
+                            <MapPicker 
+                                lat={formData.latitude} 
+                                lng={formData.longitude} 
+                                address={formData.location}
+                                onChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))}
                             />
                         </div>
                     </CardContent>

@@ -67,13 +67,13 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   const [availableDiscounts, setAvailableDiscounts] = React.useState<Discount[]>(propDiscounts || []);
   const [selectedDiscounts, setSelectedDiscounts] = React.useState<string[]>([]);
   const [selectedAdditionalServices, setSelectedAdditionalServices] = React.useState<string[]>(
-  service.additionalServices.map(s => s.name) // Mặc định chọn tất cả
+    service.additionalServices.map(s => s.name) // Mặc định chọn tất cả
   );
 
-  const basePrice = ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0) + 
+  const basePrice = ticketList.reduce((sum, t) => sum + (t.count || 0) * (t.price || 0), 0) +
     service.additionalServices
-    .filter(s => selectedAdditionalServices.includes(s.name))
-    .reduce((sum, s) => sum + s.price, 0);
+      .filter(s => selectedAdditionalServices.includes(s.name))
+      .reduce((sum, s) => sum + s.price, 0);
 
   const isDiscountEligible = (discount: Discount): boolean => {
     if (discount.minSpend && basePrice < discount.minSpend) {
@@ -105,7 +105,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     if (isOpen) {
       fetchDiscounts();
     }
-  }, [isOpen, service.id, provinceCode, propDiscounts]); 
+  }, [isOpen, service.id, provinceCode, propDiscounts]);
 
   // Auto-select best eligible discounts (1 system + 1 service)
   React.useEffect(() => {
@@ -115,15 +115,15 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
         const bestSystem = eligible
           .filter(d => d.isSystem)
           .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
-        
+
         const bestService = eligible
           .filter(d => !d.isSystem)
           .sort((a, b) => calculateDiscountAmount(b) - calculateDiscountAmount(a))[0];
-        
+
         const autoSelected = [];
         if (bestSystem) autoSelected.push(bestSystem.id);
         if (bestService) autoSelected.push(bestService.id);
-        
+
         if (autoSelected.length > 0) {
           setSelectedDiscounts(autoSelected);
         }
@@ -152,12 +152,12 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
   };
 
   const toggleAdditionalService = (serviceName: string) => {
-    setSelectedAdditionalServices(prev => 
+    setSelectedAdditionalServices(prev =>
       prev.includes(serviceName)
         ? prev.filter(name => name !== serviceName)  // Bỏ chọn
         : [...prev, serviceName]                      // Thêm vào
     );
-  };  
+  };
 
 
   const calculateDiscountAmount = (discount: Discount): number => {
@@ -172,7 +172,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
     const discount = availableDiscounts.find(d => d.id === id);
     return discount ? sum + calculateDiscountAmount(discount) : sum;
   }, 0);
-   
+
   const finalPriceWithDiscounts = Math.max(0, basePrice - totalDiscount);
 
   // Sort discounts: eligible first, then non-eligible
@@ -264,56 +264,58 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
 
               {/* Customer Information */}
               <div>
-                
+
                 <button
                   onClick={() => setShowCustomerInfo(!showCustomerInfo)}
                   className="flex md:hidden items-center justify-between w-full text-left mb-3 cursor-pointer"
                 >
                   <h3 className="text-base font-bold text-gray-900">Thông tin khách hàng</h3>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`w-5 h-5 text-gray-900 transition-transform ${showCustomerInfo ? 'rotate-180' : ''}`}
                   />
                 </button>
                 <h3 className="hidden md:block text-base font-bold text-gray-900 mb-3">Thông tin khách hàng</h3>
-                
-                <div className={`space-y-3 ${showCustomerInfo ? 'block' : 'hidden md:block'}`}>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Họ và tên <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Nhập họ tên..."
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Số điện thoại <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="Nhập số điện thoại..."
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
-                  </div>
+                <div className={`space-y-4 ${showCustomerInfo ? 'block' : 'hidden md:block'}`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                        Họ và tên <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="Nhập họ tên..."
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      placeholder="Nhập email..."
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white"
-                    />
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                        Số điện thoại <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="Nhập số điện thoại..."
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                        Email (Nhận mã QR) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="Nhập email..."
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -330,18 +332,18 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                   </div>
 
                   <button
-                      onClick={() => setShowCustomerInfo(false)}
-                      className="md:hidden w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <ChevronDown className="w-4 h-4 rotate-180" />
-                      Thu gọn
+                    onClick={() => setShowCustomerInfo(false)}
+                    className="md:hidden w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <ChevronDown className="w-4 h-4 rotate-180" />
+                    Thu gọn
                   </button>
                 </div>
- 
-                   {/* Ticket Types */}
-                   {ticketList.length > 0 && (
-                     <div className="mt-6">
-                       <h3 className="text-base font-bold text-gray-900 mb-3 text-left">Các loại vé:</h3>
+
+                {/* Ticket Types */}
+                {ticketList.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-base font-bold text-gray-900 mb-3 text-left">Các loại vé:</h3>
                     {/* <div className="space-y-3">
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -403,88 +405,84 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                     {ticketList.map((ticket) => (
                       <div key={ticket.id} className="bg-gray-50 rounded-lg p-4 mb-3">
                         <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {ticket.name}:
-                            </p>
-                            <p className="text-sm font-bold text-orange-500">
-                              {ticket.price} VNĐ / người
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateTicketQuantity(ticket.id, -1)}
-                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors cursor-pointer"
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-semibold">{ticket.count}</span>
-                            <button
-                              onClick={() => updateTicketQuantity(ticket.id, +1)}
-                              className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors cursor-pointer"
-                            >
-                              +
-                            </button>
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {ticket.name}:
+                              </p>
+                              <p className="text-sm font-bold text-orange-500">
+                                {ticket.price} VNĐ / người
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateTicketQuantity(ticket.id, -1)}
+                                className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors cursor-pointer"
+                              >
+                                −
+                              </button>
+                              <span className="w-8 text-center font-semibold">{ticket.count}</span>
+                              <button
+                                onClick={() => updateTicketQuantity(ticket.id, +1)}
+                                className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-white transition-colors cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      </div>
-                     ))}
-                   </div>
-                   )}
-            
-                  {service.additionalServices && service.additionalServices.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-3">Dịch vụ bổ sung:</h3>
-                      <div className="space-y-2">
-                        {service.additionalServices.map((addService) => {
-                          const isSelected = selectedAdditionalServices.includes(addService.name);
-                          return (
-                            <button
-                              key={addService.name}
-                              onClick={() => toggleAdditionalService(addService.name)}
-                              className={`w-full text-left p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'border-orange-400 bg-orange-50'
-                                  : 'border-gray-200 hover:border-orange-300 bg-gray-50'
+                    ))}
+                  </div>
+                )}
+
+                {service.additionalServices && service.additionalServices.length > 0 && (
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900 mb-3">Dịch vụ bổ sung:</h3>
+                    <div className="space-y-2">
+                      {service.additionalServices.map((addService) => {
+                        const isSelected = selectedAdditionalServices.includes(addService.name);
+                        return (
+                          <button
+                            key={addService.name}
+                            onClick={() => toggleAdditionalService(addService.name)}
+                            className={`w-full text-left p-4 rounded-lg border-2 transition-all cursor-pointer ${isSelected
+                                ? 'border-orange-400 bg-orange-50'
+                                : 'border-gray-200 hover:border-orange-300 bg-gray-50'
                               }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  {/* Checkbox custom */}
-                                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                    isSelected 
-                                      ? 'bg-orange-500 border-orange-500' 
-                                      : 'border-gray-300'
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                {/* Checkbox custom */}
+                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected
+                                    ? 'bg-orange-500 border-orange-500'
+                                    : 'border-gray-300'
                                   }`}>
-                                    {isSelected && (
-                                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    )}
-                                  </div>
-                                  {/* Tên dịch vụ */}
-                                  <span className={`text-sm font-semibold ${
-                                    isSelected ? 'text-gray-900' : 'text-gray-700'
-                                  }`}>
-                                    {addService.name}
-                                  </span>
+                                  {isSelected && (
+                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
                                 </div>
-                                
-                                {/* PHẦN NÀY LÀ: Giá */}
-                                <span className={`text-sm font-bold ${
-                                  isSelected ? 'text-orange-500' : 'text-gray-600'
-                                }`}>
-                                  +{(addService.price || 0).toLocaleString()} VNĐ
+                                {/* Tên dịch vụ */}
+                                <span className={`text-sm font-semibold ${isSelected ? 'text-gray-900' : 'text-gray-700'
+                                  }`}>
+                                  {addService.name}
                                 </span>
                               </div>
-                            </button>
-                          );
-                        })}
-                      </div>
+
+                              {/* PHẦN NÀY LÀ: Giá */}
+                              <span className={`text-sm font-bold ${isSelected ? 'text-orange-500' : 'text-gray-600'
+                                }`}>
+                                +{(addService.price || 0).toLocaleString()} VNĐ
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
+                )}
 
                 {/* </div> */}
               </div>
@@ -500,7 +498,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                   className="flex items-center justify-between w-full text-left cursor-pointer"
                 >
                   <h3 className="text-base font-bold text-gray-900">Ưu đãi</h3>
-                  <Plus 
+                  <Plus
                     className={`w-5 h-5 text-gray-900 transition-transform ${showDiscountSection ? 'rotate-45' : ''}`}
                     style={{ position: 'static' }}
                   />
@@ -512,19 +510,18 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                       sortedDiscounts.map((discount) => {
                         const isEligible = isDiscountEligible(discount);
                         const isSelected = selectedDiscounts.includes(discount.id);
-                        
+
                         return (
                           <button
                             key={discount.id}
                             onClick={() => toggleDiscount(discount.id)}
                             disabled={!isEligible}
-                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                              isSelected && isEligible
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${isSelected && isEligible
                                 ? 'border-orange-500 bg-orange-50'
                                 : isEligible
-                                ? 'border-gray-200 hover:border-orange-300 bg-white'
-                                : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                            }`}
+                                  ? 'border-gray-200 hover:border-orange-300 bg-white'
+                                  : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1">
@@ -536,12 +533,11 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                                   ) : (
                                     <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
                                   )}
-                                  <span className={`text-sm font-semibold ${
-                                    isEligible ? 'text-gray-900' : 'text-gray-400'
-                                  }`}>
+                                  <span className={`text-sm font-semibold ${isEligible ? 'text-gray-900' : 'text-gray-400'
+                                    }`}>
                                     {discount.code}
                                   </span>
-                                   {discount.isSystem && (
+                                  {discount.isSystem && (
                                     <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold rounded-full uppercase tracking-tight shadow-sm">
                                       <span className="w-1 h-1 bg-indigo-400 rounded-full animate-pulse" />
                                       Hệ thống
@@ -558,10 +554,9 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                                 )}
                               </div>
                               <div className="text-right">
-                                <p className={`text-sm font-bold ${
-                                  isEligible ? 'text-orange-500' : 'text-gray-400'
-                                }`}>
-                                  {discount.percentage 
+                                <p className={`text-sm font-bold ${isEligible ? 'text-orange-500' : 'text-gray-400'
+                                  }`}>
+                                  {discount.percentage
                                     ? `-${discount.percentage}%`
                                     : `-${(discount.fixedPrice || 0).toLocaleString()} VNĐ`}
                                 </p>
@@ -589,13 +584,12 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                 <h3 className="text-base font-bold text-gray-900 mb-3">Hình thức thanh toán</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* MoMo */}
-                  <label 
+                  <label
                     onClick={() => setPaymentMethod('MOMO')}
-                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'MOMO' 
-                      ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20' 
-                      : 'border-gray-100 bg-gray-50 hover:border-pink-300 hover:bg-white'
-                  }`}>
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'MOMO'
+                        ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20'
+                        : 'border-gray-100 bg-gray-50 hover:border-pink-300 hover:bg-white'
+                      }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -605,9 +599,8 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                       className="w-4 h-4 text-pink-600 focus:ring-pink-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                        paymentMethod === 'MOMO' ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-600'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${paymentMethod === 'MOMO' ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-600'
+                        }`}>
                         <span className="text-xs font-bold font-sans">M</span>
                       </div>
                       <span className="text-xs font-bold text-gray-800">MoMo</span>
@@ -615,13 +608,12 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                   </label>
 
                   {/* VNPAY */}
-                  <label 
+                  <label
                     onClick={() => setPaymentMethod('VNPAY')}
-                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'VNPAY' 
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' 
-                      : 'border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-white'
-                  }`}>
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'VNPAY'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20'
+                        : 'border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-white'
+                      }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -631,9 +623,8 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                       className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                        paymentMethod === 'VNPAY' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${paymentMethod === 'VNPAY' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
+                        }`}>
                         <span className="text-xs font-bold font-sans">V</span>
                       </div>
                       <span className="text-xs font-bold text-gray-800">VNPAY</span>
@@ -641,13 +632,12 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                   </label>
 
                   {/* ZaloPay */}
-                  <label 
+                  <label
                     onClick={() => setPaymentMethod('ZALOPAY')}
-                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'ZALOPAY' 
-                      ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500/20' 
-                      : 'border-gray-100 bg-gray-50 hover:border-teal-300 hover:bg-white'
-                  }`}>
+                    className={`flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'ZALOPAY'
+                        ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500/20'
+                        : 'border-gray-100 bg-gray-50 hover:border-teal-300 hover:bg-white'
+                      }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -657,9 +647,8 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                       className="w-4 h-4 text-teal-600 focus:ring-teal-500 border-gray-300"
                     />
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                        paymentMethod === 'ZALOPAY' ? 'bg-teal-500 text-white' : 'bg-teal-100 text-teal-600'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${paymentMethod === 'ZALOPAY' ? 'bg-teal-500 text-white' : 'bg-teal-100 text-teal-600'
+                        }`}>
                         <span className="text-xs font-bold font-sans">Z</span>
                       </div>
                       <span className="text-xs font-bold text-gray-800">ZaloPay</span>
@@ -690,7 +679,7 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
                           {(addService.price || 0).toLocaleString()} VNĐ
                         </span>
                       </div>
-                  ))}
+                    ))}
                   {totalDiscount > 0 && (
                     <div className="flex items-center justify-between text-orange-600">
                       <span>Ưu đãi ({selectedDiscounts.length})</span>
@@ -711,15 +700,14 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
               </div>
 
               {/* Confirm Button */}
-              {}
+              { }
               <button
                 onClick={() => onConfirm(selectedDiscounts)}
                 disabled={!isFormValid() || isSubmitting}
-                className={`w-full py-3.5 rounded-lg font-bold text-base transition-all flex items-center justify-center gap-2 ${
-                  isFormValid() && !isSubmitting
+                className={`w-full py-3.5 rounded-lg font-bold text-base transition-all flex items-center justify-center gap-2 ${isFormValid() && !isSubmitting
                     ? 'bg-orange-500 hover:bg-orange-600 text-white cursor-pointer'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {isSubmitting ? (
                   <>

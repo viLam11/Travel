@@ -124,6 +124,13 @@ export const SERVICE_TYPES = {
     namePlural: 'Khách sạn',
     slug: 'hotel',
     icon: 'Hotel'
+  },
+  'ticket': {
+    id: 'ticket',
+    name: 'Vé tham quan',
+    namePlural: 'Các vé tham quan',
+    slug: 'ticket',
+    icon: 'Ticket'
   }
 } as const;
 
@@ -172,6 +179,17 @@ export const getRegionByDestination = (destinationSlug: string) => {
 
 export const getDestinationInfo = (destinationSlug: string) => {
   return DESTINATIONS[destinationSlug as DestinationSlug] || null;
+};
+
+export const getDestinationByName = (name: string) => {
+  if (!name) return null;
+  const normalizedSearch = name.toLowerCase().trim();
+  const found = Object.values(DESTINATIONS).find(d => 
+    d.name.toLowerCase() === normalizedSearch || 
+    d.slug.toLowerCase() === normalizedSearch ||
+    (d as any).fullName?.toLowerCase() === normalizedSearch
+  );
+  return found || null;
 };
 
 export const getServiceTypeName = (serviceTypeSlug: string, plural = false) => {

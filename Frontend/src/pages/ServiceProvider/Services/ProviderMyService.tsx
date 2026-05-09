@@ -33,6 +33,8 @@ import TicketsTab from './components/TicketsTab';
 import PricingCalendarTab from './components/PricingCalendarTab';
 import PromotionsTab from './components/PromotionsTab';
 import { toast } from 'sonner';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 const ProviderMyService = () => {
     const { currentUser } = useAuthContext();
@@ -136,14 +138,20 @@ const ProviderMyService = () => {
         if (!serviceId) return;
         setIsSaving(true);
         try {
-            await serviceApi.updateService(serviceId.toString(), {
+            // Chuẩn hóa payload theo đúng API Doc của UpdatedServiceRequest DTO (như EditServicePage)
+            const payload = {
                 serviceName: serviceData.name,
-                address: serviceData.address,
-                location: serviceData.location,
                 description: serviceData.description,
-                tags: serviceData.tags,
-                amenities: serviceData.attributes.map((a: any) => a.label)
-            });
+                address: serviceData.address || serviceData.location || "",
+                averagePrice: Number(serviceData.price || serviceData.averagePrice || 0),
+                provinceCode: serviceData.province?.code || serviceData.provinceCode || "",
+                contactNumber: serviceData.contactNumber || "",
+                serviceType: serviceData.serviceType || (serviceData.type === 'hotel' ? 'HOTEL' : 'TICKET_VENUE'),
+                rating: Number(serviceData.rating || 0),
+                tags: serviceData.tags || ""
+            };
+
+            await serviceApi.updateService(serviceId.toString(), payload);
             
             setBackupData(serviceData);
             toast.success("Đã lưu thay đổi thành công!");
@@ -565,31 +573,38 @@ const ProviderMyService = () => {
                                             <h3 className="text-xl font-bold text-foreground/90">Giới thiệu</h3>
                                         </div>
                                         {isEditing ? (
-                                            <Textarea
-                                                value={serviceData.description}
-                                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                                className="min-h-[150px] bg-white"
-                                                placeholder="Mô tả về dịch vụ của bạn..."
-                                            />
+                                            <div className="bg-white rounded-md overflow-hidden border border-input focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                                                <ReactQuill 
+                                                    theme="snow"
+                                                    value={serviceData.description}
+                                                    onChange={(content) => handleInputChange('description', content)}
+                                                    className="h-[200px] mb-12"
+                                                    placeholder="Viết một đoạn giới thiệu thật hấp dẫn về dịch vụ của bạn..."
+                                                />
+                                            </div>
                                         ) : (
-                                            <p className="text-gray-600 leading-relaxed whitespace-pre-line text-justify">
-                                                {serviceData.description}
-                                            </p>
+                                            <div 
+                                                className="text-gray-600 leading-relaxed whitespace-pre-line text-justify description-content"
+                                                dangerouslySetInnerHTML={{ __html: serviceData.description || "Chưa có mô tả cho dịch vụ này." }}
+                                            />
                                         )}
                                     </section>
 
-                                    {/* Tags Section */}
+                                    {/* Amenities (Tags) Section */}
                                     <section className={`rounded-xl ${isEditing ? 'p-6 border-2 border-primary/20 bg-primary/5' : ''}`}>
                                         <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-xl font-bold text-foreground/90">Tags & SEO</h3>
+                                            <h3 className="text-xl font-bold text-foreground/90">
+                                                {serviceType === 'hotel' ? 'Tiện nghi khách sạn' : 'Điểm nổi bật & Dịch vụ'}
+                                            </h3>
                                         </div>
                                         {isEditing ? (
                                             <div className="space-y-3">
-                                                <Label className="text-sm font-medium">Thêm tags (cách nhau bởi dấu phẩy)</Label>
+                                                <Label className="text-sm font-medium">Thêm tiện nghi (cách nhau bởi dấu phẩy)</Label>
+                                                <p className="text-xs text-muted-foreground mb-2">Hệ thống lưu trữ các tiện ích dưới dạng từ khóa. Vui lòng nhập các tiện ích cách nhau bởi dấu phẩy (VD: WiFi miễn phí, Hồ bơi, Bữa sáng miễn phí).</p>
                                                 <Input 
                                                     value={serviceData.tags}
                                                     onChange={(e) => handleInputChange('tags', e.target.value)}
-                                                    placeholder="Ví dụ: Luxury, Beach, Family, WiFi"
+                                                    placeholder={serviceType === 'hotel' ? "Ví dụ: WiFi, Hồ bơi, Spa, Bãi đỗ xe" : "Ví dụ: Hướng dẫn viên, Nước uống, Đưa đón"}
                                                     className="bg-white"
                                                 />
                                                 <div className="flex flex-wrap gap-2 mt-2">
@@ -601,56 +616,21 @@ const ProviderMyService = () => {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                 {(serviceData.tags || "").split(',').filter((t: string) => t.trim()).map((tag: string, idx: number) => (
-                                                    <Badge key={idx} variant="outline" className="bg-orange-50 text-orange-600 border-orange-100 px-3 py-1 text-sm font-medium">
-                                                        #{tag.trim()}
-                                                    </Badge>
+                                                    <div key={idx} className="bg-orange-50/50 p-3 rounded-lg flex items-center gap-3 border border-orange-100">
+                                                        <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                                                        <span className="text-gray-700 font-medium text-sm">{tag.trim()}</span>
+                                                    </div>
                                                 ))}
                                                 {(!serviceData.tags || serviceData.tags.trim() === "") && (
-                                                    <span className="text-gray-400 text-sm italic">Chưa có tags nào.</span>
+                                                    <span className="text-gray-400 text-sm italic col-span-2">Chưa có thông tin tiện ích.</span>
                                                 )}
                                             </div>
                                         )}
                                     </section>
 
-                                    {/* Amenities Section */}
-                                    <section className={`rounded-xl ${isEditing ? 'p-6 border-2 border-primary/20 bg-primary/5' : ''}`}>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-xl font-bold text-foreground/90">
-                                                {serviceType === 'hotel' ? 'Tiện nghi khách sạn' : 'Điểm nổi bật & Dịch vụ'}
-                                            </h3>
-                                        </div>
-                                        {isEditing ? (
-                                            <div className="space-y-4">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {serviceData.attributes.map((attr: any, idx: number) => (
-                                                        <Badge key={idx} variant="secondary" className="pl-3 pr-1 py-1 flex items-center gap-2 text-sm">
-                                                            {attr.label}
-                                                            <button
-                                                                onClick={() => handleAttributeRemove(idx)}
-                                                                className="hover:bg-red-200 rounded-full p-0.5 text-red-600 cursor-pointer"
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                            </button>
-                                                        </Badge>
-                                                    ))}
-                                                    <Button variant="outline" size="sm" className="h-7 text-xs border-dashed cursor-pointer">
-                                                        <Plus className="w-3 h-3 mr-1" /> Thêm tiện ích
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                {serviceData.attributes.map((attr: any, idx: number) => (
-                                                    <div key={idx} className="bg-orange-50/50 p-3 rounded-lg flex items-center gap-3 border border-orange-100">
-                                                        <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                                                        <span className="text-gray-700 font-medium text-sm">{attr.label}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </section>
+
 
                                     {/* Policies Section */}
                                     <section className={`rounded-xl ${isEditing ? 'p-4 border border-blue-200 bg-blue-50/30' : ''}`}>
@@ -734,11 +714,14 @@ const ProviderMyService = () => {
                             )}
 
                             {activeTab === 'pricing' && (
-                                <PricingCalendarTab serviceId={serviceId as number} basePrice={serviceData.price} />
+                                <PricingCalendarTab serviceId={serviceId?.toString() || ""} basePrice={serviceData.price} />
                             )}
 
                             {activeTab === 'promotions' && (
-                                <PromotionsTab serviceId={serviceId!.toString()} />
+                                <PromotionsTab 
+                                    serviceId={serviceId!.toString()} 
+                                    placeCode={serviceData?.province?.code || serviceData?.provinceCode || ''} 
+                                />
                             )}
                         </div>
                     </div>
@@ -772,9 +755,15 @@ const ProviderMyService = () => {
                                 </div>
 
                                 {!isEditing ? (
-                                    <Button className="w-full bg-orange-600 hover:bg-orange-700" onClick={() => setIsEditing(true)}>
+                                    <Button 
+                                        className="w-full bg-orange-600 hover:bg-orange-700" 
+                                        onClick={() => {
+                                            if (activeTab !== 'info') setActiveTab('info');
+                                            setIsEditing(true);
+                                        }}
+                                    >
                                         <Edit className="w-4 h-4 mr-2" />
-                                        Cập nhật thông tin
+                                        {activeTab !== 'info' ? 'Về trang thông tin' : 'Cập nhật thông tin'}
                                     </Button>
                                 ) : (
                                     <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSave} disabled={isSaving}>

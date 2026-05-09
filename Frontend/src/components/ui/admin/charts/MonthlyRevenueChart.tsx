@@ -30,12 +30,12 @@ export default function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) 
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <CardTitle className="text-lg font-semibold">Monthly Revenue Comparison</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Current year vs previous year</p>
+            <CardTitle className="text-lg font-semibold">So sánh doanh thu</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Năm nay so với năm trước</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Current Month</p>
+              <p className="text-xs text-muted-foreground">Tháng hiện tại</p>
               <p className="text-xl font-bold">{formatCurrency(latestMonth?.revenue || 0)}</p>
             </div>
             <div className="flex items-center gap-1 text-chart-2">

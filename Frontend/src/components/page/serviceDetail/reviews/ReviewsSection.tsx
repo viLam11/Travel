@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Star, ThumbsUp, ThumbsDown, Upload, Image as ImageIcon, Flag, AlertTriangle } from 'lucide-react';
+import { X, Star, ThumbsUp, ThumbsDown, Upload, Image as ImageIcon, Flag, AlertTriangle, Reply } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -26,6 +26,12 @@ interface Review {
   userDisliked?: boolean;
   verified?: boolean;
   userId?: number | string;
+  replies?: {
+    id: string | number;
+    content: string;
+    username: string;
+    createdAt: string;
+  }[];
 }
 
 interface ReviewsSectionProps {
@@ -58,6 +64,7 @@ interface ReviewsSectionProps {
   currentUserInfo?: any;
   onEditReview?: (reviewId: number | string, content: string, rating: number) => Promise<void>;
   onDeleteReview?: (reviewId: number | string) => Promise<void>;
+  onReply?: (reviewId: number | string, content: string) => Promise<void>;
 }
 
 type SortOption = 'newest' | 'helpful' | 'rating-high' | 'rating-low';
@@ -91,6 +98,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   currentUserInfo,
   onEditReview,
   onDeleteReview,
+  onReply,
 }) => {
   const navigate = useNavigate();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -113,6 +121,11 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const [editingReviewId, setEditingReviewId] = useState<number | string | null>(null);
   const [editContent, setEditContent] = useState<string>('');
   const [editRating, setEditRating] = useState<number>(0);
+  
+  // Reply State
+  const [replyingToId, setReplyingToId] = useState<number | string | null>(null);
+  const [replyContent, setReplyContent] = useState<string>('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
   const REPORT_REASONS = [
     "Nội dung rác (Spam) / Quảng cáo",
@@ -315,6 +328,29 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
       } catch (err) {
         console.error('Delete API error:', err);
       }
+    }
+  };
+
+  const handleReplyClick = (reviewId: number | string) => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    setReplyingToId(prev => prev === reviewId ? null : reviewId);
+    setReplyContent('');
+  };
+
+  const submitReply = async (reviewId: number | string) => {
+    if (!replyContent.trim()) return;
+    setIsSubmittingReply(true);
+    try {
+      await onReply?.(reviewId, replyContent);
+      setReplyingToId(null);
+      setReplyContent('');
+    } catch (err) {
+      console.error('Reply API error:', err);
+    } finally {
+      setIsSubmittingReply(false);
     }
   };
 
@@ -794,6 +830,13 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                     <ThumbsDown className={`w-4 h-4 ${reviewDislikes[review.id] ? 'fill-orange-500' : ''}`} />
                     <span>{(review.notHelpful || 0) + (reviewDislikes[review.id] ? 1 : 0)}</span>
                   </button>
+                  <button
+                    onClick={() => handleReplyClick(review.id)}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-500 transition-colors cursor-pointer"
+                  >
+                    <Reply className="w-4 h-4" />
+                    <span>Trả lời</span>
+                  </button>
                   <span className="flex-1" />
                   <button
                     onClick={() => handleReportReviewClick(review.id)}
@@ -807,23 +850,72 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                     <Flag className="w-4 h-4" />
                     <span>{reportedReviews.has(review.id) ? 'Đã báo cáo' : 'Báo cáo'}</span>
                   </button>
-                  {currentUserInfo && currentUserInfo.id && review.userId && String(currentUserInfo.id) === String(review.userId) && (
+                  {isLoggedIn && currentUserInfo && (
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditClick(review)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(review.id)}
-                        className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors cursor-pointer"
-                      >
-                        Xóa
-                      </button>
+                      {/* Sửa: Chỉ chủ nhân của comment mới được sửa */}
+                      {String(currentUserInfo.userID || currentUserInfo.id) === String(review.userId) && (
+                        <button
+                          onClick={() => handleEditClick(review)}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                        >
+                          Sửa
+                        </button>
+                      )}
+                      
+                      {/* Xóa: Chủ nhân comment HOẶC Admin mới được xóa */}
+                      {(String(currentUserInfo.userID || currentUserInfo.id) === String(review.userId) || currentUserInfo.role === 'ADMIN') && (
+                        <button
+                          onClick={() => handleDeleteClick(review.id)}
+                          className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors cursor-pointer"
+                        >
+                          Xóa
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {/* Reply Form */}
+                {replyingToId === review.id && (
+                  <div className="mt-4 pl-6 border-l-2 border-orange-200">
+                    <textarea
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      placeholder="Viết câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-2 focus:ring-orange-500 focus:border-orange-500 resize-none outline-none"
+                      rows={2}
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setReplyingToId(null)} className="h-8 text-xs">
+                        Hủy
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => submitReply(review.id)} 
+                        disabled={!replyContent.trim() || isSubmittingReply}
+                        className="h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        {isSubmittingReply ? 'Đang gửi...' : 'Gửi trả lời'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Replies List */}
+                {review.replies && review.replies.length > 0 && (
+                  <div className="mt-4 space-y-4 pl-6 border-l-2 border-gray-100">
+                    {review.replies.map((reply) => (
+                      <div key={reply.id} className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm text-gray-900">{reply.username}</span>
+                          <span className="text-[10px] text-gray-500">{reply.createdAt}</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{reply.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
 

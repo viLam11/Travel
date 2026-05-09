@@ -15,7 +15,7 @@ import {
 import {
     Calendar, Banknote, Users, Package,
     Eye, CheckCircle, XCircle, Search,
-    X, User, CreditCard, Clock,
+    X, User, CreditCard, Clock, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { type MockBooking } from '@/mocks/bookings';
 import apiClient from '@/services/apiClient';
@@ -45,7 +45,7 @@ const PAY_CONFIG: Record<string, { label: string; className: string }> = {
 
 // ─── Inline Detail Modal ───────────────────────────────────────────────────────
 
-function DetailModal({ booking, onClose }: { booking: MockBooking; onClose: () => void }) {
+function DetailModal({ booking, onClose, onConfirm }: { booking: MockBooking; onClose: () => void; onConfirm: () => void }) {
     const s = STATUS_CONFIG[booking.status];
     const p = PAY_CONFIG[booking.paymentStatus];
     return (
@@ -120,10 +120,10 @@ function DetailModal({ booking, onClose }: { booking: MockBooking; onClose: () =
                 {/* Footer */}
                 <div className="flex justify-end gap-2 px-8 py-6 flex-shrink-0 border-t border-border mt-4">
                     <Button variant="outline" onClick={onClose}>Đóng</Button>
-                    {booking.status !== 'confirmed' ? (
-                        <Button variant="default">Xác nhận đơn</Button>
+                    {booking.status === 'pending' ? (
+                        <Button variant="default" onClick={onConfirm}>Xác nhận đơn</Button>
                     ) : (
-                        <Button variant="outline" disabled>Đã xác nhận</Button>
+                        <Button variant="outline" disabled>{STATUS_CONFIG[booking.status]?.label}</Button>
                     )}
                 </div>
             </div>
@@ -211,7 +211,7 @@ const ProviderBookings = () => {
                         status: o.status === 'SUCCESS' ? 'completed' : 
                                 (o.status === 'ACCEPTED' || o.status === 'CONFIRMED') ? 'confirmed' : 
                                 (o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'FAILED') ? 'cancelled' : 'pending',
-                        paymentStatus: o.isPaid ? 'paid' : 'pending',
+                        paymentStatus: (o.isPaid || o.status === 'SUCCESS') ? 'paid' : 'pending',
                         createdAt: o.createdAt || new Date().toISOString(),
                     }));
                     setBookings(mappedBookings);
@@ -225,6 +225,9 @@ const ProviderBookings = () => {
         fetchBookings();
     }, [serviceId, providerType]);
 
+    const [page, setPage] = useState(1);
+    const pageSize = 5;
+
     const filtered = useMemo(() => {
         return bookings.filter(b => {
             const matchStatus = statusFilter === 'all' || b.status === statusFilter;
@@ -235,6 +238,15 @@ const ProviderBookings = () => {
             return matchStatus && matchSearch;
         });
     }, [bookings, statusFilter, search]);
+
+    const paginatedBookings = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filtered.slice(start, start + pageSize);
+    }, [filtered, page]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search, statusFilter]);
 
     const stats = useMemo(() => ({
         total: bookings.length,
@@ -383,13 +395,13 @@ const ProviderBookings = () => {
                                         <td className="px-6 py-4 text-right"><div className="h-8 bg-muted rounded w-8 ml-auto"></div></td>
                                     </tr>
                                 ))
-                            ) : filtered.length === 0 ? (
+                            ) : paginatedBookings.length === 0 ? (
                                 <tr>
                                     <td colSpan={serviceType === 'hotel' ? 9 : 8} className="text-center py-20 text-muted-foreground text-[14px]">
                                         Chưa có thông tin phù hợp
                                     </td>
                                 </tr>
-                            ) : filtered.map(booking => {
+                            ) : paginatedBookings.map(booking => {
                                 const s = STATUS_CONFIG[booking.status];
                                 const p = PAY_CONFIG[booking.paymentStatus];
 
@@ -452,11 +464,50 @@ const ProviderBookings = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination component */}
+                {filtered.length > pageSize && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 border-t border-border">
+                        <div className="text-sm text-muted-foreground">
+                            Trang <strong>{page}</strong> trên <strong>{Math.ceil(filtered.length / pageSize)}</strong>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="h-9 px-3"
+                            >
+                                <ChevronLeft className="h-4 w-4 mr-1" />
+                                Trước
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage(p => Math.min(Math.ceil(filtered.length / pageSize), p + 1))}
+                                disabled={page === Math.ceil(filtered.length / pageSize)}
+                                className="h-9 px-3"
+                            >
+                                Tiếp
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
+
 
             {/* Modals */}
             {detailBooking && (
-                <DetailModal booking={detailBooking} onClose={() => setDetailBooking(null)} />
+                <DetailModal 
+                    booking={detailBooking} 
+                    onClose={() => setDetailBooking(null)} 
+                    onConfirm={() => {
+                        setStatusBooking(detailBooking);
+                        setDetailBooking(null);
+                    }}
+                />
             )}
             {statusBooking && (
                 <StatusModal

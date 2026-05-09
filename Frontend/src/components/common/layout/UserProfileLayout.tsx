@@ -49,6 +49,12 @@ const UserProfileLayout: React.FC = () => {
       icon: Heart,
     },
     {
+      id: 'blogs',
+      label: 'Bài viết của tôi',
+      path: '/user/profile/blogs',
+      icon: MessageCircle,
+    },
+    {
       id: 'settings',
       label: 'Cài đặt',
       path: '/user/settings',

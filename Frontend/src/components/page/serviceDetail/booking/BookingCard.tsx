@@ -24,6 +24,8 @@ interface BookingCardProps {
   setTicketList: (tickets: any[]) => void;
   isLoggedIn: boolean;
   isLoading?: boolean;
+  selectedRooms?: (string | number)[];
+  allRooms?: any[];
 }
 
 const BookingCard: React.FC<BookingCardProps> = ({
@@ -45,11 +47,14 @@ const BookingCard: React.FC<BookingCardProps> = ({
   ticketList,
   setTicketList,
   isLoggedIn,
-  isLoading = false
+  isLoading = false,
+  selectedRooms = [],
+  allRooms = []
 }) => {
   const isHotel = serviceType === 'hotel';
   const [showAllServices, setShowAllServices] = useState(false);
   const [showAllDiscounts, setShowAllDiscounts] = useState(false);
+  const [showSelectedRooms, setShowSelectedRooms] = useState(true);
 
   return (
     <div className="sticky top-24 bg-white border-2 border-gray-200 rounded-xl shadow-md flex flex-col max-h-[calc(100vh-120px)] overflow-hidden">
@@ -135,6 +140,49 @@ const BookingCard: React.FC<BookingCardProps> = ({
                   Lưu ý: Giá phòng có thể thay đổi tùy thuộc vào ngày bạn chọn.
                 </p>
               </div>
+
+              {/* Selected Rooms List - Collapsible */}
+              {selectedRooms.length > 0 && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => setShowSelectedRooms(!showSelectedRooms)}
+                    className="w-full flex items-center justify-between mb-2 hover:bg-orange-50 -mx-1 px-1 py-1 rounded transition-colors group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-1 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest font-inter">Phòng đã chọn</span>
+                      <span className="bg-orange-100 text-orange-600 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                        {selectedRooms.length}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-all ${showSelectedRooms ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {showSelectedRooms && (
+                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar animate-in slide-in-from-top-2 duration-300">
+                      {selectedRooms.map((roomId) => {
+                        const room = allRooms.find(r => String(r.id) === String(roomId));
+                        if (!room) return null;
+                        return (
+                          <div key={roomId} className="flex justify-between items-center text-sm p-2.5 bg-orange-50/50 rounded-xl border border-orange-100 group transition-all">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-gray-800 text-[11px] leading-tight">{room.name || room.title}</span>
+                              <span className="text-[9px] text-gray-500 uppercase">{room.type || 'Phòng'}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-bold text-orange-600 text-xs">
+                                {Number(room.price).toLocaleString('vi-VN')} đ
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             // Standard Interface: Dynamic Ticket List
@@ -324,7 +372,15 @@ const BookingCard: React.FC<BookingCardProps> = ({
             {isLoading ? (
               <div className="h-8 bg-gray-200 rounded w-32 animate-pulse"></div>
             ) : (
-              <span className="font-extrabold text-orange-500 text-xl tracking-tight">{(finalPrice || 0).toLocaleString()} <span className="text-xs">VNĐ</span></span>
+              finalPrice > 0 ? (
+                <span className="font-extrabold text-orange-500 text-xl tracking-tight">
+                  {finalPrice.toLocaleString()} <span className="text-xs">VNĐ</span>
+                </span>
+              ) : (
+                <span className="text-sm font-medium text-gray-400 italic">
+                  {isHotel ? 'Vui lòng chọn phòng' : 'Chọn số lượng vé'}
+                </span>
+              )
             )}
           </div>
         </div>

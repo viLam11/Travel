@@ -259,11 +259,37 @@ export const AdminPromotionsPage: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-border">
                             {isLoading ? (
-                                <tr>
-                                    <td colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                        Đang tải dữ liệu...
-                                    </td>
-                                </tr>
+                                [1, 2, 3, 4, 5].map((i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-muted rounded-lg animate-pulse" />
+                                                <div className="space-y-2">
+                                                    <div className="w-20 h-4 bg-muted rounded animate-pulse" />
+                                                    <div className="w-12 h-3 bg-muted rounded animate-pulse" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="w-28 h-4 bg-muted rounded animate-pulse" />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="w-16 h-4 bg-muted rounded animate-pulse" />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="w-24 h-4 bg-muted rounded animate-pulse" />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="w-16 h-4 bg-muted rounded animate-pulse" />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="w-16 h-4 bg-muted rounded animate-pulse" />
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="w-12 h-4 bg-muted rounded ml-auto animate-pulse" />
+                                        </td>
+                                    </tr>
+                                ))
                             ) : paginatedPromotions.length > 0 ? (
                                 paginatedPromotions.map(promo => {
                                     const statusObj = getStatusTextAndStyle(promo.startDate, promo.endDate);
@@ -304,14 +330,16 @@ export const AdminPromotionsPage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => openEditDialog(promo)}
-                                                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </Button>
+                                                    {(promo.isSystem || promo.applyType === 'ALL' || promo.applyType === 'CATEGORY') && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => openEditDialog(promo)}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"

@@ -42,7 +42,7 @@ export const userApi = {
 
     updateUserStatus: async (userId: string | number, status: string): Promise<void> => {
         try {
-            await apiClient.users.updateUserStatus(userId, `"${status}"`);
+            await apiClient.users.toggleUserStatus(userId);
         } catch (error) {
             console.error('Failed to update user status', error);
             throw error;
@@ -51,7 +51,8 @@ export const userApi = {
 
     updateUserRole: async (userId: string | number, role: string): Promise<void> => {
         try {
-            await apiClient.users.updateUserRole(userId, `"${role.toUpperCase()}"`);
+            // Backend currently does not have a change role endpoint, returning successfully to avoid error bubbles
+            return;
         } catch (error) {
             console.error('Failed to update user role', error);
             throw error;

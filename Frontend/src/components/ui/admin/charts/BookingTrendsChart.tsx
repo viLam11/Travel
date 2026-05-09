@@ -16,11 +16,11 @@ interface BookingTrendsChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-gray-900 text-white shadow-xl rounded-xl px-4 py-3 text-xs z-50 border-none">
-        <p className="font-black mb-2 uppercase tracking-widest text-[10px] text-gray-400">{label}</p>
+      <div className="bg-popover text-popover-foreground shadow-xl rounded-xl px-4 py-3 text-xs z-50 border border-border">
+        <p className="font-black mb-2 uppercase tracking-widest text-[10px] text-muted-foreground">{label}</p>
         <div className="flex gap-4 justify-between items-center">
           <span className="font-medium">Lượt truy cập:</span>
-          <span className="font-black text-sm text-orange-400">{payload[0].value.toLocaleString()}</span>
+          <span className="font-black text-sm text-primary">{payload[0].value.toLocaleString()}</span>
         </div>
       </div>
     );
@@ -49,8 +49,8 @@ export default function BookingTrendsChart({ data }: BookingTrendsChartProps) {
           </div>
           <div className="text-right shrink-0">
             <p className="text-[10px] font-black uppercase text-muted-foreground mb-0.5 tracking-widest">Tổng lượt truy cập</p>
-            <p className="text-2xl font-black text-gray-900">{totalVisits.toLocaleString()}</p>
-            <div className={`flex items-center justify-end gap-1 text-xs font-bold text-blue-600`}>
+            <p className="text-2xl font-black text-foreground">{totalVisits.toLocaleString()}</p>
+            <div className={`flex items-center justify-end gap-1 text-xs font-bold text-primary`}>
               <MapPin className="w-3 h-3" />
               <span>{chartData.length} Thành phố</span>
             </div>
@@ -60,22 +60,23 @@ export default function BookingTrendsChart({ data }: BookingTrendsChartProps) {
       <CardContent>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              className="text-gray-400 font-bold text-[10px] uppercase tracking-wider"
-              tick={{ dy: 10 }}
+              className="text-muted-foreground font-bold text-[10px] uppercase tracking-wider"
+              tick={{ dy: 10, fill: 'currentColor' }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-gray-400 font-bold text-[10px]"
+              className="text-muted-foreground font-bold text-[10px]"
+              tick={{ fill: 'currentColor' }}
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ fill: '#F8FAFC' }}
+              cursor={{ fill: 'hsl(var(--muted))' }}
             />
             <Bar
               dataKey="value"

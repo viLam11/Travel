@@ -48,6 +48,8 @@ export interface Service {
 
     createdAt: string;
     updatedAt: string;
+    latitude?: string;
+    longitude?: string;
     provider?: {
         userID: string;
         fullname?: string;

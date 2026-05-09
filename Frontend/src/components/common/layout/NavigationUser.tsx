@@ -273,6 +273,15 @@ const Navigation: React.FC<NavigationProps> = ({
                   >
                     Hồ sơ của tôi
                   </button>
+                  <button
+                    onClick={() => {
+                      navigate('/my-plans');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Kế hoạch du lịch của tôi
+                  </button>
                   {currentUser?.user?.role === 'admin' && (
                     <button
                       onClick={() => { navigate('/admin/dashboard'); setIsMobileMenuOpen(false); }}

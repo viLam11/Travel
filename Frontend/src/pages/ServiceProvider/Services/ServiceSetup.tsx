@@ -16,6 +16,8 @@ import { X, CheckCircle, Hotel, Map, UploadCloud, ImagePlus } from 'lucide-react
 import { useAuthContext } from '@/contexts/AuthContext';
 import { ApiClient } from '@/services/apiClient';
 import { ROUTES } from '@/constants/routes';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 interface ServiceSetupProps {
     initialData?: any;
@@ -262,15 +264,15 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
 
                                 <div>
                                     <Label htmlFor="description" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mô tả *</Label>
-                                    <Textarea
-                                        id="description"
-                                        value={formData.description}
-                                        onChange={(e) => handleInputChange('description', e.target.value)}
-                                        placeholder="Mô tả dịch vụ, điểm nổi bật và điều gì khiến nó đặc biệt..."
-                                        rows={5}
-                                        className="mt-1.5 resize-none"
-                                        required
-                                    />
+                                    <div className="mt-1.5 bg-white rounded-md overflow-hidden border border-input focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                                        <ReactQuill 
+                                            theme="snow"
+                                            value={formData.description}
+                                            onChange={(content) => handleInputChange('description', content)}
+                                            className="h-[150px] mb-12"
+                                            placeholder="Mô tả dịch vụ, điểm nổi bật và điều gì khiến nó đặc biệt..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>

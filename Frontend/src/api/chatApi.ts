@@ -137,24 +137,27 @@ export const chatApi = {
         }
 
         try {
-            const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/admin/inbox`);
+            // Sử dụng chung endpoint chat-list vì Backend trả về danh sách các tin nhắn mới nhất của user hiện tại (admin)
+            const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/chat-list`);
             
             if (!Array.isArray(lastMessages)) {
                 return [];
             }
 
             return lastMessages.map(msg => {
-                // In the shared inbox, we care about the provider (sender or receiver depending on context)
-                // but usually the "otherUser" is the provider if we are an admin
-                const otherUser = msg.sender; // Providers are typically the initiators or primary subject
+                // Đối với Admin, người "kia" (otherUser) thường là Provider
+                const currentUserStr = localStorage.getItem('currentUser');
+                const currentUserId = currentUserStr ? JSON.parse(currentUserStr).user.userID : '';
+                const otherUser = String(msg.sender.userId) === String(currentUserId) ? msg.receiver : msg.sender;
+
                 return {
                     id: String(otherUser.userId),
                     participants: [
-                        { id: String(msg.sender.userId), name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'provider' },
-                        { id: String(msg.receiver.userId), name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'admin' }
+                        { id: String(msg.sender.userId), name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
+                        { id: String(msg.receiver.userId), name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
                     ],
                     lastMessage: mapBackendToFrontendMessage(msg),
-                    unreadCount: msg.read ? 0 : 1,
+                    unreadCount: (msg.read || msg.isRead) ? 0 : (String(msg.receiver.userId) === String(currentUserId) ? 1 : 0),
                     updatedAt: msg.createdAt,
                     serviceName: 'Hỗ trợ Đối tác'
                 };

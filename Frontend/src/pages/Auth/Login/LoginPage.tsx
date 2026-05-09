@@ -37,8 +37,13 @@ const LoginPage: React.FC = () => {
   // Redirect nếu đã login
   useEffect(() => {
     if (isAuthenticated && currentUser) {
-      const role = currentUser.user.role?.toLowerCase() || '';
-      const redirectPath = role.includes('provider') ? '/admin/dashboard' : '/homepage';
+      const userRole = currentUser.user.role?.toLowerCase() || '';
+      const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
+      
+      const redirectPath = userRole === 'admin' 
+        ? '/admin/dashboard' 
+        : (isProvider ? '/provider/dashboard' : '/homepage');
+        
       navigate(redirectPath, { replace: true });
     }
   }, [isAuthenticated, currentUser, navigate]);
@@ -102,23 +107,16 @@ const LoginPage: React.FC = () => {
       // Use the login function from useAuth hook
       await login(formData.email, formData.password);
 
-      // Get user from currentUser (already set by useAuth)
-      const role = currentUser?.user?.role?.toLowerCase() || '';
+      // The login response already contains the user role
+      const userRole = currentUser?.user?.role?.toLowerCase() || '';
+      const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
 
-      // Show success message
-      toast.success('Đăng nhập thành công!');
-
-      // Check for return URL
-      const returnUrl = sessionStorage.getItem('returnUrl');
-
-      if (returnUrl) {
-        sessionStorage.removeItem('returnUrl');
-        navigate(returnUrl);
-      } else {
-        // Role-based redirect
-        const redirectPath = role.includes('provider') ? '/admin/dashboard' : '/homepage';
-        navigate(redirectPath);
-      }
+      // Role-based redirect
+      const redirectPath = userRole === 'admin' 
+        ? '/admin/dashboard' 
+        : (isProvider ? '/provider/dashboard' : '/homepage');
+        
+      navigate(redirectPath);
 
     } catch (error: any) {
       console.error("Đăng nhập thất bại (LoginPage):", error);

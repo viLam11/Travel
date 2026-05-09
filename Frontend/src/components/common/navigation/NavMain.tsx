@@ -1,5 +1,5 @@
-// src/components/common/navigation/NavMain.tsx
 import { ChevronRight } from "lucide-react"
+import { toast } from "sonner"
 import { Link } from "react-router-dom"
 import {
     Collapsible,
@@ -25,6 +25,7 @@ const NavMain = ({
         url: string
         icon?: React.ReactNode
         isActive?: boolean
+        disabled?: boolean
         items?: {
             title: string
             url: string
@@ -75,6 +76,24 @@ const NavMain = ({
                         }
 
                         // Nếu item không có submenu
+                        if (item.disabled) {
+                            return (
+                                <SidebarMenuItem key={item.title}>
+                                    <SidebarMenuButton 
+                                        tooltip={item.title} 
+                                        className="opacity-50 cursor-not-allowed"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            toast.error("Vui lòng hoàn tất thiết lập dịch vụ trước khi dùng tính năng này!");
+                                        }}
+                                    >
+                                        {item.icon && item.icon}
+                                        <span>{item.title}</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            )
+                        }
+
                         return (
                             <SidebarMenuItem key={item.title}>
                                 <SidebarMenuButton isActive={item.isActive} tooltip={item.title} asChild>

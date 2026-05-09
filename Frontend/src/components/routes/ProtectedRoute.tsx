@@ -8,12 +8,14 @@ interface ProtectedRouteProps {
     children?: ReactNode;
     requiredRole?: 'admin' | 'provider' | 'user';
     redirectTo?: string;
+    requireService?: boolean;
 }
 
 const ProtectedRoute: FC<ProtectedRouteProps> = ({
     children,
     requiredRole,
     redirectTo = "/login",
+    requireService = false,
 }) => {
     const location = useLocation();
     const { isAuthenticated, currentUser, isLoading } = useAuth();
@@ -60,6 +62,15 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({
         // Block regular users from admin/provider panels
         if (userRole === 'user' && (location.pathname.startsWith('/admin') || location.pathname.startsWith('/provider'))) {
             return <Navigate to="/homepage" replace />;
+        }
+    }
+
+    // Check if service is required
+    if (requireService && currentUser?.user) {
+        const hasService = currentUser.user.hasService;
+        const serviceId = currentUser.user.serviceId;
+        if (!hasService || !serviceId) {
+            return <Navigate to="/provider/my-service" replace />;
         }
     }
 

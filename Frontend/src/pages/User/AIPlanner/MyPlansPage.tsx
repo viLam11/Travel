@@ -9,6 +9,7 @@ import { aiPlannerApi } from '@/api/aiPlannerApi';
 import type { PlanOverallResponse } from '@/types/aiPlanner.types';
 import Avatar from '@/components/common/avatar/Avatar';
 import Footer from '@/components/common/layout/Footer';
+import Pagination from '@/components/common/Pagination';
 
 const MyPlansPage: React.FC = () => {
     const location = useLocation();
@@ -24,6 +25,11 @@ const MyPlansPage: React.FC = () => {
     const [sharedPlans, setSharedPlans] = useState<PlanOverallResponse[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'newest' | 'name'>('newest');
+    const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchQuery, sortBy]);
 
     useEffect(() => {
         // Sync state if url changes
@@ -191,9 +197,15 @@ const MyPlansPage: React.FC = () => {
         )
         .sort((a, b) => {
             if (sortBy === 'name') return a.place.localeCompare(b.place);
-            // Mặc định mock ID có dạng mock-timestamp nên có thể dùng làm sort newest
             return b.planId.localeCompare(a.planId);
         });
+
+    const ITEMS_PER_PAGE = 6;
+    const totalPages = Math.ceil(currentList.length / ITEMS_PER_PAGE);
+    const paginatedList = currentList.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
 
     return (
         <div className="min-h-screen bg-[#FDFDFD] flex flex-col">
@@ -325,8 +337,19 @@ const MyPlansPage: React.FC = () => {
                             </div>
                         ) : (
                             /* State: Data List */
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-                                {currentList.map(plan => renderPlanCard(plan, activeTab === 'shared'))}
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                                    {paginatedList.map(plan => renderPlanCard(plan, activeTab === 'shared'))}
+                                </div>
+                                {totalPages > 1 && (
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalPages={totalPages}
+                                        onPageChange={(page) => setCurrentPage(page)}
+                                        totalResults={currentList.length}
+                                        resultsPerPage={ITEMS_PER_PAGE}
+                                    />
+                                )}
                             </div>
                         )}
                     </>

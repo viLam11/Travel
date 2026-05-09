@@ -135,6 +135,22 @@ const realApi = {
       console.error('Error fetching satisfied discounts:', error);
       return [];
     }
+  },
+
+  getPriceCalendar: async (
+    serviceId: string,
+    year: number,
+    month: number
+  ): Promise<any> => {
+    try {
+      const response: any = await apiClient.get(`/availability/${serviceId}`, {
+        params: { year, month }
+      });
+      return response?.result || response?.data || response;
+    } catch (error) {
+      console.error('Error fetching price calendar:', error);
+      return null;
+    }
   }
 };
 

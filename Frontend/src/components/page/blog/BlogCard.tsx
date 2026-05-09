@@ -182,67 +182,48 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
     const commentInputRef = useRef<HTMLInputElement>(null);
 
     // Reaction state
-    const [localReaction, setLocalReaction] = useState<ReactionType | null>(() => {
-        if (!post.reactions || !currentUser?.user?.userID) return post.isLiked ? 'LIKE' : null;
-        const mine = post.reactions.find(r => String(r.userId) === String(currentUser.user.userID));
-        return mine ? mine.reactionType : null;
-    });
+    const [localReaction, setLocalReaction] = useState<ReactionType | null>(null);
 
-    const [localCount, setLocalCount] = useState<number>(() => {
-        const val = post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0;
-        return val > 0 ? val : 726; // MOCK DATA: Giả lập 726 lượt tương tác để test UI
-    });
+    const [localCount, setLocalCount] = useState<number>(0);
 
-    const [breakdown, setBreakdown] = useState<Partial<Record<ReactionType, number>>>(() => {
-        const counts: Partial<Record<ReactionType, number>> = {};
-        if (post.reactions && post.reactions.length > 0) {
-            post.reactions.forEach(r => {
-                counts[r.reactionType] = (counts[r.reactionType] ?? 0) + 1;
-            });
-        } else {
-            // MOCK DATA: Chèn dữ liệu giả để dễ test UI popup
-            counts['LIKE'] = 450;
-            counts['LOVE'] = 200;
-            counts['WOW'] = 50;
-            counts['HELPFUL'] = 25;
-            if (post.isLiked) counts['LIKE'] = 451;
-        }
-        return counts;
-    });
+    const [breakdown, setBreakdown] = useState<Partial<Record<ReactionType, number>>>({});
 
     const [isReacting, setIsReacting] = useState(false);
 
     // Sync state with post data changes
     useEffect(() => {
-        if (post.reactions && post.reactions.length > 0 && currentUser?.user?.userID) {
-            const mine = post.reactions.find(r => String(r.userId) === String(currentUser.user.userID));
-            const reactionType = mine ? mine.reactionType : (post.isLiked ? 'LIKE' as ReactionType : null);
-            setLocalReaction(reactionType);
-
-            const counts: Partial<Record<ReactionType, number>> = {};
-            post.reactions.forEach(r => {
-                counts[r.reactionType] = (counts[r.reactionType] ?? 0) + 1;
-            });
-            if (reactionType && !counts[reactionType]) counts[reactionType] = 1;
-            setBreakdown(counts);
-            setLocalCount(post.reactionCount || (post as any).likeCount || (post as any).likes || post.reactions.length);
-        } else {
-            const reactionType = post.isLiked ? 'LIKE' as ReactionType : null;
-            setLocalReaction(reactionType);
-
-            // MOCK DATA: Chèn dữ liệu giả để test UI nếu post.reactions trống
-            const counts: Partial<Record<ReactionType, number>> = {};
-            counts['LIKE'] = 450;
-            counts['LOVE'] = 200;
-            counts['WOW'] = 50;
-            counts['HELPFUL'] = 25;
-            if (reactionType) counts[reactionType] = (counts[reactionType] ?? 0) + 1;
-            setBreakdown(counts);
+        if (post) {
+            let reactionType: ReactionType | null = null;
             
-            const realCount = post.reactionCount || (post as any).likeCount || (post as any).likes || 0;
-            setLocalCount(realCount > 0 ? realCount : (725 + (reactionType ? 1 : 0)));
+            if (isAuthenticated && currentUser?.user) {
+                // Ưu tiên tìm trong mảng reactions thực tế từ backend
+                const mine = post.reactions?.find(r => 
+                    String(r.userId) === String(currentUser.user.userID) || 
+                    (r as any).username === currentUser.user.username
+                );
+                reactionType = mine ? (mine.reactionType as ReactionType) : (post.isLiked ? 'LIKE' as ReactionType : null);
+            } else {
+                reactionType = post.isLiked ? 'LIKE' as ReactionType : null;
+            }
+            
+            setLocalReaction(reactionType);
+
+            // Đồng bộ breakdown icons
+            const counts: Partial<Record<ReactionType, number>> = {};
+            if (post.reactions && post.reactions.length > 0) {
+                post.reactions.forEach(r => {
+                    counts[r.reactionType] = (counts[r.reactionType] ?? 0) + 1;
+                });
+            } else if (reactionType) {
+                counts[reactionType] = 1;
+            }
+            setBreakdown(counts);
+
+            // Cập nhật tổng số react thực tế, không dùng số giả lập
+            const realCount = post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0;
+            setLocalCount(realCount);
         }
-    }, [post.reactions, post.isLiked, post.reactionCount, currentUser?.user?.userID]);
+    }, [post, post.reactions, post.isLiked, post.reactionCount, isAuthenticated, currentUser]);
 
     // UI state
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked ?? false);

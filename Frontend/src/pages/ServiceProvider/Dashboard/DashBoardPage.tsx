@@ -42,7 +42,6 @@ import ProviderDailyTrendsChart from '@/components/ui/admin/charts/ProviderDaily
 // Import Data
 import {
   bookingsData,
-  revenueByServiceData,
   bookingTrendsData,
   type Booking,
 } from '@/data/dashboardData';
@@ -172,25 +171,7 @@ function BookingsTable({
         </div>
       ),
     },
-    {
-      accessorKey: "service",
-      header: "Dịch vụ",
-      cell: ({ row }) => <span className="font-medium text-base">{row.getValue("service")}</span>,
-    },
-    {
-      accessorKey: "serviceType",
-      header: "Loại hình",
-      cell: ({ row }) => {
-        const type = row.getValue("serviceType") as string;
-        return (
-          <Badge
-            className={`text-sm px-2.5 py-0.5 ${type === "hotel" ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
-          >
-            {type === "hotel" ? "Khách sạn" : "Vé tham quan"}
-          </Badge>
-        );
-      },
-    },
+
     {
       accessorKey: "checkIn",
       header: "Ngày nhận/đi",
@@ -526,50 +507,6 @@ export default function TravelServicesDashboard() {
     staleTime: 60 * 60 * 1000,
   });
 
-  const { data: statsData, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['dashboardStats', providerType, currentUser?.user?.serviceId, USE_MOCK],
-    queryFn: async () => {
-      const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId || USE_MOCK) return { totalRevenue: 156000000, totalBookings: 45, trendsData: bookingTrendsData, revenueData: revenueByServiceData };
-      
-      const endDate = new Date().toISOString().split('.')[0];
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('.')[0];
-      
-      let stats: any = providerType === 'hotel' 
-        ? await apiClient.statistics.getHotelStats(serviceId, startDate, endDate)
-        : await apiClient.statistics.getVenueStats(serviceId, startDate, endDate);
-        
-      const dataArr = Array.isArray(stats) ? stats : (stats?.items || []);
-      let sumRev = 0, sumBkg = 0;
-      
-      const mappedTrends = dataArr.map((day: any) => {
-         const rev = day.revenue || 0;
-         const ord = day.totalOrders || 0;
-         sumRev += rev;
-         sumBkg += ord;
-         let label = day.date || 'unknown';
-         if (day.date && day.date.includes('-')) {
-           const parts = day.date.split('-');
-           if (parts.length >= 3) label = `${parts[2]}/${parts[1]}`;
-         }
-         return { date: label, bookings: ord };
-      });
-      return {
-        totalRevenue: sumRev,
-        totalBookings: sumBkg,
-        trendsData: mappedTrends,
-        revenueData: [{ service: serviceInfo?.name || 'Dịch vụ của tôi', revenue: sumRev, bookings: sumBkg }]
-      };
-    },
-    enabled: !!currentUser?.user?.serviceId,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const totalRevenue = statsData?.totalRevenue || 0;
-  const totalBookings = statsData?.totalBookings || 0;
-  const trendsData = statsData?.trendsData || [];
-  const revenueData = statsData?.revenueData || [];
-
   const { data: localBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
     queryFn: async () => {
@@ -585,11 +522,12 @@ export default function TravelServicesDashboard() {
       return fetchedOrders.map((o: any) => ({
         id: o.orderID || o.id,
         guest: o.user?.fullname || o.guestPhone || `Khách #${o.orderID || o.id}`,
-        guests: (o.orderedRooms?.length || 0) + (o.orderedTickets?.length || 0),
+        guests: (o.orderedRooms?.length || 0) + (o.orderedTickets?.length || 0) || 1,
         checkIn: o.orderedRooms?.[0]?.startDate || o.createdAt,
         checkOut: o.orderedRooms?.[0]?.endDate || o.createdAt,
+        createdAt: o.createdAt || new Date().toISOString(),
         service: o.orderedRooms?.[0]?.room?.hotel?.serviceName || o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName || "Dịch vụ của bạn",
-        serviceType: providerType,
+        serviceType: providerType, // 'hotel' or 'place'
         amount: o.finalPrice || o.totalPrice || 0,
         status: o.status === 'SUCCESS' ? 'completed' : 
                 (o.status === 'ACCEPTED' || o.status === 'CONFIRMED') ? 'confirmed' : 
@@ -601,11 +539,37 @@ export default function TravelServicesDashboard() {
   });
 
   // Filter bookings by providerType
-  const filteredBookings = localBookings.filter((b: Booking) => {
+  const filteredBookings = localBookings.filter((b: any) => {
     if (providerType === 'hotel') return b.serviceType === 'hotel';
-    if (providerType === 'place') return b.serviceType === 'ticket';
+    if (providerType === 'place') return b.serviceType === 'place' || b.serviceType === 'ticket'; // fix the ticket/place mismatch
     return true; // admin / other → all
   });
+
+  // Calculate stats directly from bookings
+  const totalBookings = filteredBookings.length;
+  // Calculate total revenue from successful or confirmed bookings
+  const totalRevenue = filteredBookings.reduce((sum: number, b: any) => {
+    if (b.status === 'completed' || b.status === 'confirmed') return sum + b.amount;
+    return sum;
+  }, 0);
+
+  // Calculate trendsData
+  const trendsMap: Record<string, number> = {};
+  filteredBookings.forEach((b: any) => {
+      const d = new Date(b.createdAt);
+      const label = `${d.getDate()}/${d.getMonth() + 1}`;
+      trendsMap[label] = (trendsMap[label] || 0) + 1;
+  });
+  
+  const trendsData = Object.keys(trendsMap).length > 0 
+    ? Object.entries(trendsMap).map(([date, bookings]) => ({ date, bookings }))
+    : bookingTrendsData;
+
+  const revenueData = [{ 
+    service: serviceInfo?.name || 'Dịch vụ của tôi', 
+    revenue: totalRevenue, 
+    bookings: totalBookings 
+  }];
 
   // Dynamic Stats based on provider type
   const getStats = () => {
@@ -640,12 +604,12 @@ export default function TravelServicesDashboard() {
         },
         {
           title: "Đánh giá khách hàng",
-          value: "4.8/5",
+          value: serviceInfo ? `${serviceInfo.rating.toFixed(1)}/5` : "—",
           icon: Users,
           color: "text-purple-600 dark:text-purple-400",
           iconBg: "bg-purple-50 dark:bg-purple-950/40",
-          change: "+0.2",
-          trend: "up",
+          change: serviceInfo ? `${serviceInfo.reviews} lượt` : null,
+          trend: "neutral",
         },
       ];
     } else if (providerType === 'place') {
@@ -679,12 +643,12 @@ export default function TravelServicesDashboard() {
         },
         {
           title: "Lượt đánh giá",
-          value: "4.7/5",
+          value: serviceInfo ? `${serviceInfo.rating.toFixed(1)}/5` : "—",
           icon: Users,
           color: "text-purple-600 dark:text-purple-400",
           iconBg: "bg-purple-50 dark:bg-purple-950/40",
-          change: "+0.4",
-          trend: "up",
+          change: serviceInfo ? `${serviceInfo.reviews} lượt` : null,
+          trend: "neutral",
         },
       ];
     } else {
@@ -719,12 +683,12 @@ export default function TravelServicesDashboard() {
         },
         {
           title: "Đánh giá trung bình",
-          value: "4.75/5",
+          value: serviceInfo ? `${serviceInfo.rating.toFixed(1)}/5` : "—",
           icon: Users,
           color: "text-purple-600 dark:text-purple-400",
           iconBg: "bg-purple-100 dark:bg-purple-500/20",
-          change: "+0.25",
-          trend: "up",
+          change: serviceInfo ? `${serviceInfo.reviews} đánh giá` : null,
+          trend: "neutral",
         },
       ];
     }
@@ -876,7 +840,7 @@ export default function TravelServicesDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {isLoadingStats ? (
+        {isLoadingBookings ? (
           [1, 2, 3, 4].map((i) => (
             <Card key={i} className="bg-card border border-border/40 rounded-xl animate-pulse">
               <CardContent className="p-5 flex justify-between items-start gap-4">
@@ -924,7 +888,7 @@ export default function TravelServicesDashboard() {
                     <div className="mt-4 flex items-center">
                       <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-0.5 text-[11px] font-medium ${trendBg} ${trendColor}`}>
                         {TrendIcon && <TrendIcon className="w-3 h-3" />}
-                        {isUp ? '' : isDown ? '' : ''}{stat.change} so với hôm qua
+                        {stat.change} {stat.trend !== 'neutral' ? 'so với hôm qua' : ''}
                       </span>
                     </div>
                   )}

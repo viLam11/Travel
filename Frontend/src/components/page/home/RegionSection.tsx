@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLazyImage } from '../../../hooks/useLazyImage';
 import { useNavigate } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import apiClient from '@/services/apiClient';
 
 interface Province {
@@ -319,7 +320,14 @@ const RegionSection: React.FC = () => {
   const handleRegionClick = (slug: string, _name: string) => {
     const queryParams = new URLSearchParams();
     queryParams.append('destination', slug);
-    queryParams.append('serviceType', 'TICKET_VENUE');
+    queryParams.append('serviceType', 'place');
+    navigate(`/destinations?${queryParams.toString()}`);
+  };
+
+  const handleViewAllRegion = () => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('region', activeTab);
+    queryParams.append('serviceType', 'place');
     navigate(`/destinations?${queryParams.toString()}`);
   };
 
@@ -336,20 +344,30 @@ const RegionSection: React.FC = () => {
         </div>
 
         <div className="mb-6 sm:mb-8 lg:mb-10 overflow-x-auto scrollbar-hide">
-          <div className="flex justify-center gap-6 sm:gap-12 lg:gap-16 min-w-max px-4 sm:px-0">
-            {['mien-bac', 'mien-trung', 'mien-nam'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`cursor-pointer pb-2 sm:pb-3 px-2 font-bold text-base sm:text-lg lg:text-xl transition-all whitespace-nowrap ${activeTab === tab
-                  ? 'text-[#1A1D7A] border-b-3 sm:border-b-4 border-blue-600'
-                  : 'text-gray-600 hover:text-orange-500'
-                  }`}
-              >
-                {tab === 'mien-bac' ? 'Miền Bắc' : tab === 'mien-trung' ? 'Miền Trung' : 'Miền Nam'}
-              </button>
-            ))}
-          </div>
+            <div className="flex justify-center items-center gap-6 sm:gap-12 lg:gap-16 min-w-max px-4 sm:px-0 relative">
+                {['mien-bac', 'mien-trung', 'mien-nam'].map((tab) => (
+                <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`cursor-pointer pb-2 sm:pb-3 px-2 font-bold text-base sm:text-lg lg:text-xl transition-all whitespace-nowrap ${activeTab === tab
+                    ? 'text-[#1A1D7A] border-b-3 sm:border-b-4 border-blue-600'
+                    : 'text-gray-600 hover:text-orange-500'
+                    }`}
+                >
+                    {tab === 'mien-bac' ? 'Miền Bắc' : tab === 'mien-trung' ? 'Miền Trung' : 'Miền Nam'}
+                </button>
+                ))}
+            </div>
+            {/* View All Region Link - Premium Style */}
+            <div className="flex items-center">
+                <button 
+                    onClick={handleViewAllRegion}
+                    className="group flex items-center gap-1.5 px-4 py-2 text-orange-500 hover:text-orange-600 font-semibold text-sm sm:text-base bg-orange-50/50 hover:bg-orange-100/80 rounded-full transition-all duration-300 cursor-pointer"
+                >
+                    <span>Khám phá {activeTab === 'mien-bac' ? 'Miền Bắc' : activeTab === 'mien-trung' ? 'Miền Trung' : 'Miền Nam'}</span>
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                </button>
+            </div>
         </div>
 
         {isLoading && currentData.regions.length === 0 ? (

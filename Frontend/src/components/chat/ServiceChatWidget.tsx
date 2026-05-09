@@ -20,7 +20,24 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [connStatus, setConnStatus] = useState(socketService.connectionStatus);
+    const [isAIChatOpen, setIsAIChatOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Sync AI chat widget visibility
+    useEffect(() => {
+        const handleAiChatToggle = (e: any) => {
+            if (e.detail) {
+                setIsAIChatOpen(e.detail.open);
+            }
+        };
+        window.addEventListener('ai-chat-open', handleAiChatToggle);
+        return () => window.removeEventListener('ai-chat-open', handleAiChatToggle);
+    }, []);
+
+    useEffect(() => {
+        // Broadcast that the service chat is open/closed
+        window.dispatchEvent(new CustomEvent('service-chat-open', { detail: { open: isOpen } }));
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen && isAuthenticated && !conversationId) {
@@ -118,6 +135,9 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
     };
 
     if (!isOpen) {
+        // Khi AI chat đang mở, ẩn nút chat với chủ dịch vụ để tránh đè lên
+        if (isAIChatOpen) return null;
+
         return (
             <button
                 onClick={toggleWidget}
@@ -130,7 +150,7 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
     }
 
     return (
-        <div className="fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: '500px' }}>
+        <div className="fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: '500px' }}>
             {/* Header */}
             <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">

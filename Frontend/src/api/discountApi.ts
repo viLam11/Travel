@@ -31,6 +31,8 @@ export interface DiscountResponse {
     percentage: number;
     maxDiscountAmount: number;
     applyType: 'ALL' | 'CATEGORY' | 'SERVICE' | 'PROVINCE';
+    serviceList?: string[];   // danh sách serviceId nếu applyType = 'SERVICE'
+    provinceList?: string[];  // danh sách tỉnh nếu applyType = 'PROVINCE'
     isSystem?: boolean;
 }
 
@@ -69,23 +71,64 @@ export const discountApi = {
         }
     },
 
+    // Lấy ưu đãi dành cho 1 dịch vụ cụ thể (ALL + SERVICE match)
+    getDiscountsByService: async (serviceId: string): Promise<DiscountResponse[]> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return MOCK_DISCOUNTS.map(mapMockToResponse).filter(d =>
+                d.applyType === 'ALL' ||
+                (d.applyType === 'SERVICE' && d.serviceList?.includes(serviceId))
+            );
+        }
+        try {
+            const raw = await apiClient.get<any>('/api/discounts/my-discounts', {
+                params: { serviceID: serviceId }
+            });
+            console.log('[DiscountAPI] Raw response from /api/discounts/my-discounts:', raw);
+
+            // Normalize: server có thể trả array thẳng hoặc wrapped trong {data, content, items}
+            if (Array.isArray(raw)) return raw as DiscountResponse[];
+            if (raw && Array.isArray(raw.result)) return raw.result as DiscountResponse[];
+            if (raw && Array.isArray(raw.data)) return raw.data as DiscountResponse[];
+            if (raw && Array.isArray(raw.content)) return raw.content as DiscountResponse[];
+            if (raw && Array.isArray(raw.items)) return raw.items as DiscountResponse[];
+            
+            console.warn('[DiscountAPI] Unexpected response shape:', raw);
+            return [];
+        } catch (error) {
+            console.error('Failed to get discounts by service', error);
+            throw error;
+        }
+    },
+
 
     getSatisfiedDiscounts: async (serviceID: string, placeCode: string): Promise<DiscountResponse[]> => {
         if (USE_MOCK) {
             await new Promise(resolve => setTimeout(resolve, 300));
-            return MOCK_DISCOUNTS.map(mapMockToResponse).filter(d => 
-                d.applyType === 'ALL' || 
+            return MOCK_DISCOUNTS.map(mapMockToResponse).filter(d =>
+                d.applyType === 'ALL' ||
                 (d.applyType === 'SERVICE' && (d as any).serviceList?.includes(serviceID)) ||
                 (d.applyType === 'PROVINCE' && (d as any).provinceList?.includes(placeCode))
             );
         }
         try {
-            return await apiClient.get<DiscountResponse[]>('/api/discounts/apply', {
+            const raw = await apiClient.get<any>('/api/discounts/apply', {
                 params: { serviceID, placeCode },
             });
-        } catch (error) {
-            console.error('Failed to get satisfied discounts', error);
-            throw error;
+            console.log('[DiscountAPI] /apply raw response:', raw);
+
+            // Normalize: Spring Boot có thể trả {result:[...]}, {data:[...]}, hoặc array thẳng
+            if (Array.isArray(raw)) return raw as DiscountResponse[];
+            if (raw && Array.isArray(raw.result)) return raw.result as DiscountResponse[];
+            if (raw && Array.isArray(raw.data)) return raw.data as DiscountResponse[];
+            if (raw && Array.isArray(raw.content)) return raw.content as DiscountResponse[];
+            if (raw && Array.isArray(raw.items)) return raw.items as DiscountResponse[];
+            console.warn('[DiscountAPI] /apply unexpected shape:', raw);
+            return [];
+        } catch (error: any) {
+            // BE đang có lỗi SQL với endpoint này → trả về [] để UI hiện empty state
+            console.warn('[DiscountAPI] /apply lỗi (có thể do BE), trả về []:', error?.message || error);
+            return [];
         }
     },
 
@@ -127,17 +170,29 @@ export const discountApi = {
 
     updateDiscount: async (id: string, data: DiscountRequest): Promise<DiscountResponse> => {
         if (USE_MOCK) {
-             await new Promise(resolve => setTimeout(resolve, 300));
-             return { id, ...data } as unknown as DiscountResponse;
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return { id, ...data } as unknown as DiscountResponse;
         }
         try {
-            return await apiClient.put<DiscountResponse>(`/api/discounts/${id}`, data);
+            return await apiClient.patch<DiscountResponse>(`/api/discounts/${id}`, data);
         } catch (error) {
             console.error('Failed to update discount', error);
             throw error;
         }
     },
 
+    updateDiscountWithPermission: async (id: string, data: DiscountRequest): Promise<DiscountResponse> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return { id, ...data } as unknown as DiscountResponse;
+        }
+        try {
+            return await apiClient.put<DiscountResponse>(`/api/discounts/${id}/with-permission`, data);
+        } catch (error) {
+            console.error('Failed to update discount with permission', error);
+            throw error;
+        }
+    },
 
     deleteDiscount: async (id: string): Promise<void> => {
         if (USE_MOCK) {
@@ -148,6 +203,19 @@ export const discountApi = {
             await apiClient.delete(`/api/discounts/${id}`);
         } catch (error) {
             console.error('Failed to delete discount', error);
+            throw error;
+        }
+    },
+
+    deleteDiscountWithPermission: async (id: string): Promise<void> => {
+        if (USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return;
+        }
+        try {
+            await apiClient.delete(`/api/discounts/${id}/with-permission`);
+        } catch (error) {
+            console.error('Failed to delete discount with permission', error);
             throw error;
         }
     },

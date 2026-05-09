@@ -153,19 +153,28 @@ export const AdminServiceApprovalsPage: React.FC = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {stats.map((stat, idx) => (
-                    <Card key={idx} className="bg-card border border-border/40 shadow-sm rounded-xl">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-                                <stat.icon className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
-                                <h3 className="text-2xl font-bold">{stat.value}</h3>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                {isLoading ? (
+                    [1, 2, 3].map((i) => (
+                        <div key={i} className="h-[96px] bg-muted/40 border border-border/40 animate-pulse rounded-xl p-5 flex flex-col justify-between">
+                            <div className="w-24 h-4 bg-muted-foreground/20 rounded animate-pulse" />
+                            <div className="w-16 h-6 bg-muted-foreground/30 rounded animate-pulse" />
+                        </div>
+                    ))
+                ) : (
+                    stats.map((stat, idx) => (
+                        <Card key={idx} className="bg-card border border-border/40 shadow-sm rounded-xl">
+                            <CardContent className="p-6 flex items-center gap-4">
+                                <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+                                    <stat.icon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
+                                    <h3 className="text-2xl font-bold">{stat.value}</h3>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
 
             <div className="flex flex-col lg:flex-row gap-8">

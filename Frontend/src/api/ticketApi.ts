@@ -11,8 +11,8 @@ export const ticketApi = {
         }
         try {
             const id = serviceId?.toString();
-            const response: any = await apiClient.get(`/services/${id}/tickets`);
-            const data = response?.data?.result || response?.data?.data || response?.data || response;
+            const response: any = await apiClient.tickets.getByServiceId(id);
+            const data = response?.result || response?.data || response;
             return Array.isArray(data) ? data : (data?.content || []);
         } catch (error) {
             console.error('Error fetching tickets:', error);
@@ -26,7 +26,7 @@ export const ticketApi = {
             return { id: Date.now().toString(), ...data, tourId: serviceId } as any;
         }
         try {
-            return await apiClient.post(`/services/${serviceId}/tickets`, data);
+            return await apiClient.tickets.create(serviceId, data);
         } catch (error) {
             console.error('Error creating ticket', error);
             throw error;
@@ -39,7 +39,7 @@ export const ticketApi = {
             return { id: ticketId, ...data } as any;
         }
         try {
-            return await apiClient.patch(`/tickets/${ticketId}`, data);
+            return await apiClient.tickets.update(ticketId, data);
         } catch (error) {
             console.error('Error updating ticket', error);
             throw error;
@@ -52,7 +52,7 @@ export const ticketApi = {
              return;
         }
         try {
-            await apiClient.delete(`/tickets/${ticketId}`);
+            await apiClient.tickets.delete(ticketId);
         } catch (error) {
             console.error('Error deleting ticket', error);
             throw error;

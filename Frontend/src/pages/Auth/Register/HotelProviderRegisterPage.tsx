@@ -167,7 +167,7 @@ const HotelProviderRegisterPage: React.FC = () => {
                         </div>
                     </div>
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-500 mb-1">
-                        Đăng Ký Chủ Khách Sạn
+                        Chủ Khách Sạn
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500">Tạo tài khoản quản lý khách sạn</p>
                 </div>

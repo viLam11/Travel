@@ -2,7 +2,8 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import type { ChatMessage } from '@/types/chat.types';
 
-const BASE_URL = import.meta.env.VITE_API_DEPLOY_URL || import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// const BASE_URL = import.meta.env.VITE_API_DEPLOY_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type MessageCallback = (msg: ChatMessage) => void;
 type NotificationCallback = (noti: any) => void;
@@ -143,7 +144,7 @@ class SocketService {
             receiverId,
             content: text,
             type: 'CHAT',
-            isRead: false
+            read: false
         };
 
         const frontendPayload: ChatMessage = {

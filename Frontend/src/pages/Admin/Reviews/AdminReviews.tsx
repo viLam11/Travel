@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/admin/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/admin/avatar';
 import {
@@ -12,6 +12,7 @@ import { Check, X, ShieldAlert, Flag, Trash2, Ban } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { MOCK_REPORTS, type MockReport } from '@/mocks/reports';
 import { toast } from 'sonner';
+import apiClient from '@/services/apiClient';
 
 // --- Stats Card Component ---
 function StatsCard({ title, value, subValue, icon: Icon, color, bg }: any) {
@@ -33,7 +34,81 @@ function StatsCard({ title, value, subValue, icon: Icon, color, bg }: any) {
 
 const AdminReviews = () => {
     const [statusFilter, setStatusFilter] = useState<string>('pending');
-    const [reports, setReports] = useState<MockReport[]>(MOCK_REPORTS);
+    const [reports, setReports] = useState<MockReport[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAllReports = async () => {
+            try {
+                setIsLoading(true);
+                let services: any[] = [];
+                try {
+                    let servicesRes = await apiClient.services.getAll();
+                    if (!servicesRes || servicesRes.status_code >= 400 || servicesRes.status >= 400 || servicesRes.message) {
+                        servicesRes = await apiClient.services.list(0, 50);
+                    }
+                    if (servicesRes && (servicesRes.status_code >= 400 || servicesRes.status >= 400 || servicesRes.message)) {
+                        services = [];
+                    } else {
+                        services = Array.isArray(servicesRes) ? servicesRes : (servicesRes?.content || []);
+                    }
+                } catch (e) {
+                    services = [];
+                }
+
+                let allFetchedReports: any[] = [];
+                
+                if (services && services.length > 0) {
+                    const commentsPromises = services.map(async (service: any) => {
+                        try {
+                            const commentsRes = await apiClient.comments.getByServiceId(service.id, 0, 50);
+                            const comments = Array.isArray(commentsRes) ? commentsRes : (commentsRes?.content || []);
+                            return comments.map((comment: any) => ({
+                                id: comment.id,
+                                reporterId: comment.userID,
+                                reporterName: comment.username || "Người dùng ẩn danh",
+                                reporterType: 'user',
+                                reason: comment.rating < 3 ? "Đánh giá tiêu cực, cần xem xét" : "Nội dung không phù hợp",
+                                status: 'pending',
+                                createdAt: comment.createdAt || new Date().toISOString(),
+                                reviewId: comment.id,
+                                review: {
+                                    id: comment.id,
+                                    serviceId: service.id,
+                                    serviceName: service.serviceName || "Dịch vụ",
+                                    serviceType: service.serviceType?.toLowerCase() || "hotel",
+                                    userId: comment.userID,
+                                    userName: comment.username || "Khách hàng",
+                                    userAvatar: comment.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.id}`,
+                                    rating: comment.rating || 5,
+                                    comment: comment.content || "",
+                                    status: "pending",
+                                    createdAt: comment.createdAt || new Date().toISOString()
+                                }
+                            }));
+                        } catch (err) {
+                            return [];
+                        }
+                    });
+                    const results = await Promise.all(commentsPromises);
+                    allFetchedReports = results.flat();
+                }
+
+                if (services && services.length > 0) {
+                    setReports(allFetchedReports);
+                } else {
+                    setReports(MOCK_REPORTS);
+                }
+            } catch (err) {
+                console.error(err);
+                setReports(MOCK_REPORTS);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAllReports();
+    }, []);
 
     // Filter reports
     const filteredReports = useMemo(() => {
@@ -64,20 +139,34 @@ const AdminReviews = () => {
         );
     };
 
-    const handleAction = (reportId: number, action: 'dismiss' | 'delete' | 'block', reporterName: string, authorName: string) => {
-        setReports(prev => prev.map(r => {
-            if (r.id === reportId) {
-                return { ...r, status: action === 'dismiss' ? 'dismissed' : 'resolved' };
+    const handleAction = async (reportId: number, action: 'dismiss' | 'delete' | 'block', reporterName: string, authorName: string, reviewId?: number, userId?: number) => {
+        try {
+            if (action === 'delete' || action === 'block') {
+                if (reviewId) {
+                    await apiClient.comments.delete(reviewId);
+                }
+                if (action === 'block' && userId) {
+                    await apiClient.users.toggleUserStatus(userId);
+                }
             }
-            return r;
-        }));
 
-        if (action === 'dismiss') {
-            toast.success(`Đã bỏ qua báo cáo. Hệ thống đã gửi thông báo phản hồi lại cho ${reporterName}.`);
-        } else if (action === 'delete') {
-            toast.success(`Đã gỡ bỏ bình luận vi phạm. Hệ thống đã gửi thông báo cảm ơn đến ${reporterName}.`);
-        } else if (action === 'block') {
-            toast.success(`Đã gỡ bỏ bình luận và KHÓA VĨNH VIỄN tài khoản của ${authorName}. Đã thông báo cho ${reporterName}.`);
+            setReports(prev => prev.map(r => {
+                if (r.id === reportId) {
+                    return { ...r, status: action === 'dismiss' ? 'dismissed' : 'resolved' };
+                }
+                return r;
+            }));
+
+            if (action === 'dismiss') {
+                toast.success(`Đã bỏ qua báo cáo. Hệ thống đã gửi thông báo phản hồi lại cho ${reporterName}.`);
+            } else if (action === 'delete') {
+                toast.success(`Đã gỡ bỏ bình luận vi phạm. Hệ thống đã gửi thông báo cảm ơn đến ${reporterName}.`);
+            } else if (action === 'block') {
+                toast.success(`Đã gỡ bỏ bình luận và KHÓA VĨNH VIỄN tài khoản của ${authorName}. Đã thông báo cho ${reporterName}.`);
+            }
+        } catch (error) {
+            console.error("Action error:", error);
+            toast.error("Thao tác thất bại, vui lòng thử lại.");
         }
     };
 
@@ -93,10 +182,21 @@ const AdminReviews = () => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatsCard title="Tổng báo cáo" value={stats.total} icon={Flag} color="text-blue-600" bg="bg-blue-100" />
-                <StatsCard title="Chờ xử lý" value={stats.pending} icon={ShieldAlert} color="text-amber-600" bg="bg-amber-100" />
-                <StatsCard title="Đã xử lý" value={stats.resolved} icon={Check} color="text-emerald-600" bg="bg-emerald-100" />
-                <StatsCard title="Đã bỏ qua" value={stats.dismissed} icon={X} color="text-gray-600" bg="bg-gray-100" />
+                {isLoading ? (
+                    [1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-[120px] bg-muted/40 border border-border/40 animate-pulse rounded-xl p-5 flex flex-col justify-between">
+                            <div className="w-24 h-4 bg-muted-foreground/20 rounded animate-pulse" />
+                            <div className="w-16 h-6 bg-muted-foreground/30 rounded animate-pulse" />
+                        </div>
+                    ))
+                ) : (
+                    <>
+                        <StatsCard title="Tổng báo cáo" value={stats.total} icon={Flag} color="text-blue-600" bg="bg-blue-100 dark:bg-blue-900/20" />
+                        <StatsCard title="Chờ xử lý" value={stats.pending} icon={ShieldAlert} color="text-amber-600" bg="bg-amber-100 dark:bg-amber-900/20" />
+                        <StatsCard title="Đã xử lý" value={stats.resolved} icon={Check} color="text-emerald-600" bg="bg-emerald-100 dark:bg-emerald-900/20" />
+                        <StatsCard title="Đã bỏ qua" value={stats.dismissed} icon={X} color="text-gray-600" bg="bg-gray-100 dark:bg-gray-800" />
+                    </>
+                )}
             </div>
 
             <Card className="shadow-sm border-border/40">
@@ -183,7 +283,7 @@ const AdminReviews = () => {
                                             variant="outline"
                                             size="sm"
                                             className="w-full justify-start text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-200 dark:border-orange-900/50 cursor-pointer font-semibold"
-                                            onClick={() => handleAction(report.id, 'delete', report.reporterName, report.review.userName)}
+                                            onClick={() => handleAction(report.id, 'delete', report.reporterName, report.review.userName, report.reviewId, report.review.userId)}
                                         >
                                             <Trash2 className="w-4 h-4 mr-2" />
                                             Gỡ bỏ bình luận
@@ -195,7 +295,7 @@ const AdminReviews = () => {
                                             className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50 cursor-pointer font-semibold"
                                             onClick={() => {
                                                 if (window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
-                                                    handleAction(report.id, 'block', report.reporterName, report.review.userName);
+                                                    handleAction(report.id, 'block', report.reporterName, report.review.userName, report.reviewId, report.review.userId);
                                                 }
                                             }}
                                         >

@@ -1,9 +1,9 @@
 // src/routes/routes.tsx
-import { lazy, type LazyExoticComponent, type ComponentType, type ReactNode } from "react";
+import { lazy, type LazyExoticComponent, type ComponentType } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { withSuspense } from "@/utils/withSuspense";
-import { ROUTES, ROUTE_PERMISSIONS } from "@/constants/routes";
+import { ROUTES } from "@/constants/routes";
 import ProtectedRoute from "@/components/routes/ProtectedRoute";
 import { ErrorBoundary } from "@/components/common/error-boundary";
 import UserLayout from "@/components/common/layout/UserLayout";
@@ -27,15 +27,16 @@ const GoogleCallbackPage = lazy(() => import("@/pages/Auth/GoogleCallback/Google
 const Homepage = lazy(() => import("@/pages/User/Homepage/Homepage"));
 const DestinationFilterPage = lazy(() => import("@/pages/User/DestinationFilter/DestinationFilterPage"));
 const HotelFilterPage = lazy(() => import("@/pages/User/HotelFilter/HotelFilterPage"));
-const DestinationDetailPage = lazy(() => import("@/pages/User/DestinationDetail/DestinationDetailPage"));
 const ServiceDetailPage = lazy(() => import("@/pages/User/ServiceDetail/ServiceDetailPage"));
 
 // User Profile Pages
 const UserProfilePage = lazy(() => import("@/pages/User/Profile/UserProfilePage"));
 const UserBookingsPage = lazy(() => import("@/pages/User/Bookings/UserBookingsPage"));
+const UserBlogsPage = lazy(() => import("./pages/User/Profile/UserBlogsPage"));
 const UserTransactionsPage = lazy(() => import("@/pages/User/Transactions/UserTransactionsPage"));
 const UserSavedPage = lazy(() => import("@/pages/User/Saved/UserSavedPage"));
 const UserMessagesPage = lazy(() => import("@/pages/User/Messages/UserMessagesPage"));
+const PaymentResultPage = lazy(() => import("@/pages/User/Transactions/PaymentResultPage"));
 
 const AdminDashboard = lazy(() => import("@/pages/Admin/Dashboard/AdminDashboard"));
 const AdminServiceList = lazy(() => import("@/pages/Admin/Services/AdminServiceList"));
@@ -45,6 +46,7 @@ const AdminUsers = lazy(() => import("@/pages/Admin/Users/AdminUsers"));
 const AdminServiceApprovalsPage = lazy(() => import("@/pages/Admin/Approvals/AdminServiceApprovalsPage"));
 const AdminPromotionsPage = lazy(() => import("@/pages/Admin/Promotions/AdminPromotionsPage"));
 const AdminMessagesPage = lazy(() => import("@/pages/Admin/Messages/AdminMessagesPage"));
+const AdminBlogList = lazy(() => import("@/pages/Admin/Blogs/AdminBlogList"));
 
 // Service Provider Pages
 const ProviderDashboard = lazy(() => import("@/pages/ServiceProvider/Dashboard/DashBoardPage"));
@@ -53,13 +55,13 @@ const ProviderTickets = lazy(() => import("@/pages/ServiceProvider/Tickets/Provi
 const ProviderBookings = lazy(() => import("@/pages/ServiceProvider/Bookings/ProviderBookings"));
 const ProviderReviews = lazy(() => import("@/pages/ServiceProvider/Reviews/ProviderReviews"));
 const ProviderMyService = lazy(() => import("@/pages/ServiceProvider/Services/ProviderMyService"));
-const ProviderServiceSetup = lazy(() => import("@/pages/ServiceProvider/Services/ServiceSetup"));
 const ProviderServiceListPage = lazy(() => import("@/pages/ServiceProvider/Services/ServiceListPage"));
 const ProviderEditServicePage = lazy(() => import("@/pages/ServiceProvider/Services/EditServicePage"));
 const ProviderHotelListPage = lazy(() => import("@/pages/ServiceProvider/Hotels/HotelListPage"));
 const ProviderEditHotelPage = lazy(() => import("@/pages/ServiceProvider/Hotels/EditHotelPage"));
-const ProviderRoomManagementPage = lazy(() => import("@/pages/ServiceProvider/Rooms/RoomManagementPage"));
 const ProviderMessagesPage = lazy(() => import("@/pages/ServiceProvider/Messages/ProviderMessagesPage"));
+const ProviderSettingsPage = lazy(() => import("@/pages/ServiceProvider/Settings/ProviderSettingsPage"));
+const ProviderHelpPage = lazy(() => import("@/pages/ServiceProvider/Help/ProviderHelpPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 const AIPlannerPage = lazy(() => import("@/pages/User/AIPlanner/AIPlannerPage"));
 const BlogListPage = lazy(() => import("@/pages/User/Blog/BlogListPage"));
@@ -249,6 +251,10 @@ const routes: RouteObject[] = [
             element: withSuspense(UserProfilePage as LazyExoticComponent<ComponentType<unknown>>),
           },
           {
+            path: "blogs",
+            element: withSuspense(UserBlogsPage as LazyExoticComponent<ComponentType<unknown>>),
+          },
+          {
             path: "bookings",
             element: withSuspense(UserBookingsPage as LazyExoticComponent<ComponentType<unknown>>),
           },
@@ -266,8 +272,7 @@ const routes: RouteObject[] = [
           },
           {
             path: "success/payment",
-            element: <div>SUCCESS PAYMENT</div>,
-            // element: withSuspense(UserSavedPage as LazyExoticComponent<ComponentType<unknown>>),
+            element: withSuspense(PaymentResultPage as LazyExoticComponent<ComponentType<unknown>>),
           }
         ],
       },
@@ -279,7 +284,7 @@ const routes: RouteObject[] = [
     path: ROUTES.ADMIN_ROOT,
     element: (
       <ErrorBoundary>
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="admin">
           <AdminLayout />
         </ProtectedRoute>
       </ErrorBoundary>
@@ -336,6 +341,10 @@ const routes: RouteObject[] = [
         path: "messages",
         element: withSuspense(AdminMessagesPage as LazyExoticComponent<ComponentType<unknown>>),
       },
+      {
+        path: "blogs",
+        element: withSuspense(AdminBlogList as LazyExoticComponent<ComponentType<unknown>>),
+      },
     ],
   },
 
@@ -344,7 +353,7 @@ const routes: RouteObject[] = [
     path: ROUTES.PROVIDER_ROOT,
     element: (
       <ErrorBoundary>
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="provider">
           <AdminLayout />
         </ProtectedRoute>
       </ErrorBoundary>
@@ -367,45 +376,85 @@ const routes: RouteObject[] = [
       },
       {
         path: "services/list",
-        element: withSuspense(ProviderServiceListPage as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderServiceListPage as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
       {
         path: "services/edit/:id",
-        element: withSuspense(ProviderEditServicePage as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderEditServicePage as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
 
       // ==================== HOTELS ROUTES ====================
       {
         path: "hotels/list",
-        element: withSuspense(ProviderHotelListPage as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderHotelListPage as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
       {
         path: "hotels/rooms",
-        element: withSuspense(ProviderRoomTypes as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderRoomTypes as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
       {
         path: "hotels/edit/:id",
-        element: withSuspense(ProviderEditHotelPage as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderEditHotelPage as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
 
       // ==================== TICKETS (TOUR PROVIDERS) ====================
       {
         path: "tickets",
-        element: withSuspense(ProviderTickets as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderTickets as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
 
       // ==================== BOOKINGS & REVIEWS ====================
       {
         path: "bookings",
-        element: withSuspense(ProviderBookings as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderBookings as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
       {
         path: "reviews",
-        element: withSuspense(ProviderReviews as LazyExoticComponent<ComponentType<unknown>>),
+        element: (
+          <ProtectedRoute requiredRole="provider" requireService={true}>
+            {withSuspense(ProviderReviews as LazyExoticComponent<ComponentType<unknown>>)}
+          </ProtectedRoute>
+        ),
       },
       {
         path: "messages",
         element: withSuspense(ProviderMessagesPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: "settings",
+        element: withSuspense(ProviderSettingsPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: "help",
+        element: withSuspense(ProviderHelpPage as LazyExoticComponent<ComponentType<unknown>>),
       },
     ],
   },

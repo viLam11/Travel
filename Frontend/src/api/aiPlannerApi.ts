@@ -1,4 +1,4 @@
-import type { 
+import type {
     PlanRequest, PlanResponse, PlanData, Activity, ItineraryDay,
     PlanCollabInvitation, PlanCollaboration, PlanOverallResponse,
     CollabStatus, PlanUpdate
@@ -11,7 +11,7 @@ import { shouldUseMock } from '@/config/mockConfig';
 // Điền `true` để ép file này dùng mock.
 // Điền `false` để ép file này dùng real API.
 // Điền `null` để kế thừa từ biến GLOBAL_MOCK_ENABLED trong config.
-const LOCAL_MOCK_OVERRIDE: boolean | null = null; 
+const LOCAL_MOCK_OVERRIDE: boolean | null = null;
 export const USE_MOCK_AI_PLANNER = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ const mapFrontendDayToBackend = (day: ItineraryDay, idx: number): any => ({
     ],
 });
 
-const MOCK_DELAY_MS = 1500; 
+const MOCK_DELAY_MS = 1500;
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const CACHE_KEY = 'travollo_mock_plans';

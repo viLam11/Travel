@@ -93,7 +93,13 @@ export class ApiClient {
     },
 
     register: (data: any): ApiResponse<any> => {
-      return this.post("/auth/register/local", data);
+      // Backend expects role like PROVIDER_HOTEL or PROVIDER_VENUE
+      // but DOES NOT have a 'providerType' field in the User entity
+      const { providerType, ...transformedData } = data;
+      if (data.role === 'PROVIDER' && providerType) {
+        transformedData.role = providerType === 'hotel' ? 'PROVIDER_HOTEL' : 'PROVIDER_VENUE';
+      }
+      return this.post("/auth/register/local", transformedData);
     },
 
     verify: (data: {
@@ -141,6 +147,10 @@ export class ApiClient {
     }): ApiResponse<any> => {
       return this.post("/auth/reset-password", data);
     },
+
+    changePassword: (data: any): ApiResponse<any> => {
+      return this.post("/auth/change-password", data);
+    },
   };
 
   // Service endpoints
@@ -179,10 +189,19 @@ export class ApiClient {
     },
 
     update: (serviceID: number | string, updatedServiceRequest: any): ApiResponse<any> => {
-      // Backend (Spring Boot) often expects fields as individual query params when @ModelAttribute/@ParameterObject is used
-      return this.patch(`/services/${serviceID}`, {}, {
-        params: updatedServiceRequest,
-        headers: { "Content-Type": "application/json" }
+      // Backend dùng @ModelAttribute → cần multipart/form-data
+      // Chỉ gửi các text fields, bỏ imageList/thumbnailImg để tránh lỗi type conversion MultipartFile
+      const formData = new FormData();
+      const skipFields = ['imageList', 'thumbnailImg', 'provider', 'commentList', 'province', 'id'];
+      Object.keys(updatedServiceRequest).forEach(key => {
+        if (skipFields.includes(key)) return;
+        const val = updatedServiceRequest[key];
+        if (val !== undefined && val !== null) {
+          formData.append(key, String(val));
+        }
+      });
+      return this.patch(`/services/${serviceID}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
     },
 
@@ -255,9 +274,9 @@ export class ApiClient {
         const self = (this as any);
         console.log("Fetching real API services/search", restParams);
 
-        const response: any = await self.get("/services/search", { 
+        const response: any = await self.get("/services/search", {
           params: restParams,
-          signal 
+          signal
         });
 
         // Backend returns PageResponse containing "content" array
@@ -430,7 +449,7 @@ export class ApiClient {
       const formData = new FormData();
       formData.append("content", content);
       formData.append("rating", rating.toString());
-      return this.put(`/comment/${commentID}`, formData, {
+      return this.patch(`/comment/${commentID}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     },
@@ -633,10 +652,30 @@ export class ApiClient {
       return this.get(`/services/${serviceId}/tickets`);
     },
     create: (serviceId: string | number, data: any): ApiResponse<any> => {
-      return this.post(`/services/${serviceId}/tickets`, data);
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key === 'photos' && Array.isArray(data[key])) {
+          data[key].forEach((photo: File) => formData.append('photos', photo));
+        } else if (data[key] !== undefined && data[key] !== null) {
+          formData.append(key, data[key]);
+        }
+      });
+      return this.post(`/services/${serviceId}/tickets`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
     update: (ticketId: string | number, data: any): ApiResponse<any> => {
-      return this.patch(`/tickets/${ticketId}`, data);
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key === 'photos' && Array.isArray(data[key])) {
+          data[key].forEach((photo: File) => formData.append('photos', photo));
+        } else if (data[key] !== undefined && data[key] !== null) {
+          formData.append(key, data[key]);
+        }
+      });
+      return this.patch(`/tickets/${ticketId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
     delete: (ticketId: string | number): ApiResponse<any> => {
       return this.delete(`/tickets/${ticketId}`);
@@ -662,7 +701,17 @@ export class ApiClient {
       });
     },
     update: (roomId: string | number, data: any): ApiResponse<any> => {
-      return this.patch(`/rooms/${roomId}`, data);
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (key === 'photos' && Array.isArray(data[key])) {
+          data[key].forEach((photo: File) => formData.append('photos', photo));
+        } else if (data[key] !== undefined && data[key] !== null) {
+          formData.append(key, data[key]);
+        }
+      });
+      return this.patch(`/rooms/${roomId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
     delete: (roomId: string | number): ApiResponse<any> => {
       return this.delete(`/rooms/${roomId}`);

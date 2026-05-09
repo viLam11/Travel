@@ -15,8 +15,25 @@ const AIChatWidget: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isServiceChatOpen, setIsServiceChatOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const location = useLocation();
+
+    // Sync Service Chat Widget visibility
+    useEffect(() => {
+        const handleServiceChatToggle = (e: any) => {
+            if (e.detail) {
+                setIsServiceChatOpen(e.detail.open);
+            }
+        };
+        window.addEventListener('service-chat-open', handleServiceChatToggle);
+        return () => window.removeEventListener('service-chat-open', handleServiceChatToggle);
+    }, []);
+
+    useEffect(() => {
+        // Broadcast that the AI chat is open/closed
+        window.dispatchEvent(new CustomEvent('ai-chat-open', { detail: { open: isOpen } }));
+    }, [isOpen]);
 
     // Welcome message
     useEffect(() => {
@@ -118,10 +135,13 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
     const toggleWidget = () => setIsOpen(!isOpen);
 
     if (!isOpen) {
+        // Khi chat với chủ dịch vụ đang mở, ẩn nút AI chat để tránh đè lên
+        if (isServiceChatOpen) return null;
+
         return (
             <button
                 onClick={toggleWidget}
-                className="fixed bottom-6 left-6 bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-[9999] flex items-center justify-center group"
+                className="fixed bottom-28 right-6 bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-[9999] flex items-center justify-center group"
                 aria-label="Chat với AI"
             >
                 <div className="absolute -top-1 -right-1 flex h-4 w-4">
@@ -137,7 +157,7 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
     }
 
     return (
-        <div className="fixed bottom-6 left-6 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(245,_158,_11,_0.2)] border border-orange-100 z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: '550px' }}>
+        <div className="fixed bottom-28 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(245,_158,_11,_0.2)] border border-orange-100 z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: '520px' }}>
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">

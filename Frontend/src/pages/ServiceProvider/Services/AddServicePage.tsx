@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import RichTextEditor from '@/components/ui/RichTextEditor';
+import MapPicker from '@/components/common/map/MapPicker';
 
 // Types
 interface AdditionalService {
@@ -50,6 +51,8 @@ interface ServiceFormData {
   availability: {
     [key: string]: { [day: string]: string };
   };
+  latitude: string;
+  longitude: string;
 }
 
 const AdminAddServicePage: React.FC = () => {
@@ -73,7 +76,9 @@ const AdminAddServicePage: React.FC = () => {
     features: [],
     additionalServices: [],
     discounts: [],
-    availability: {}
+    availability: {},
+    latitude: '',
+    longitude: ''
   });
 
   const navigate = useNavigate();
@@ -250,6 +255,8 @@ const AdminAddServicePage: React.FC = () => {
         serviceType: 'TICKET_VENUE', // Since this page seems tailored for ticket venues
         open_time: formData.openingHours.split('-')[0].trim(),
         close_time: formData.openingHours.split('-')[1]?.trim(),
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       };
 
       await serviceApi.createService(params, formData.thumbnailFile, formData.additionalFiles);
@@ -617,9 +624,18 @@ const AdminAddServicePage: React.FC = () => {
                       id="address"
                       value={formData.address}
                       onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="VD: 135 Nam Kỳ Khởi Nghĩa..."
-                    />
+                      />
                   </div>
+                </div>
+
+                {/* Map Integration */}
+                <div className="pt-2">
+                  <MapPicker 
+                    lat={formData.latitude} 
+                    lng={formData.longitude} 
+                    address={formData.address}
+                    onChange={(lat, lng) => setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

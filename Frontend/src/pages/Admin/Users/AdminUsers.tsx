@@ -89,7 +89,7 @@ const AdminUsers = () => {
         queryFn: async () => {
             const data = await userApi.getAllUsers();
             return data.map((u: any) => ({
-                id: Number(u.userID || u.id),
+                id: u.userID !== undefined && u.userID !== null ? u.userID : u.id,
                 name: u.fullname || u.username || 'Anonymous',
                 email: u.email,
                 avatar: u.avatarUrl,

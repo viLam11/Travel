@@ -9,7 +9,6 @@ import {
     Calendar,
     Star,
     LayoutDashboard,
-    Bed,
     MessageCircle,
     CheckSquare,
     Tags,
@@ -33,14 +32,6 @@ import { useAuth } from "@/hooks/useAuth"
 const getNavItems = (currentPath: string, currentUser: any) => {
     // Get user role and provider type
     const userRole = currentUser?.user?.role?.toLowerCase() || '';
-
-    // Normalize provider type based on specific role or providerType field
-    let providerType: 'hotel' | 'place' = 'hotel';
-    if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place') {
-        providerType = 'place';
-    } else if (userRole === 'provider_hotel' || currentUser?.user?.providerType === 'hotel') {
-        providerType = 'hotel';
-    }
 
     const isAdmin = userRole === 'admin';
     const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
@@ -76,6 +67,13 @@ const getNavItems = (currentPath: string, currentUser: any) => {
                 url: "/admin/promotions",
                 icon: <Tags />,
                 isActive: currentPath.startsWith('/admin/promotions'),
+                visible: true,
+            } as any,
+            {
+                title: "Quản lý Blog",
+                url: "/admin/blogs",
+                icon: <MessageCircle />,
+                isActive: currentPath.startsWith('/admin/blogs'),
                 visible: true,
             } as any,
             {
@@ -121,28 +119,6 @@ const getNavItems = (currentPath: string, currentUser: any) => {
             visible: true,
         } as any);
 
-        // // Hotel Provider - Room Management
-        // if (providerType === 'hotel') {
-        //     navMain.push({
-        //         title: "Quản lý phòng",
-        //         url: ROUTES.PROVIDER_ROOMS,
-        //         icon: <Bed />,
-        //         isActive: currentPath === ROUTES.PROVIDER_ROOMS,
-        //         visible: true,
-        //     } as any);
-        // }
-
-        // // Venue Provider - Ticket Management
-        // if (providerType === 'place') {
-        //     navMain.push({
-        //         title: "Quản lý vé",
-        //         url: ROUTES.PROVIDER_TICKETS,
-        //         icon: <Tags />,
-        //         isActive: currentPath === ROUTES.PROVIDER_TICKETS,
-        //         visible: true,
-        //     } as any);
-        // }
-
         // Shared Provider menu items
         navMain.push(
             {
@@ -151,6 +127,7 @@ const getNavItems = (currentPath: string, currentUser: any) => {
                 icon: <Calendar />,
                 isActive: currentPath === "/provider/bookings",
                 visible: true,
+                disabled: !currentUser?.user?.hasService,
             } as any,
             {
                 title: "Tin nhắn",
@@ -165,6 +142,7 @@ const getNavItems = (currentPath: string, currentUser: any) => {
                 icon: <Star />,
                 isActive: currentPath === "/provider/reviews",
                 visible: true,
+                disabled: !currentUser?.user?.hasService,
             } as any
         );
     }

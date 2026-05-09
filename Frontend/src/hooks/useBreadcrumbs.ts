@@ -46,7 +46,7 @@ export const useBreadcrumbs = (options: UseBreadcrumbsOptions = {}): BreadcrumbI
   const location = useLocation();
   const { serviceName } = options;
 
-    const breadcrumbs = useMemo(() => {
+  const breadcrumbs = useMemo(() => {
     const items: BreadcrumbItem[] = [];
     const pathSegments = location.pathname.split('/').filter(Boolean);
     const baseRoute = pathSegments[0]; // e.g., 'destinations' or 'hotels'
@@ -76,9 +76,11 @@ export const useBreadcrumbs = (options: UseBreadcrumbsOptions = {}): BreadcrumbI
 
     // 3. Region (nếu có trong URL hoặc infer từ destination)
     let regionInfo = null;
-    if (region) {
+    if (region && region !== 'undefined') {
       regionInfo = REGIONS[region as RegionSlug];
-    } else if (destination) {
+    }
+    
+    if (!regionInfo && destination && destination !== 'undefined') {
       // Infer region từ destination
       const destInfo = getDestinationInfo(destination);
       if (destInfo) {
@@ -89,28 +91,38 @@ export const useBreadcrumbs = (options: UseBreadcrumbsOptions = {}): BreadcrumbI
     if (regionInfo) {
       items.push({
         label: regionInfo.name,
-        href: `/destinations?region=${regionInfo.slug}`,
+        href: baseRoute === 'hotels' 
+          ? `/hotels?region=${regionInfo.slug}` 
+          : `/destinations?region=${regionInfo.slug}`,
       });
     }
 
     // 3. Destination
-    if (destination) {
+    if (destination && destination !== 'undefined') {
       const destInfo = DESTINATIONS[destination as DestinationSlug];
       if (destInfo) {
         // Nếu có serviceType hoặc serviceName → link về destination detail
         // Nếu không → đây là trang cuối (active)
-        const isActive = !serviceType && !serviceName;
+        // Với baseRoute = hotels, nếu có serviceName thì chưa phải trang cuối
+        const isActive = baseRoute === 'hotels' 
+          ? !serviceName 
+          : (!serviceType && !serviceName);
         
         items.push({
-          label: isActive ? `Khám phá ${destInfo.name}` : destInfo.name,
-          href: isActive ? undefined : `/destinations/${regionInfo?.slug || destInfo.region}/${destInfo.slug}`,
+          label: isActive && baseRoute !== 'hotels' ? `Khám phá ${destInfo.name}` : destInfo.name,
+          href: isActive 
+            ? undefined 
+            : (baseRoute === 'hotels' 
+                ? `/hotels/${regionInfo?.slug || destInfo.region}/${destInfo.slug}`
+                : `/destinations/${regionInfo?.slug || destInfo.region}/${destInfo.slug}`),
           isActive: isActive,
         });
       }
     }
 
-    // 4. Service Type (hotel/place)
-    if (serviceType) {
+    // 4. Service Type (hotel/place/ticket)
+    // Chỉ thêm cấp này nếu ở destinations, không thêm nếu ở hotels
+    if (serviceType && serviceType !== 'undefined' && baseRoute !== 'hotels') {
       const serviceTypeName = getServiceTypeName(serviceType, true);
       
       // Nếu có serviceName → link về filter page
@@ -121,7 +133,7 @@ export const useBreadcrumbs = (options: UseBreadcrumbsOptions = {}): BreadcrumbI
         label: serviceTypeName,
         href: isActive 
           ? undefined 
-          : `/destinations/${regionInfo?.slug}/${destination}/${serviceType}`,
+          : `/destinations/${regionInfo?.slug || 'undefined'}/${destination}/${serviceType}`,
         isActive: isActive,
       });
     }

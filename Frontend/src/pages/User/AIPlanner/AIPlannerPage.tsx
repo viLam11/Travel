@@ -305,9 +305,10 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                 <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors">{activity.name}</p>
                                 {activity.description && (
                                     <div className="relative mt-1">
-                                        <p className={`text-[11px] text-gray-500 leading-relaxed italic transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}>
-                                            {activity.description}
-                                        </p>
+                                        <p 
+                                            className={`text-[11px] text-gray-500 leading-relaxed italic transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}
+                                            dangerouslySetInnerHTML={{ __html: activity.description || '' }}
+                                        />
                                         {activity.description.length > 60 && (
                                             <button 
                                                 onClick={() => setIsExpanded(!isExpanded)}
@@ -742,13 +743,18 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const planId = planData.id;
     const isOwner = planData.isOwner;
 
+    const originalItineraryRef = useRef<string>('');
+    useEffect(() => {
+        originalItineraryRef.current = JSON.stringify(planData.itinerary);
+    }, []);
+
     // Track changes
     useEffect(() => {
-        if (firstRender.current) {
-            firstRender.current = false;
-            return;
+        if (originalItineraryRef.current && JSON.stringify(itinerary) !== originalItineraryRef.current) {
+            setHasUnsavedChanges(true);
+        } else {
+            setHasUnsavedChanges(false);
         }
-        setHasUnsavedChanges(true);
     }, [itinerary]);
 
     const handleManualSave = async () => {
@@ -764,6 +770,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 itinerary: itinerary
             });
             setAutoSaveStatus('saved');
+            originalItineraryRef.current = JSON.stringify(itinerary);
             setHasUnsavedChanges(false);
             setTimeout(() => setAutoSaveStatus('idle'), 3000);
         } catch (err) {
@@ -1060,7 +1067,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
                                 <div className="min-w-0 flex-1">
                                     <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
-                                    <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1 italic">{lib.description}</p>
+                                    <p 
+                                        className="text-[11px] text-gray-500 mt-0.5 line-clamp-1 italic"
+                                        dangerouslySetInnerHTML={{ __html: lib.description || '' }}
+                                    />
                                     <div className="flex gap-2 mt-2">
                                         <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
                                         <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>

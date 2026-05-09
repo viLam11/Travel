@@ -76,9 +76,12 @@ export function translateErrorMessage(message: string): string {
     }
 
     // Return original if no translation found
-    // Feature: Specific backend data inconsistency handling
-    if (message.includes('No enum constant') || message.includes('PROVIDER_HOTEL')) {
-      return 'Dịch vụ này tạm thời không thể đặt do lỗi dữ liệu từ Nhà cung cấp. Vui lòng thử lại sau hoặc chọn dịch vụ khác.';
+    // Feature: Specific backend data inconsistency handling (enum mismatch)
+    if (message.includes('No enum constant')) {
+      if (message.includes('PROVIDER_VENUE') || message.includes('PROVIDER_HOTEL')) {
+        return 'Tài khoản của bạn có cấu hình không hợp lệ (lỗi vai trò). Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+      }
+      return 'Dịch vụ này tạm thời không thể đặt do lỗi dữ liệu. Vui lòng thử lại sau.';
     }
 
     if (message.includes('Unable to find') && message.includes('User')) {

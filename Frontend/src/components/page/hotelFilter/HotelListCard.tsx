@@ -83,21 +83,29 @@ const HotelListCard: React.FC<HotelListCardProps> = ({ hotel, onClick }) => {
                             <h3 className="text-base font-bold text-gray-900 leading-snug line-clamp-2 group-hover:text-orange-500 transition-colors">
                                 {hotel.name}
                             </h3>
-                            <div className="flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-lg shrink-0">
-                                <Star className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
-                                <span className="text-sm font-bold text-orange-700">{hotel.rating}</span>
-                            </div>
+                            {hotel.rating > 0 && (
+                                <div className="flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-lg shrink-0">
+                                    <Star className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
+                                    <span className="text-sm font-bold text-orange-700">{hotel.rating}</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Hotel stars */}
                         <div className="flex items-center gap-0.5 mb-2">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                    key={i}
-                                    className={`w-3.5 h-3.5 ${i < hotel.stars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`}
-                                />
-                            ))}
-                            <span className="text-xs text-gray-500 ml-1">{hotel.stars} sao</span>
+                            {hotel.stars > 0 ? (
+                                <>
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <Star
+                                            key={i}
+                                            className={`w-3.5 h-3.5 ${i < hotel.stars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`}
+                                        />
+                                    ))}
+                                    <span className="text-xs text-gray-500 ml-1">{hotel.stars} sao</span>
+                                </>
+                            ) : (
+                                <span className="text-xs text-gray-400 italic">Chưa có đánh giá</span>
+                            )}
                         </div>
 
                         {/* Location */}

@@ -126,7 +126,7 @@ export default function RevenueByServiceChart({ data: initialData }: RevenueBySe
             <p className="text-sm">Chưa có dữ liệu doanh thu</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%" minHeight={320}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={320} minWidth={1}>
             {/* Tăng margin bottom để không bị cắt chữ */}
             <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
 

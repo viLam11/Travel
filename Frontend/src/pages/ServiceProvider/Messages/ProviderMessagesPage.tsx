@@ -1,16 +1,22 @@
 // src/pages/ServiceProvider/Messages/ProviderMessagesPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MoreVertical, Send, User, Menu, MessageCircle, Zap, FileText, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Search, MoreVertical, Send, User, Menu, MessageCircle, Zap, FileText, X, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { socketService } from '@/services/socketService';
 import { chatApi } from '@/api/chatApi';
 import type { ChatMessage, Conversation } from '@/types/chat.types';
+import { ROUTES } from '@/constants/routes';
 
 const ProviderMessagesPage: React.FC = () => {
     const { currentUser, isAuthenticated } = useAuth();
+    const location = useLocation();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const activeConversationRef = useRef<Conversation | null>(null);
+
+    // Flag to track if we've handled the redirect state
+    const handledRedirect = useRef(false);
 
     // Update ref whenever state changes
     useEffect(() => {
@@ -21,10 +27,11 @@ const ProviderMessagesPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
 
-    const ADMIN_ID = '1';
+    // Trong thực tế, ID này nên là một UUID từ database hoặc một ID hệ thống được Backend công nhận
+    const ADMIN_ID = 'admin-support';
 
     const handleContactAdmin = () => {
-        let exists = conversations.find(c => c.id === ADMIN_ID);
+        let exists = conversations.find(c => c.id === ADMIN_ID || c.participants.some(p => p.role === 'admin'));
         if (exists) {
             handleSelectConversation(exists);
         } else {
@@ -33,7 +40,8 @@ const ProviderMessagesPage: React.FC = () => {
                 participants: [{ id: ADMIN_ID, name: 'Quản Trị Viên (Hỗ trợ)', role: 'admin', avatar: '' }],
                 lastMessage: undefined,
                 unreadCount: 0,
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                serviceName: 'Hỗ trợ hệ thống'
             };
             setConversations(prev => [adminConv, ...prev]);
             handleSelectConversation(adminConv);
@@ -118,6 +126,17 @@ const ProviderMessagesPage: React.FC = () => {
         };
     }, [isAuthenticated, currentUser?.user?.userID]);
 
+    // Handle redirect from Help page
+    useEffect(() => {
+        if (!loading && conversations.length >= 0 && !handledRedirect.current) {
+            const state = location.state as { openAdminChat?: boolean };
+            if (state?.openAdminChat) {
+                handleContactAdmin();
+                handledRedirect.current = true;
+            }
+        }
+    }, [loading, conversations]);
+
     const handleSelectConversation = async (conversation: Conversation) => {
         setActiveConversation(conversation);
         if (window.innerWidth < 768) setShowSidebar(false);
@@ -189,6 +208,37 @@ const ProviderMessagesPage: React.FC = () => {
         );
     }
 
+    if (!currentUser?.user?.hasService) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 dark:bg-gray-900/30 min-h-[500px] rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 m-6">
+                <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-indigo-100 dark:border-indigo-800/50 rotate-3">
+                    <Zap className="w-10 h-10 text-indigo-400 dark:text-indigo-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Sẵn sàng để bắt đầu?</h3>
+                <p className="text-center max-w-md text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
+                    Bạn chưa có dịch vụ nào đang hoạt động, vì vậy chưa thể nhận tin nhắn từ khách hàng. Hãy thiết lập dịch vụ của bạn để bắt đầu kết nối nhé!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                    <button 
+                        onClick={() => window.location.href = ROUTES.PROVIDER_MY_SERVICE}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white h-12 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all cursor-pointer"
+                    >
+                        Thiết lập ngay
+                    </button>
+                    <button 
+                        onClick={handleContactAdmin}
+                        className="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-700 h-12 rounded-xl font-bold hover:bg-gray-50 transition-all cursor-pointer"
+                    >
+                        Chat với Admin
+                    </button>
+                </div>
+                <p className="mt-8 text-xs text-muted-foreground flex items-center gap-2">
+                    <ShieldCheck className="w-3 h-3" /> Hỗ trợ kỹ thuật 24/7 luôn sẵn sàng
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden flex h-[calc(100vh-140px)] min-h-[500px]">
 
@@ -198,10 +248,33 @@ const ProviderMessagesPage: React.FC = () => {
                 <div className="p-4 md:p-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-black text-gray-900 dark:text-white">Tin nhắn</h2>
-                        <button onClick={handleContactAdmin} title="Liên hệ Hỗ trợ" className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center justify-center border border-indigo-100 dark:border-indigo-800/50 shadow-sm">
-                            Hỗ trợ
+                        <button 
+                            onClick={handleContactAdmin} 
+                            title="Liên hệ Hỗ trợ" 
+                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center border shadow-sm ${activeConversation?.id === ADMIN_ID ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50 hover:bg-indigo-100'}`}
+                        >
+                            Hỗ trợ Admin
                         </button>
                     </div>
+                    {activeConversation?.id === ADMIN_ID && (
+                        <button 
+                            onClick={() => {
+                                // Filter out the admin support conversation from the list
+                                const regularConvs = conversations.filter(c => c.id !== ADMIN_ID);
+                                setConversations(regularConvs);
+                                
+                                // Select the first regular conversation if available, otherwise clear
+                                if (regularConvs.length > 0) {
+                                    handleSelectConversation(regularConvs[0]);
+                                } else {
+                                    setActiveConversation(null);
+                                }
+                            }}
+                            className="w-full mb-4 py-2 text-xs font-bold text-gray-500 hover:text-indigo-600 flex items-center justify-center gap-2 bg-gray-50 rounded-lg border border-dashed border-gray-200 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                        >
+                            <X className="w-3 h-3" /> Thoát chế độ hỗ trợ
+                        </button>
+                    )}
                     <div className="relative w-full">
                         <input
                             type="text"

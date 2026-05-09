@@ -10,7 +10,7 @@ const MOCK_USERS = {
     customer: {
         token: 'mock-token-customer',
         user: {
-            userID: 1,
+            userID: '1',
             name: 'Nguyễn Văn A',
             email: 'customer@test.com',
             role: 'user',
@@ -21,7 +21,7 @@ const MOCK_USERS = {
     hotelProvider: {
         token: 'mock-token-hotel',
         user: {
-            userID: 2,
+            userID: '2',
             name: 'Khách sạn Majestic',
             email: 'hotel@test.com',
             role: 'provider',
@@ -35,7 +35,7 @@ const MOCK_USERS = {
     tourProvider: {
         token: 'mock-token-tour',
         user: {
-            userID: 3,
+            userID: '3',
             name: 'Tour Hà Nội',
             email: 'tour@test.com',
             role: 'provider',
@@ -49,7 +49,7 @@ const MOCK_USERS = {
     admin: {
         token: 'mock-token-admin',
         user: {
-            userID: 4,
+            userID: '4',
             name: 'Admin System',
             email: 'admin@test.com',
             role: 'admin',
@@ -61,7 +61,7 @@ const MOCK_USERS = {
     pendingProvider: {
         token: 'mock-token-pending',
         user: {
-            userID: 5,
+            userID: '5',
             name: 'Pending Hotel',
             email: 'pending@hotel.com',
             role: 'provider',
@@ -75,8 +75,10 @@ const MOCK_USERS = {
 } as Record<string, LoginResponse>;
 
 interface User {
-    userID: number;
+    userID: string;
     name: string;
+    username?: string;
+    fullname?: string;
     email: string;
     role: string;
     phoneNumber?: string;
@@ -134,6 +136,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userResponse = await apiClient.users.getProfile();
             console.log('User Profile Fetched:', userResponse);
 
+            // If account is blocked in profile or user details (when backend adds the active field)
+            if ((userResponse as any).active === false || (userResponse as any).status === 'blocked') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                setCurrentUser(null);
+                setIsAuthenticated(false);
+                window.location.href = '/login';
+                return;
+            }
+
+            // Fallback: temporary fetch from all users list until Backend adds 'active' to the profile API
+            if (userResponse && userResponse.userID) {
+                try {
+                    const allUsers = await apiClient.users.getAll();
+                    const freshUser = Array.isArray(allUsers) ? allUsers.find((u: any) => u.userID === userResponse.userID || u.id === userResponse.userID) : null;
+                    if (freshUser && freshUser.active === false) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('currentUser');
+                        setCurrentUser(null);
+                        setIsAuthenticated(false);
+                        window.location.href = '/login';
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch user fresh status', err);
+                }
+            }
+
             // Mapping backend DTO to frontend User interface
             const rawRole = userResponse.role?.toUpperCase() || 'USER';
             const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
@@ -151,8 +181,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
 
             const user: User = {
-                userID: userResponse.userID ?? 0,
+                userID: userResponse.userID?.toString() || '',
                 name: userResponse.fullname || userResponse.username || 'User',
+                username: userResponse.username,
+                fullname: userResponse.fullname,
                 email: userResponse.email,
                 role: normalizedRole,
                 phoneNumber: userResponse.phone,
@@ -174,10 +206,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // Update localStorage with fresh data
             localStorage.setItem('currentUser', JSON.stringify(authData));
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch user profile:', error);
-            // Optional: if error is 401, maybe logout? 
-            // For now, keep existing local state if available, but it might be stale.
+            // If error happens (e.g., 401 Unauthorized or blocked), log out immediately
+            const status = error?.response?.status || error?.status;
+            if (status === 401 || status === 403) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                setCurrentUser(null);
+                setIsAuthenticated(false);
+                window.location.href = '/login';
+            }
         } finally {
             setIsLoading(false);
         }
@@ -260,10 +299,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }) as unknown as LoginResponse;
             console.log("Đăng nhập thành công:", response);
 
-            // Map fullname to name if needed
-            if ((response.user as any).fullname && !response.user.name) {
-                response.user.name = (response.user as any).fullname;
+            // Check if account is blocked
+            if ((response.user as any).active === false || (response.user as any).status === 'blocked') {
+                throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
             }
+
+            // Map fullname to name if needed and preserve original fields
+            const rawUser = response.user as any;
+            if (rawUser.fullname && !response.user.name) {
+                response.user.name = rawUser.fullname;
+            }
+            if (rawUser.fullname) response.user.fullname = rawUser.fullname;
+            if (rawUser.username) response.user.username = rawUser.username;
 
             // Normalize role and set providerType
             const rawRole = (response.user.role as string)?.toUpperCase() || 'USER';

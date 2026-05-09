@@ -18,9 +18,10 @@ import { toast } from 'sonner';
 
 interface PromotionsTabProps {
     serviceId: string | number;
+    placeCode?: string; // province code của dịch vụ, dùng cho filter
 }
 
-const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
+const PromotionsTab = ({ serviceId, placeCode }: PromotionsTabProps) => {
     const [promotions, setPromotions] = useState<DiscountResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -43,12 +44,8 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
         if (!serviceId) return;
         setIsLoading(true);
         try {
-            const data = await discountApi.getAllDiscounts();
-            // Lọc: Ưu đãi toàn hệ thống HOẶC ưu đãi riêng cho dịch vụ này
-            setPromotions(data.filter((d: any) => 
-                d.applyType === 'ALL' || 
-                (d.applyType === 'SERVICE' && d.serviceList?.includes(String(serviceId)))
-            ));
+            const data = await discountApi.getDiscountsByService(String(serviceId));
+            setPromotions(data);
         } catch (err) {
             console.error('Failed to load promotions', err);
             toast.error('Không thể tải danh sách ưu đãi');
@@ -97,7 +94,7 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
             };
 
             if (editingId) {
-                await discountApi.updateDiscount(editingId, request);
+                await discountApi.updateDiscountWithPermission(editingId, request);
                 toast.success('Cập nhật ưu đãi thành công');
             } else {
                 await discountApi.createDiscount(request);
@@ -117,7 +114,7 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
     const handleDelete = async (id: string) => {
         if (!window.confirm('Bạn có chắc muốn xóa ưu đãi này?')) return;
         try {
-            await discountApi.deleteDiscount(id);
+            await discountApi.deleteDiscountWithPermission(id);
             toast.success('Đã xóa ưu đãi');
             fetchPromotions();
         } catch (err) {
@@ -273,7 +270,7 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                             <div className="w-full md:w-[160px] bg-orange-50 flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-dashed border-gray-300 relative group-hover:bg-orange-100 transition-colors">
                                 <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-gray-50 rounded-full border border-gray-200 z-10 hidden md:block"></div>
                                 <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-gray-50 rounded-full border border-gray-200 z-10 hidden md:block"></div>
-                                
+
                                 <div className="text-3xl font-black text-orange-500 leading-none mb-1">
                                     {promo.discountType === 'Percentage' ? `${promo.percentage}%` : `${promo.fixedPrice / 1000}k`}
                                 </div>
@@ -288,7 +285,7 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                                             <h4 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{promo.name}</h4>
                                             {promo.isSystem && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-transparent text-[9px] h-4">Hệ thống</Badge>}
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-gray-500">
                                             <div className="flex items-center gap-1.5">
                                                 <Tag className="w-3 h-3 text-orange-400" />
@@ -313,11 +310,15 @@ const PromotionsTab = ({ serviceId }: PromotionsTabProps) => {
                                         <div className="flex gap-1">
                                             <Button variant="ghost" size="sm" onClick={() => {
                                                 setFormData({
-                                                    name: promo.name, code: promo.code, discountType: promo.discountType,
-                                                    discountValue: (promo.discountType === 'Percentage' ? promo.percentage : promo.fixedPrice).toString(),
-                                                    maxDiscountAmount: promo.maxDiscountAmount.toString(),
-                                                    minSpend: promo.minSpend.toString(), quantity: promo.quantity.toString(),
-                                                    startDate: promo.startDate.split('T')[0], endDate: promo.endDate.split('T')[0]
+                                                    name: promo.name || '',
+                                                    code: promo.code || '',
+                                                    discountType: promo.discountType,
+                                                    discountValue: ((promo.discountType === 'Percentage' ? promo.percentage : promo.fixedPrice) ?? 0).toString(),
+                                                    maxDiscountAmount: (promo.maxDiscountAmount ?? 0).toString(),
+                                                    minSpend: (promo.minSpend ?? 0).toString(),
+                                                    quantity: (promo.quantity ?? 100).toString(),
+                                                    startDate: promo.startDate?.split('T')[0] ?? '',
+                                                    endDate: promo.endDate?.split('T')[0] ?? ''
                                                 });
                                                 setEditingId(promo.id);
                                                 setIsAdding(true);

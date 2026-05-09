@@ -37,11 +37,21 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   // Get query params
   const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
   const urlDestination = destination || searchParams.get('destination') || ''; 
-  const provinceCode = urlDestination === 'undefined' ? '' : urlDestination;
+  const queryProvinceCode = searchParams.get('provinceCode') || ''; 
+  const provinceSlug = urlDestination === 'undefined' ? '' : urlDestination;
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
 
   // Resolve slug/code to numeric ID for backend filter
-  const resolvedProvinceID = getDestinationInfo(provinceCode || '')?.id || provinceCode;
+  // Priority: 1. provinceCode param, 2. Resolve from slug, 3. Check if slug is already an ID
+  const resolvedProvinceID = queryProvinceCode || getDestinationInfo(provinceSlug || '')?.id || (provinceSlug && !isNaN(Number(provinceSlug)) ? provinceSlug : '');
+
+  // Map frontend slug to backend enum
+  let apiServiceType = paramServiceType;
+  if (paramServiceType === 'ticket') apiServiceType = 'TICKET_VENUE';
+  else if (paramServiceType === 'place') apiServiceType = 'TICKET_VENUE'; 
+  else if (paramServiceType === 'hotel') apiServiceType = 'HOTEL';
+  else if (paramServiceType === 'restaurant') apiServiceType = 'RESTAURANT';
+  else if (paramServiceType === 'all') apiServiceType = 'ALL';
 
   // Fetch API
   const fetchDestinations = async () => {
@@ -60,7 +70,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
       const response: any = await apiClient.services.search({
         provinceCode: resolvedProvinceID || undefined,
         keyword: searchKeyword || undefined,
-        serviceType: paramServiceType || 'TICKET_VENUE',
+        serviceType: apiServiceType || 'TICKET_VENUE',
         minPrice: priceRange[0],
         maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined,
         minRating: minRating > 0 ? minRating : undefined,
@@ -90,34 +100,27 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
 
   // Effect to fetch data
   React.useEffect(() => {
-    const fetchWithCleanup = async () => {
-      await fetchDestinations();
-    };
-    
-    fetchWithCleanup();
+    fetchDestinations();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Cleanup is handled inside fetchDestinations if we use a ref or similar,
-    // but for simplicity in this structure, we'll just ensure the API handles the signal.
-  }, [searchKeyword, provinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); 
+  }, [searchKeyword, provinceSlug, queryProvinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); 
 
 
   // Determine page title and breadcrumb
   const getPageTitle = () => {
     if (searchKeyword) return `Kết quả tìm kiếm cho "${searchKeyword}"`;
-    if (provinceCode) {
+    if (provinceSlug) {
       // 1. Try local hardcoded list (slug or code)
-      const destInfo = getDestinationInfo(provinceCode);
+      const destInfo = getDestinationInfo(provinceSlug);
       if (destInfo) return destInfo.name;
 
       // 2. Try to get from first service result from API
       if (destinations.length > 0 && destinations[0].province) {
         const p = destinations[0].province;
-        return p.full_name || p.fullName || p.name || provinceCode;
+        return p.full_name || p.fullName || p.name || provinceSlug;
       }
 
-      // 3. Last fallback: decode and capitalize provinceCode
-      return decodeURIComponent(provinceCode).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      // 3. Last fallback: decode and capitalize provinceSlug
+      return decodeURIComponent(provinceSlug).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
     return 'Tất cả điểm đến';
   };
@@ -144,14 +147,17 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
     const idSlug = `${id}-${titleSlug}`;
 
     // Region fallback
-    const targetRegion = region || 'vietnam';
+    const targetRegion = (region && region !== 'undefined') ? region : 'vietnam';
     
     // Province fallback logic
-    const provinceCode = item.province?.code || item.provinceCode || destination || 'ha-noi';
+    let tempProvinceCode = item.province?.code || item.provinceCode || destination || 'ha-noi';
+    if (tempProvinceCode === 'undefined') tempProvinceCode = 'ha-noi';
+    
+    const finalProvinceCode = tempProvinceCode;
 
     const finalUrl = typeSlug === 'hotel'
-      ? `/hotels/${targetRegion}/${provinceCode}/${idSlug}`
-      : `/destinations/${targetRegion}/${provinceCode}/${typeSlug}/${idSlug}`;
+      ? `/hotels/${targetRegion}/${finalProvinceCode}/${idSlug}`
+      : `/destinations/${targetRegion}/${finalProvinceCode}/${typeSlug}/${idSlug}`;
     console.log('Final Navigation URL:', finalUrl);
 
     navigate(finalUrl);

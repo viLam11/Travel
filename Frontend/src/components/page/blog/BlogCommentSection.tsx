@@ -1,6 +1,6 @@
 // src/components/page/blog/BlogCommentSection.tsx
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Flag, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, MessageCircle, Flag, Send, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { BlogComment } from '@/types/blog.types';
 import { useAuth } from '@/hooks/useAuth';
 import ReportModal from './ReportModal';
@@ -8,8 +8,10 @@ import toast from 'react-hot-toast';
 
 interface BlogCommentSectionProps {
   postId: string;
+  postAuthorId: string; // Add this to check if current user is post owner
   comments: BlogComment[];
   onAddComment: (content: string, parentId?: string) => void;
+  onDeleteComment: (commentId: string) => void;
 }
 
 const timeAgo = (iso: string) => {
@@ -25,11 +27,20 @@ const timeAgo = (iso: string) => {
 
 interface CommentItemProps {
   comment: BlogComment;
+  postAuthorId: string;
   onReply: (parentId: string, authorName: string) => void;
+  onDelete: (commentId: string) => void;
   isReply?: boolean;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = false }) => {
+const CommentItem: React.FC<CommentItemProps> = ({ 
+  comment, 
+  postAuthorId,
+  onReply, 
+  onDelete,
+  isReply = false 
+}) => {
+  const { currentUser } = useAuth();
   const [liked, setLiked] = useState(comment.isLiked || false);
   const [likeCount, setLikeCount] = useState(comment.likes ?? 0);
   const [showReplies, setShowReplies] = useState(false);
@@ -94,6 +105,20 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
           >
             <Flag className="w-3 h-3" />
           </button>
+
+          {(currentUser?.user?.userID === comment.authorId || currentUser?.user?.userID === postAuthorId) && (
+            <button
+              onClick={() => {
+                if (window.confirm('Xóa bình luận này?')) {
+                  onDelete(comment.id);
+                }
+              }}
+              className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-600 transition-colors"
+              title="Xóa bình luận"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
         </div>
 
         {/* Replies */}
@@ -118,7 +143,14 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
 
             {showReplies &&
               comment.replies.map((reply) => (
-                <CommentItem key={reply.id} comment={reply} onReply={onReply} isReply />
+                <CommentItem 
+                  key={reply.id} 
+                  comment={reply} 
+                  postAuthorId={postAuthorId}
+                  onReply={onReply} 
+                  onDelete={onDelete}
+                  isReply 
+                />
               ))}
           </div>
         )}
@@ -135,8 +167,10 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
 };
 
 const BlogCommentSection: React.FC<BlogCommentSectionProps> = ({
+  postAuthorId,
   comments,
   onAddComment,
+  onDeleteComment
 }) => {
   const { isAuthenticated, currentUser } = useAuth();
   const [newComment, setNewComment] = useState('');
@@ -242,7 +276,13 @@ const BlogCommentSection: React.FC<BlogCommentSectionProps> = ({
       ) : (
         <div className="space-y-5">
           {comments.map((comment) => (
-            <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
+            <CommentItem 
+              key={comment.id} 
+              comment={comment} 
+              postAuthorId={postAuthorId}
+              onReply={handleReply} 
+              onDelete={onDeleteComment}
+            />
           ))}
         </div>
       )}

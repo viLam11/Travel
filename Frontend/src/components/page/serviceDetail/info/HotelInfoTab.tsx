@@ -1,26 +1,57 @@
 // src/components/page/serviceDetail/info/HotelInfoTab.tsx
 import React from 'react';
-import { Wifi, Wind, Tv, Coffee, Car, UtensilsCrossed, Dumbbell, Waves } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { getTagIcon } from '@/utils/tagIconMapper';
+import toast from 'react-hot-toast';
 
 interface HotelInfoTabProps {
     service: any;
+    selectedMonth: string;
+    setSelectedMonth: (month: string) => void;
+    getDaysInMonth: (monthKey: string) => any[];
+    dynamicMonths: { label: string; value: string }[];
+    onSelectDate?: (date: string) => void;
+    isCalendarLoading?: boolean;
 }
 
-const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ service }) => {
+const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ 
+    service,
+    selectedMonth,
+    setSelectedMonth,
+    getDaysInMonth,
+    dynamicMonths,
+    onSelectDate,
+    isCalendarLoading = false,
+}) => {
+    const lat = service?.latitude || service?.location_lat;
+    const lng = service?.longitude || service?.location_lng;
     const encodedAddress = encodeURIComponent(service?.address ?? "Hoàn Kiếm, Hà Nội");
-    const mapSrc = `https://maps.google.com/maps?q=${encodedAddress}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+    const mapSrc = (lat && lng) 
+        ? `https://maps.google.com/maps?q=${lat},${lng}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+        : `https://maps.google.com/maps?q=${encodedAddress}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
 
-    // Hotel amenities data
-    const hotelAmenities = [
-        { icon: <Wifi className="w-5 h-5" />, name: "WiFi miễn phí", available: true },
-        { icon: <Wind className="w-5 h-5" />, name: "Điều hòa", available: true },
-        { icon: <Tv className="w-5 h-5" />, name: "TV màn hình phẳng", available: true },
-        { icon: <Coffee className="w-5 h-5" />, name: "Minibar", available: true },
-        { icon: <Car className="w-5 h-5" />, name: "Bãi đậu xe", available: true },
-        { icon: <UtensilsCrossed className="w-5 h-5" />, name: "Nhà hàng", available: true },
-        { icon: <Dumbbell className="w-5 h-5" />, name: "Phòng gym", available: true },
-        { icon: <Waves className="w-5 h-5" />, name: "Hồ bơi", available: true },
+    // Parse tags from DB into an array
+    const tags = service?.tags
+        ? service.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+        : [];
+
+    // Fallback amenities if no tags provided
+    const fallbackAmenities = [
+        'WiFi miễn phí', 'Điều hòa', 'TV màn hình phẳng',
+        'Minibar', 'Bãi đậu xe', 'Nhà hàng', 'Phòng gym', 'Hồ bơi',
     ];
+    const amenities = tags.length > 0 ? tags : fallbackAmenities;
+    
+    const daysOfWeek = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+    // Hàm kiểm tra ngày có phải quá khứ không (so với ngày hiện tại theo giờ Việt Nam)
+    const isTodayOrPast = (monthKey: string, dayNum: number): boolean => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const [year, month] = monthKey.split('-').map(Number);
+        const date = new Date(year, month - 1, dayNum);
+        return date < today;
+    };
 
     return (
         <div className="space-y-6">
@@ -29,33 +60,33 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ service }) => {
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
                     Giới thiệu
                 </h3>
-                <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
-                    {service.description}
-                </p>
+                <div 
+                    className="text-gray-700 leading-relaxed text-sm sm:text-base [&>p]:mb-2"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(service.description) }}
+                />
             </div>
 
-            {/* Hotel Amenities */}
-            <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Tiện nghi khách sạn
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {hotelAmenities.map((amenity, idx) => (
-                        <div
-                            key={idx}
-                            className={`flex items-center gap-3 p-3 rounded-lg ${amenity.available
-                                ? "bg-orange-50 text-gray-900"
-                                : "bg-gray-50 text-gray-400"
-                                }`}
-                        >
-                            <div className={amenity.available ? "text-orange-500" : "text-gray-400"}>
-                                {amenity.icon}
+            {/* Điểm nổi bật & Dịch vụ - icon grid from tags */}
+            {amenities.length > 0 && (
+                <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                        Tiện nghi & Điểm nổi bật
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {amenities.map((tag: string, idx: number) => (
+                            <div
+                                key={idx}
+                                className="flex items-center gap-3 p-3 rounded-lg bg-orange-50 text-gray-900 hover:bg-orange-100 transition-colors"
+                            >
+                                <div className="text-orange-500 shrink-0">
+                                    {getTagIcon(tag, 'w-5 h-5')}
+                                </div>
+                                <span className="text-sm font-medium capitalize">{tag}</span>
                             </div>
-                            <span className="text-sm font-medium">{amenity.name}</span>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Check-in/Check-out Policies */}
             <div>
@@ -104,6 +135,103 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ service }) => {
                                 <span>Hủy miễn phí trước 24h</span>
                             </li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+
+            {/* Calendar Booking */}
+            <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                    Lịch trống phòng
+                </h3>
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-3 border-b border-gray-200">
+                        {dynamicMonths.map((monthObj) => (
+                            <button
+                                key={monthObj.value}
+                                onClick={() => setSelectedMonth(monthObj.value)}
+                                className={`py-3 text-xs sm:text-sm font-medium transition-colors ${selectedMonth === monthObj.value
+                                    ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500"
+                                    : "text-gray-600 hover:bg-gray-50"
+                                    }`}
+                            >
+                                {monthObj.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="p-3 sm:p-4 relative min-h-[300px]">
+                        {isCalendarLoading && (
+                            <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-xs font-medium text-orange-600">Đang tải giá...</span>
+                                </div>
+                            </div>
+                        )}
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
+                            {daysOfWeek.map((day) => (
+                                <div
+                                    key={day}
+                                    className="text-center text-xs sm:text-sm font-medium text-gray-600 py-2"
+                                >
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                            {getDaysInMonth(selectedMonth).map((day: any, idx: number) => {
+                                const isPast = day ? isTodayOrPast(selectedMonth, day.day) : false;
+                                return (
+                                <div key={idx} className="aspect-square">
+                                    {day ? (
+                                        <button
+                                            onClick={() => {
+                                                if (isPast) {
+                                                    toast.error('Không thể chọn ngày trong quá khứ');
+                                                } else if (!day.available) {
+                                                    toast.error('Dịch vụ đã hết chỗ trong thời gian này');
+                                                } else if (onSelectDate) {
+                                                    const dateStr = `${selectedMonth}-${String(day.day).padStart(2, '0')}`;
+                                                    onSelectDate(dateStr);
+                                                }
+                                            }}
+                                            className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all relative ${
+                                                isPast
+                                                ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                                                : day.available
+                                                ? "bg-gray-50 text-gray-900 font-medium cursor-pointer hover:bg-orange-50"
+                                                : "bg-gray-100 text-gray-400 cursor-pointer"
+                                                }`}
+                                        >
+                                            <span className={isPast || !day.available ? 'line-through opacity-50' : ''}>{day.day}</span>
+                                            {isPast ? (
+                                                <span className="text-[8px] sm:text-[9px] font-bold text-gray-300 uppercase mt-0.5">Đã qua</span>
+                                            ) : day.available ? (
+                                                <>
+                                                    {day.price && (
+                                                        <span className="text-[10px] sm:text-[11px] font-bold text-orange-600">
+                                                            {day.price.includes('đ') ? day.price : `${new Intl.NumberFormat('vi-VN').format(Number(day.price))}đ`}
+                                                        </span>
+                                                    )}
+                                                    {day.rooms !== null && (
+                                                        <span className="text-[8px] sm:text-[9px] text-green-600 font-semibold absolute bottom-1">
+                                                            Còn {day.rooms}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase mt-0.5">Kín phòng</span>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        <div className="w-full h-full" />
+                                    )}
+                                </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -8,7 +8,7 @@ interface SearchFormData {
   destination: string;
   startDate: string;
   endDate: string;
-  serviceType: 'TICKET_VENUE' | 'HOTEL'; // Changed from tripType array to single serviceType
+  serviceType: 'place' | 'hotel'; // Changed to use SEO slugs
 }
 
 interface Province {
@@ -31,7 +31,7 @@ const HeroSection: React.FC = () => {
     destination: '',
     startDate: '',
     endDate: '',
-    serviceType: 'TICKET_VENUE' // Default to destinations
+    serviceType: 'place' // Default to destinations slug
   });
 
   // Slider states
@@ -197,7 +197,7 @@ const HeroSection: React.FC = () => {
     queryParams.append('serviceType', formData.serviceType);
 
     // Navigate based on service type
-    const basePath = formData.serviceType === 'HOTEL' ? '/hotels' : '/destinations';
+    const basePath = formData.serviceType === 'hotel' ? '/hotels' : '/destinations';
     console.log(`Navigating to ${basePath} with:`, queryParams.toString());
     navigate(`${basePath}?${queryParams.toString()}`);
   };
@@ -288,11 +288,11 @@ const HeroSection: React.FC = () => {
               <div className="relative">
                 <select
                   value={formData.serviceType}
-                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value as 'TICKET_VENUE' | 'HOTEL' })}
+                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value as 'place' | 'hotel' })}
                   className="w-full px-3 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all appearance-none bg-white cursor-pointer"
                 >
-                  <option value="TICKET_VENUE">Địa điểm</option>
-                  <option value="HOTEL">Khách sạn</option>
+                  <option value="place">Địa điểm</option>
+                  <option value="hotel">Khách sạn</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -335,13 +335,13 @@ const HeroSection: React.FC = () => {
 
             <div className="relative overflow-visible" ref={datePickerRef}>
               <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
-                {formData.serviceType === 'HOTEL' ? 'Check-in - Check-out' : 'Thời gian'}
+                {formData.serviceType === 'hotel' ? 'Check-in - Check-out' : 'Thời gian'}
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder={formData.serviceType === 'HOTEL' ? 'Chọn ngày nhận - trả phòng' : 'Chọn ngày đi - về'}
+                  placeholder={formData.serviceType === 'hotel' ? 'Chọn ngày nhận - trả phòng' : 'Chọn ngày đi - về'}
                   value={formatDateRange()}
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   readOnly
@@ -358,7 +358,7 @@ const HeroSection: React.FC = () => {
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs font-medium text-gray-600 block mb-1 text-left">
-                        {formData.serviceType === 'HOTEL' ? 'Check-in' : 'Ngày đi'}
+                        {formData.serviceType === 'hotel' ? 'Check-in' : 'Ngày đi'}
                       </label>
                       <input
                         type="date"
@@ -369,7 +369,7 @@ const HeroSection: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-600 block mb-1 text-left">
-                        {formData.serviceType === 'HOTEL' ? 'Check-out' : 'Ngày về'}
+                        {formData.serviceType === 'hotel' ? 'Check-out' : 'Ngày về'}
                       </label>
                       <input
                         type="date"

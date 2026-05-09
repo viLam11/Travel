@@ -9,7 +9,6 @@ import {
   MapPin,
   ChevronLeft,
   Calendar,
-  Loader2,
   MessageCircle,
   Tag,
   Heart,
@@ -31,7 +30,7 @@ import toast from 'react-hot-toast';
 const BlogDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   const queryClient = useQueryClient();
 
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -53,13 +52,29 @@ const BlogDetailPage: React.FC = () => {
     enabled: !!id,
   });
 
-  // Sync local state when post data arrives
+  // Sync local state when post data arrives or user auth changes
   useEffect(() => {
     if (post) {
-      setLocalReaction(post.isLiked ? 'LIKE' : null);
-      setLocalCount(post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0);
+      let reactionType: ReactionType | null = null;
+
+      // Tìm phản ứng của user hiện tại trong danh sách reactions thực tế từ backend
+      if (isAuthenticated && currentUser?.user) {
+        const mine = post.reactions?.find((r: any) => 
+          String(r.userId) === String(currentUser.user.userID) || 
+          (r as any).username === currentUser.user.username
+        );
+        reactionType = mine ? (mine.reactionType as ReactionType) : (post.isLiked ? 'LIKE' : null);
+      } else {
+        reactionType = post.isLiked ? 'LIKE' : null;
+      }
+
+      setLocalReaction(reactionType);
+      
+      // Cập nhật tổng số react thực tế
+      const realCount = post.reactionCount ?? (post as any).likeCount ?? (post as any).likes ?? 0;
+      setLocalCount(realCount);
     }
-  }, [post]);
+  }, [post, post?.reactions, post?.isLiked, post?.reactionCount, isAuthenticated, currentUser]);
 
   // Mutation
   const reactionMutation = useMutation({
@@ -105,17 +120,31 @@ const BlogDetailPage: React.FC = () => {
     }
   };
 
-  const handleAddComment = async (content: string, _parentId?: string) => {
+  const handleAddComment = async (content: string, parentId?: string) => {
     if (!isAuthenticated) {
       toast.error('Vui lòng đăng nhập để bình luận');
       return;
     }
     try {
-      await blogApi.addComment(id!, content);
+      if (parentId) {
+        await blogApi.addReply(parentId, content);
+      } else {
+        await blogApi.addComment(id!, content);
+      }
       queryClient.invalidateQueries({ queryKey: ['blog', id] });
-      toast.success('Bình luận đã được đăng!');
+      toast.success(parentId ? 'Đã phản hồi bình luận!' : 'Bình luận đã được đăng!');
     } catch {
       toast.error('Không thể gửi bình luận');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await blogApi.deleteComment(commentId);
+      queryClient.invalidateQueries({ queryKey: ['blog', id] });
+      toast.success('Đã xóa bình luận');
+    } catch {
+      toast.error('Không thể xóa bình luận');
     }
   };
 
@@ -415,8 +444,10 @@ const BlogDetailPage: React.FC = () => {
             <div id="comments-section" className="mt-10 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 scroll-mt-24">
               <BlogCommentSection
                 postId={post.id}
+                postAuthorId={post.authorId}
                 comments={post.comments || []}
                 onAddComment={handleAddComment}
+                onDeleteComment={handleDeleteComment}
               />
             </div>
           </article>

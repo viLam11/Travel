@@ -43,7 +43,10 @@ export const ROUTES = {
   PROVIDER_ROOMS: '/provider/rooms',
   PROVIDER_TICKETS: '/provider/tickets',
   PROVIDER_BOOKINGS: '/provider/bookings',
+  PROVIDER_MESSAGES: '/provider/messages',
   PROVIDER_REVIEWS: '/provider/reviews',
+  PROVIDER_SETTINGS: '/provider/settings',
+  PROVIDER_HELP: '/provider/help',
 
   // ==================== AI PLANNER ====================
   AI_PLANNER: '/ai-planner',
@@ -71,7 +74,10 @@ export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {
   [ROUTES.PROVIDER_ROOMS]: { roles: ['provider'] },
   [ROUTES.PROVIDER_TICKETS]: { roles: ['provider'] },
   [ROUTES.PROVIDER_BOOKINGS]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_MESSAGES]: { roles: ['provider'] },
   [ROUTES.PROVIDER_REVIEWS]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_SETTINGS]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_HELP]: { roles: ['provider'] },
 
   // User profile routes require authentication (user or admin)
   [ROUTES.USER_PROFILE]: { roles: ['user', 'admin'] },
@@ -122,7 +128,10 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.PROVIDER_ROOMS]: 'Quản lý phòng',
   [ROUTES.PROVIDER_TICKETS]: 'Quản lý vé',
   [ROUTES.PROVIDER_BOOKINGS]: 'Đơn đặt',
+  [ROUTES.PROVIDER_MESSAGES]: 'Tin nhắn',
   [ROUTES.PROVIDER_REVIEWS]: 'Đánh giá',
+  [ROUTES.PROVIDER_SETTINGS]: 'Cài đặt tài khoản',
+  [ROUTES.PROVIDER_HELP]: 'Trung tâm trợ giúp',
 
   // Public routes
   [ROUTES.HOMEPAGE]: 'Trang chủ',

@@ -25,6 +25,13 @@ export interface ServiceDetail {
   };
   providerId?: string;
   tags?: string;
+  province?: {
+    code: string | number;
+    name: string;
+    full_name?: string;
+    fullName?: string;
+  };
+  provinceCode?: string | number;
 }
 
 export interface TicketType {
