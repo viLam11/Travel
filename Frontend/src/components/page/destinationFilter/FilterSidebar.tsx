@@ -46,9 +46,18 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   const [isRatingExpanded, setIsRatingExpanded] = useState(true);
   const [isLocationExpanded, setIsLocationExpanded] = useState(true);
 
+  // Local state cho range slider để kéo mượt
+  const [localRange, setLocalRange] = useState<[number, number]>(priceRange);
   // Local state cho input fields
   const [minInput, setMinInput] = useState(priceRange[0].toString());
   const [maxInput, setMaxInput] = useState(priceRange[1].toString());
+
+  // Sync local range when priceRange prop changes (e.g. from reset)
+  React.useEffect(() => {
+    setLocalRange(priceRange);
+    setMinInput(priceRange[0].toString());
+    setMaxInput(priceRange[1].toString());
+  }, [priceRange]);
 
   // Format currency VND
   const formatPrice = (price: number) => {
@@ -61,19 +70,24 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     return price.toLocaleString('vi-VN');
   };
 
-  // Handle slider change
+  // Handle slider drag (local update)
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'min' | 'max') => {
     const value = parseInt(e.target.value);
     const newRange: [number, number] = type === 'min'
-      ? [value, Math.max(value, priceRange[1])]
-      : [Math.min(value, priceRange[0]), value];
+      ? [value, Math.max(value, localRange[1])]
+      : [Math.min(value, localRange[0]), value];
 
-    onPriceChange(newRange);
+    setLocalRange(newRange);
     setMinInput(newRange[0].toString());
     setMaxInput(newRange[1].toString());
   };
 
-  // Handle input change
+  // Commit changes when slider is released
+  const handleSliderCommit = () => {
+    onPriceChange(localRange);
+  };
+
+  // Handle input change (manual)
   const handleInputChange = (value: string, type: 'min' | 'max') => {
     if (type === 'min') {
       setMinInput(value);
@@ -88,9 +102,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     const clampedValue = Math.max(minPrice, Math.min(maxPrice, value));
 
     const newRange: [number, number] = type === 'min'
-      ? [clampedValue, Math.max(clampedValue, priceRange[1])]
-      : [Math.min(clampedValue, priceRange[0]), clampedValue];
+      ? [clampedValue, Math.max(clampedValue, localRange[1])]
+      : [Math.min(clampedValue, localRange[0]), clampedValue];
 
+    setLocalRange(newRange);
     onPriceChange(newRange);
     setMinInput(newRange[0].toString());
     setMaxInput(newRange[1].toString());
@@ -215,11 +230,11 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             {/* Price Display */}
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">
-                {formatPrice(priceRange[0])} VND
+                {formatPrice(localRange[0])} VND
               </span>
               <span className="text-gray-400">—</span>
               <span className="text-gray-600">
-                {priceRange[1] >= maxPrice ? `${formatPrice(maxPrice)} + VND` : `${formatPrice(priceRange[1])} VND`}
+                {localRange[1] >= maxPrice ? `${formatPrice(maxPrice)}+ VND` : `${formatPrice(localRange[1])} VND`}
               </span>
             </div>
 
@@ -232,8 +247,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
               <div
                 className="absolute h-2 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full"
                 style={{
-                  left: `${(priceRange[0] / maxPrice) * 100}% `,
-                  right: `${100 - (priceRange[1] / maxPrice) * 100}% `,
+                  left: `${(localRange[0] / maxPrice) * 100}%`,
+                  right: `${100 - (localRange[1] / maxPrice) * 100}%`,
                   top: '50%',
                   transform: 'translateY(-50%)'
                 }}
@@ -245,8 +260,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 min={minPrice}
                 max={maxPrice}
                 step={100000}
-                value={priceRange[0]}
+                value={localRange[0]}
                 onChange={(e) => handleSliderChange(e, 'min')}
+                onMouseUp={handleSliderCommit}
+                onTouchEnd={handleSliderCommit}
                 className="absolute w-full h-2 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-orange-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
                 style={{ top: '50%', transform: 'translateY(-50%)' }}
               />
@@ -257,8 +274,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 min={minPrice}
                 max={maxPrice}
                 step={100000}
-                value={priceRange[1]}
+                value={localRange[1]}
                 onChange={(e) => handleSliderChange(e, 'max')}
+                onMouseUp={handleSliderCommit}
+                onTouchEnd={handleSliderCommit}
                 className="absolute w-full h-2 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-orange-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
                 style={{ top: '50%', transform: 'translateY(-50%)' }}
               />
@@ -361,19 +380,19 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     </div>
   );
 
-    return (
-        <>
-            {/* Mobile Overlay */}
-            {isMobileOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={onClose}
-                />
-            )}
+  return (
+    <>
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-            {/* Sidebar */}
-            <div
-                className={`
+      {/* Sidebar */}
+      <div
+        className={`
           fixed lg:sticky top-0 left-0 h-screen lg:h-auto
           w-80 lg:w-72 xl:w-80
           z-50 lg:z-0
@@ -385,13 +404,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
           p-6 lg:p-0
           lg:top-6
         `}
-            >
-                <div className="lg:bg-white lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-100 lg:p-6 lg:sticky lg:top-6">
-                    {sidebarContent}
-                </div>
-            </div>
-        </>
-    );
+      >
+        <div className="lg:bg-white lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-100 lg:p-6 lg:sticky lg:top-6">
+          {sidebarContent}
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default FilterSidebar;

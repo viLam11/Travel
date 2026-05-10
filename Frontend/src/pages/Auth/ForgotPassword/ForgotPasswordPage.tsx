@@ -122,7 +122,10 @@ const ForgotPasswordPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await apiClient.auth.forgotPassword({ email: formData.email });
+      // MOCK API: Giả lập gọi API thành công
+      // await apiClient.auth.forgotPassword({ email: formData.email });
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Giả lập delay mạng
+      console.log("MOCK: Đã gửi OTP thành công tới", formData.email);
 
       setStep(2);
       setCountdown(60);
@@ -151,10 +154,13 @@ const ForgotPasswordPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await apiClient.auth.verifyResetOTP({
-        email: formData.email,
-        otp: formData.otp
-      });
+      // MOCK API: Giả lập xác nhận OTP thành công (nhập gì cũng đúng)
+      // const response = await apiClient.auth.verifyResetOTP({
+      //   email: formData.email,
+      //   otp: formData.otp
+      // });
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Giả lập delay mạng
+      const response = { resetToken: "mock-token-12345" };
 
       // Navigate to reset password page with token
       navigate(`/reset-password?token=${response.resetToken}`);
@@ -181,8 +187,10 @@ const ForgotPasswordPage: React.FC = () => {
 
     setLoading(true);
     try {
+      // MOCK API: Giả lập gọi API gửi lại OTP thành công
       // Reuse forgot-password endpoint
-      await apiClient.auth.forgotPassword({ email: formData.email });
+      // await apiClient.auth.forgotPassword({ email: formData.email });
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Giả lập delay mạng
 
       setCountdown(60);
       setFormData({ ...formData, otp: "" });

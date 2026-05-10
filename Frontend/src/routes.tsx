@@ -55,13 +55,10 @@ const ProviderTickets = lazy(() => import("@/pages/ServiceProvider/Tickets/Provi
 const ProviderBookings = lazy(() => import("@/pages/ServiceProvider/Bookings/ProviderBookings"));
 const ProviderReviews = lazy(() => import("@/pages/ServiceProvider/Reviews/ProviderReviews"));
 const ProviderMyService = lazy(() => import("@/pages/ServiceProvider/Services/ProviderMyService"));
-const ProviderServiceListPage = lazy(() => import("@/pages/ServiceProvider/Services/ServiceListPage"));
-const ProviderEditServicePage = lazy(() => import("@/pages/ServiceProvider/Services/EditServicePage"));
-const ProviderHotelListPage = lazy(() => import("@/pages/ServiceProvider/Hotels/HotelListPage"));
-const ProviderEditHotelPage = lazy(() => import("@/pages/ServiceProvider/Hotels/EditHotelPage"));
 const ProviderMessagesPage = lazy(() => import("@/pages/ServiceProvider/Messages/ProviderMessagesPage"));
 const ProviderSettingsPage = lazy(() => import("@/pages/ServiceProvider/Settings/ProviderSettingsPage"));
 const ProviderHelpPage = lazy(() => import("@/pages/ServiceProvider/Help/ProviderHelpPage"));
+const ProviderNotificationsPage = lazy(() => import("@/pages/ServiceProvider/Notifications/ProviderNotificationsPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 const AIPlannerPage = lazy(() => import("@/pages/User/AIPlanner/AIPlannerPage"));
 const BlogListPage = lazy(() => import("@/pages/User/Blog/BlogListPage"));
@@ -374,32 +371,8 @@ const routes: RouteObject[] = [
         path: "my-service",
         element: withSuspense(ProviderMyService as LazyExoticComponent<ComponentType<unknown>>),
       },
-      {
-        path: "services/list",
-        element: (
-          <ProtectedRoute requiredRole="provider" requireService={true}>
-            {withSuspense(ProviderServiceListPage as LazyExoticComponent<ComponentType<unknown>>)}
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "services/edit/:id",
-        element: (
-          <ProtectedRoute requiredRole="provider" requireService={true}>
-            {withSuspense(ProviderEditServicePage as LazyExoticComponent<ComponentType<unknown>>)}
-          </ProtectedRoute>
-        ),
-      },
 
       // ==================== HOTELS ROUTES ====================
-      {
-        path: "hotels/list",
-        element: (
-          <ProtectedRoute requiredRole="provider" requireService={true}>
-            {withSuspense(ProviderHotelListPage as LazyExoticComponent<ComponentType<unknown>>)}
-          </ProtectedRoute>
-        ),
-      },
       {
         path: "hotels/rooms",
         element: (
@@ -408,15 +381,6 @@ const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-      {
-        path: "hotels/edit/:id",
-        element: (
-          <ProtectedRoute requiredRole="provider" requireService={true}>
-            {withSuspense(ProviderEditHotelPage as LazyExoticComponent<ComponentType<unknown>>)}
-          </ProtectedRoute>
-        ),
-      },
-
       // ==================== TICKETS (TOUR PROVIDERS) ====================
       {
         path: "tickets",
@@ -455,6 +419,10 @@ const routes: RouteObject[] = [
       {
         path: "help",
         element: withSuspense(ProviderHelpPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: "notifications",
+        element: withSuspense(ProviderNotificationsPage as LazyExoticComponent<ComponentType<unknown>>),
       },
     ],
   },

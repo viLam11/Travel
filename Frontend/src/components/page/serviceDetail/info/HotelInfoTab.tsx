@@ -3,6 +3,9 @@ import React from 'react';
 import DOMPurify from 'dompurify';
 import { getTagIcon } from '@/utils/tagIconMapper';
 import toast from 'react-hot-toast';
+import CustomSelect from '../../../common/CustomSelect';
+import ServiceMap from '../../../common/map/ServiceMap';
+import { MapPin } from 'lucide-react';
 
 interface HotelInfoTabProps {
     service: any;
@@ -12,9 +15,12 @@ interface HotelInfoTabProps {
     dynamicMonths: { label: string; value: string }[];
     onSelectDate?: (date: string) => void;
     isCalendarLoading?: boolean;
+    priceCalendar?: any;
+    selectedSubCalendarId?: string | null;
+    onSubCalendarChange?: (id: string) => void;
 }
 
-const HotelInfoTab: React.FC<HotelInfoTabProps> = ({ 
+const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
     service,
     selectedMonth,
     setSelectedMonth,
@@ -22,11 +28,14 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
     dynamicMonths,
     onSelectDate,
     isCalendarLoading = false,
+    priceCalendar,
+    selectedSubCalendarId,
+    onSubCalendarChange,
 }) => {
     const lat = service?.latitude || service?.location_lat;
     const lng = service?.longitude || service?.location_lng;
     const encodedAddress = encodeURIComponent(service?.address ?? "Hoàn Kiếm, Hà Nội");
-    const mapSrc = (lat && lng) 
+    const mapSrc = (lat && lng)
         ? `https://maps.google.com/maps?q=${lat},${lng}&t=&z=15&ie=UTF8&iwloc=&output=embed`
         : `https://maps.google.com/maps?q=${encodedAddress}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
 
@@ -41,7 +50,7 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
         'Minibar', 'Bãi đậu xe', 'Nhà hàng', 'Phòng gym', 'Hồ bơi',
     ];
     const amenities = tags.length > 0 ? tags : fallbackAmenities;
-    
+
     const daysOfWeek = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
     // Hàm kiểm tra ngày có phải quá khứ không (so với ngày hiện tại theo giờ Việt Nam)
@@ -60,8 +69,8 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
                     Giới thiệu
                 </h3>
-                <div 
-                    className="text-gray-700 leading-relaxed text-sm sm:text-base [&>p]:mb-2"
+                <div
+                    className="text-gray-700 leading-relaxed text-sm sm:text-base [&>p]:mb-2 break-words whitespace-normal overflow-hidden max-w-full"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(service.description) }}
                 />
             </div>
@@ -140,17 +149,34 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
             </div>
 
             {/* Calendar Booking */}
-            <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Lịch trống phòng
-                </h3>
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="relative z-20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">
+                        Lịch trống phòng
+                    </h3>
+
+                    {priceCalendar && priceCalendar.subCalendars?.length > 0 && onSubCalendarChange && (
+                        <div className="w-full sm:w-[280px]">
+                            <CustomSelect
+                                value={selectedSubCalendarId || ''}
+                                onChange={(val) => onSubCalendarChange(val.toString())}
+                                options={priceCalendar.subCalendars.map((item: any) => ({
+                                    value: item.id,
+                                    label: `${item.name}`
+                                }))}
+                                placeholder="Chọn loại phòng"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="grid grid-cols-3 border-b border-gray-200">
                         {dynamicMonths.map((monthObj) => (
                             <button
                                 key={monthObj.value}
                                 onClick={() => setSelectedMonth(monthObj.value)}
-                                className={`py-3 text-xs sm:text-sm font-medium transition-colors ${selectedMonth === monthObj.value
+                                className={`cursor-pointer py-3 text-xs sm:text-sm font-medium transition-colors ${selectedMonth === monthObj.value
                                     ? "bg-orange-50 text-orange-600 border-b-2 border-orange-500"
                                     : "text-gray-600 hover:bg-gray-50"
                                     }`}
@@ -184,51 +210,50 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
                             {getDaysInMonth(selectedMonth).map((day: any, idx: number) => {
                                 const isPast = day ? isTodayOrPast(selectedMonth, day.day) : false;
                                 return (
-                                <div key={idx} className="aspect-square">
-                                    {day ? (
-                                        <button
-                                            onClick={() => {
-                                                if (isPast) {
-                                                    toast.error('Không thể chọn ngày trong quá khứ');
-                                                } else if (!day.available) {
-                                                    toast.error('Dịch vụ đã hết chỗ trong thời gian này');
-                                                } else if (onSelectDate) {
-                                                    const dateStr = `${selectedMonth}-${String(day.day).padStart(2, '0')}`;
-                                                    onSelectDate(dateStr);
-                                                }
-                                            }}
-                                            className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all relative ${
-                                                isPast
-                                                ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                                                : day.available
-                                                ? "bg-gray-50 text-gray-900 font-medium cursor-pointer hover:bg-orange-50"
-                                                : "bg-gray-100 text-gray-400 cursor-pointer"
-                                                }`}
-                                        >
-                                            <span className={isPast || !day.available ? 'line-through opacity-50' : ''}>{day.day}</span>
-                                            {isPast ? (
-                                                <span className="text-[8px] sm:text-[9px] font-bold text-gray-300 uppercase mt-0.5">Đã qua</span>
-                                            ) : day.available ? (
-                                                <>
-                                                    {day.price && (
-                                                        <span className="text-[10px] sm:text-[11px] font-bold text-orange-600">
-                                                            {day.price.includes('đ') ? day.price : `${new Intl.NumberFormat('vi-VN').format(Number(day.price))}đ`}
-                                                        </span>
-                                                    )}
-                                                    {day.rooms !== null && (
-                                                        <span className="text-[8px] sm:text-[9px] text-green-600 font-semibold absolute bottom-1">
-                                                            Còn {day.rooms}
-                                                        </span>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <span className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase mt-0.5">Kín phòng</span>
-                                            )}
-                                        </button>
-                                    ) : (
-                                        <div className="w-full h-full" />
-                                    )}
-                                </div>
+                                    <div key={idx} className="aspect-square">
+                                        {day ? (
+                                            <button
+                                                onClick={() => {
+                                                    if (isPast) {
+                                                        toast.error('Không thể chọn ngày trong quá khứ');
+                                                    } else if (!day.available) {
+                                                        toast.error('Dịch vụ đã hết chỗ trong thời gian này');
+                                                    } else if (onSelectDate) {
+                                                        const dateStr = `${selectedMonth}-${String(day.day).padStart(2, '0')}`;
+                                                        onSelectDate(dateStr);
+                                                    }
+                                                }}
+                                                className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-xs transition-all relative ${isPast
+                                                        ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                                                        : day.available
+                                                            ? "bg-gray-50 text-gray-900 font-medium cursor-pointer hover:bg-orange-50"
+                                                            : "bg-gray-100 text-gray-400 cursor-pointer"
+                                                    }`}
+                                            >
+                                                <span className={isPast || !day.available ? 'line-through opacity-50' : ''}>{day.day}</span>
+                                                {isPast ? (
+                                                    <span className="text-[8px] sm:text-[9px] font-bold text-gray-300 uppercase mt-0.5">Đã qua</span>
+                                                ) : day.available ? (
+                                                    <>
+                                                        {day.price && (
+                                                            <span className="text-[8px] sm:text-[10px] font-bold text-orange-600 leading-none mb-0.5 text-center">
+                                                                {day.price.includes('đ') ? day.price : `${new Intl.NumberFormat('vi-VN').format(Number(day.price))}đ`}
+                                                            </span>
+                                                        )}
+                                                        {day.rooms !== null && (
+                                                            <span className="text-[7px] sm:text-[9px] text-green-600 font-semibold leading-none text-center">
+                                                                Còn {day.rooms}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <span className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase mt-0.5">Kín phòng</span>
+                                                )}
+                                            </button>
+                                        ) : (
+                                            <div className="w-full h-full" />
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>
@@ -241,19 +266,19 @@ const HotelInfoTab: React.FC<HotelInfoTabProps> = ({
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                     Vị trí khách sạn
                 </h3>
-                <div className="bg-gray-200 rounded-xl overflow-hidden aspect-video relative shadow-sm border border-gray-100">
+                <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
                     {service.address ? (
-                        <iframe
-                            title={`Bản đồ ${service.name}`}
-                            width="100%"
-                            height="100%"
-                            src={mapSrc}
-                            className="absolute inset-0 w-full h-full"
-                            loading="lazy"
-                        ></iframe>
+                        <ServiceMap
+                            lat={service.latitude}
+                            lng={service.longitude}
+                            serviceName={service.name}
+                            address={service.address}
+                            height="400px"
+                        />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                            <p>Chưa có thông tin bản đồ</p>
+                        <div className="bg-gray-50 rounded-xl aspect-video flex flex-col items-center justify-center text-gray-500 gap-2 border border-dashed border-gray-200">
+                            <MapPin className="w-8 h-8 text-gray-300" />
+                            <p className="text-sm">Vị trí đang được cập nhật...</p>
                         </div>
                     )}
                 </div>

@@ -47,6 +47,7 @@ export const ROUTES = {
   PROVIDER_REVIEWS: '/provider/reviews',
   PROVIDER_SETTINGS: '/provider/settings',
   PROVIDER_HELP: '/provider/help',
+  PROVIDER_NOTIFICATIONS: '/provider/notifications',
 
   // ==================== AI PLANNER ====================
   AI_PLANNER: '/ai-planner',
@@ -78,6 +79,7 @@ export const ROUTE_PERMISSIONS: Record<string, { roles: string[] }> = {
   [ROUTES.PROVIDER_REVIEWS]: { roles: ['provider'] },
   [ROUTES.PROVIDER_SETTINGS]: { roles: ['provider'] },
   [ROUTES.PROVIDER_HELP]: { roles: ['provider'] },
+  [ROUTES.PROVIDER_NOTIFICATIONS]: { roles: ['provider'] },
 
   // User profile routes require authentication (user or admin)
   [ROUTES.USER_PROFILE]: { roles: ['user', 'admin'] },
@@ -132,6 +134,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.PROVIDER_REVIEWS]: 'Đánh giá',
   [ROUTES.PROVIDER_SETTINGS]: 'Cài đặt tài khoản',
   [ROUTES.PROVIDER_HELP]: 'Trung tâm trợ giúp',
+  [ROUTES.PROVIDER_NOTIFICATIONS]: 'Thông báo',
 
   // Public routes
   [ROUTES.HOMEPAGE]: 'Trang chủ',

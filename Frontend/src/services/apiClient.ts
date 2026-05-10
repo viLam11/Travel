@@ -205,8 +205,9 @@ export class ApiClient {
       });
     },
 
-    list: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get("/services/data", { params: { page, size } });
+    list: (): ApiResponse<any> => {
+      // Backend api-docs shows /services/all with no pagination params
+      return this.get("/services/all");
     },
     filter: (params: any): ApiResponse<any> => {
       return this.get("/services/filter", { params });
@@ -632,7 +633,9 @@ export class ApiClient {
       return this.get("/orders/my-orders", { params: { page, size } });
     },
     getAll: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get("/orders/all", { params: { page, size } });
+      // Temporarily use /orders/my-orders to prevent 404 errors 
+      // until Backend provides a proper /orders/all endpoint for Admin.
+      return this.get("/orders/my-orders", { params: { page, size } });
     },
     getHotelOrders: (hotelID: string | number, page = 0, size = 10): ApiResponse<any> => {
       return this.get(`/services/hotels/${hotelID}/all-orders`, { params: { page, size } });

@@ -63,7 +63,7 @@ const PopularDestinations: React.FC = () => {
       id: service.id.toString(),
       title: service.serviceName,
       location: service.province?.full_name || service.province?.fullName || service.address || 'Việt Nam',
-      priceRange: service.averagePrice ? `${service.averagePrice.toLocaleString('vi-VN')} ₫` : 'Liên hệ',
+      priceRange: (service.minPrice || service.averagePrice) ? `${(service.minPrice || service.averagePrice).toLocaleString('vi-VN')} ₫` : 'Liên hệ',
       openingHours: '8:00 - 22:00',
       image: service.thumbnailUrl || 'https://via.placeholder.com/400x300',
       destinationSlug: destinationSlug,

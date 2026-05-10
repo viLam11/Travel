@@ -140,6 +140,7 @@ const ServiceDetailPage: React.FC = () => {
   );
   const [priceCalendar, setPriceCalendar] = useState<any>(null);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
+  const [selectedSubCalendarId, setSelectedSubCalendarId] = useState<string | null>(null);
 
   // Reviews state
   const [reviewImages, setReviewImages] = useState<File[]>([]);
@@ -394,6 +395,14 @@ const ServiceDetailPage: React.FC = () => {
         try {
           const data = await serviceDetailApi.getPriceCalendar(id.toString(), year, month);
           setPriceCalendar(data);
+
+          // Auto select first subCalendar if none selected or current one not in list
+          if (data?.subCalendars?.length > 0) {
+            const currentExists = data.subCalendars.some((s: any) => s.id === selectedSubCalendarId);
+            if (!selectedSubCalendarId || !currentExists) {
+              setSelectedSubCalendarId(data.subCalendars[0].id);
+            }
+          }
         } catch (err) {
           console.error("Failed to fetch calendar", err);
         } finally {
@@ -402,7 +411,7 @@ const ServiceDetailPage: React.FC = () => {
       };
       fetchCalendar();
     }
-  }, [id, selectedMonth]);
+  }, [id, selectedMonth, selectedSubCalendarId]);
 
   const handleCalendarDateSelect = (dateStr: string) => {
     if (serviceType === 'hotel') {
@@ -840,13 +849,18 @@ const ServiceDetailPage: React.FC = () => {
 
     // If we have priceCalendar from API, process it
     if (priceCalendar && priceCalendar.subCalendars && priceCalendar.subCalendars.length > 0) {
-      priceCalendar.subCalendars.forEach((sub: any) => {
+      // Filter subCalendars if one is selected, otherwise use all (fallback)
+      const subCalendarsToProcess = selectedSubCalendarId
+        ? priceCalendar.subCalendars.filter((s: any) => s.id === selectedSubCalendarId)
+        : priceCalendar.subCalendars;
+
+      subCalendarsToProcess.forEach((sub: any) => {
         const subBasePrice = sub.basePrice || priceCalendar.basePrice || defaultPrice;
 
         // Fill days with subCalendar base price if not already filled by a cheaper one
         for (let d = 1; d <= maxDay; d++) {
           if (!calendarMap[d] || subBasePrice < calendarMap[d].price) {
-            calendarMap[d] = { price: subBasePrice, rooms: 10 };
+            calendarMap[d] = { price: subBasePrice, rooms: sub.stock ?? 10 };
           }
         }
 
@@ -856,10 +870,16 @@ const ServiceDetailPage: React.FC = () => {
             const exDate = new Date(ex.date);
             if (exDate.getFullYear() === year && exDate.getMonth() + 1 === month) {
               const d = exDate.getDate();
-              if (!calendarMap[d] || ex.price < calendarMap[d].price) {
+              // If filtering by specific ID, we always take its exception. 
+              // Otherwise (fallback) we take cheapest.
+              const shouldUpdate = !selectedSubCalendarId
+                ? (!calendarMap[d] || ex.price < calendarMap[d].price)
+                : true;
+
+              if (shouldUpdate) {
                 calendarMap[d] = {
                   price: ex.price,
-                  rooms: ex.availableRooms !== undefined ? ex.availableRooms : 10
+                  rooms: ex.stock !== undefined ? ex.stock : (ex.availableRooms !== undefined ? ex.availableRooms : 10)
                 };
               }
             }
@@ -1096,7 +1116,7 @@ const ServiceDetailPage: React.FC = () => {
   const serviceWithAppliedDiscounts = { ...service, discounts: activeDiscounts };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {/* Breadcrumb Section - Manual mode với đầy đủ region → province → service */}
       <BreadcrumbSection
         breadcrumbItems={(() => {
@@ -1189,8 +1209,8 @@ const ServiceDetailPage: React.FC = () => {
                   onClick={handleToggleFavorite}
                   disabled={isFavoriteLoading}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 border shadow-sm transform active:scale-95 cursor-pointer ${isFavorite
-                      ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
-                      : "bg-white text-gray-600 border-gray-100 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100"
+                    ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                    : "bg-white text-gray-600 border-gray-100 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-100"
                     }`}
                 >
                   {isFavoriteLoading ? (
@@ -1318,6 +1338,9 @@ const ServiceDetailPage: React.FC = () => {
                   dynamicMonths={dynamicMonths}
                   onSelectDate={handleCalendarDateSelect}
                   isCalendarLoading={isCalendarLoading}
+                  priceCalendar={priceCalendar}
+                  selectedSubCalendarId={selectedSubCalendarId}
+                  onSubCalendarChange={setSelectedSubCalendarId}
                 />
               ) : (
                 <ServiceInfoTab
@@ -1329,6 +1352,9 @@ const ServiceDetailPage: React.FC = () => {
                   dynamicMonths={dynamicMonths}
                   onSelectDate={handleCalendarDateSelect}
                   isCalendarLoading={isCalendarLoading}
+                  priceCalendar={priceCalendar}
+                  selectedSubCalendarId={selectedSubCalendarId}
+                  onSubCalendarChange={setSelectedSubCalendarId}
                 />
               )
             )}
@@ -1446,7 +1472,7 @@ const ServiceDetailPage: React.FC = () => {
       </div>
 
       {/* Mobile Sticky Booking Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] animate-in slide-in-from-bottom duration-300">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[80] bg-white border-t border-gray-100 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] animate-in slide-in-from-bottom duration-300">
         <div className="flex items-center justify-between gap-4 max-w-md mx-auto">
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Tổng cộng</p>
@@ -1457,8 +1483,8 @@ const ServiceDetailPage: React.FC = () => {
           <button
             onClick={serviceType === 'hotel' ? () => handleRoomBookNow() : () => handleBookNow()}
             className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-md uppercase tracking-widest active:scale-95 ${isAuthenticated
-                ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100"
-                : "bg-orange-50 text-orange-600 border border-orange-200"
+              ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100"
+              : "bg-orange-50 text-orange-600 border border-orange-200"
               }`}
           >
             {isAuthenticated

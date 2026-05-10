@@ -69,7 +69,7 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
     const renderMessage = (text: string) => {
         // Handle bold: **text**
         let processed = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
+
         // Handle bullet points: * text
         processed = processed.split('\n').map(line => {
             if (line.trim().startsWith('* ')) {
@@ -103,7 +103,7 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
         try {
             // Get current context (page title or URL)
             const context = `User is currently on ${window.location.origin}${location.pathname}. Page title: ${document.title}`;
-            
+
             const response = await aiChatApi.ask({
                 question: userMsg.text,
                 context: context
@@ -136,19 +136,17 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
 
     if (!isOpen) {
         // Khi chat với chủ dịch vụ đang mở, ẩn nút AI chat để tránh đè lên
-        if (isServiceChatOpen) return null;
-
         return (
             <button
                 onClick={toggleWidget}
-                className="fixed bottom-28 right-6 bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-[9999] flex items-center justify-center group"
+                className="fixed bottom-48 md:bottom-28 right-4 md:right-6 bg-gradient-to-r from-orange-500 to-amber-600 text-white p-2.5 md:p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-[9999] flex items-center justify-center group"
                 aria-label="Chat với AI"
             >
                 <div className="absolute -top-1 -right-1 flex h-4 w-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 border-2 border-white"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 border-2 border-white"></span>
                 </div>
-                <Bot className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                <Bot className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-12 transition-transform" />
                 <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-500 whitespace-nowrap font-medium text-sm">
                     Hỏi Trợ Lý AI
                 </span>
@@ -157,7 +155,7 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
     }
 
     return (
-        <div className="fixed bottom-28 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(245,_158,_11,_0.2)] border border-orange-100 z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: '520px' }}>
+        <div className="fixed bottom-4 right-4 md:bottom-28 md:right-6 w-[calc(100%-2rem)] sm:w-80 md:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(245,_158,_11,_0.2)] border border-orange-100 z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: 'calc(100vh - 120px)', maxHeight: '520px' }}>
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
@@ -175,8 +173,8 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
                         </p>
                     </div>
                 </div>
-                <button 
-                    onClick={toggleWidget} 
+                <button
+                    onClick={toggleWidget}
                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                 >
                     <X className="w-5 h-5" />
@@ -195,11 +193,10 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
                                         <Bot className="w-4 h-4 text-orange-600" />
                                     </div>
                                 )}
-                                <div className={`group relative rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
-                                    isAi 
-                                    ? 'bg-white text-slate-700 border border-orange-50/50 rounded-tl-none' 
+                                <div className={`group relative rounded-2xl px-4 py-2.5 text-sm shadow-sm ${isAi
+                                    ? 'bg-white text-slate-700 border border-orange-50/50 rounded-tl-none'
                                     : 'bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-tr-none'
-                                }`}>
+                                    }`}>
                                     <div className="leading-relaxed">
                                         {renderMessage(msg.text)}
                                     </div>

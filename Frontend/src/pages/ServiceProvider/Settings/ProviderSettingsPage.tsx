@@ -38,10 +38,18 @@ const ProviderSettingsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!currentUser?.user?.userID) return;
+      const userIdStr = currentUser?.user?.userID || (currentUser?.user as any)?.id;
+      if (!userIdStr) return;
+      
+      const userId = Number(userIdStr);
+      if (isNaN(userId)) {
+        console.error('Invalid user ID:', userIdStr);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const userData = await apiClient.users.getById(Number(currentUser.user.userID));
+        const userData = await apiClient.users.getById(userId);
         setFormData({
           name: userData.fullname || userData.name || '',
           email: userData.email || '',
@@ -56,7 +64,7 @@ const ProviderSettingsPage: React.FC = () => {
       }
     };
     fetchUserData();
-  }, [currentUser?.user?.userID]);
+  }, [currentUser?.user]);
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -68,13 +76,21 @@ const ProviderSettingsPage: React.FC = () => {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser?.user?.userID) {
+    const userIdStr = currentUser?.user?.userID || (currentUser?.user as any)?.id;
+    if (!userIdStr) {
       toast.error('Không tìm thấy thông tin người dùng');
       return;
     }
+    
+    const userId = Number(userIdStr);
+    if (isNaN(userId)) {
+      toast.error('ID người dùng không hợp lệ');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await apiClient.users.update(Number(currentUser.user.userID), {
+      await apiClient.users.update(userId, {
         fullname: formData.name,
         phone: formData.phone,
         address: formData.address,

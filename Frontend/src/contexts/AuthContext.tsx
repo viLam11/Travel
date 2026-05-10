@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { toast } from 'react-hot-toast';
 import apiClient from '@/services/apiClient';
 
 // MOCK AUTH MODE - Set to true to test with mock users
@@ -133,40 +134,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
             // Fetch fresh profile from backend
+            console.log('[Auth] Fetching profile from /users/me...');
             const userResponse = await apiClient.users.getProfile();
-            console.log('User Profile Fetched:', userResponse);
+            console.log('[Auth] Profile fetched successfully:', userResponse);
 
-            // If account is blocked in profile or user details (when backend adds the active field)
-            if ((userResponse as any).active === false || (userResponse as any).status === 'blocked') {
+            // Mapping backend DTO to frontend User interface
+            const rawRole = (userResponse.role || 'USER').toString().toUpperCase();
+            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+
+            // Strict check: if active is false or status is blocked, kick out immediately
+            if (userResponse.active === false || userResponse.status === 'blocked') {
+                const msg = 'Tài khoản của bạn chưa được kích hoạt hoặc đã bị khóa. Vui lòng liên hệ quản trị viên.';
+                console.warn('[Auth] Account inactive/blocked. Clearing session.');
+                
                 localStorage.removeItem('token');
                 localStorage.removeItem('currentUser');
                 setCurrentUser(null);
                 setIsAuthenticated(false);
-                window.location.href = '/login';
+                
+                // Store message to show after redirect
+                sessionStorage.setItem('auth_error', msg);
+                
+                if (!window.location.pathname.includes('/login')) {
+                    window.location.href = '/login';
+                } else {
+                    // If already on login page, show it immediately
+                    toast.error(msg);
+                }
                 return;
             }
 
-            // Fallback: temporary fetch from all users list until Backend adds 'active' to the profile API
-            if (userResponse && userResponse.userID) {
-                try {
-                    const allUsers = await apiClient.users.getAll();
-                    const freshUser = Array.isArray(allUsers) ? allUsers.find((u: any) => u.userID === userResponse.userID || u.id === userResponse.userID) : null;
-                    if (freshUser && freshUser.active === false) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('currentUser');
-                        setCurrentUser(null);
-                        setIsAuthenticated(false);
-                        window.location.href = '/login';
-                        return;
-                    }
-                } catch (err) {
-                    console.error('Failed to fetch user fresh status', err);
-                }
-            }
-
-            // Mapping backend DTO to frontend User interface
-            const rawRole = userResponse.role?.toUpperCase() || 'USER';
-            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
 
             // Extract serviceId safely - One provider = One service
             let fetchedServiceId: string | number | undefined = undefined;
@@ -181,13 +178,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
 
             const user: User = {
-                userID: userResponse.userID?.toString() || '',
-                name: userResponse.fullname || userResponse.username || 'User',
+                userID: (userResponse.userID || userResponse.id)?.toString() || '',
+                name: userResponse.fullname || userResponse.username || userResponse.name || 'User',
                 username: userResponse.username,
                 fullname: userResponse.fullname,
                 email: userResponse.email,
                 role: normalizedRole,
-                phoneNumber: userResponse.phone,
+                phoneNumber: userResponse.phone || userResponse.phoneNumber,
                 address: userResponse.address,
                 avatarUrl: userResponse.avatarUrl,
                 // Derive providerType from specific provider role
@@ -195,11 +192,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
                 serviceId: fetchedServiceId,
                 hasService: !!fetchedServiceId,
-                // Add the original specific role for component-level checks if needed
-                status: userResponse.status || 'active'
+                status: (userResponse.active === false && normalizedRole === 'provider') ? 'pending' : (userResponse.status || 'active')
             };
 
             const authData: LoginResponse = { token, user };
+            console.log('Final Auth Data (checkAuth):', authData);
 
             setCurrentUser(authData);
             setIsAuthenticated(true);
@@ -223,6 +220,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     useEffect(() => {
+        console.log('[Auth] Initializing authentication state...');
         // Check localStorage for immediate display
         const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('currentUser');
@@ -245,6 +243,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Always try to refresh from server
         checkAuth();
+
+        // Check for pending error messages from previous redirects
+        const pendingError = sessionStorage.getItem('auth_error');
+        if (pendingError) {
+            toast.error(pendingError);
+            sessionStorage.removeItem('auth_error');
+        }
     }, []);
 
     const login = async (email: string, password: string) => {
@@ -295,38 +300,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const response = await apiClient.auth.login({
                 email,
                 password
-                // remember_me: true
-            }) as unknown as LoginResponse;
-            console.log("Đăng nhập thành công:", response);
+            }) as any;
+            console.log("Login API RAW Response:", response);
 
-            // Check if account is blocked
-            if ((response.user as any).active === false || (response.user as any).status === 'blocked') {
-                throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
+            // Handle structure where user and role might be sibling or nested
+            const rawUser = response.user || response;
+            const rawRole = (response.role || rawUser.role || 'USER').toString().toUpperCase();
+
+            // Map and normalize roles
+            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+
+            // Check if account is blocked/inactive
+            const userStatus = rawUser.status || 'active';
+            if (rawUser.active === false || userStatus === 'blocked') {
+                const msg = 'Tài khoản của bạn chưa được kích hoạt hoặc đã bị khóa. Vui lòng liên hệ quản trị viên.';
+                toast.error(msg);
+                throw new Error(msg);
             }
 
-            // Map fullname to name if needed and preserve original fields
-            const rawUser = response.user as any;
-            if (rawUser.fullname && !response.user.name) {
-                response.user.name = rawUser.fullname;
+            // Safely extract service info
+            let fetchedServiceId: string | number | undefined = undefined;
+            if (rawUser.serviceId) {
+                fetchedServiceId = rawUser.serviceId;
+            } else if (Array.isArray(rawUser.services) && rawUser.services.length > 0) {
+                const firstService = rawUser.services[0];
+                fetchedServiceId = typeof firstService === 'object' ? firstService.id : firstService;
+            } else if (Array.isArray(rawUser.serviceIds) && rawUser.serviceIds.length > 0) {
+                fetchedServiceId = rawUser.serviceIds[0];
             }
-            if (rawUser.fullname) response.user.fullname = rawUser.fullname;
-            if (rawUser.username) response.user.username = rawUser.username;
 
-            // Normalize role and set providerType
-            const rawRole = (response.user.role as string)?.toUpperCase() || 'USER';
-            if (rawRole.startsWith('PROVIDER_')) {
-                response.user.role = 'provider';
-                response.user.providerType = rawRole === 'PROVIDER_HOTEL' ? 'hotel' : 'place';
-            } else {
-                response.user.role = rawRole.toLowerCase();
-            }
+            const user: User = {
+                userID: (rawUser.userID || rawUser.id)?.toString() || '',
+                name: rawUser.fullname || rawUser.username || rawUser.name || 'User',
+                username: rawUser.username,
+                fullname: rawUser.fullname,
+                email: rawUser.email,
+                role: normalizedRole,
+                phoneNumber: rawUser.phone || rawUser.phoneNumber,
+                address: rawUser.address,
+                avatarUrl: rawUser.avatarUrl,
+                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' :
+                    rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                serviceId: fetchedServiceId,
+                hasService: !!fetchedServiceId,
+                status: userStatus
+            };
+
+            const authData: LoginResponse = {
+                token: response.token,
+                user
+            };
+
+            console.log('Final Mapped Auth Data (login):', authData);
 
             // Save JWT token and user data
             localStorage.setItem('token', response.token);
-            localStorage.setItem('currentUser', JSON.stringify(response));
+            localStorage.setItem('currentUser', JSON.stringify(authData));
 
-            setCurrentUser(response);
+            setCurrentUser(authData);
             setIsAuthenticated(true);
+            
+            toast.success(`Chào mừng trở lại, ${user.name || 'Người dùng'}!`);
+
+            // Re-sync profile from /users/me to ensure we have the most complete data (like serviceIds)
+            // which might be missing from the initial login response
+            console.log('[Auth] Login successful, re-syncing full profile...');
+            await checkAuth();
         } catch (error: any) {
             console.error('Đăng nhập thất bại:', error);
             console.error('FULL ERROR OBJECT:', JSON.stringify(error, null, 2));

@@ -9,7 +9,11 @@ import {
     CheckCircle,
     FileText,
     ArrowUpRight,
-    Loader2
+    Loader2,
+    Tag,
+    MapPin,
+    Phone,
+    Globe
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
@@ -26,19 +30,23 @@ interface ServiceUpdateReq {
     providerId: string;
     providerName: string;
     serviceName: string;
-    serviceType: 'hotel' | 'tour' | 'place';
+    serviceType: string;
     status: ApprovalStatus;
     submittedAt: string;
-    changes: {
-        field: string;
-        oldValue: string;
-        newValue: string;
-    }[];
+    description: string;
+    address: string;
+    contactNumber: string;
+    thumbnailUrl: string;
+    averagePrice: number;
+    provinceName: string;
+    tags?: string;
+    rating?: number;
 }
 
 const STATUS_BADGE_CONFIG: Record<string, { label: string, className: string }> = {
     pending: { label: 'Chờ duyệt', className: 'bg-amber-100 text-amber-700' },
     approved: { label: 'Đã duyệt', className: 'bg-emerald-100 text-emerald-700' },
+    active: { label: 'Đang hoạt động', className: 'bg-emerald-100 text-emerald-700' },
     rejected: { label: 'Từ chối', className: 'bg-rose-100 text-rose-700' },
 };
 
@@ -61,14 +69,17 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                 providerId: s.provider?.userID?.toString() || 'Unknown',
                 providerName: s.provider?.fullname || s.provider?.username || 'Nhà cung cấp ẩn danh',
                 serviceName: s.serviceName || 'Dịch vụ chưa đặt tên',
-                serviceType: s.serviceType?.toLowerCase() || 'hotel',
+                serviceType: s.serviceType || 'HOTEL',
                 status: s.status?.toLowerCase() || 'pending',
                 submittedAt: s.createdAt || new Date().toISOString(),
-                changes: [
-                    { field: 'Loại Dịch Vụ', oldValue: '(Tạo mới)', newValue: s.serviceType || 'Chưa rõ' },
-                    { field: 'Mô Tả', oldValue: '(Trống)', newValue: s.description || 'Không có mô tả' },
-                    { field: 'Địa chỉ', oldValue: '(Trống)', newValue: (s.address || s.province?.name) || 'Không có địa chỉ' }
-                ]
+                description: s.description || 'Không có mô tả',
+                address: s.address || 'Không có địa chỉ cụ thể',
+                contactNumber: s.contactNumber || 'Chưa cung cấp số điện thoại',
+                thumbnailUrl: s.thumbnailUrl || '',
+                averagePrice: s.averagePrice || 0,
+                provinceName: s.province?.name || s.province?.fullName || 'Chưa rõ tỉnh thành',
+                tags: s.tags,
+                rating: s.rating
             }));
             
             setRequests(mapped);
@@ -89,7 +100,9 @@ export const AdminServiceApprovalsPage: React.FC = () => {
 
     const filteredRequests = requests.filter(req => {
         const reqStat = req.status.toLowerCase();
-        const matchStatus = filterStatus === 'all' || reqStat === filterStatus;
+        // Normalize 'active' to 'approved' for filtering if needed, or keep separate
+        const normalizedStat = reqStat === 'active' ? 'approved' : reqStat;
+        const matchStatus = filterStatus === 'all' || normalizedStat === filterStatus;
         const matchSearch = searchTerm === '' ||
             req.serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             req.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,7 +117,12 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' }
             });
             setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
-            setSelectedReq(null);
+            
+            // Nếu đang chọn chính request này thì update state selected luôn
+            if (selectedReq?.id === id) {
+                setSelectedReq(prev => prev ? { ...prev, status: 'approved' } : null);
+            }
+            
             success('Đã phê duyệt dịch vụ thành công!');
         } catch (error) {
             console.error(error);
@@ -122,8 +140,11 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                     headers: { 'Content-Type': 'application/json' }
                 });
                 setRequests(prev => prev.map(r => r.id === selectedReq.id ? { ...r, status: 'rejected' } : r));
+                
+                // Update selected request status
+                setSelectedReq(prev => prev ? { ...prev, status: 'rejected' } : null);
+                
                 setShowRejectModal(false);
-                setSelectedReq(null);
                 setRejectReason('');
                 success('Đã từ chối dịch vụ thành công!');
             } catch (error) {
@@ -277,7 +298,7 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                         <Card className="sticky top-24 border border-border/40 shadow-sm rounded-xl overflow-hidden flex flex-col max-h-[calc(100vh-120px)]">
                             <CardHeader className="p-6 border-b border-border/40 bg-muted/20 flex flex-row items-center justify-between">
                                 <div>
-                                    <CardTitle className="text-lg font-bold">Yêu cầu phê duyệt</CardTitle>
+                                    <CardTitle className="text-lg font-bold">Chi tiết dịch vụ</CardTitle>
                                     <p className="text-xs text-muted-foreground mt-1">Gửi lúc {new Date(selectedReq.submittedAt).toLocaleString('vi-VN')}</p>
                                 </div>
                                 <Button variant="ghost" size="icon" onClick={() => setSelectedReq(null)} className="h-8 w-8">
@@ -286,53 +307,111 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                             </CardHeader>
 
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                {/* Comparison Section */}
+                                {/* Thumbnail Preview */}
+                                {selectedReq.thumbnailUrl && (
+                                    <div className="aspect-video w-full rounded-2xl overflow-hidden border border-border/40 shadow-sm">
+                                        <img 
+                                            src={selectedReq.thumbnailUrl} 
+                                            alt={selectedReq.serviceName} 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                )}
+
                                 <div className="space-y-4">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                        <FileText className="w-4 h-4 text-blue-500" /> Nội dung thay đổi
-                                    </h4>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xl font-bold text-foreground">{selectedReq.serviceName}</h3>
+                                        <Badge className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase ${STATUS_BADGE_CONFIG[selectedReq.status]?.className}`}>
+                                            {STATUS_BADGE_CONFIG[selectedReq.status]?.label}
+                                        </Badge>
+                                    </div>
                                     
-                                    <div className="space-y-4">
-                                        {selectedReq.changes.map((change, idx) => (
-                                            <div key={idx} className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                                                <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
-                                                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">{change.field}</span>
-                                                </div>
-                                                <div className="grid grid-cols-1 divide-y divide-gray-50">
-                                                    <div className="p-4 bg-rose-50/20">
-                                                        <span className="text-[9px] font-bold text-rose-600 uppercase mb-1 block">Hiện tại</span>
-                                                        <p className="text-sm text-gray-500 line-through italic">{change.oldValue}</p>
-                                                    </div>
-                                                    <div className="p-4 bg-emerald-50/20">
-                                                        <span className="text-[9px] font-bold text-emerald-600 uppercase mb-1 block">Yêu cầu mới</span>
-                                                        <p className="text-sm font-bold text-gray-900">{change.newValue}</p>
-                                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-3 rounded-xl bg-muted/30 border border-border/40">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Loại dịch vụ</p>
+                                            <div className="flex items-center gap-2">
+                                                <Tag className="w-3.5 h-3.5 text-blue-500" />
+                                                <span className="text-sm font-semibold">{selectedReq.serviceType}</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-muted/30 border border-border/40">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Giá trung bình</p>
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-sm font-bold text-emerald-600">
+                                                    {selectedReq.averagePrice.toLocaleString('vi-VN')} VNĐ
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 pt-2">
+                                        <div className="space-y-1.5">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                                                <FileText className="w-3.5 h-3.5" /> Mô tả
+                                            </p>
+                                            <p className="text-sm text-foreground/80 leading-relaxed bg-muted/20 p-4 rounded-xl border border-border/40">
+                                                {selectedReq.description}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/40">
+                                                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                                                    <MapPin className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Địa chỉ</p>
+                                                    <p className="text-sm font-medium">{selectedReq.address}</p>
+                                                    <p className="text-xs text-muted-foreground">{selectedReq.provinceName}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/40">
+                                                <div className="p-2 rounded-lg bg-emerald-100 text-emerald-600">
+                                                    <Phone className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Liên hệ</p>
+                                                    <p className="text-sm font-medium">{selectedReq.contactNumber}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/40">
+                                                <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+                                                    <Globe className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Đối tác</p>
+                                                    <p className="text-sm font-medium">{selectedReq.providerName}</p>
+                                                    <p className="text-[10px] text-muted-foreground">ID: {selectedReq.providerId}</p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
-                                <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 text-blue-800 text-sm flex gap-3">
-                                    <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                                    <p className="leading-relaxed">Vui lòng kiểm tra kỹ các thông tin trước khi xác nhận. Thay đổi sẽ được cập nhật ngay lập tức sau khi phê duyệt.</p>
-                                </div>
+                                {selectedReq.status === 'pending' && (
+                                    <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 text-blue-800 text-sm flex gap-3">
+                                        <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                                        <p className="leading-relaxed font-medium">Vui lòng kiểm tra kỹ các thông tin pháp lý và hình ảnh trước khi xác nhận phê duyệt dịch vụ mới.</p>
+                                    </div>
+                                )}
                             </div>
 
                             {selectedReq.status === 'pending' && (
-                                <CardContent className="p-6 border-t border-gray-50 bg-gray-50/30 flex gap-3">
+                                <CardContent className="p-6 border-t border-border/40 bg-muted/20 flex gap-3">
                                     <Button
                                         onClick={() => selectedReq && handleApprove(selectedReq.id)}
-                                        className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 cursor-pointer"
+                                        className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 cursor-pointer transition-all hover:scale-[1.02]"
                                         disabled={isProcessing === selectedReq?.id}
                                     >
                                         {isProcessing === selectedReq?.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
-                                        Duyệt
+                                        Duyệt ngay
                                     </Button>
                                     <Button
                                         onClick={() => setShowRejectModal(true)}
                                         variant="outline"
-                                        className="flex-1 h-12 border-rose-200 text-rose-600 hover:bg-rose-50 font-bold rounded-xl cursor-pointer"
+                                        className="flex-1 h-12 border-rose-200 text-rose-600 hover:bg-rose-50 font-bold rounded-xl cursor-pointer transition-all"
                                         disabled={isProcessing === selectedReq?.id}
                                     >
                                         <XSquare className="w-4 h-4 mr-2" />

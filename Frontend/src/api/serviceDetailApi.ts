@@ -46,16 +46,16 @@ const realApi = {
           if (!isNaN(date.getTime())) {
             return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
           }
-        } catch (e) {}
+        } catch (e) { }
         return time;
       };
 
-      const openingHours = backendData.startTime && backendData.endTime 
+      const openingHours = backendData.startTime && backendData.endTime
         ? `${formatTime(backendData.startTime)} - ${formatTime(backendData.endTime)}`
         : (backendData.openingHours || '08:00 - 22:00');
 
       const reviewCount = backendData.commentList?.length || backendData.reviewCount || 0;
-      
+
       const images = backendData.imageList?.length > 0
         ? backendData.imageList.map((img: any) => img.imageUrl || img.url)
         : (backendData.thumbnailUrl || backendData.thumbnail)
@@ -71,7 +71,7 @@ const realApi = {
         reviews: Number(reviewCount),
         description: backendData.description || 'Chưa có mô tả cho dịch vụ này.',
         address: backendData.address || '',
-        
+
         provider: backendData.provider ? {
           userID: backendData.provider.userID || backendData.provider.id,
           fullname: backendData.provider.fullname || backendData.provider.username || backendData.provider.email,
@@ -82,8 +82,43 @@ const realApi = {
         images: images,
         thumbnails: images.length > 0 ? images.slice(0, 4) : [],
 
-        priceAdult: backendData.averagePrice || backendData.minPrice || 0,
-        priceChild: Math.floor((backendData.averagePrice || backendData.minPrice || 0) * 0.7),
+        // Collect all potential price points for robust minimum price detection
+        priceAdult: (() => {
+          const potentialPrices: number[] = [
+            backendData.averagePrice,
+            backendData.minPrice,
+            backendData.price,
+            backendData.lowestPrice,
+            backendData.priceAdult
+          ].filter((p): p is number => typeof p === 'number' && p > 0);
+
+          // Also check nested items if the main fields are missing
+          if (backendData.roomList || backendData.roomTypes) {
+            const rooms = backendData.roomList || backendData.roomTypes;
+            if (Array.isArray(rooms)) {
+              rooms.forEach((r: any) => {
+                const p = r.price || r.pricePerNight || 0;
+                if (p > 0) potentialPrices.push(p);
+              });
+            }
+          }
+
+          if (backendData.ticketList || backendData.ticketTypes) {
+            const tickets = backendData.ticketList || backendData.ticketTypes;
+            if (Array.isArray(tickets)) {
+              tickets.forEach((t: any) => {
+                const p = t.price || 0;
+                if (p > 0) potentialPrices.push(p);
+              });
+            }
+          }
+
+          return potentialPrices.length > 0 ? Math.min(...potentialPrices) : 0;
+        })(),
+        priceChild: (() => {
+          const base = backendData.averagePrice || backendData.minPrice || backendData.price || 0;
+          return backendData.priceChild || Math.floor(base * 0.7);
+        })(),
         tags: backendData.tags || '',
 
         openingHours: openingHours,
@@ -154,4 +189,4 @@ const realApi = {
   }
 };
 
-export const serviceDetailApi = realApi;
+export const serviceDetailApi = realApi;

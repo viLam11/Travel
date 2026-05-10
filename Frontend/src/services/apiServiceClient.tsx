@@ -172,8 +172,8 @@ export class ApiServiceClient {
     
     // getAllTicketsByID: (venueID: string): 
 
-    list: (page = 0, size = 10): ApiResponse<any> => {
-      return this.get("/services/data", { params: { page, size } });
+    list: (): ApiResponse<any> => {
+      return this.get("/services/all");
     },
 
     getAll: (): ApiResponse<any> => {
@@ -495,7 +495,8 @@ export class ApiServiceClient {
       return this.post("/orders/create", data);
     },
     getAll: (): ApiResponse<any> => {
-      return this.get("/orders/all");
+      // Temporarily use /orders/my-orders to prevent 404
+      return this.get("/orders/my-orders");
     },
   };
 
@@ -539,7 +540,8 @@ export class ApiServiceClient {
 
   transactions = {
     getAll: (): ApiResponse<any> => {
-      return this.get("/orders/all");
+      // Temporarily use /orders/my-orders to prevent 404
+      return this.get("/orders/my-orders");
     },
   };
 

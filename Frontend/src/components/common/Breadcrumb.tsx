@@ -90,15 +90,24 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
   };
 
   return (
-    <nav aria-label="Breadcrumb" className={className}>
-      <ol className="flex items-center flex-wrap">
+    <nav aria-label="Breadcrumb" className={`${className} overflow-hidden`}>
+      <ol className="flex items-center whitespace-nowrap overflow-x-auto scrollbar-hide pb-1">
         {items.map((item, index) => (
-          <li key={index} className="flex items-center">
+          <li key={index} className="flex items-center flex-shrink-0">
             {renderItem(item, index)}
             {index < items.length - 1 && renderSeparator()}
           </li>
         ))}
       </ol>
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </nav>
   );
 };

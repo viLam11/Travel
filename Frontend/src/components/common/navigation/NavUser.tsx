@@ -58,6 +58,24 @@ const NavUser = ({
         });
     }
 
+    const handleNavigation = (path: string) => {
+        navigate(path);
+    }
+
+    // Determine settings path based on role
+    const getSettingsPath = () => {
+        if (currentUser?.user?.role === 'provider') return ROUTES.PROVIDER_SETTINGS;
+        if (currentUser?.user?.role === 'admin') return ROUTES.ADMIN_DASHBOARD; // Fallback for admin
+        return ROUTES.USER_SETTINGS;
+    }
+
+    // Determine notifications path based on role
+    const getNotificationsPath = () => {
+        if (currentUser?.user?.role === 'provider') return ROUTES.PROVIDER_NOTIFICATIONS;
+        if (currentUser?.user?.role === 'admin') return ROUTES.ADMIN_DASHBOARD; // Fallback for admin
+        return ROUTES.USER_NOTIFICATIONS;
+    }
+
     return (
         <SidebarMenu>
             <SidebarMenuItem>
@@ -98,26 +116,27 @@ const NavUser = ({
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem>
-                                <User />
-                                Profile
+                            <DropdownMenuItem onClick={() => handleNavigation(getSettingsPath())} className="cursor-pointer">
+                                <User className="w-4 h-4 mr-2" />
+                                Hồ sơ
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Settings />
-                                Settings
+                            <DropdownMenuItem onClick={() => handleNavigation(getSettingsPath())} className="cursor-pointer">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Cài đặt
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <BellIcon />
-                                Notifications
+                            <DropdownMenuItem onClick={() => handleNavigation(getNotificationsPath())} className="cursor-pointer">
+                                <BellIcon className="w-4 h-4 mr-2" />
+                                Thông báo
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onClick={handleLogout}
                             disabled={isLoggingOut}
+                            className="cursor-pointer text-red-600 focus:text-red-600"
                         >
-                            <LogOut />
-                            {isLoggingOut ? 'Đang đăng xuất...' : 'Log out'}
+                            <LogOut className="w-4 h-4 mr-2" />
+                            {isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

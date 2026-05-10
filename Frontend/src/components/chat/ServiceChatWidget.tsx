@@ -103,7 +103,7 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
         if (!newMessage.trim() || !isAuthenticated || !currentUser?.user || !conversationId) return;
 
         const currentUserId = currentUser.user.userID.toString();
-        
+
         const result = socketService.sendMessage(
             conversationId,
             currentUserId,
@@ -135,22 +135,19 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
     };
 
     if (!isOpen) {
-        // Khi AI chat đang mở, ẩn nút chat với chủ dịch vụ để tránh đè lên
-        if (isAIChatOpen) return null;
-
         return (
             <button
                 onClick={toggleWidget}
-                className="fixed bottom-6 right-6 bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition-all z-50 flex items-center justify-center animate-bounce"
+                className="fixed bottom-32 md:bottom-10 right-4 md:right-6 bg-orange-600 text-white p-2.5 md:p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-[9999] flex items-center justify-center group"
                 aria-label="Chat với chủ dịch vụ"
             >
-                <MessageCircle className="w-6 h-6" />
+                <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         );
     }
 
     return (
-        <div className="fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: '500px' }}>
+        <div className="fixed bottom-4 right-4 md:bottom-10 md:right-6 w-[calc(100%-2rem)] sm:w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: 'calc(100vh - 120px)', maxHeight: '500px' }}>
             {/* Header */}
             <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -161,8 +158,8 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
                         <h3 className="font-semibold text-sm line-clamp-1">{providerName}</h3>
                         <p className="text-xs text-orange-100 line-clamp-1 flex items-center gap-1">
                             <span className={`w-2 h-2 rounded-full inline-block ${connStatus === 'CONNECTED' ? 'bg-green-400' : 'bg-gray-400 animate-pulse'}`}></span>
-                            {connStatus === 'CONNECTED' ? 'Đang trực tuyến' : 
-                             connStatus === 'CONNECTING' ? 'Đang kết nối...' : 'Mất kết nối'}
+                            {connStatus === 'CONNECTED' ? 'Đang trực tuyến' :
+                                connStatus === 'CONNECTING' ? 'Đang kết nối...' : 'Mất kết nối'}
                         </p>
                     </div>
                 </div>

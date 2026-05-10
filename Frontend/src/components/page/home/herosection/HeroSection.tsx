@@ -211,7 +211,7 @@ const HeroSection: React.FC = () => {
   };
 
   return (
-    <div className="relative h-[400px] sm:h-[700px] overflow-visible pb-8 sm:pb-0">
+    <div className="relative min-h-[600px] sm:h-[700px] overflow-visible pb-12 sm:pb-0">
       <div className="absolute inset-0 w-[90vw] rounded-b-[40px] mx-auto overflow-hidden pointer-events-none ">
         {backgroundImages.map((image, index) => (
           <div
@@ -267,7 +267,7 @@ const HeroSection: React.FC = () => {
         </svg>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center items-center text-center md:-mt-10 -mt-0 ">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-start sm:justify-center items-center text-center pt-24 sm:pt-0 md:-mt-10">
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-3 drop-shadow-lg">
           Tận hưởng chuyến đi
         </h1>

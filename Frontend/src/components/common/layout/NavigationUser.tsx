@@ -100,7 +100,7 @@ const Navigation: React.FC<NavigationProps> = ({
           </div>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-4 lg:gap-6">
+          <div className="hidden lg:flex items-center gap-4 lg:gap-6">
             <button
               onClick={() => {
                 if (onNavigateToDestinations) {

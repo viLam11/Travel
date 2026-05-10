@@ -11,8 +11,8 @@ interface CustomAxiosRequestConfig extends AxiosRequestConfig {
 const AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/logout'];
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
-    // baseURL: import.meta.env.VITE_API_DEPLOY_URL,
+    // baseURL: import.meta.env.VITE_API_BASE_URL,
+    baseURL: import.meta.env.VITE_API_DEPLOY_URL,
     headers: {
         'ngrok-skip-browser-warning': '69420',
     },

@@ -109,8 +109,8 @@ export default function RevenueByServiceChart({ data: initialData }: RevenueBySe
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${timeRange === range
-                    ? 'bg-background shadow-sm text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 {range === 'week' ? 'Tuần' : range === 'month' ? 'Tháng' : 'Năm'}

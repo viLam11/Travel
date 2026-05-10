@@ -97,7 +97,25 @@ const HotelFilterPage: React.FC = () => {
     ];
 
     const mapServiceToHotel = (service: any): HotelListItem => {
-        const rawPrice = service.averagePrice ?? 0;
+        // Collect all potential price points
+        const potentialPrices: number[] = [
+            service.minPrice,
+            service.averagePrice,
+            service.price,
+            service.lowestPrice
+        ].filter((p): p is number => typeof p === 'number' && p > 0);
+
+        // Add prices from nested room types if available
+        if (service.roomTypes && Array.isArray(service.roomTypes)) {
+            service.roomTypes.forEach((r: any) => {
+                const p = r.price || r.pricePerNight || 0;
+                if (p > 0) potentialPrices.push(p);
+            });
+        }
+
+        // Pick the absolute minimum
+        const rawPrice = potentialPrices.length > 0 ? Math.min(...potentialPrices) : 0;
+
         const stars = service.rating ? Math.floor(service.rating) : 0; // Fallback star estimation if not provided
 
         return {

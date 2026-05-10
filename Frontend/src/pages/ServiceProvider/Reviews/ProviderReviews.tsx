@@ -298,7 +298,7 @@ export default function ProviderReviews() {
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="bg-background text-foreground border border-border/80 rounded-xl px-3 h-10 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none min-w-[180px]"
+                        className="cursor-pointer bg-background text-foreground border border-border/80 rounded-xl px-3 h-10 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none min-w-[180px]"
                     >
                         <option value="newest">Mới nhất</option>
                         <option value="oldest">Cũ nhất</option>
@@ -401,14 +401,14 @@ export default function ProviderReviews() {
                                                                     <div className="flex items-center gap-1 ml-1 opacity-0 group-hover/reply:opacity-100 transition-opacity">
                                                                         <button 
                                                                             onClick={() => handleStartEdit(reply.id, reply.comment)}
-                                                                            className="p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                                            className="p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors cursor-pointer"
                                                                             title="Chỉnh sửa"
                                                                         >
                                                                             <Pencil className="w-3 h-3" />
                                                                         </button>
                                                                         <button 
                                                                             onClick={() => handleDeleteReply(reply.id)}
-                                                                            className="p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors"
+                                                                            className="p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                                                                             title="Xóa"
                                                                         >
                                                                             <Trash2 className="w-3 h-3" />
@@ -425,10 +425,10 @@ export default function ProviderReviews() {
                                                                         autoFocus
                                                                     />
                                                                     <div className="flex justify-end gap-2">
-                                                                        <Button size="sm" variant="ghost" onClick={() => setEditingReplyId(null)} className="h-7 text-xs">
+                                                                        <Button size="sm" variant="ghost" onClick={() => setEditingReplyId(null)} className="h-7 text-xs cursor-pointer">
                                                                             Hủy
                                                                         </Button>
-                                                                        <Button size="sm" onClick={() => handleUpdateReply(reply.id)} disabled={isUpdatingReply} className="h-7 text-xs px-4">
+                                                                        <Button size="sm" onClick={() => handleUpdateReply(reply.id)} disabled={isUpdatingReply} className="h-7 text-xs px-4 cursor-pointer">
                                                                             {isUpdatingReply ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Lưu'}
                                                                         </Button>
                                                                     </div>

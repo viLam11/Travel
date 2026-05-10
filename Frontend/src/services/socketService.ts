@@ -2,8 +2,8 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import type { ChatMessage } from '@/types/chat.types';
 
-// const BASE_URL = import.meta.env.VITE_API_DEPLOY_URL;
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_DEPLOY_URL;
+// const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type MessageCallback = (msg: ChatMessage) => void;
 type NotificationCallback = (noti: any) => void;

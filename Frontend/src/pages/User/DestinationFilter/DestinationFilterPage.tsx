@@ -353,7 +353,25 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                   const discounts = item.discounts || [];
                   const activeDiscount = discounts.length > 0 ? discounts[0] : null;
 
-                  const rawPrice = item.averagePrice ?? 0;
+                  // Collect all potential price points from primary fields and nested objects
+                  const potentialPrices: number[] = [
+                    item.minPrice,
+                    item.averagePrice,
+                    item.price,
+                    item.lowestPrice
+                  ].filter((p): p is number => typeof p === 'number' && p > 0);
+
+                  // Add prices from nested room/ticket types if available
+                  const children = item.roomTypes || item.ticketTypes || item.rooms || item.tickets || [];
+                  if (Array.isArray(children) && children.length > 0) {
+                    children.forEach((c: any) => {
+                      const p = c.price || c.pricePerNight || 0;
+                      if (p > 0) potentialPrices.push(p);
+                    });
+                  }
+
+                  // Pick the absolute minimum
+                  const rawPrice = potentialPrices.length > 0 ? Math.min(...potentialPrices) : 0;
                   let discountedPrice = rawPrice;
                   let discountLabel = undefined;
 

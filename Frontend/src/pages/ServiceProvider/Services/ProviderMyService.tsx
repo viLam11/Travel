@@ -35,6 +35,7 @@ import PromotionsTab from './components/PromotionsTab';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import MapPicker from '@/components/common/map/MapPicker';
 
 const ProviderMyService = () => {
     const { currentUser } = useAuthContext();
@@ -70,7 +71,9 @@ const ProviderMyService = () => {
             checkIn: "14:00",
             checkOut: "12:00"
         },
-        tags: ""
+        tags: "",
+        latitude: "",
+        longitude: ""
     };
 
     const [serviceData, setServiceData] = useState<any>(initialServiceData);
@@ -148,7 +151,9 @@ const ProviderMyService = () => {
                 contactNumber: serviceData.contactNumber || "",
                 serviceType: serviceData.serviceType || (serviceData.type === 'hotel' ? 'HOTEL' : 'TICKET_VENUE'),
                 rating: Number(serviceData.rating || 0),
-                tags: serviceData.tags || ""
+                tags: serviceData.tags || "",
+                latitude: serviceData.latitude || "",
+                longitude: serviceData.longitude || ""
             };
 
             await serviceApi.updateService(serviceId.toString(), payload);
@@ -377,36 +382,56 @@ const ProviderMyService = () => {
                             </div>
 
                             {isEditing ? (
-                                <div className="grid grid-cols-2 gap-4 max-w-2xl">
-                                    <div>
-                                        <Label htmlFor="address">Địa chỉ hiển thị</Label>
-                                        <Input
-                                            id="address"
-                                            value={serviceData.address}
-                                            onChange={(e) => handleInputChange('address', e.target.value)}
-                                            className="mt-1"
+                                <>
+                                    <div className="grid grid-cols-2 gap-4 max-w-2xl">
+                                        <div>
+                                            <Label htmlFor="address">Địa chỉ hiển thị</Label>
+                                            <Input
+                                                id="address"
+                                                value={serviceData.address}
+                                                onChange={(e) => handleInputChange('address', e.target.value)}
+                                                className="mt-1"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="location">Thành phố/Địa điểm</Label>
+                                            <Input
+                                                id="location"
+                                                value={serviceData.location}
+                                                onChange={(e) => handleInputChange('location', e.target.value)}
+                                                className="mt-1"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 max-w-2xl">
+                                        <MapPicker 
+                                            lat={serviceData.latitude} 
+                                            lng={serviceData.longitude} 
+                                            address={`${serviceData.address}${serviceData.location ? `, ${serviceData.location}` : ''}`}
+                                            onChange={(lat, lng) => setServiceData((prev: any) => ({ ...prev, latitude: lat, longitude: lng }))}
                                         />
                                     </div>
-                                    <div>
-                                        <Label htmlFor="location">Thành phố/Địa điểm</Label>
-                                        <Input
-                                            id="location"
-                                            value={serviceData.location}
-                                            onChange={(e) => handleInputChange('location', e.target.value)}
-                                            className="mt-1"
-                                        />
-                                    </div>
-                                </div>
+                                </>
                             ) : (
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                    <div className="flex items-center gap-1">
-                                        <span className="font-semibold text-gray-900">{serviceData.rating}</span>
-                                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                        <span>({serviceData.reviews} đánh giá)</span>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-gray-900">{serviceData.rating}</span>
+                                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                            <span>({serviceData.reviews} đánh giá)</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <MapPin className="w-4 h-4 text-orange-500" />
+                                            <span>{serviceData.address}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <MapPin className="w-4 h-4 text-orange-500" />
-                                        <span>{serviceData.address}</span>
+                                    <div className="max-w-2xl">
+                                        <MapPicker 
+                                            lat={serviceData.latitude} 
+                                            lng={serviceData.longitude} 
+                                            address={`${serviceData.address}${serviceData.location ? `, ${serviceData.location}` : ''}`}
+                                            readOnly={true}
+                                        />
                                     </div>
                                 </div>
                             )}

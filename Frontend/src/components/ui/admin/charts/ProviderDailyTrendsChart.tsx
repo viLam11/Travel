@@ -78,11 +78,10 @@ export default function ProviderDailyTrendsChart({ data, providerType = 'place' 
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  timeRange === range
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${timeRange === range
                     ? 'bg-background shadow-sm text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 {range === 'week' ? 'Tuần' : 'Tháng'}
               </button>

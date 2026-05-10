@@ -54,7 +54,7 @@ export const BreadcrumbSection: React.FC<BreadcrumbSectionProps> = ({
     <div
       className={`
         ${backgroundGradient ? 'bg-gradient-to-r from-orange-50 to-red-50' : 'bg-gray-50'}
-        py-3 border-b border-gray-200
+        py-2 sm:py-3 border-b border-gray-200 mt-0 sm:mt-0
         ${className}
       `}
     >

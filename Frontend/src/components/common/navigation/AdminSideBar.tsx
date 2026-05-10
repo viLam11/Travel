@@ -162,8 +162,14 @@ const getNavItems = (currentPath: string, currentUser: any) => {
             },
             {
                 title: "Ngôn ngữ",
-                url: isAdmin ? "/admin/language" : "/provider/language",
                 icon: <Languages />,
+                disabled: true,
+                onClick: (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    import('sonner').then(({ toast }) => {
+                        toast.info("Tính năng Ngôn ngữ đang được phát triển!");
+                    });
+                }
             },
         ],
         quickActions: [] // Providers cannot add new services, only Admin can
@@ -174,7 +180,7 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
     const { currentUser } = useAuth();
     const location = useLocation();
 
-    const userRole = currentUser?.user?.role?.toLowerCase() || 'provider';
+    const userRole = currentUser?.user?.role?.toLowerCase() || '';
     const isAdmin = userRole === 'admin';
 
     const navItems = getNavItems(location.pathname, currentUser);
@@ -210,8 +216,8 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
             </SidebarContent>
             <SidebarFooter>
                 <NavUser user={{
-                    name: currentUser?.user?.name || "Admin User",
-                    email: currentUser?.user?.email || "admin@example.com",
+                    name: currentUser?.user?.name || currentUser?.user?.fullname || "Người dùng",
+                    email: currentUser?.user?.email || "",
                     avatar: "",
                 }} />
             </SidebarFooter>
