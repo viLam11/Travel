@@ -378,6 +378,12 @@ export class ApiServiceClient {
     undoDislike: (commentID: string | number): ApiResponse<any> => {
       return this.post(`/comment/undoDislike/${commentID}`, {});
     },
+
+    report: (commentID: string | number, reason: string): ApiResponse<any> => {
+      return this.post(`/comment/${commentID}/report`, { reason, details: reason }, {
+        headers: { "Content-Type": "application/json" }
+      });
+    },
   };
 
   // Payment endpoints

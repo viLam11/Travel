@@ -225,7 +225,7 @@ const SharePlanModal: React.FC<SharePlanModalProps> = ({
                                                 <button 
                                                     onClick={() => handleInvite(user)}
                                                     disabled={invitingId === user.userID}
-                                                    className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+                                                    className=" p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
                                                 >
                                                     {invitingId === user.userID ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
                                                 </button>

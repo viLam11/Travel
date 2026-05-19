@@ -102,7 +102,7 @@ const ProviderRoomTypes = () => {
                     images: formData.images,
                 };
                 await roomApi.updateRoom(editingRoom.id, updateData);
-                
+
                 setRoomTypes(prev => prev.map(room =>
                     room.id === editingRoom.id
                         ? { ...room, ...updateData }
@@ -280,82 +280,82 @@ const ProviderRoomTypes = () => {
                                     </tr>
                                 ) : (
                                     roomTypes.map((room) => (
-                                    <tr key={room.id} className="hover:bg-muted/50 transition-colors">
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-20 h-20 rounded-lg bg-muted overflow-hidden flex-shrink-0 border border-border">
-                                                    <img
-                                                        src={room.images[0]}
-                                                        alt={room.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                        <tr key={room.id} className="hover:bg-muted/50 transition-colors">
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-20 h-20 rounded-lg bg-muted overflow-hidden flex-shrink-0 border border-border">
+                                                        <img
+                                                            src={room.images[0]}
+                                                            alt={room.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-foreground text-lg">{room.name}</p>
+                                                        <p className="text-muted-foreground text-sm truncate max-w-[240px] mt-1.5">
+                                                            {room.description}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-semibold text-foreground text-lg">{room.name}</p>
-                                                    <p className="text-muted-foreground text-sm truncate max-w-[240px] mt-1.5">
-                                                        {room.description}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <span className="font-semibold text-foreground text-lg">
-                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.price)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex flex-col gap-2 align-start">
-                                                <span className="text-sm font-medium text-muted-foreground">
-                                                    <span className="text-foreground font-bold text-base">{room.available}</span> / {room.quantity} trống
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="font-semibold text-foreground text-lg">
+                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.price)}
                                                 </span>
-                                                {room.available > 5 ? (
-                                                    <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 border-emerald-200 dark:border-emerald-800 w-fit text-sm px-3 py-1">
-                                                        Còn phòng
-                                                    </Badge>
-                                                ) : room.available > 0 ? (
-                                                    <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 border-amber-200 dark:border-amber-800 w-fit text-sm px-3 py-1">
-                                                        Sắp hết
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="destructive" className="w-fit text-sm px-3 py-1">Hết phòng</Badge>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex flex-wrap gap-2">
-                                                {room.amenities.slice(0, 2).map((amenity, idx) => (
-                                                    <Badge key={idx} variant="secondary" className="text-sm font-normal py-1 px-3">
-                                                        {amenity}
-                                                    </Badge>
-                                                ))}
-                                                {room.amenities.length > 2 && (
-                                                    <Badge variant="outline" className="text-sm text-muted-foreground py-1 px-3">
-                                                        +{room.amenities.length - 2}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <div className="flex justify-end gap-3">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-10 w-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
-                                                    onClick={() => handleOpenDialog(room)}
-                                                >
-                                                    <Edit className="w-5 h-5" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-10 w-10 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
-                                                    onClick={() => handleDelete(room)}
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex flex-col gap-2 align-start">
+                                                    <span className="text-sm font-medium text-muted-foreground">
+                                                        <span className="text-foreground font-bold text-base">{room.available}</span> / {room.quantity} trống
+                                                    </span>
+                                                    {room.available > 5 ? (
+                                                        <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 border-emerald-200 dark:border-emerald-800 w-fit text-sm px-3 py-1">
+                                                            Còn phòng
+                                                        </Badge>
+                                                    ) : room.available > 0 ? (
+                                                        <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 border-amber-200 dark:border-amber-800 w-fit text-sm px-3 py-1">
+                                                            Sắp hết
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive" className="w-fit text-sm px-3 py-1">Hết phòng</Badge>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {room.amenities.slice(0, 2).map((amenity, idx) => (
+                                                        <Badge key={idx} variant="secondary" className="text-sm font-normal py-1 px-3">
+                                                            {amenity}
+                                                        </Badge>
+                                                    ))}
+                                                    {room.amenities.length > 2 && (
+                                                        <Badge variant="outline" className="text-sm text-muted-foreground py-1 px-3">
+                                                            +{room.amenities.length - 2}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 text-right">
+                                                <div className="flex justify-end gap-3">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-10 w-10 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+                                                        onClick={() => handleOpenDialog(room)}
+                                                    >
+                                                        <Edit className="w-5 h-5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-10 w-10 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                                                        onClick={() => handleDelete(room)}
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     ))
                                 )}
                             </tbody>

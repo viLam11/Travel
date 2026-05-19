@@ -38,10 +38,6 @@ interface ReviewsSectionProps {
   serviceName: string;
   reviewText: string;
   setReviewText: (text: string) => void;
-  reviewTitle: string;
-  setReviewTitle: (title: string) => void;
-  reviewCost: string;
-  setReviewCost: (cost: string) => void;
   reviewRating: number;
   setReviewRating: (rating: number) => void;
   reviewImages: string[];
@@ -73,10 +69,6 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   serviceName,
   reviewText,
   setReviewText,
-  reviewTitle,
-  setReviewTitle,
-  reviewCost,
-  setReviewCost,
   reviewRating,
   setReviewRating,
   reviewImages,
@@ -365,25 +357,14 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
       {isLoggedIn && (
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 gap-4">
+              <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Dịch vụ</label>
                 <input
                   type="text"
                   value={serviceName}
                   disabled
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Chi phí</label>
-                <input
-                  type="text"
-                  value={reviewCost}
-                  onChange={(e) => setReviewCost(e.target.value)}
-                  placeholder="Nhập chi phí..."
-                  disabled={!isLoggedIn}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -420,20 +401,6 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                   {reviewRating === 5 && 'Tuyệt vời'}
                 </p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Tiêu đề đánh giá <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={reviewTitle}
-                onChange={(e) => setReviewTitle(e.target.value)}
-                placeholder="Vd: Dịch vụ tuyệt vời!"
-                disabled={!isLoggedIn}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
-              />
             </div>
 
             <div>
@@ -546,7 +513,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               )}
               <button 
                 onClick={handleSubmitReview}
-                disabled={!isLoggedIn || reviewRating === 0 || !reviewTitle.trim() || !reviewText.trim() || isSubmitting}
+                disabled={!isLoggedIn || reviewRating === 0 || !reviewText.trim() || isSubmitting}
                 className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (

@@ -5,6 +5,8 @@ import { Search, MoreVertical, Send, User, Menu, MessageCircle, Zap, FileText, X
 import { useAuth } from '@/hooks/useAuth';
 import { socketService } from '@/services/socketService';
 import { chatApi } from '@/api/chatApi';
+import { userApi } from '@/api/userApi';
+import { toast } from 'react-hot-toast';
 import type { ChatMessage, Conversation } from '@/types/chat.types';
 import { ROUTES } from '@/constants/routes';
 
@@ -27,24 +29,41 @@ const ProviderMessagesPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
 
-    // Trong thực tế, ID này nên là một UUID từ database hoặc một ID hệ thống được Backend công nhận
-    const ADMIN_ID = 'admin-support';
+    const handleContactAdmin = async () => {
+        try {
+            // 1. Lấy danh sách users từ BE
+            const users = await userApi.getAllUsers();
+            
+            // 2. Tìm một tài khoản Admin thật sự trong DB
+            const adminUser = users.find((u: any) => u.role === 'ADMIN');
+            
+            if (!adminUser) {
+                toast.error("Không tìm thấy Quản trị viên nào trong hệ thống!");
+                return;
+            }
 
-    const handleContactAdmin = () => {
-        let exists = conversations.find(c => c.id === ADMIN_ID || c.participants.some(p => p.role === 'admin'));
-        if (exists) {
-            handleSelectConversation(exists);
-        } else {
-            const adminConv: Conversation = {
-                id: ADMIN_ID,
-                participants: [{ id: ADMIN_ID, name: 'Quản Trị Viên (Hỗ trợ)', role: 'admin', avatar: '' }],
-                lastMessage: undefined,
-                unreadCount: 0,
-                updatedAt: new Date().toISOString(),
-                serviceName: 'Hỗ trợ hệ thống'
-            };
-            setConversations(prev => [adminConv, ...prev]);
-            handleSelectConversation(adminConv);
+            const realAdminId = adminUser.userID;
+
+            // 3. Kiểm tra xem đã có hội thoại với Admin này chưa
+            let exists = conversations.find(c => c.id === realAdminId || c.participants.some(p => p.role === 'admin'));
+            
+            if (exists) {
+                handleSelectConversation(exists);
+            } else {
+                const adminConv: Conversation = {
+                    id: realAdminId,
+                    participants: [{ id: realAdminId, name: adminUser.fullname || 'Quản Trị Viên (Hỗ trợ)', role: 'admin', avatar: adminUser.avatarUrl || '' }],
+                    lastMessage: undefined,
+                    unreadCount: 0,
+                    updatedAt: new Date().toISOString(),
+                    serviceName: 'Hỗ trợ hệ thống'
+                };
+                setConversations(prev => [adminConv, ...prev]);
+                handleSelectConversation(adminConv);
+            }
+        } catch (error) {
+            console.error("Lỗi khi tìm Admin:", error);
+            toast.error("Không thể kết nối đến Quản trị viên. Vui lòng thử lại sau.");
         }
     };
 
@@ -251,16 +270,16 @@ const ProviderMessagesPage: React.FC = () => {
                         <button 
                             onClick={handleContactAdmin} 
                             title="Liên hệ Hỗ trợ" 
-                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center border shadow-sm ${activeConversation?.id === ADMIN_ID ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50 hover:bg-indigo-100'}`}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center border shadow-sm ${activeConversation?.participants?.some(p => p.role === 'admin') ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50 hover:bg-indigo-100'}`}
                         >
                             Hỗ trợ Admin
                         </button>
                     </div>
-                    {activeConversation?.id === ADMIN_ID && (
+                    {activeConversation?.participants?.some(p => p.role === 'admin') && (
                         <button 
                             onClick={() => {
                                 // Filter out the admin support conversation from the list
-                                const regularConvs = conversations.filter(c => c.id !== ADMIN_ID);
+                                const regularConvs = conversations.filter(c => !c.participants.some(p => p.role === 'admin'));
                                 setConversations(regularConvs);
                                 
                                 // Select the first regular conversation if available, otherwise clear

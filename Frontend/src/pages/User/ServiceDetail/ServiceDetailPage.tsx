@@ -151,7 +151,7 @@ const ServiceDetailPage: React.FC = () => {
   const [apiReviews, setApiReviews] = useState<any[]>([]); // Data from API
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
-  const [reviewTitle, setReviewTitle] = useState("");
+
   const [apiDiscounts, setApiDiscounts] = useState<any[]>([]);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
@@ -743,7 +743,6 @@ const ServiceDetailPage: React.FC = () => {
             author: currentUser?.user?.name || "Bạn",
             date: new Date().toLocaleDateString("vi-VN"),
             rating: reviewRating,
-            title: reviewTitle,
             content: reviewText,
             cost: reviewCost,
             images: reviewImagePreviewUrls,
@@ -756,7 +755,7 @@ const ServiceDetailPage: React.FC = () => {
 
         // Reset form
         setReviewRating(0);
-        setReviewTitle("");
+
         setReviewText("");
         setReviewCost("");
         setReviewImages([]);
@@ -1396,13 +1395,11 @@ const ServiceDetailPage: React.FC = () => {
                 isLoggedIn={isAuthenticated}
                 reviewRating={reviewRating}
                 setReviewRating={setReviewRating}
-                reviewTitle={reviewTitle}
-                setReviewTitle={setReviewTitle}
+
                 serviceName={service.name}
                 reviewText={reviewText}
                 setReviewText={setReviewText}
-                reviewCost={reviewCost}
-                setReviewCost={setReviewCost}
+
                 reviewImages={reviewImagePreviewUrls}
                 handleImageUpload={handleImageUpload}
                 handleRemoveImage={handleRemoveImage}
@@ -1425,8 +1422,14 @@ const ServiceDetailPage: React.FC = () => {
                 onUndoDislike={async (reviewId) => {
                   await apiClient.comments.undoDislike(reviewId);
                 }}
-                onReport={async (_reviewId, _reason) => {
-                  toast.success('Đã gửi báo cáo vi phạm');
+                onReport={async (reviewId, reason) => {
+                  try {
+                    await apiClient.comments.report(reviewId, reason);
+                    toast.success('Đã gửi báo cáo vi phạm');
+                  } catch (error) {
+                    console.error("Failed to report review", error);
+                    toast.error("Có lỗi xảy ra khi gửi báo cáo");
+                  }
                 }}
                 currentUserInfo={currentUser?.user}
                 onEditReview={handleEditReview}

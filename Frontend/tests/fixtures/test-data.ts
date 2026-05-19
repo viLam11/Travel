@@ -32,7 +32,7 @@ export const ROUTES = {
   
   // Provider
   PROVIDER_DASHBOARD: '/provider/dashboard',
-  PROVIDER_SERVICES: '/provider/services/list',
+  PROVIDER_SERVICES: '/provider/services',
   PROVIDER_BOOKINGS: '/provider/bookings',
   PROVIDER_DISCOUNTS: '/provider/discounts',
   

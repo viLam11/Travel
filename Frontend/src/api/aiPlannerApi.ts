@@ -218,7 +218,14 @@ export const aiPlannerApi = {
             await sleep(500);
             return { success: true };
         }
-        return apiClient.post(`/api/plan-recommend/${planId}/share`, invitation);
+        
+        // Map frontend's READ_ONLY to backend's typo READ_ONY
+        const payload = {
+            memberId: invitation.memberId,
+            permission: invitation.permission === 'READ_ONLY' ? 'READ_ONY' : invitation.permission
+        };
+        
+        return apiClient.post(`/api/plan-recommend/${planId}/share`, payload);
     },
 
     handleInvitation: async (collabId: string, status: CollabStatus): Promise<PlanCollaboration> => {

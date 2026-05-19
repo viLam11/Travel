@@ -152,7 +152,8 @@ const BlogCreatePage: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [linkedServices, setLinkedServices] = useState<any[]>([]);
@@ -208,7 +209,7 @@ const BlogCreatePage: React.FC = () => {
       const blogReq: BlogRequest = {
         title: title.trim(),
         content: content.trim(),
-        mediaUrls: mediaUrl ? [mediaUrl] : [],
+        mediaUrls: mediaFiles,
         status: 'PUBLISHED' as BlogStatus,
         taggedServiceIds: linkedServices.map((s) => s.id),
         tags: tags.join(','),
@@ -225,7 +226,7 @@ const BlogCreatePage: React.FC = () => {
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
-  const coverSrc = mediaUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80';
+  const coverSrc = previewUrls.length > 0 ? previewUrls[0] : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -338,40 +339,60 @@ const BlogCreatePage: React.FC = () => {
               <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-orange-500" />
                 <label className="text-sm font-semibold text-gray-700">Ảnh bìa</label>
-                <span className="text-xs text-gray-400">(dán URL ảnh)</span>
+                <span className="text-xs text-gray-400">(Tải ảnh từ thiết bị)</span>
               </div>
               <div className="px-6 py-4">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={mediaUrl}
-                    onChange={(e) => { setMediaUrl(e.target.value); setImgError(false); }}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
-                  />
-                  {mediaUrl && (
+                <div className="flex gap-3 items-center">
+                  <label className="flex-1 cursor-pointer">
+                    <div className="px-4 py-2.5 border border-dashed border-gray-300 rounded-xl text-sm text-center hover:bg-gray-50 transition-colors">
+                      <span className="text-orange-500 font-semibold">Chọn ảnh</span> hoặc kéo thả vào đây
+                    </div>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          const files = Array.from(e.target.files);
+                          setMediaFiles(files);
+                          const urls = files.map(file => URL.createObjectURL(file));
+                          setPreviewUrls(urls);
+                          setImgError(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  {previewUrls.length > 0 && (
                     <button
-                      onClick={() => setMediaUrl('')}
+                      onClick={() => {
+                        setMediaFiles([]);
+                        setPreviewUrls([]);
+                      }}
                       className="px-3 py-2 text-gray-400 hover:text-red-400 border border-gray-200 rounded-xl hover:border-red-200 transition-all"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-                {mediaUrl && !imgError && (
-                  <div className="mt-3 rounded-xl overflow-hidden" style={{ height: 200 }}>
-                    <img
-                      src={mediaUrl}
-                      alt="cover preview"
-                      className="w-full h-full object-cover"
-                      onError={() => setImgError(true)}
-                    />
+                {previewUrls.length > 0 && !imgError && (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {previewUrls.map((url, idx) => (
+                      <div key={idx} className="rounded-xl overflow-hidden h-32 border border-gray-100">
+                        <img
+                          src={url}
+                          alt="cover preview"
+                          className="w-full h-full object-cover"
+                          onError={() => setImgError(true)}
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
                 {imgError && (
                   <p className="mt-2 flex items-center text-xs text-red-400 font-medium">
                     <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                    Không thể hiển thị ảnh từ URL này
+                    Có lỗi khi hiển thị ảnh
                   </p>
                 )}
               </div>

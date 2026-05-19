@@ -89,13 +89,13 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
     }, [serviceId, isHotel]);
 
     const handleSave = async () => {
-        console.log('Attempting to save:', { 
-            editingId, 
-            name: formData.name, 
+        console.log('Attempting to save:', {
+            editingId,
+            name: formData.name,
             price: formData.price,
-            allData: formData 
+            allData: formData
         });
-        
+
         if (!formData.name) {
             console.warn('Validation failed: name is missing');
             toast.error('Vui lòng nhập tên gọi');
@@ -273,17 +273,17 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                     <Label className="text-gray-700 font-medium">Hình ảnh {isHotel ? 'phòng' : 'vé'}</Label>
                                     <div className="flex items-center gap-4">
                                         <div className="relative group w-32 h-32 border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 hover:border-orange-300 transition-colors">
-                                            <input 
-                                                type="file" 
-                                                className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                            <input
+                                                type="file"
+                                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                                 accept="image/*"
                                                 multiple
                                                 onChange={(e) => {
                                                     if (e.target.files) {
                                                         const newFiles = Array.from(e.target.files);
-                                                        setFormData(prev => ({ 
-                                                            ...prev, 
-                                                            photos: [...prev.photos, ...newFiles] 
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            photos: [...prev.photos, ...newFiles]
                                                         }));
                                                     }
                                                 }}
@@ -298,8 +298,8 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                                 {formData.photos.map((file, idx) => (
                                                     <div key={idx} className="relative w-32 h-32 rounded-xl overflow-hidden border border-gray-100">
                                                         <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
-                                                        <button 
-                                                            onClick={() => setFormData({...formData, photos: formData.photos.filter((_, i) => i !== idx)})}
+                                                        <button
+                                                            onClick={() => setFormData({ ...formData, photos: formData.photos.filter((_, i) => i !== idx) })}
                                                             className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
                                                         >
                                                             <X className="w-3 h-3" />
@@ -335,14 +335,14 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                             <div className="flex relative">
                                 {/* Left accent bar */}
                                 <div className={`absolute top-0 left-0 w-1 h-full z-10 rounded-l-2xl ${isHotel ? 'bg-gradient-to-b from-orange-400 to-amber-500' : 'bg-gradient-to-b from-orange-400 to-red-500'}`}></div>
-                                
+
                                 {/* Room Image */}
                                 {item.image && (
                                     <div className="w-36 h-auto shrink-0 overflow-hidden relative ml-1">
-                                        <img 
-                                            src={item.image} 
-                                            alt={item.name} 
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                        <img
+                                            src={item.image}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         />
                                     </div>
                                 )}
@@ -358,30 +358,29 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                             <h4 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
                                                 {item.name || (isHotel
                                                     ? (item.type === 'SINGLE' ? 'Phòng Đơn' :
-                                                       item.type === 'DOUBLE' ? 'Phòng Đôi' :
-                                                       item.type === 'SUITE' ? 'Suite' :
-                                                       item.type === 'DELUXE' ? 'Phòng Deluxe' : 'Phòng')
+                                                        item.type === 'DOUBLE' ? 'Phòng Đôi' :
+                                                            item.type === 'SUITE' ? 'Suite' :
+                                                                item.type === 'DELUXE' ? 'Phòng Deluxe' : 'Phòng')
                                                     : 'Vé tham quan')}
                                             </h4>
                                         </div>
 
                                         {isHotel && (
                                             <div className="flex flex-wrap gap-1.5">
-                                                <Badge 
-                                                    variant="secondary" 
-                                                    className={`px-2 py-0.5 text-[11px] font-semibold border ${
-                                                        item.type === 'SINGLE' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                        item.type === 'DOUBLE' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                                        item.type === 'SUITE' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                                                        item.type === 'DELUXE' ? 'bg-orange-100 text-orange-800 border-orange-300' :
-                                                        'bg-slate-50 text-slate-700 border-slate-200'
-                                                    }`}
+                                                <Badge
+                                                    variant="secondary"
+                                                    className={`px-2 py-0.5 text-[11px] font-semibold border ${item.type === 'SINGLE' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                            item.type === 'DOUBLE' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                                item.type === 'SUITE' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                                                    item.type === 'DELUXE' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                                                        'bg-slate-50 text-slate-700 border-slate-200'
+                                                        }`}
                                                 >
-                                                    {item.type === 'SINGLE' ? 'Phòng Đơn' : 
-                                                     item.type === 'DOUBLE' ? 'Phòng Đôi' : 
-                                                     item.type === 'SUITE' ? 'Suite' : 
-                                                     item.type === 'DELUXE' ? 'Deluxe' : 
-                                                     item.type}
+                                                    {item.type === 'SINGLE' ? 'Phòng Đơn' :
+                                                        item.type === 'DOUBLE' ? 'Phòng Đôi' :
+                                                            item.type === 'SUITE' ? 'Suite' :
+                                                                item.type === 'DELUXE' ? 'Deluxe' :
+                                                                    item.type}
                                                 </Badge>
                                                 <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-2 py-0.5 text-[11px] font-semibold">
                                                     Còn {item.quantity} phòng
@@ -405,9 +404,9 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button 
-                                                variant="outline" 
-                                                size="icon" 
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
                                                 onClick={() => {
                                                     setFormData({
                                                         name: item.name,
@@ -419,15 +418,15 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                                     });
                                                     setEditingId(item.id);
                                                     setIsAdding(true);
-                                                }} 
+                                                }}
                                                 className="h-9 w-9 rounded-xl hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all cursor-pointer"
                                             >
                                                 <Edit className="w-4 h-4" />
                                             </Button>
-                                            <Button 
-                                                variant="outline" 
-                                                size="icon" 
-                                                onClick={() => handleDelete(item.id)} 
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() => handleDelete(item.id)}
                                                 className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all cursor-pointer"
                                             >
                                                 <Trash2 className="w-4 h-4" />

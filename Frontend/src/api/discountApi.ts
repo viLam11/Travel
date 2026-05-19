@@ -92,7 +92,7 @@ export const discountApi = {
             if (raw && Array.isArray(raw.data)) return raw.data as DiscountResponse[];
             if (raw && Array.isArray(raw.content)) return raw.content as DiscountResponse[];
             if (raw && Array.isArray(raw.items)) return raw.items as DiscountResponse[];
-            
+
             console.warn('[DiscountAPI] Unexpected response shape:', raw);
             return [];
         } catch (error) {

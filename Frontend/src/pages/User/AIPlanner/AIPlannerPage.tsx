@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { aiPlannerApi, USE_MOCK_AI_PLANNER } from '@/api/aiPlannerApi';
+import apiClient from '@/services/apiClient';
 import { MOCK_LIBRARY_ACTIVITIES } from '@/mocks/aiPlanner';
 import type { ItineraryDay, Activity, TimeSlot, PlanData } from '@/types/aiPlanner.types';
 import SharePlanModal from './components/SharePlanModal';
@@ -451,7 +452,24 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
     const [days, setDays] = useState(3);
     const [interests, setInterests] = useState<string[]>([]);
     const [notes, setNotes] = useState('');
+    const [specificLocation, setSpecificLocation] = useState('');
     const [loading, setLoading] = useState(false);
+    const [provinces, setProvinces] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchProvinces = async () => {
+            try {
+                const data = await apiClient.provinces.getAll();
+                setProvinces(data);
+                if (data && data.length > 0) {
+                    setPlace(data[0].name);
+                }
+            } catch (err) {
+                console.error("Failed to fetch provinces", err);
+            }
+        };
+        fetchProvinces();
+    }, []);
 
     const toggleInterest = (tag: string) =>
         setInterests(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -463,6 +481,7 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
         const formattedPlace = place.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
         const additionalInfo = [
+            specificLocation.trim() ? `Chi tiết vị trí mong muốn: ${specificLocation}` : '',
             interests.length ? `Sở thích: ${interests.join(', ')}` : '',
             notes.trim() ? `Ghi chú: ${notes}` : '',
         ].filter(Boolean).join('. ');
@@ -495,18 +514,43 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
                 <div className="bg-white rounded-3xl shadow-xl shadow-orange-900/5 border border-gray-100 overflow-hidden">
                     <div className="p-7 space-y-5">
                         {/* Destination */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-orange-500" /> Bạn muốn đi đâu?
-                            </label>
-                            <input
-                                type="text"
-                                value={place}
-                                onChange={e => setPlace(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                placeholder="VD: Hà Nội, Đà Nẵng, Hội An, Phú Quốc..."
-                                className="w-full h-12 px-4 rounded-xl border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base"
-                            />
+                        <div className="space-y-4 sm:space-y-0 sm:flex sm:gap-4">
+                            <div className="space-y-2 flex-1">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-orange-500" /> Tỉnh/Thành phố
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={place}
+                                        onChange={e => setPlace(e.target.value)}
+                                        className="appearance-none w-full h-12 px-4 rounded-xl border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base bg-white cursor-pointer"
+                                    >
+                                        {provinces.length === 0 && <option value="">Đang tải...</option>}
+                                        {provinces.map(prov => (
+                                            <option key={prov.code} value={prov.name}>{prov.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 flex-1">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    Chi tiết vị trí <span className="text-gray-400 font-normal text-xs">(tùy chọn)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={specificLocation}
+                                    onChange={e => setSpecificLocation(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                                    placeholder="VD: Nhà thờ, Chợ nổi..."
+                                    className="w-full h-12 px-4 rounded-xl border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base"
+                                />
+                            </div>
                         </div>
 
                         {/* Days */}
@@ -1039,7 +1083,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
 
     // ── Shared sub-components (reused in both mobile and desktop) ──
 
-    const LibraryContent = () => (
+    const LibraryContent = () => {
+        const [expandedId, setExpandedId] = useState<string | null>(null);
+
+        return (
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
             {isLoadingLibrary ? (
                 <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
@@ -1068,8 +1115,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 <div className="min-w-0 flex-1">
                                     <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
                                     <p 
-                                        className="text-[11px] text-gray-500 mt-0.5 line-clamp-1 italic"
+                                        onClick={() => setExpandedId(prev => prev === lib.id ? null : lib.id!)}
+                                        className={`text-[11px] text-gray-500 mt-0.5 italic cursor-pointer transition-all ${expandedId === lib.id ? '' : 'line-clamp-1'}`}
                                         dangerouslySetInnerHTML={{ __html: lib.description || '' }}
+                                        title="Nhấn để xem chi tiết"
                                     />
                                     <div className="flex gap-2 mt-2">
                                         <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
@@ -1098,7 +1147,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 </div>
             )}
         </div>
-    );
+        );
+    };
 
     const SummaryContent = () => (
         <>

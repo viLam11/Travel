@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/admin/badge';
 import { Input } from '@/components/ui/admin/input';
 import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/services/apiClient';
+import Pagination from '@/components/common/Pagination';
 
 // Types
 type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'active' | 'inactive';
@@ -58,6 +59,8 @@ export const AdminServiceApprovalsPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8;
 
     const fetchRequests = async () => {
         try {
@@ -109,6 +112,17 @@ export const AdminServiceApprovalsPage: React.FC = () => {
             req.id.toString().toLowerCase().includes(searchTerm.toLowerCase());
         return matchStatus && matchSearch;
     });
+
+    const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+    const currentItems = filteredRequests.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to page 1 when filter or search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus, searchTerm]);
 
     const handleApprove = async (id: string) => {
         setIsProcessing(id);
@@ -255,7 +269,7 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredRequests.map(req => (
+                                        currentItems.map(req => (
                                             <tr 
                                                 key={req.id} 
                                                 className={`hover:bg-muted/50 transition-colors cursor-pointer ${selectedReq?.id === req.id ? 'bg-muted' : ''}`}
@@ -289,6 +303,17 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                                 </tbody>
                             </table>
                         </div>
+                        {totalPages > 1 && (
+                            <div className="border-t border-border/40 py-2">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    totalResults={filteredRequests.length}
+                                    resultsPerPage={itemsPerPage}
+                                />
+                            </div>
+                        )}
                     </Card>
                 </div>
 

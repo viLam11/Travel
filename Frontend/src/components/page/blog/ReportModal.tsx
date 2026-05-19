@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { X, Flag, AlertTriangle } from 'lucide-react';
 import { REPORT_REASONS } from '@/types/blog.types';
 import toast from 'react-hot-toast';
+import apiClient from '@/services/apiClient';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface ReportModalProps {
   targetId: string;
 }
 
-const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, targetType }) => {
+const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, targetType, targetId }) => {
   const [selectedReason, setSelectedReason] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,13 +25,26 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, targetType }
       return;
     }
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 800));
-    setIsSubmitting(false);
-    toast.success('Báo cáo của bạn đã được gửi. Chúng tôi sẽ xem xét sớm nhất!');
-    onClose();
-    setSelectedReason('');
-    setCustomNote('');
+    try {
+      if (targetType === 'comment') {
+        const reasonObj = REPORT_REASONS.find(r => r.id === selectedReason);
+        const reasonText = reasonObj ? reasonObj.label : selectedReason;
+        const finalReason = selectedReason === 'other' ? customNote : reasonText;
+        await apiClient.comments.report(targetId, finalReason);
+      } else {
+        // Simulate API call for post report
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      toast.success('Báo cáo của bạn đã được gửi. Chúng tôi sẽ xem xét sớm nhất!');
+      onClose();
+      setSelectedReason('');
+      setCustomNote('');
+    } catch (error) {
+      console.error('Failed to report:', error);
+      toast.error('Có lỗi xảy ra khi gửi báo cáo');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
