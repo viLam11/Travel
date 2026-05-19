@@ -779,7 +779,7 @@ export class ApiClient {
     delete: (id: string): ApiResponse<any> => {
       return this.delete(`/api/plan-recommend/${id}`, { params: { planID: id } });
     },
-    share: (id: string, memberId: string, permission: 'EDIT' | 'READ_ONY'): ApiResponse<any> => {
+    share: (id: string, memberId: string, permission: 'EDIT' | 'READ_ONLY'): ApiResponse<any> => {
       return this.post(`/api/plan-recommend/${id}/share`, { memberId, permission });
     },
     handleInvitation: (collabID: string, status: 'ACCEPTED' | 'DENIED'): ApiResponse<any> => {

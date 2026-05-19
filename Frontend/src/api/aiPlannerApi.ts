@@ -219,10 +219,9 @@ export const aiPlannerApi = {
             return { success: true };
         }
         
-        // Map frontend's READ_ONLY to backend's typo READ_ONY
         const payload = {
             memberId: invitation.memberId,
-            permission: invitation.permission === 'READ_ONLY' ? 'READ_ONY' : invitation.permission
+            permission: invitation.permission === invitation.permission
         };
         
         return apiClient.post(`/api/plan-recommend/${planId}/share`, payload);

@@ -537,11 +537,13 @@ const ServiceDetailPage: React.FC = () => {
       const orderId = response?.id || response?.orderId || response?.orderID;
       const finalPrice = response?.totalPrice || response?.amount || 0;
 
-      // Only redirect to backend-provided payUrl if MOMO is selected
-      if (paymentMethod === 'MOMO' && payUrl) {
+      if (payUrl) {
+        // Backend returned a payment URL directly (e.g. MOMO or VNPAY from order creation)
         window.location.href = payUrl;
+      } else if (paymentMethod === 'VNPAY' && orderId) {
+        // Backend did not return a payUrl; create VNPay payment link manually
+        handleSelectPayment('vnpay', orderId.toString(), finalPrice);
       } else if (orderId) {
-        // For VNPAY or ZALOPAY, or if no MOMO link, trigger manual payment flow
         handleSelectPayment(paymentMethod.toLowerCase() as any, orderId.toString(), finalPrice);
       }
     } catch (err: any) {
@@ -638,11 +640,13 @@ const ServiceDetailPage: React.FC = () => {
       const orderId = response?.id || response?.orderId || response?.orderID;
       const finalPrice = response?.totalPrice || response?.amount || 0;
 
-      // Only redirect to backend-provided payUrl if MOMO is selected
-      if (roomPaymentMethod === 'MOMO' && payUrl) {
+      if (payUrl) {
+        // Backend returned a payment URL directly (e.g. MOMO or VNPAY from order creation)
         window.location.href = payUrl;
+      } else if (roomPaymentMethod === 'VNPAY' && orderId) {
+        // Backend did not return a payUrl; create VNPay payment link manually
+        handleSelectPayment('vnpay', orderId.toString(), finalPrice);
       } else if (orderId) {
-        // For VNPAY or ZALOPAY, trigger manual payment flow
         handleSelectPayment(roomPaymentMethod.toLowerCase() as any, orderId.toString(), finalPrice);
       }
     } catch (err: any) {

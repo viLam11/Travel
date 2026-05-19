@@ -53,7 +53,7 @@
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.6.0",
     "react-oidc-context": "^3.3.0",
-    "react-quill-new": "^3.8.3",
+    "react-quill-new": "^3.7.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.4",
     "recharts": "^3.4.1",
