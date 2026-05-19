@@ -205,7 +205,7 @@ export class ApiClient {
       });
     },
 
-    list: (): ApiResponse<any> => {
+    list: (page?: number, size?: number): ApiResponse<any> => {
       // Backend api-docs shows /services/all with no pagination params
       return this.get("/services/all");
     },

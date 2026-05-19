@@ -23,6 +23,7 @@ import {
     Building2, MapPin, Star, Plus, Search,
     Edit, Trash2, Eye, MoreHorizontal, Filter
 } from 'lucide-react';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 // Format currency VND
 const formatCurrency = (value: number) => {
@@ -74,6 +75,7 @@ const MOCK_HOTELS = [
 
 export default function HotelListPage() {
     const navigate = useNavigate();
+    const { confirm } = useConfirm();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -85,8 +87,15 @@ export default function HotelListPage() {
         return matchesSearch && matchesStatus;
     });
 
-    const handleDelete = (id: number) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa khách sạn này không?')) {
+    const handleDelete = async (id: number) => {
+        const isConfirmed = await confirm({
+            title: 'Xóa khách sạn',
+            message: 'Bạn có chắc chắn muốn xóa khách sạn này không? Hành động này không thể hoàn tác.',
+            variant: 'danger',
+            confirmText: 'Xóa ngay',
+            cancelText: 'Hủy'
+        });
+        if (isConfirmed) {
             alert(`Đã xóa khách sạn ID: ${id} (Mock)`);
         }
     };

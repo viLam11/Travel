@@ -26,6 +26,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { blogApi } from '@/api/blogApi';
 import toast from 'react-hot-toast';
 import AdminBlogDetailModal from './AdminBlogDetailModal';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface AdminBlogTableProps {
   blogs: BlogPost[];
@@ -45,6 +46,7 @@ const AdminBlogTable: React.FC<AdminBlogTableProps> = ({
   totalPages
 }) => {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   // Status mutation
@@ -214,8 +216,15 @@ const AdminBlogTable: React.FC<AdminBlogTableProps> = ({
                       
                       <DropdownMenuItem 
                         className="cursor-pointer text-red-600"
-                        onClick={() => {
-                          if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này vĩnh viễn?')) {
+                        onClick={async () => {
+                          const isConfirmed = await confirm({
+                            title: 'Xóa bài viết',
+                            message: 'Bạn có chắc chắn muốn xóa bài viết này vĩnh viễn?',
+                            variant: 'danger',
+                            confirmText: 'Xóa ngay',
+                            cancelText: 'Hủy'
+                          });
+                          if (isConfirmed) {
                             deleteMutation.mutate(blog.id);
                           }
                         }}

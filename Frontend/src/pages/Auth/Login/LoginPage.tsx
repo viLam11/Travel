@@ -107,8 +107,17 @@ const LoginPage: React.FC = () => {
       // Use the login function from useAuth hook
       await login(formData.email, formData.password);
 
-      // The login response already contains the user role
-      const userRole = currentUser?.user?.role?.toLowerCase() || '';
+      // Get the fresh user data from localStorage to avoid stale state in render closure
+      const storedUserStr = localStorage.getItem('currentUser');
+      let userRole = '';
+      if (storedUserStr) {
+        try {
+          const parsed = JSON.parse(storedUserStr);
+          userRole = parsed?.user?.role?.toLowerCase() || '';
+        } catch (e) {
+          console.error("Lỗi parse currentUser từ localStorage:", e);
+        }
+      }
       const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
 
       // Role-based redirect

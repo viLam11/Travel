@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     Map, Share2, Compass, Plus, Loader2, Calendar, Users, 
-    MapPin, Briefcase, Trash2
+    MapPin, Briefcase, Trash2, LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { aiPlannerApi } from '@/api/aiPlannerApi';
@@ -10,10 +10,14 @@ import type { PlanOverallResponse } from '@/types/aiPlanner.types';
 import Avatar from '@/components/common/avatar/Avatar';
 import Footer from '@/components/common/layout/Footer';
 import Pagination from '@/components/common/Pagination';
+import { useAuth } from '@/hooks/useAuth';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const MyPlansPage: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
+    const { confirm } = useConfirm();
     
     // Parse the ?tab= params
     const queryParams = new URLSearchParams(location.search);
@@ -90,7 +94,15 @@ const MyPlansPage: React.FC = () => {
 
     const handleDeletePlan = async (e: React.MouseEvent, planId: string) => {
         e.stopPropagation(); // Ngăn chặn việc click vào card nhảy vào trang edit
-        if (!window.confirm('Bạn có chắc chắn muốn xóa kế hoạch này?')) return;
+        
+        const isConfirmed = await confirm({
+            title: 'Xóa kế hoạch',
+            message: 'Bạn có chắc chắn muốn xóa kế hoạch này? Hành động này không thể hoàn tác.',
+            variant: 'danger',
+            confirmText: 'Xóa ngay',
+            cancelText: 'Hủy'
+        });
+        if (!isConfirmed) return;
 
         try {
             await aiPlannerApi.deletePlan(planId);
@@ -99,6 +111,31 @@ const MyPlansPage: React.FC = () => {
             setSharedPlans(prev => prev.filter(p => p.planId !== planId));
         } catch (err) {
             toast.error('Xóa thất bại, vui lòng thử lại sau');
+        }
+    };
+
+    const handleLeaveSharedPlan = async (e: React.MouseEvent, planId: string) => {
+        e.stopPropagation();
+        if (!currentUser?.user?.userID) {
+            toast.error('Không tìm thấy thông tin tài khoản');
+            return;
+        }
+
+        const isConfirmed = await confirm({
+            title: 'Rời khỏi kế hoạch hợp tác',
+            message: 'Bạn có chắc chắn muốn rời khỏi kế hoạch hợp tác này?',
+            variant: 'warning',
+            confirmText: 'Rời khỏi',
+            cancelText: 'Hủy'
+        });
+        if (!isConfirmed) return;
+
+        try {
+            await aiPlannerApi.revokeAccess(planId, currentUser.user.userID.toString());
+            toast.success('Đã rời khỏi kế hoạch hợp tác');
+            setSharedPlans(prev => prev.filter(p => p.planId !== planId));
+        } catch (err) {
+            toast.error('Rời kế hoạch thất bại, vui lòng thử lại sau');
         }
     };
 
@@ -140,13 +177,24 @@ const MyPlansPage: React.FC = () => {
                                 </button>
                             )}
 
-                            {isShared && plan.owner && (
-                                <div className="bg-white/90 backdrop-blur-sm px-2.5 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
-                                    <Avatar name={plan.owner.fullname} size="sm" />
-                                    <div className="flex flex-col pr-1 text-gray-800">
-                                        <span className="text-[8px] font-extrabold uppercase leading-none text-gray-500">Người tạo</span>
-                                        <span className="text-[10px] font-bold leading-tight">{plan.owner.fullname}</span>
-                                    </div>
+                            {isShared && (
+                                <div className="flex items-center gap-2">
+                                    {plan.owner && (
+                                        <div className="bg-white/90 backdrop-blur-sm px-2.5 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+                                            <Avatar name={plan.owner.fullname} size="sm" />
+                                            <div className="flex flex-col pr-1 text-gray-800">
+                                                <span className="text-[8px] font-extrabold uppercase leading-none text-gray-500">Người tạo</span>
+                                                <span className="text-[10px] font-bold leading-tight">{plan.owner.fullname}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button 
+                                        onClick={(e) => handleLeaveSharedPlan(e, plan.planId)}
+                                        className="w-8 h-8 bg-white/20 hover:bg-red-500 text-white rounded-full backdrop-blur-md flex items-center justify-center transition-all shadow-sm border border-white/20 group/trash"
+                                        title="Rời khỏi kế hoạch"
+                                    >
+                                        <LogOut className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
                             )}
                         </div>

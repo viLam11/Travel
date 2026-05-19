@@ -5,6 +5,7 @@ import type { BlogComment } from '@/types/blog.types';
 import { useAuth } from '@/hooks/useAuth';
 import ReportModal from './ReportModal';
 import toast from 'react-hot-toast';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface BlogCommentSectionProps {
   postId: string;
@@ -41,6 +42,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   isReply = false 
 }) => {
   const { currentUser } = useAuth();
+  const { confirm } = useConfirm();
   const [liked, setLiked] = useState(comment.isLiked || false);
   const [likeCount, setLikeCount] = useState(comment.likes ?? 0);
   const [showReplies, setShowReplies] = useState(false);
@@ -108,8 +110,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
           {(currentUser?.user?.userID === comment.authorId || currentUser?.user?.userID === postAuthorId) && (
             <button
-              onClick={() => {
-                if (window.confirm('Xóa bình luận này?')) {
+              onClick={async () => {
+                const isConfirmed = await confirm({
+                  title: 'Xóa bình luận',
+                  message: 'Bạn có chắc chắn muốn xóa bình luận này vĩnh viễn?',
+                  variant: 'danger',
+                  confirmText: 'Xóa ngay',
+                  cancelText: 'Hủy'
+                });
+                if (isConfirmed) {
                   onDelete(comment.id);
                 }
               }}

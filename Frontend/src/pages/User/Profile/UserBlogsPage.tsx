@@ -27,10 +27,12 @@ import { Badge } from '@/components/ui/admin/badge';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import type { BlogStatus } from '@/types/blog.types';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const UserBlogsPage: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -193,8 +195,15 @@ const UserBlogsPage: React.FC = () => {
                         
                         <DropdownMenuItem 
                           className="cursor-pointer text-red-600"
-                          onClick={() => {
-                            if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+                          onClick={async () => {
+                            const isConfirmed = await confirm({
+                              title: 'Xóa bài viết',
+                              message: 'Bạn có chắc chắn muốn xóa bài viết này vĩnh viễn?',
+                              variant: 'danger',
+                              confirmText: 'Xóa ngay',
+                              cancelText: 'Hủy'
+                            });
+                            if (isConfirmed) {
                               deleteMutation.mutate(blog.id);
                             }
                           }}

@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/services/apiClient';
 import toast from 'react-hot-toast';
 import { serviceApi } from '@/api/serviceApi';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { useQuery } from '@tanstack/react-query';
@@ -49,6 +50,7 @@ const AVATAR_COLORS = [
 
 export default function ProviderReviews() {
     const { currentUser } = useAuth();
+    const { confirm } = useConfirm();
     const currentServiceId = currentUser?.user?.serviceId || 1;
     // Fetch service detail to get the real name
     const { data: serviceDetail } = useQuery({
@@ -236,7 +238,14 @@ export default function ProviderReviews() {
     };
 
     const handleDeleteReply = async (replyId: number) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xóa phản hồi này?")) return;
+        const isConfirmed = await confirm({
+            title: 'Xóa phản hồi',
+            message: 'Bạn có chắc chắn muốn xóa phản hồi này vĩnh viễn?',
+            variant: 'danger',
+            confirmText: 'Xóa ngay',
+            cancelText: 'Hủy'
+        });
+        if (!isConfirmed) return;
         try {
             await apiClient.comments.delete(replyId);
             toast.success("Đã xóa phản hồi");

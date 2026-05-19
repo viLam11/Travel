@@ -36,7 +36,13 @@ const GoogleCallbackPage: React.FC = () => {
 
                 // Redirect based on role
                 setTimeout(() => {
-                    const redirectPath = role === 'PROVIDER' ? '/admin/dashboard' : '/homepage';
+                    const userRole = (role || 'USER').toUpperCase();
+                    const isProvider = userRole.startsWith('PROVIDER');
+                    const isAdmin = userRole === 'ADMIN';
+                    
+                    const redirectPath = isAdmin 
+                        ? '/admin/dashboard' 
+                        : (isProvider ? '/provider/dashboard' : '/homepage');
                     // Use window.location to force page reload and let useAuth hook detect the token
                     window.location.href = redirectPath;
                 }, 1000);

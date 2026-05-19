@@ -15,6 +15,7 @@ import {
 import { Plus, Edit, Trash2, X, Tag, Percent, Calendar, Check, Loader2, Info } from 'lucide-react';
 import { discountApi, type DiscountResponse, type DiscountRequest } from '@/api/discountApi';
 import { toast } from 'sonner';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface PromotionsTabProps {
     serviceId: string | number;
@@ -23,6 +24,7 @@ interface PromotionsTabProps {
 
 const PromotionsTab = ({ serviceId, placeCode }: PromotionsTabProps) => {
     const [promotions, setPromotions] = useState<DiscountResponse[]>([]);
+    const { confirm } = useConfirm();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
@@ -112,7 +114,14 @@ const PromotionsTab = ({ serviceId, placeCode }: PromotionsTabProps) => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Bạn có chắc muốn xóa ưu đãi này?')) return;
+        const isConfirmed = await confirm({
+            title: 'Xóa chương trình ưu đãi',
+            message: 'Bạn có chắc muốn xóa chương trình ưu đãi này vĩnh viễn?',
+            variant: 'danger',
+            confirmText: 'Xóa ngay',
+            cancelText: 'Hủy'
+        });
+        if (!isConfirmed) return;
         try {
             await discountApi.deleteDiscountWithPermission(id);
             toast.success('Đã xóa ưu đãi');

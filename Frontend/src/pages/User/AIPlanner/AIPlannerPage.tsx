@@ -16,6 +16,7 @@ import { MOCK_LIBRARY_ACTIVITIES } from '@/mocks/aiPlanner';
 import type { ItineraryDay, Activity, TimeSlot, PlanData } from '@/types/aiPlanner.types';
 import SharePlanModal from './components/SharePlanModal';
 import toast from 'react-hot-toast';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let idCounter = 0;
@@ -775,6 +776,7 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
 // ─── Plan Editor ─────────────────────────────────────────────────────────────
 
 function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => void }) {
+    const { confirm } = useConfirm();
     const [itinerary, setItinerary] = useState<ItineraryDay[]>(planData.itinerary);
     const [isPublic, setIsPublic] = useState(planData.isPublic);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -844,14 +846,23 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     );
 
     useEffect(() => {
-        if (blocker.state === 'blocked') {
-            const confirmLeave = window.confirm('Quá trình lưu chưa hoàn tất. Nếu rời đi bạn có thể mất dữ liệu vừa chỉnh sửa. Tiếp tục rời trang?');
-            if (confirmLeave) {
-                blocker.proceed();
-            } else {
-                blocker.reset();
+        const checkBlocker = async () => {
+            if (blocker.state === 'blocked') {
+                const isConfirmed = await confirm({
+                    title: 'Chưa lưu thay đổi',
+                    message: 'Quá trình lưu chưa hoàn tất. Nếu rời đi bạn có thể mất dữ liệu vừa chỉnh sửa. Tiếp tục rời trang?',
+                    variant: 'warning',
+                    confirmText: 'Rời đi',
+                    cancelText: 'Ở lại'
+                });
+                if (isConfirmed) {
+                    blocker.proceed();
+                } else {
+                    blocker.reset();
+                }
             }
-        }
+        };
+        checkBlocker();
     }, [blocker]);
 
     const [mobileTab, setMobileTab] = useState<'library' | 'timeline' | 'summary'>('timeline');

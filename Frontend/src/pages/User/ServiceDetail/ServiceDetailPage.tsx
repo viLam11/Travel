@@ -726,9 +726,9 @@ const ServiceDetailPage: React.FC = () => {
     }
 
     if (isSubmittingReview) return;
-    setIsSubmittingReview(true);
 
     requireAuth(async () => {
+      setIsSubmittingReview(true);
       try {
         if (!USE_MOCK) {
           // Call actual backend API

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import apiClient from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthCheck } from '@/hooks/useAuthCheck';
+import AuthModal from '@/components/common/AuthModal';
 
 interface FavoriteButtonProps {
   serviceId: string | number;
@@ -23,7 +24,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated } = useAuth();
-  const { requireAuth } = useAuthCheck();
+  const { requireAuth, showAuthModal, authMessage, closeAuthModal } = useAuthCheck();
 
   // If initialIsFavorite changes from parent, sync it
   useEffect(() => {
@@ -59,20 +60,28 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   };
 
   return (
-    <button
-      onClick={handleToggle}
-      disabled={isLoading}
-      className={`group/heart transition-all active:scale-90 cursor-pointer disabled:opacity-70 ${className}`}
-      title={isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
-    >
-      <Heart
-        className={`transition-all duration-300 ${
-          isFavorite 
-            ? 'fill-orange-500 text-orange-500 scale-110' 
-            : 'text-orange-500 group-hover/heart:scale-110'
-        } ${iconClassName}`}
+    <>
+      <button
+        onClick={handleToggle}
+        disabled={isLoading}
+        className={`group/heart transition-all active:scale-90 cursor-pointer disabled:opacity-70 ${className}`}
+        title={isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+      >
+        <Heart
+          className={`transition-all duration-300 ${
+            isFavorite 
+              ? 'fill-orange-500 text-orange-500 scale-110' 
+              : 'text-orange-500 group-hover/heart:scale-110'
+          } ${iconClassName}`}
+        />
+      </button>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={closeAuthModal}
+        message={authMessage}
       />
-    </button>
+    </>
   );
 };
 

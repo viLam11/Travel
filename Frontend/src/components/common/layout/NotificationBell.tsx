@@ -18,6 +18,7 @@ interface NotificationInfo {
     isRead: boolean;
     createdAt: string;
     type?: string;
+    referenceInvitationID?: string;
 }
 
 // ─── CẤU HÌNH MOCK DỮ LIỆU CỤC BỘ ──────────────────────────────────────────────
@@ -79,7 +80,8 @@ const NotificationBell: React.FC = () => {
             targetUrl: url,
             isRead: noti.read || false,
             createdAt: noti.createdAt || new Date().toISOString(),
-            type: type // Use uppercase type for consistent UI matching
+            type: type, // Use uppercase type for consistent UI matching
+            referenceInvitationID: noti.referenceInvitationID
         };
     };
 
@@ -187,7 +189,7 @@ const NotificationBell: React.FC = () => {
         };
     }, [isOpen]);
 
-    const handleRead = async (notif: NotificationInfo) => {
+    const handleRead = async (notif: NotificationInfo, shouldNavigate = true) => {
         setNotifications(prev => 
             prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)
         );
@@ -203,7 +205,28 @@ const NotificationBell: React.FC = () => {
         }
 
         setIsOpen(false);
-        navigate(notif.targetUrl);
+        if (shouldNavigate) {
+            navigate(notif.targetUrl);
+        }
+    };
+
+    const handleCollabAction = async (notif: NotificationInfo, status: 'ACCEPTED' | 'DENIED') => {
+        if (!notif.referenceInvitationID) return;
+        try {
+            await aiPlannerApi.handleInvitation(notif.referenceInvitationID.toString(), status);
+            toast.success(status === 'ACCEPTED' ? "Đã chấp nhận lời mời!" : "Đã từ chối lời mời!");
+            
+            // Mark as read, do not auto-navigate if declined
+            await handleRead(notif, status === 'ACCEPTED');
+            
+            // Refresh if on plans page
+            if (window.location.pathname.includes('/my-plans')) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Lỗi khi xử lý lời mời cộng tác (mobile):", error);
+            toast.error("Không thể thực hiện thao tác này.");
+        }
     };
 
     const handleMarkAllRead = async () => {
@@ -287,7 +310,12 @@ const NotificationBell: React.FC = () => {
                             notifications.map(notif => (
                                 <div 
                                     key={notif.id} 
-                                    onClick={() => handleRead(notif)}
+                                    onClick={() => {
+                                        if (notif.type === 'PLAN_INVITATION' && !notif.isRead && notif.referenceInvitationID) {
+                                            return;
+                                        }
+                                        handleRead(notif);
+                                    }}
                                     className={`p-4 flex gap-3 cursor-pointer hover:bg-orange-50/50 transition-colors border-b border-gray-50 last:border-0 ${notif.isRead ? 'opacity-60 bg-white' : 'bg-orange-50/20'}`}
                                 >
                                     <div className="relative shrink-0">
@@ -300,6 +328,22 @@ const NotificationBell: React.FC = () => {
                                         <p className="text-[13px] text-gray-800 leading-snug">
                                             <span className="font-bold text-gray-900">{notif.senderName}</span> {notif.message}
                                         </p>
+                                        {notif.type === 'PLAN_INVITATION' && !notif.isRead && notif.referenceInvitationID && (
+                                            <div className="flex gap-2 mt-2 mb-1" onClick={(e) => e.stopPropagation()}>
+                                                <button 
+                                                    className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg cursor-pointer"
+                                                    onClick={() => handleCollabAction(notif, 'ACCEPTED')}
+                                                >
+                                                    Đồng ý
+                                                </button>
+                                                <button 
+                                                    className="px-3 py-1 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-semibold rounded-lg cursor-pointer"
+                                                    onClick={() => handleCollabAction(notif, 'DENIED')}
+                                                >
+                                                    Từ chối
+                                                </button>
+                                            </div>
+                                        )}
                                         <p className="text-[10px] text-gray-400 mt-1 font-medium">
                                             {new Date(notif.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                         </p>

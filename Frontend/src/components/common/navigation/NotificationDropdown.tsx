@@ -29,6 +29,7 @@ interface NotificationInfo {
     isRead: boolean;
     createdAt: string;
     type?: string;
+    referenceInvitationID?: string;
 }
 
 export const NotificationDropdown = () => {
@@ -84,7 +85,8 @@ export const NotificationDropdown = () => {
             targetUrl: url,
             isRead: noti.read || false,
             createdAt: noti.createdAt || new Date().toISOString(),
-            type: type
+            type: type,
+            referenceInvitationID: noti.referenceInvitationID
         };
     };
 
@@ -211,7 +213,7 @@ export const NotificationDropdown = () => {
         };
     }, [currentUser]);
 
-    const handleRead = async (notif: NotificationInfo) => {
+    const handleRead = async (notif: NotificationInfo, shouldNavigate = true) => {
         setNotifications(prev => 
             prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)
         );
@@ -227,7 +229,28 @@ export const NotificationDropdown = () => {
         }
 
         setIsOpen(false);
-        navigate(notif.targetUrl);
+        if (shouldNavigate) {
+            navigate(notif.targetUrl);
+        }
+    };
+
+    const handleCollabAction = async (notif: NotificationInfo, status: 'ACCEPTED' | 'DENIED') => {
+        if (!notif.referenceInvitationID) return;
+        try {
+            await aiPlannerApi.handleInvitation(notif.referenceInvitationID.toString(), status);
+            toast.success(status === 'ACCEPTED' ? "Đã chấp nhận lời mời!" : "Đã từ chối lời mời!");
+            
+            // Mark as read, do not auto-navigate if declined
+            await handleRead(notif, status === 'ACCEPTED');
+            
+            // Refresh if on plans page
+            if (window.location.pathname.includes('/my-plans')) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Lỗi khi xử lý lời mời cộng tác:", error);
+            toast.error("Không thể thực hiện thao tác này.");
+        }
     };
 
     const handleMarkAllRead = async () => {
@@ -285,6 +308,9 @@ export const NotificationDropdown = () => {
                                 key={notification.id} 
                                 onClick={(e) => {
                                     e.preventDefault();
+                                    if (notification.type === 'PLAN_INVITATION' && !notification.isRead && notification.referenceInvitationID) {
+                                        return;
+                                    }
                                     handleRead(notification);
                                 }}
                                 className={`flex items-start gap-3 p-3 cursor-pointer ${notification.isRead ? 'opacity-70 hover:bg-gray-50 dark:hover:bg-gray-800 focus:bg-gray-50 dark:focus:bg-gray-800' : 'bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30'}`}
@@ -299,6 +325,25 @@ export const NotificationDropdown = () => {
                                     <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
                                         {notification.message}
                                     </p>
+                                    {notification.type === 'PLAN_INVITATION' && !notification.isRead && notification.referenceInvitationID && (
+                                        <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                                            <Button 
+                                                size="sm" 
+                                                className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
+                                                onClick={() => handleCollabAction(notification, 'ACCEPTED')}
+                                            >
+                                                Đồng ý
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                className="h-7 px-3 text-xs border-gray-200 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                                                onClick={() => handleCollabAction(notification, 'DENIED')}
+                                            >
+                                                Từ chối
+                                            </Button>
+                                        </div>
+                                    )}
                                     <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                                         {new Date(notification.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                     </p>

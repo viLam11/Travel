@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MapPicker from '@/components/common/map/MapPicker';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 // Types
 interface AdditionalService {
@@ -82,6 +83,7 @@ const AdminAddServicePage: React.FC = () => {
   });
 
   const navigate = useNavigate();
+  const { confirm } = useConfirm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [provinces, setProvinces] = useState<any[]>([]);
 
@@ -954,7 +956,18 @@ const AdminAddServicePage: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-4 pt-4">
-              <Button variant="outline" onClick={() => { if (confirm('Bạn có chắc muốn hủy? Dữ liệu sẽ không được lưu.')) window.location.reload(); }} className="flex-1">
+              <Button variant="outline" onClick={async () => {
+                const isConfirmed = await confirm({
+                  title: 'Hủy bỏ',
+                  message: 'Bạn có chắc muốn hủy? Dữ liệu sẽ không được lưu.',
+                  variant: 'danger',
+                  confirmText: 'Xóa dữ liệu',
+                  cancelText: 'Quay lại'
+                });
+                if (isConfirmed) {
+                  window.location.reload();
+                }
+              }} className="flex-1">
                 Hủy bỏ
               </Button>
               <Button onClick={proceedToReview} className="flex-1">

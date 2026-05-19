@@ -18,12 +18,14 @@ import { Plus, Edit, Trash2, Ticket } from 'lucide-react';
 import { type MockTicket } from '@/mocks/tickets';
 import { ticketApi } from '@/api/ticketApi';
 import { useToast } from '@/contexts/ToastContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const ProviderTickets = () => {
     // Mock: Get current provider's tour ID (in real app, from auth context)
     const currentTourId = "6"; // Ha Long Bay Cruise
     const tourName = "Ha Long Bay Cruise";
     const toastObj = useToast();
+    const { confirm } = useConfirm();
 
     const [tickets, setTickets] = useState<MockTicket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -124,7 +126,14 @@ const ProviderTickets = () => {
     };
 
     const handleDelete = async (ticket: MockTicket) => {
-        if (confirm(`Are you sure you want to delete "${ticket.name}"?`)) {
+        const isConfirmed = await confirm({
+            title: 'Delete Ticket Type',
+            message: `Are you sure you want to delete "${ticket.name}"? This action cannot be undone.`,
+            variant: 'danger',
+            confirmText: 'Delete',
+            cancelText: 'Cancel'
+        });
+        if (isConfirmed) {
             try {
                 await ticketApi.deleteTicket(ticket.id.toString());
                 setTickets(prev => prev.filter(t => t.id !== ticket.id));

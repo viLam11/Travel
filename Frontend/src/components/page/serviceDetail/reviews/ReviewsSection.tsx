@@ -1,6 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { X, Star, ThumbsUp, ThumbsDown, Upload, Image as ImageIcon, Flag, AlertTriangle, Reply } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useConfirm } from '@/contexts/ConfirmContext';
+import { useAuthCheck } from '@/hooks/useAuthCheck';
+import AuthModal from '@/components/common/AuthModal';
+import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
@@ -93,6 +97,8 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   onReply,
 }) => {
   const navigate = useNavigate();
+  const { confirm } = useConfirm();
+  const { requireAuth, showAuthModal, authMessage, closeAuthModal } = useAuthCheck();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragAreaRef = React.useRef<HTMLDivElement>(null);
   const [showImageUploader, setShowImageUploader] = useState(false);
@@ -192,7 +198,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
       const newImages = imageFiles.map(file => URL.createObjectURL(file));
       const totalAfter = reviewImages.length + newImages.length;
       if (totalAfter > 12) {
-        alert('Tối đa 12 ảnh');
+        toast.error('Tối đa 12 ảnh');
         return;
       }
       const dataTransfer = new DataTransfer();
@@ -206,71 +212,65 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     }
   };
 
-  const handleThumbsUp = async (reviewId: number) => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
-    const wasLiked = reviewLikes[reviewId];
-    // Optimistic UI update
-    setReviewLikes(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
-    if (reviewDislikes[reviewId]) {
-      setReviewDislikes(prev => ({ ...prev, [reviewId]: false }));
-    }
-    // API call
-    try {
-      if (wasLiked) {
-        await onUndoLike?.(reviewId);
-      } else {
-        if (reviewDislikes[reviewId]) await onUndoDislike?.(reviewId);
-        await onLike?.(reviewId);
+  const handleThumbsUp = (reviewId: number) => {
+    requireAuth(async () => {
+      const wasLiked = reviewLikes[reviewId];
+      // Optimistic UI update
+      setReviewLikes(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
+      if (reviewDislikes[reviewId]) {
+        setReviewDislikes(prev => ({ ...prev, [reviewId]: false }));
       }
-    } catch (err) {
-      // Rollback on failure
-      console.error('Like API error:', err);
-      setReviewLikes(prev => ({ ...prev, [reviewId]: wasLiked }));
-    }
+      // API call
+      try {
+        if (wasLiked) {
+          await onUndoLike?.(reviewId);
+        } else {
+          if (reviewDislikes[reviewId]) await onUndoDislike?.(reviewId);
+          await onLike?.(reviewId);
+        }
+      } catch (err) {
+        // Rollback on failure
+        console.error('Like API error:', err);
+        setReviewLikes(prev => ({ ...prev, [reviewId]: wasLiked }));
+      }
+    }, 'Vui lòng đăng nhập để thích đánh giá');
   };
 
-  const handleThumbsDown = async (reviewId: number) => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
-    const wasDisliked = reviewDislikes[reviewId];
-    // Optimistic UI update
-    setReviewDislikes(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
-    if (reviewLikes[reviewId]) {
-      setReviewLikes(prev => ({ ...prev, [reviewId]: false }));
-    }
-    // API call
-    try {
-      if (wasDisliked) {
-        await onUndoDislike?.(reviewId);
-      } else {
-        if (reviewLikes[reviewId]) await onUndoLike?.(reviewId);
-        await onDislike?.(reviewId);
+  const handleThumbsDown = (reviewId: number) => {
+    requireAuth(async () => {
+      const wasDisliked = reviewDislikes[reviewId];
+      // Optimistic UI update
+      setReviewDislikes(prev => ({ ...prev, [reviewId]: !prev[reviewId] }));
+      if (reviewLikes[reviewId]) {
+        setReviewLikes(prev => ({ ...prev, [reviewId]: false }));
       }
-    } catch (err) {
-      console.error('Dislike API error:', err);
-      setReviewDislikes(prev => ({ ...prev, [reviewId]: wasDisliked }));
-    }
+      // API call
+      try {
+        if (wasDisliked) {
+          await onUndoDislike?.(reviewId);
+        } else {
+          if (reviewLikes[reviewId]) await onUndoLike?.(reviewId);
+          await onDislike?.(reviewId);
+        }
+      } catch (err) {
+        console.error('Dislike API error:', err);
+        setReviewDislikes(prev => ({ ...prev, [reviewId]: wasDisliked }));
+      }
+    }, 'Vui lòng đăng nhập để không thích đánh giá');
   };
 
   const handleReportReviewClick = (reviewId: number) => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
-    setReportingReviewId(reviewId);
-    setReportReason('');
-    setOtherReason('');
+    requireAuth(() => {
+      setReportingReviewId(reviewId);
+      setReportReason('');
+      setOtherReason('');
+    }, 'Vui lòng đăng nhập để báo cáo đánh giá');
   };
 
   const submitReport = async () => {
     if (reportingReviewId === null) return;
     if (!reportReason) {
-        alert("Vui lòng chọn lý do báo cáo");
+        toast.error("Vui lòng chọn lý do báo cáo");
         return;
     }
     try {
@@ -298,11 +298,11 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const submitEdit = async () => {
     if (editingReviewId === null) return;
     if (!editContent.trim()) {
-      alert("Nội dung không được để trống");
+      toast.error("Nội dung không được để trống");
       return;
     }
     if (editRating === 0) {
-      alert("Vui lòng chọn số sao");
+      toast.error("Vui lòng chọn số sao");
       return;
     }
     try {
@@ -314,7 +314,14 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   };
 
   const handleDeleteClick = async (reviewId: number | string) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) {
+    const isConfirmed = await confirm({
+      title: 'Xóa đánh giá',
+      message: 'Bạn có chắc chắn muốn xóa đánh giá này vĩnh viễn?',
+      variant: 'danger',
+      confirmText: 'Xóa ngay',
+      cancelText: 'Hủy'
+    });
+    if (isConfirmed) {
       try {
         await onDeleteReview?.(reviewId);
       } catch (err) {
@@ -324,12 +331,10 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   };
 
   const handleReplyClick = (reviewId: number | string) => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
-    setReplyingToId(prev => prev === reviewId ? null : reviewId);
-    setReplyContent('');
+    requireAuth(() => {
+      setReplyingToId(prev => prev === reviewId ? null : reviewId);
+      setReplyContent('');
+    }, 'Vui lòng đăng nhập để phản hồi đánh giá');
   };
 
   const submitReply = async (reviewId: number | string) => {
@@ -535,7 +540,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
         <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 text-center">
           <p className="text-orange-800 font-medium mb-3">Bạn cần đăng nhập để viết đánh giá</p>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => requireAuth(() => {}, 'Vui lòng đăng nhập để viết đánh giá')}
             className="inline-flex items-center justify-center px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition-all transform active:scale-95 shadow-md shadow-orange-100 cursor-pointer"
           >
             Đăng nhập ngay
@@ -966,6 +971,12 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={closeAuthModal}
+        message={authMessage}
+      />
     </div>
   );
 };

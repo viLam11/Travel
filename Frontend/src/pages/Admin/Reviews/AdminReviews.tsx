@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/admin/card';
 import { MOCK_REPORTS, type MockReport } from '@/mocks/reports';
 import { toast } from 'sonner';
 import apiClient from '@/services/apiClient';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 // --- Stats Card Component ---
 function StatsCard({ title, value, subValue, icon: Icon, color, bg }: any) {
@@ -35,6 +36,7 @@ function StatsCard({ title, value, subValue, icon: Icon, color, bg }: any) {
 const AdminReviews = () => {
     const [statusFilter, setStatusFilter] = useState<string>('pending');
     const [reports, setReports] = useState<MockReport[]>([]);
+    const { confirm } = useConfirm();
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -293,8 +295,15 @@ const AdminReviews = () => {
                                             variant="outline"
                                             size="sm"
                                             className="w-full justify-start text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/50 cursor-pointer font-semibold"
-                                            onClick={() => {
-                                                if (window.confirm(`Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`)) {
+                                            onClick={async () => {
+                                                const isConfirmed = await confirm({
+                                                    title: 'Khóa tài khoản người dùng',
+                                                    message: `Bạn có chắc muốn gỡ bỏ bình luận và KHÓA vĩnh viễn tài khoản của ${report.review.userName} không?`,
+                                                    variant: 'danger',
+                                                    confirmText: 'Khóa ngay',
+                                                    cancelText: 'Hủy'
+                                                });
+                                                if (isConfirmed) {
                                                     handleAction(report.id, 'block', report.reporterName, report.review.userName, report.reviewId, report.review.userId);
                                                 }
                                             }}

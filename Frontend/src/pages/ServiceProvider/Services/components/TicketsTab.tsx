@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, X, Ticket as TicketIcon, Loader2, Bed } from 'lucid
 import { ticketApi } from '@/api/ticketApi';
 import { roomApi } from '@/api/roomApi';
 import { toast } from 'react-hot-toast';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface TicketsTabProps {
     serviceId: string | number;
@@ -29,6 +30,7 @@ interface CommonData {
 const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
     const isHotel = serviceType.toLowerCase().includes('hotel');
     const [items, setItems] = useState<CommonData[]>([]);
+    const { confirm } = useConfirm();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
@@ -154,7 +156,14 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm(`Bạn có chắc muốn xóa ${isHotel ? 'loại phòng' : 'loại vé'} này?`)) return;
+        const isConfirmed = await confirm({
+            title: isHotel ? 'Xóa loại phòng' : 'Xóa loại vé',
+            message: `Bạn có chắc muốn xóa ${isHotel ? 'loại phòng' : 'loại vé'} này vĩnh viễn?`,
+            variant: 'danger',
+            confirmText: 'Xóa ngay',
+            cancelText: 'Hủy'
+        });
+        if (!isConfirmed) return;
 
         try {
             if (isHotel) {

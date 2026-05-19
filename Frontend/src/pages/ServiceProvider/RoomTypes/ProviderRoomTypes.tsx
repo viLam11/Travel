@@ -18,13 +18,14 @@ import { CheckCircle2, BedDouble, DoorOpen, Search, Plus, Edit, Trash2, Upload, 
 import { type MockRoomType } from '@/mocks/roomTypes';
 import { roomApi } from '@/api/roomApi';
 import { useToast } from '@/contexts/ToastContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const ProviderRoomTypes = () => {
     // Mock: Get current provider's hotel ID (in real app, from auth context)
     const currentHotelId = 1; // Grand Hotel Saigon
     const hotelName = "Grand Hotel Saigon";
     const toastObj = useToast();
-
+    const { confirm } = useConfirm();
     const [roomTypes, setRoomTypes] = useState<MockRoomType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -133,7 +134,14 @@ const ProviderRoomTypes = () => {
     };
 
     const handleDelete = async (room: MockRoomType) => {
-        if (confirm(`Bạn có chắc chắn muốn xóa "${room.name}"?`)) {
+        const isConfirmed = await confirm({
+            title: 'Xóa loại phòng',
+            message: `Bạn có chắc chắn muốn xóa "${room.name}"? Hành động này không thể hoàn tác.`,
+            variant: 'danger',
+            confirmText: 'Xóa ngay',
+            cancelText: 'Hủy'
+        });
+        if (isConfirmed) {
             try {
                 await roomApi.deleteRoom(room.id);
                 setRoomTypes(prev => prev.filter(r => r.id !== room.id));

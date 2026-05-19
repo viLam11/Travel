@@ -13,6 +13,7 @@ import { store } from './store';
 import { UserProvider } from "./contexts/UserContext";
 import { AuthProvider as CustomAuthProvider } from "@/contexts/AuthContext";
 import router from "./routes";
+import { ConfirmProvider } from "@/contexts/ConfirmContext";
 
 import "./index.css"; // or your main CSS file
 
@@ -52,7 +53,9 @@ root.render(
         <Provider store={store}>
           <CustomAuthProvider>
             <UserProvider>
-              <RouterProvider router={router} />
+              <ConfirmProvider>
+                <RouterProvider router={router} />
+              </ConfirmProvider>
               <Toaster
                 position="top-right"
                 toastOptions={{
