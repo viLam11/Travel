@@ -1,0 +1,39 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Travello — Production Docker Compose
+#
+# Services:
+#   frontend  →  React/Vite SPA served by Nginx (port 80/443)
+#   nginx     →  Reverse proxy + SSL termination (host-level)
+#
+# Backend (Spring Boot) is deployed separately on port 8080.
+# Database (MySQL) is hosted on Aiven Cloud — no local DB container needed.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Frontend (React + Nginx) ───────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_DEPLOY_URL: ${VITE_API_DEPLOY_URL}
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+    container_name: travello_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"           # Internal: Nginx listens on 80 inside container
+    networks:
+      - travello_net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  travello_net:
+    driver: bridge

@@ -6,7 +6,7 @@ const SocialLogin: React.FC = () => {
   const handleGoogleLogin = () => {
     // Redirect to backend Google OAuth endpoint
     // Backend will redirect to Google login, then back to frontend callback
-    window.location.href = '{import.meta.env./auth/login/google';
+    window.location.href = `${import.meta.env.VITE_API_DEPLOY_URL}/auth/login/google`;
   };
 
   return (

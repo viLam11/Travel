@@ -1,0 +1,42 @@
+# .dockerignore — Travello Frontend
+# Exclude files/directories from Docker build context to keep image fast & clean
+
+# Dependencies (will be reinstalled inside container)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output (regenerated inside container)
+dist/
+
+# Test files
+tests/
+*.spec.ts
+playwright-report/
+test-results/
+
+# Environment files (injected as build-args, not baked in)
+.env
+.env.*
+!.env.example
+
+# Editor & OS junk
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# TypeScript source maps (optional — already excluded from Vite prod build)
+*.map
+
+# README and docs
+README.md
+*.md

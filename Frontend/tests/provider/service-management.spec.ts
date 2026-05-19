@@ -43,4 +43,27 @@ test.describe('Provider Service Management', () => {
     
     await expect(page.locator('text=Xóa dịch vụ thành công')).toBeVisible();
   });
+
+  test('should add a new service', async ({ page }) => {
+    await page.getByRole('button', { name: /Thêm dịch vụ/i }).click();
+    
+    // Form fill - Assuming generic fields based on common patterns
+    await page.locator('input[name="name"]').fill('Test New Service');
+    await page.locator('textarea[name="description"]').fill('Test description');
+    
+    await page.getByRole('button', { name: /Lưu|Tạo mới/i }).click();
+    
+    await expect(page.locator('text=thành công')).toBeVisible();
+  });
+
+  test('should edit a service', async ({ page }) => {
+    const firstServiceRow = page.locator('tbody tr').first();
+    const editBtn = firstServiceRow.locator('button[title*="Chỉnh sửa"]');
+    await editBtn.click();
+    
+    await page.locator('input[name="name"]').fill('Updated Service Name');
+    await page.getByRole('button', { name: /Lưu|Cập nhật/i }).click();
+    
+    await expect(page.locator('text=thành công')).toBeVisible();
+  });
 });

@@ -61,10 +61,42 @@ test.describe('Authentication', () => {
       await page.locator('input[name="email"]').fill(`${randomUser}@test.com`);
       await page.locator('input[name="password"]').fill('Password123!');
       await page.locator('input[name="confirmPassword"]').fill('Password123!');
+      
+      const agreeToTerms = page.locator('input[name="agreeToTerms"]');
+      if (await agreeToTerms.isVisible()) {
+        await agreeToTerms.check();
+      }
+      
       await page.getByRole('button', { name: 'TẠO TÀI KHOẢN' }).click();
 
       // Should redirect to customer registration detail or login
-      await expect(page).toHaveURL(/.*register\/customer|.*login/);
+      await expect(page).toHaveURL(/.*register\/customer|.*login|.*verify-email/);
+    });
+
+    test('should register successfully as hotel owner', async ({ page }) => {
+      await page.goto('/register/hotel-owner');
+      const randomUser = `hotel_${Math.floor(Math.random() * 10000)}`;
+      await page.locator('input[name="username"]').fill(randomUser);
+      await page.locator('input[name="email"]').fill(`${randomUser}@test.com`);
+      await page.locator('input[name="password"]').fill('Password123!');
+      await page.locator('input[name="confirmPassword"]').fill('Password123!');
+      await page.locator('input[name="agreeToTerms"]').check();
+      await page.getByRole('button', { name: 'TẠO TÀI KHOẢN' }).click();
+
+      await expect(page).toHaveURL(/.*verify-email|.*login/);
+    });
+
+    test('should register successfully as tour provider', async ({ page }) => {
+      await page.goto('/register/tour-provider');
+      const randomUser = `tour_${Math.floor(Math.random() * 10000)}`;
+      await page.locator('input[name="username"]').fill(randomUser);
+      await page.locator('input[name="email"]').fill(`${randomUser}@test.com`);
+      await page.locator('input[name="password"]').fill('Password123!');
+      await page.locator('input[name="confirmPassword"]').fill('Password123!');
+      await page.locator('input[name="agreeToTerms"]').check();
+      await page.getByRole('button', { name: 'TẠO TÀI KHOẢN' }).click();
+
+      await expect(page).toHaveURL(/.*verify-email|.*login/);
     });
   });
 });
