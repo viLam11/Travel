@@ -21,6 +21,9 @@ ARG VITE_MAPBOX_TOKEN
 ENV VITE_API_DEPLOY_URL=${VITE_API_DEPLOY_URL}
 ENV VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
 
+# Increase Node heap memory limit to use Swap space during build
+ENV NODE_OPTIONS="--max-old-space-size=1536"
+
 # Build production bundle
 RUN npm run build
 
