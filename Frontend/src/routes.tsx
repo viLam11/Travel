@@ -32,7 +32,7 @@ const ServiceDetailPage = lazy(() => import("@/pages/User/ServiceDetail/ServiceD
 // User Profile Pages
 const UserProfilePage = lazy(() => import("@/pages/User/Profile/UserProfilePage"));
 const UserBookingsPage = lazy(() => import("@/pages/User/Bookings/UserBookingsPage"));
-const UserBlogsPage = lazy(() => import("./pages/User/Profile/UserBlogsPage"));
+const UserBlogsPage = lazy(() => import("@/pages/User/Profile/UserBlogsPage"));
 const UserTransactionsPage = lazy(() => import("@/pages/User/Transactions/UserTransactionsPage"));
 const UserSavedPage = lazy(() => import("@/pages/User/Saved/UserSavedPage"));
 const UserMessagesPage = lazy(() => import("@/pages/User/Messages/UserMessagesPage"));
@@ -248,7 +248,7 @@ const routes: RouteObject[] = [
             element: withSuspense(UserProfilePage as LazyExoticComponent<ComponentType<unknown>>),
           },
           {
-            path: "blogs",
+            path: "profile/blogs",
             element: withSuspense(UserBlogsPage as LazyExoticComponent<ComponentType<unknown>>),
           },
           {

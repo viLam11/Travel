@@ -16,11 +16,13 @@ import apiClient from '@/services/apiClient';
 import toast from 'react-hot-toast';
 import { serviceApi } from '@/api/serviceApi';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { shouldUseMock } from '@/config/mockConfig';
 
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { useQuery } from '@tanstack/react-query';
 
-const USE_MOCK = false;
+const LOCAL_MOCK_OVERRIDE: boolean | null = null;
+const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 
 // --- Stats Card Component ---
 function StatsCard({ title, value, subValue, icon: Icon, color, bg }: any) {
@@ -51,7 +53,7 @@ const AVATAR_COLORS = [
 export default function ProviderReviews() {
     const { currentUser } = useAuth();
     const { confirm } = useConfirm();
-    const currentServiceId = currentUser?.user?.serviceId || 1;
+    const currentServiceId = currentUser?.user?.serviceId ? Number(currentUser.user.serviceId) : 1;
     // Fetch service detail to get the real name
     const { data: serviceDetail } = useQuery({
         queryKey: ['serviceDetail', currentServiceId],
@@ -63,6 +65,15 @@ export default function ProviderReviews() {
     });
 
     const serviceName = serviceDetail?.serviceName || (currentServiceId === 1 ? "Grand Hotel Saigon" : "Đang tải...");
+
+    const [mockRepliesState, setMockRepliesState] = useState<Record<number, any[]>>(() => {
+        try {
+            const saved = localStorage.getItem('travollo_mock_review_replies');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
 
     const [replyText, setReplyText] = useState<Record<number, string>>({});
     const [editingReply, setEditingReply] = useState<Record<number, boolean>>({});
@@ -91,17 +102,54 @@ export default function ProviderReviews() {
         queryKey: ['providerReviews', currentServiceId],
         queryFn: async () => {
             if (USE_MOCK) return [];
-            const response: any = await apiClient.comments.getByServiceId(currentServiceId);
-            const fetchedReviews = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
-            return fetchedReviews || [];
+            try {
+                const response: any = await apiClient.comments.getByServiceId(currentServiceId);
+                const fetchedReviews = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
+                return fetchedReviews || [];
+            } catch (err) {
+                console.error("Failed to fetch provider reviews:", err);
+                return [];
+            }
         },
         enabled: !!currentServiceId,
         staleTime: 0, // Dữ liệu luôn "cũ", React Query sẽ render từ cache ngay lập tức sau đó fetch ngầm API mới
     });
 
     const providerReviews = useMemo(() => {
-        if (USE_MOCK) {
-            return MOCK_REVIEWS.filter(review => review.serviceId === currentServiceId && review.status === 'approved');
+        const useMockData = USE_MOCK || apiReviews.length === 0;
+
+        if (useMockData) {
+            let mockSource = MOCK_REVIEWS.filter(review => review.serviceId === currentServiceId && review.status === 'approved');
+            if (mockSource.length === 0) {
+                mockSource = MOCK_REVIEWS.filter(review => review.serviceId === 1 && review.status === 'approved')
+                    .map(r => ({
+                        ...r,
+                        serviceId: currentServiceId,
+                        serviceName: serviceName
+                    }));
+            }
+            return mockSource.map(r => {
+                const mockReplies = mockRepliesState[r.id] || [];
+                const defaultReplies = r.replies ? r.replies.map((reply: any) => ({
+                    id: reply.id,
+                    comment: reply.comment,
+                    createdAt: reply.createdAt || new Date().toISOString()
+                })) : [];
+                return {
+                    id: r.id,
+                    userId: r.userId,
+                    userName: r.userName,
+                    userAvatar: r.userAvatar,
+                    serviceId: r.serviceId,
+                    rating: r.rating,
+                    comment: r.comment,
+                    images: r.images || [],
+                    createdAt: r.createdAt,
+                    updatedAt: r.createdAt,
+                    status: r.status,
+                    replies: [...defaultReplies, ...mockReplies]
+                };
+            });
         }
 
         // Lọc bỏ các comment là reply (bị backend trả về ở top-level)
@@ -115,29 +163,33 @@ export default function ProviderReviews() {
         // Chỉ lấy các đánh giá gốc (không nằm trong danh sách replyIds) và tùy chọn lọc rating
         const topLevelReviews = apiReviews.filter((r: any) => !replyIds.has(r.id) && !r.parentCommentId);
 
-        return topLevelReviews.map((r: any) => ({
-            id: r.id,
-            userId: r.user?.id || 0,
-            userName: r.username || r.user?.fullname || r.user?.username || "Người dùng ẩn danh",
-            userAvatar: r.user?.avatar || undefined,
-            serviceId: r.serviceId || currentServiceId,
-            rating: r.rating || 5,
-            comment: r.content || "",
-            images: Array.isArray(r.imageList)
-                ? r.imageList.map((img: any) => typeof img === 'string' ? img : img?.url || img?.imageUrl || '')
-                : (Array.isArray(r.images)
-                    ? r.images.map((img: any) => typeof img === 'string' ? img : img?.url || img?.imageUrl || '')
-                    : []),
-            createdAt: r.createdAt || new Date().toISOString(),
-            updatedAt: r.updatedAt || new Date().toISOString(),
-            status: 'approved',
-            replies: r.replies ? r.replies.map((reply: any) => ({
+        return topLevelReviews.map((r: any) => {
+            const mockReplies = mockRepliesState[r.id] || [];
+            const apiRepliesMapped = r.replies ? r.replies.map((reply: any) => ({
                 id: reply.id,
                 comment: reply.content,
                 createdAt: reply.createdAt || new Date().toISOString()
-            })) : []
-        }));
-    }, [currentServiceId, apiReviews]);
+            })) : [];
+            return {
+                id: r.id,
+                userId: r.user?.id || 0,
+                userName: r.username || r.user?.fullname || r.user?.username || "Người dùng ẩn danh",
+                userAvatar: r.user?.avatar || undefined,
+                serviceId: r.serviceId || currentServiceId,
+                rating: r.rating || 5,
+                comment: r.content || "",
+                images: Array.isArray(r.imageList)
+                    ? r.imageList.map((img: any) => typeof img === 'string' ? img : img?.url || img?.imageUrl || '')
+                    : (Array.isArray(r.images)
+                        ? r.images.map((img: any) => typeof img === 'string' ? img : img?.url || img?.imageUrl || '')
+                        : []),
+                createdAt: r.createdAt || new Date().toISOString(),
+                updatedAt: r.updatedAt || new Date().toISOString(),
+                status: 'approved',
+                replies: [...apiRepliesMapped, ...mockReplies]
+            };
+        });
+    }, [currentServiceId, apiReviews, serviceName, mockRepliesState]);
 
     const [sortBy, setSortBy] = useState<string>('newest');
     const [page, setPage] = useState(1);
@@ -202,6 +254,26 @@ export default function ProviderReviews() {
 
         setIsSubmittingReply(prev => ({ ...prev, [reviewId]: true }));
         try {
+            const isMockReview = USE_MOCK || !apiReviews.some((r: any) => r.id === reviewId);
+            if (isMockReview) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const newReply = {
+                    id: Date.now(),
+                    comment: reply,
+                    createdAt: new Date().toISOString()
+                };
+                const updated = {
+                    ...mockRepliesState,
+                    [reviewId]: [...(mockRepliesState[reviewId] || []), newReply]
+                };
+                setMockRepliesState(updated);
+                localStorage.setItem('travollo_mock_review_replies', JSON.stringify(updated));
+                toast.success("Phản hồi đã được gửi thành công");
+                setReplyText(prev => ({ ...prev, [reviewId]: '' }));
+                setEditingReply(prev => ({ ...prev, [reviewId]: false }));
+                return;
+            }
+
             await apiClient.comments.reply(reviewId, { content: reply });
             toast.success("Phản hồi đã được gửi thành công");
             setReplyText(prev => ({ ...prev, [reviewId]: '' }));
@@ -225,6 +297,30 @@ export default function ProviderReviews() {
         if (!editReplyValue.trim()) return;
         setIsUpdatingReply(true);
         try {
+            let foundReviewId: number | null = null;
+            for (const [revId, replies] of Object.entries(mockRepliesState)) {
+                if (replies.some(r => r.id === replyId)) {
+                    foundReviewId = Number(revId);
+                    break;
+                }
+            }
+
+            if (foundReviewId !== null) {
+                await new Promise(resolve => setTimeout(resolve, 400));
+                const updatedReplies = mockRepliesState[foundReviewId].map(r => 
+                    r.id === replyId ? { ...r, comment: editReplyValue } : r
+                );
+                const updated = {
+                    ...mockRepliesState,
+                    [foundReviewId]: updatedReplies
+                };
+                setMockRepliesState(updated);
+                localStorage.setItem('travollo_mock_review_replies', JSON.stringify(updated));
+                toast.success("Đã cập nhật phản hồi");
+                setEditingReplyId(null);
+                return;
+            }
+
             await apiClient.comments.update(replyId, editReplyValue, 5); // Default rating 5 for replies
             toast.success("Đã cập nhật phản hồi");
             setEditingReplyId(null);
@@ -247,6 +343,27 @@ export default function ProviderReviews() {
         });
         if (!isConfirmed) return;
         try {
+            let foundReviewId: number | null = null;
+            for (const [revId, replies] of Object.entries(mockRepliesState)) {
+                if (replies.some(r => r.id === replyId)) {
+                    foundReviewId = Number(revId);
+                    break;
+                }
+            }
+
+            if (foundReviewId !== null) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                const updatedReplies = mockRepliesState[foundReviewId].filter(r => r.id !== replyId);
+                const updated = {
+                    ...mockRepliesState,
+                    [foundReviewId]: updatedReplies
+                };
+                setMockRepliesState(updated);
+                localStorage.setItem('travollo_mock_review_replies', JSON.stringify(updated));
+                toast.success("Đã xóa phản hồi");
+                return;
+            }
+
             await apiClient.comments.delete(replyId);
             toast.success("Đã xóa phản hồi");
             refetch();

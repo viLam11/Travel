@@ -97,7 +97,7 @@ const UserBlogsPage: React.FC = () => {
           <p className="text-sm text-gray-500 font-medium">Bạn đã đăng {blogs.length} bài viết trên cộng đồng</p>
         </div>
         <Button 
-          onClick={() => navigate('/blog')} // Or wherever the "Create" page is
+          onClick={() => navigate('/blog/create')}
           className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-md shadow-orange-100 cursor-pointer"
         >
           <Plus className="w-4 h-4 mr-2" />

@@ -56,7 +56,7 @@ export type TimeSlot = 'morning_activities' | 'afternoon_activities' | 'evening_
 
 // ─── COLLABORATION TYPES ──────────────────────
 
-export type Permission = 'EDIT' | 'READ_ONLY';
+export type Permission = 'EDIT' | 'READ_ONY';
 export type CollabStatus = 'PENDING' | 'ACCEPTED' | 'DENIED';
 
 export interface PlanCollabInvitation {
