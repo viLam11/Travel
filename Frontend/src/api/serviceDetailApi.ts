@@ -56,11 +56,17 @@ const realApi = {
 
       const reviewCount = backendData.commentList?.length || backendData.reviewCount || 0;
 
-      const images = backendData.imageList?.length > 0
-        ? backendData.imageList.map((img: any) => img.imageUrl || img.url)
-        : (backendData.thumbnailUrl || backendData.thumbnail)
-          ? [backendData.thumbnailUrl || backendData.thumbnail]
-          : [];
+      const imageObjects: Array<{ id: string; url: string }> =
+        backendData.imageList?.length > 0
+          ? backendData.imageList.map((img: any) => ({
+              id: img.imageID || img.id || '',
+              url: img.imageUrl || img.url || '',
+            }))
+          : (backendData.thumbnailUrl || backendData.thumbnail)
+            ? [{ id: '', url: backendData.thumbnailUrl || backendData.thumbnail }]
+            : [];
+
+      const images = imageObjects.map((o) => o.url);
 
       const mappedData: ServiceDetail = {
         id: backendData.id?.toString() || id,
@@ -81,6 +87,7 @@ const realApi = {
 
         images: images,
         thumbnails: images.length > 0 ? images.slice(0, 4) : [],
+        imageObjects,
 
         // Collect all potential price points for robust minimum price detection
         priceAdult: (() => {

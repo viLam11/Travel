@@ -1,7 +1,7 @@
 // src/components/common/DestinationCard.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { MapPin, Calendar, Star } from 'lucide-react';
-import { useLazyImage } from '../../hooks/useLazyImage';
+import CloudinaryImage from '../ui/CloudinaryImage';
 import FavoriteButton from './FavoriteButton';
 
 export interface Destination {
@@ -45,32 +45,6 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     discount
   } = destination;
 
-
-  const {
-    ref,
-    imageLoaded,
-    showPlaceholder,
-    shouldLoadImage,
-    hasError,
-    currentSrc,
-    setImageLoaded,
-    setHasError
-  } = useLazyImage<HTMLDivElement>(image, {
-    rootMargin: '100px', // Reduced for faster loading
-    once: true,
-    priority: 'low',
-    fallbackSrc: fallbackImage,
-    onInView: () => {
-      // console.log(`👀 Card in view: ${title}`);
-    },
-    onLoad: () => {
-      // console.log(` Image loaded: ${title}`);
-    },
-    onError: () => {
-      // console.error(`❌ Image failed: ${title}`);
-    }
-  });
-
   return (
     <div
       className="animate-fadeIn bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col sm:flex-row group h-auto cursor-pointer"
@@ -78,63 +52,35 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     >
 
       {/* Image Section */}
-      <div
-        ref={ref}
-        className="w-full sm:w-[40%] h-48 sm:h-auto flex-shrink-0 relative overflow-hidden bg-gray-200"
-      >
-        {/* Skeleton Loading State */}
-        {showPlaceholder && (
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-gray-300 border-t-orange-500 rounded-full animate-spin"></div>
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {hasError && (
-          <div className="absolute inset-0 bg-gray-300 flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <p className="text-xs">Không thể tải hình</p>
-            </div>
-          </div>
-        )}
-
-        {/* Actual Image */}
-        {shouldLoadImage && (
-          <img
-            src={currentSrc}
-            alt={title}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setHasError(true)}
-            className={`
-              w-full h-full object-cover 
-              group-hover:scale-110 transition-all duration-500
-              ${imageLoaded ? 'opacity-100' : 'opacity-0'}
-            `}
-          />
-        )}
+      <div className="w-full sm:w-[40%] h-48 sm:h-auto flex-shrink-0 relative overflow-hidden bg-gray-200">
+        <CloudinaryImage
+          src={image}
+          alt={title}
+          fallbackSrc={fallbackImage}
+          // Card image is 40% of card width; card fills ~50% of grid on desktop
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 40vw, 320px"
+          className="group-hover:scale-110 transition-transform duration-500"
+          objectFit="cover"
+          priority="low"
+          rootMargin="100px"
+        />
 
         {/* Discount Badge */}
-        {imageLoaded && discount && (
+        {discount && (
           <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">
             {discount}
           </div>
         )}
 
         {/* Gradient Overlay */}
-        {imageLoaded && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {/* Favorite Button */}
-        {imageLoaded && (
-          <FavoriteButton
-            serviceId={id}
-            className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 sm:p-2.5 shadow-md z-10 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300"
-            iconClassName="w-4 h-4 sm:w-5 sm:h-5"
-          />
-        )}
+        <FavoriteButton
+          serviceId={id}
+          className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 sm:p-2.5 shadow-md z-10 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300"
+          iconClassName="w-4 h-4 sm:w-5 sm:h-5"
+        />
       </div>
 
       {/* Content Section */}

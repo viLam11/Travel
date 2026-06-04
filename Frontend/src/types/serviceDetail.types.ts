@@ -15,6 +15,8 @@ export interface ServiceDetail {
   discounts: Discount[];
   images: string[];
   thumbnails: string[];
+  /** Full image records from backend, preserving imageID for admin operations */
+  imageObjects: Array<{ id: string; url: string }>;
   features: Feature[];
   availability: Record<string, Record<string, string>>;
   ticketTypes?: TicketType[];

@@ -41,6 +41,8 @@ import AuthModal from '@/components/common/AuthModal';
 import ServiceChatWidget from '@/components/chat/ServiceChatWidget';
 import apiClient from '@/services/apiClient';
 import RelatedBlogPosts from '@/components/page/blog/RelatedBlogPosts';
+import CloudinaryImage from '@/components/ui/CloudinaryImage';
+import { HERO_WIDTHS } from '@/utils/cloudinaryImage';
 
 import { shouldUseMock } from '@/config/mockConfig';
 
@@ -160,6 +162,11 @@ const ServiceDetailPage: React.FC = () => {
   const [totalApiReviews, setTotalApiReviews] = useState(0);
 
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+
+  // Reset image index when navigating to a different service
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [service?.id]);
 
   // Load rooms/tickets from API when serviceId is available
   const fetchFavoriteStatus = async () => {
@@ -431,14 +438,14 @@ const ServiceDetailPage: React.FC = () => {
 
   // Handlers
   const handlePrevImage = () => {
-    if (!service) return;
+    if (!service?.images.length) return;
     setCurrentImageIndex((prev) =>
       prev === 0 ? service.images.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
-    if (!service) return;
+    if (!service?.images.length) return;
     setCurrentImageIndex((prev) =>
       prev === service.images.length - 1 ? 0 : prev + 1
     );
@@ -1234,9 +1241,10 @@ const ServiceDetailPage: React.FC = () => {
         {/* Image Gallery */}
         <div className="mb-8 lg:mb-10">
           <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
+            {/* Thumbnails */}
             <div className="order-2 lg:order-1 lg:w-[120px] xl:w-[140px] flex-shrink-0">
               <div className="grid grid-cols-4 lg:grid-cols-1 gap-2 lg:gap-3">
-                {service.thumbnails.slice(0, 4).map((thumb, idx) => (
+                {(service.imageObjects?.length > 0 ? service.imageObjects : service.images.map(url => ({ id: '', url }))).slice(0, 4).map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
@@ -1245,36 +1253,52 @@ const ServiceDetailPage: React.FC = () => {
                       : "border-gray-200 hover:border-orange-300"
                       }`}
                   >
-                    <img
-                      src={thumb}
+                    <CloudinaryImage
+                      src={img.url}
                       alt={`${service.name} ${idx + 1}`}
-                      className="w-full h-full object-cover"
+                      imageId={img.id || undefined}
+                      sizes="140px"
+                      widths={[140, 280]}
+                      targetWidth={140}
+                      objectFit="cover"
+                      priority="high"
                     />
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* Main image */}
             <div className="order-1 lg:order-2 flex-1">
               <div className="relative aspect-[16/10] bg-gray-200 rounded-xl overflow-hidden group">
-                <img
-                  src={service.images[currentImageIndex]}
+                <CloudinaryImage
+                  key={currentImageIndex}
+                  src={service.images[currentImageIndex] ?? service.images[0]}
+                  imageId={service.imageObjects?.[currentImageIndex]?.id || undefined}
                   alt={service.name}
-                  className="w-full h-full object-cover"
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                  widths={HERO_WIDTHS}
+                  targetWidth={1280}
+                  objectFit="cover"
+                  priority="high"
                 />
 
-                <button
-                  onClick={handlePrevImage}
-                  className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <ChevronLeft className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
-                </button>
-                <button
-                  onClick={handleNextImage}
-                  className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
-                </button>
+                {service.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrevImage}
+                      className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <ChevronLeft className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
+                    </button>
+                    <button
+                      onClick={handleNextImage}
+                      className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
+                    </button>
+                  </>
+                )}
 
                 <div className="absolute bottom-3 lg:bottom-4 right-3 lg:right-4 bg-black/70 text-white px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-xs lg:text-sm font-medium">
                   {currentImageIndex + 1} / {service.images.length}
