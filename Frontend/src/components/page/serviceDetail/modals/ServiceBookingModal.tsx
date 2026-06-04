@@ -96,7 +96,12 @@ const ServiceBookingModal: React.FC<ServiceBookingModalProps> = ({
       if (propDiscounts && propDiscounts.length > 0) return;
 
       try {
-        const data = await serviceDetailApi.getSatisfiedDiscounts(service.id, provinceCode || ''); // Use provinceCode
+        let categoryType = 'ALL';
+        if (service.type === 'hotel') categoryType = 'HOTEL';
+        else if (service.type === 'restaurant') categoryType = 'RESTAURANT';
+        else if (service.type === 'place' || service.type === 'event') categoryType = 'TICKET_VENUE';
+
+        const data = await serviceDetailApi.getSatisfiedDiscounts(service.id, provinceCode || '', categoryType);
         setAvailableDiscounts(data);
       } catch (error) {
         console.error('Failed to fetch discounts:', error);

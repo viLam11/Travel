@@ -102,7 +102,7 @@ export const discountApi = {
     },
 
 
-    getSatisfiedDiscounts: async (serviceID: string, placeCode: string): Promise<DiscountResponse[]> => {
+    getSatisfiedDiscounts: async (serviceID: string, placeCode: string, categoryType: string = 'ALL'): Promise<DiscountResponse[]> => {
         if (USE_MOCK) {
             await new Promise(resolve => setTimeout(resolve, 300));
             return MOCK_DISCOUNTS.map(mapMockToResponse).filter(d =>
@@ -113,7 +113,7 @@ export const discountApi = {
         }
         try {
             const raw = await apiClient.get<any>('/api/discounts/apply', {
-                params: { serviceID, placeCode },
+                params: { serviceID, placeCode, categoryType },
             });
             console.log('[DiscountAPI] /apply raw response:', raw);
 

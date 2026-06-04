@@ -756,7 +756,7 @@ export class ApiClient {
       return this.delete(`/api/discounts/${id}`);
     },
     apply: (serviceID: string, placeCode: string): ApiResponse<any[]> => {
-      return this.get("/api/discounts/apply", { params: { serviceID, placeCode } });
+      return this.get("/api/discounts/apply", { params: { serviceID, placeCode, categoryType: 'ALL' } });
     },
   };
 

@@ -1,5 +1,6 @@
 import apiClient from '../services/apiClient';
 import type { ServiceDetail } from '../types/serviceDetail.types';
+import { discountApi } from './discountApi';
 
 const realApi = {
   getServiceDetail: async (
@@ -165,16 +166,14 @@ const realApi = {
 
   getSatisfiedDiscounts: async (
     serviceID: string,
-    placeCode: string
+    placeCode: string,
+    categoryType: string = 'ALL'
   ): Promise<any[]> => {
     try {
-      const response: any = await apiClient.get('/api/discounts/apply', {
-        params: { serviceID, placeCode }
-      });
-      const data = response?.result || response?.data || response;
-      return Array.isArray(data) ? data : [];
+      // Sử dụng chung logic từ discountApi để hỗ trợ USE_MOCK và tránh log lỗi nhiều lần
+      return await discountApi.getSatisfiedDiscounts(serviceID, placeCode, categoryType);
     } catch (error) {
-      console.error('Error fetching satisfied discounts:', error);
+      // Đã có catch/log bên discountApi nên ở đây chỉ cần fallback
       return [];
     }
   },
