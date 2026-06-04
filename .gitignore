@@ -16,7 +16,6 @@ Thumbs.db
 # Environment files
 *.env
 .env
-!.env.example
 # =========================================
 # Backend (Java Spring Boot / Maven)
 # =========================================

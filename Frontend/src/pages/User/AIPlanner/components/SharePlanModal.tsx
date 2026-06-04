@@ -35,7 +35,7 @@ const SharePlanModal: React.FC<SharePlanModalProps> = ({
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<UserInfo[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [selectedPermission, setSelectedPermission] = useState<Permission>('READ_ONLY');
+    const [selectedPermission, setSelectedPermission] = useState<Permission>('READ_ONY');
     const [invitingId, setInvitingId] = useState<number | null>(null);
 
     // Search users with debounce
@@ -185,7 +185,7 @@ const SharePlanModal: React.FC<SharePlanModalProps> = ({
                                         onChange={(e) => setSelectedPermission(e.target.value as Permission)}
                                         className="appearance-none bg-orange-50 text-orange-600 text-[10px] font-bold py-1 pl-2 pr-6 rounded-lg focus:outline-none cursor-pointer border-none"
                                     >
-                                        <option value="READ_ONLY">Chỉ xem</option>
+                                        <option value="READ_ONY">Chỉ xem</option>
                                         <option value="EDIT">Có thể sửa</option>
                                     </select>
                                     <ChevronDown className="w-3 h-3 text-orange-400 absolute right-2 top-1.5 pointer-events-none" />

@@ -13,6 +13,12 @@ import { shouldUseMock } from '@/config/mockConfig';
 // Điền `null` để kế thừa từ biến GLOBAL_MOCK_ENABLED trong config.
 const LOCAL_MOCK_OVERRIDE: boolean | null = null;
 export const USE_MOCK_AI_PLANNER = shouldUseMock(LOCAL_MOCK_OVERRIDE);
+
+// Reset mock invitation status on load to allow user to test the notification again
+if (typeof window !== 'undefined') {
+    localStorage.removeItem('travollo_mock_invitation_status');
+    localStorage.removeItem('travollo_mock_invitation_read');
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ─── Backend → Frontend Data Mappers ─────────────────────────────────────────
@@ -97,6 +103,88 @@ const saveToCache = (cache: Record<string, PlanData>) => {
 
 const mockPlansCache = getCache();
 
+const MOCK_SHARED_PLAN_DALAT: PlanData = {
+    id: 'mock-shared-plan-dalat',
+    ownerId: 99,
+    title: 'Đà Lạt săn mây cùng nhóm 12A1',
+    overview: 'Lịch trình khám phá các địa điểm hoang sơ ở Đà Lạt, cắm trại săn mây trên đồi Đa Phú.',
+    destination: 'Đà Lạt',
+    days: 2,
+    isPublic: true,
+    isOwner: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    members: [
+        { userID: 99, fullname: 'Minh Khánh', email: 'khanh@gmail.com' },
+        { userID: 1, fullname: 'Bạn', email: 'me' },
+        { userID: 4, fullname: 'Tuấn', email: 't' }
+    ],
+    itinerary: [
+        {
+            day_label: 'Ngày 1',
+            morning_activities: [
+                {
+                    id: 'act-dalat-1',
+                    name: 'Săn mây đồi Đa Phú',
+                    description: 'Thức dậy sớm đón bình minh và săn mây ngập lối đi.',
+                    duration: '2 giờ',
+                    estimated_cost: 'Miễn phí',
+                    location: 'Đồi Đa Phú, Đà Lạt',
+                    timeOfDay: 'Morning'
+                }
+            ],
+            afternoon_activities: [
+                {
+                    id: 'act-dalat-2',
+                    name: 'Check-in Quảng trường Lâm Viên',
+                    description: 'Chụp ảnh với bông hoa dã quỳ khổng lồ và nụ hoa Atiso.',
+                    duration: '1.5 giờ',
+                    estimated_cost: 'Miễn phí',
+                    location: 'Quảng trường Lâm Viên, Đà Lạt',
+                    timeOfDay: 'Afternoon'
+                }
+            ],
+            evening_activities: [
+                {
+                    id: 'act-dalat-3',
+                    name: 'Chợ đêm Đà Lạt',
+                    description: 'Thưởng thức sữa đậu nành nóng, bánh tráng nướng và khoai nướng.',
+                    duration: '3 giờ',
+                    estimated_cost: '100.000₫',
+                    location: 'Chợ đêm Đà Lạt',
+                    timeOfDay: 'Evening'
+                }
+            ]
+        },
+        {
+            day_label: 'Ngày 2',
+            morning_activities: [
+                {
+                    id: 'act-dalat-4',
+                    name: 'Cà phê Mê Linh',
+                    description: 'Thưởng thức cà phê chồn hảo hạng ngắm cảnh đồi chè thơ mộng.',
+                    duration: '2.5 giờ',
+                    estimated_cost: '80.000₫',
+                    location: 'Mê Linh Coffee Garden',
+                    timeOfDay: 'Morning'
+                }
+            ],
+            afternoon_activities: [
+                {
+                    id: 'act-dalat-5',
+                    name: 'Thác Datanla',
+                    description: 'Trải nghiệm máng trượt xuyên qua cánh rừng thông đại ngàn.',
+                    duration: '3 giờ',
+                    estimated_cost: '150.000₫',
+                    location: 'Thác Datanla, Đà Lạt',
+                    timeOfDay: 'Afternoon'
+                }
+            ],
+            evening_activities: []
+        }
+    ]
+};
+
 export const aiPlannerApi = {
     /**
      * Tạo kế hoạch du lịch từ AI
@@ -149,6 +237,9 @@ export const aiPlannerApi = {
     },
 
     getPlan: async (planId: string): Promise<PlanData> => {
+        if (planId === 'mock-shared-plan-dalat') {
+            return MOCK_SHARED_PLAN_DALAT;
+        }
         if (planId.startsWith('mock-')) {
             if (mockPlansCache[planId]) return mockPlansCache[planId];
             throw new Error("Local mock plan not found in cache");
@@ -221,13 +312,28 @@ export const aiPlannerApi = {
         
         const payload = {
             memberId: invitation.memberId,
-            permission: invitation.permission === invitation.permission
+            permission: invitation.permission
         };
         
         return apiClient.post(`/api/plan-recommend/${planId}/share`, payload);
     },
 
     handleInvitation: async (collabId: string, status: CollabStatus): Promise<PlanCollaboration> => {
+        if (collabId === 'mock-collab-123' || collabId.startsWith('mock-')) {
+            await sleep(500);
+            localStorage.setItem('travollo_mock_invitation_status', status);
+            localStorage.setItem('travollo_mock_invitation_read', 'true');
+            return {
+                id: collabId,
+                planId: 'mock-shared-plan-dalat',
+                ownerId: '99',
+                memberId: 'me',
+                permission: 'READ_ONY',
+                status: status,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            } as any;
+        }
         if (USE_MOCK_AI_PLANNER) {
             await sleep(500);
             return { id: collabId, status } as PlanCollaboration;
@@ -238,20 +344,41 @@ export const aiPlannerApi = {
     },
 
     getSharedPlans: async (): Promise<PlanOverallResponse[]> => {
+        const isMockAccepted = localStorage.getItem('travollo_mock_invitation_status') === 'ACCEPTED';
+        const mockSharedPlan: PlanOverallResponse = {
+            planId: 'mock-shared-plan-dalat',
+            place: 'Đà Lạt',
+            tripTitle: 'Đà Lạt săn mây cùng nhóm 12A1',
+            overview: 'Lịch trình khám phá các địa điểm hoang sơ ở Đà Lạt, cắm trại săn mây trên đồi Đa Phú.',
+            status: 'ACTIVE',
+            collaborationStatus: 'ACCEPTED',
+            owner: { userID: 99, fullname: 'Minh Khánh', email: 'khanh@gmail.com' },
+            members: [{ userID: 1, fullname: 'Bạn', email: 'me' }, { userID: 4, fullname: 'Tuấn', email: 't' }]
+        };
+
         if (USE_MOCK_AI_PLANNER) {
             await sleep(500);
-            return [{
-                planId: 'mock-shared-1', place: 'Đà Lạt', tripTitle: 'Đà Lạt săn mây cùng nhóm 12A1',
-                overview: 'Lịch trình khám phá các địa điểm hoang sơ ở Đà Lạt, cắm trại săn mây trên đồi Đa Phú.',
-                status: 'ACTIVE', collaborationStatus: 'ACCEPTED',
-                owner: { userID: 99, fullname: 'Minh Khánh', email: 'khanh@gmail.com' },
-                members: [{ userID: 1, fullname: 'Bạn', email: 'me' }, { userID: 4, fullname: 'Tuấn', email: 't' }]
-            }];
+            return isMockAccepted ? [mockSharedPlan] : [];
         }
-        return apiClient.get<PlanOverallResponse[]>('/api/plan-recommend/my-shared-plans');
+
+        try {
+            const response = await apiClient.get<PlanOverallResponse[]>('/api/plan-recommend/my-shared-plans');
+            if (isMockAccepted && Array.isArray(response)) {
+                return [mockSharedPlan, ...response];
+            }
+            return response;
+        } catch (error) {
+            console.error("Failed to fetch shared plans:", error);
+            return isMockAccepted ? [mockSharedPlan] : [];
+        }
     },
 
     revokeAccess: async (planId: string, memberId: string): Promise<string> => {
+        if (planId === 'mock-shared-plan-dalat') {
+            await sleep(500);
+            localStorage.setItem('travollo_mock_invitation_status', 'DENIED');
+            return "Success";
+        }
         if (USE_MOCK_AI_PLANNER || planId.startsWith('mock-')) {
             await sleep(500);
             return "Success";
@@ -262,42 +389,81 @@ export const aiPlannerApi = {
     // ─── NOTIFICATION APIs ──────────────────────
 
     getUnreadNotificationsCount: async (): Promise<number> => {
+        let mockUnread = 0;
+        const invitationStatus = localStorage.getItem('travollo_mock_invitation_status') || 'PENDING';
+        const invitationRead = localStorage.getItem('travollo_mock_invitation_read') === 'true';
+        if (invitationStatus === 'PENDING' && !invitationRead) {
+            mockUnread = 1;
+        }
+
         if (USE_MOCK_AI_PLANNER) {
             await sleep(300);
-            return 1; // Luôn giả lập 1 thông báo chưa đọc
+            return mockUnread || 1;
         }
         try {
             const response = await apiClient.get<number>('/api/notifications/unread-count');
-            return response;
+            return (response || 0) + mockUnread;
         } catch (err) {
             console.error("Failed to fetch unread count", err);
-            return 0;
+            return mockUnread;
         }
     },
 
     getUserNotifications: async (page: number = 0, size: number = 10): Promise<any> => {
+        const invitationStatus = localStorage.getItem('travollo_mock_invitation_status') || 'PENDING';
+        const invitationRead = localStorage.getItem('travollo_mock_invitation_read') === 'true';
+        
+        let mockNotification: any = null;
+        if (invitationStatus === 'PENDING') {
+            mockNotification = {
+                id: 'mock-noti-collab',
+                type: 'PLAN_INVITATION',
+                title: 'Lời mời cộng tác',
+                content: 'vừa mời bạn tham gia chỉnh sửa lịch trình đi Đà Lạt 4N3Đ.',
+                createdAt: new Date().toISOString(),
+                creatorName: 'Minh Khánh',
+                read: invitationRead,
+                referenceInvitationID: 'mock-collab-123'
+            };
+        }
+
         if (USE_MOCK_AI_PLANNER) {
             await sleep(500);
             return {
-                content: [
-                    {
-                        id: 'mock-1',
-                        type: 'PLAN_INVITATION',
-                        title: 'Lời mời cộng tác',
-                        content: 'vừa mời bạn tham gia chỉnh sửa lịch trình đi Đà Lạt 4N3Đ.',
-                        createdAt: new Date().toISOString(),
-                        creatorName: 'Minh Khánh',
-                        read: false
-                    }
-                ],
-                totalElements: 1
+                content: mockNotification ? [mockNotification] : [],
+                totalElements: mockNotification ? 1 : 0
             };
         }
-        return apiClient.get('/api/notifications', { params: { page, size } });
+
+        try {
+            const response = await apiClient.get<any>('/api/notifications', { params: { page, size } });
+            if (response && Array.isArray(response.content)) {
+                const content = [...response.content];
+                if (mockNotification) {
+                    content.unshift(mockNotification);
+                }
+                return {
+                    ...response,
+                    content,
+                    totalElements: (response.totalElements || 0) + (mockNotification ? 1 : 0)
+                };
+            }
+            return response;
+        } catch (error) {
+            console.error("Failed to fetch user notifications:", error);
+            return {
+                content: mockNotification ? [mockNotification] : [],
+                totalElements: mockNotification ? 1 : 0
+            };
+        }
     },
 
     markNotificationAsRead: async (id: string): Promise<void> => {
-        if (USE_MOCK_AI_PLANNER) return;
+        if (id === 'mock-noti-collab') {
+            localStorage.setItem('travollo_mock_invitation_read', 'true');
+            return;
+        }
+        if (USE_MOCK_AI_PLANNER || id.startsWith('mock-')) return;
         return apiClient.put(`/api/notifications/${id}/read`, {});
     },
 
