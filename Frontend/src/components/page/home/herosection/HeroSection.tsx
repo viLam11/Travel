@@ -40,11 +40,10 @@ const HeroSection: React.FC = () => {
 
   // Destination combobox states
   const [showDestinations, setShowDestinations] = useState(false);
-  // Store all provinces fetched from API
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
-  // Store filtered result locally
   const [filteredDestinations, setFilteredDestinations] = useState<Province[]>([]);
   const [selectedProvinceCode, setSelectedProvinceCode] = useState<string | null>(null);
+  const [destinationError, setDestinationError] = useState('');
   const destinationRef = useRef<HTMLDivElement>(null);
 
   // Date picker state
@@ -137,6 +136,7 @@ const HeroSection: React.FC = () => {
   const handleDestinationChange = (value: string) => {
     setFormData({ ...formData, destination: value });
     setSelectedProvinceCode(null);
+    setDestinationError('');
     setShowDestinations(true);
 
     // Safety check: ensure allProvinces is an array
@@ -177,28 +177,27 @@ const HeroSection: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.destination.trim()) {
-      alert('Vui lòng nhập địa điểm');
+    const trimmed = formData.destination.trim();
+    if (!trimmed) {
+      setDestinationError('Vui lòng nhập hoặc chọn địa điểm');
       return;
     }
+    setDestinationError('');
 
-    // Build query params
     const queryParams = new URLSearchParams();
 
-    // Destination
-    if (formData.destination) queryParams.append('destination', formData.destination);
-    if (selectedProvinceCode) queryParams.append('provinceCode', selectedProvinceCode);
+    if (selectedProvinceCode) {
+      // User picked a province from the dropdown → location-based filter
+      queryParams.append('provinceCode', selectedProvinceCode);
+    } else {
+      // User typed free text without selecting → full-text / keyword search
+      queryParams.append('keyword', trimmed);
+    }
 
-    // Dates (for future booking feature)
     if (formData.startDate) queryParams.append('startDate', formData.startDate);
     if (formData.endDate) queryParams.append('endDate', formData.endDate);
 
-    // Service Type
-    queryParams.append('serviceType', formData.serviceType);
-
-    // Navigate based on service type
     const basePath = formData.serviceType === 'hotel' ? '/hotels' : '/destinations';
-    console.log(`Navigating to ${basePath} with:`, queryParams.toString());
     navigate(`${basePath}?${queryParams.toString()}`);
   };
 
@@ -310,13 +309,16 @@ const HeroSection: React.FC = () => {
                   value={formData.destination}
                   onChange={(e) => handleDestinationChange(e.target.value)}
                   onFocus={handleDestinationFocus}
-                  className="w-full pl-9 pr-9 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all"
+                  className={`w-full pl-9 pr-9 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all ${destinationError ? 'border-red-400' : 'border-gray-300'}`}
                 />
                 <ChevronDown
                   className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer hover:text-orange-500 transition-all duration-200 ${showDestinations ? 'rotate-180' : ''}`}
                   onClick={() => setShowDestinations(!showDestinations)}
                 />
               </div>
+              {destinationError && (
+                <p className="text-red-500 text-xs mt-1 text-left">{destinationError}</p>
+              )}
 
               {showDestinations && filteredDestinations.length > 0 && (
                 <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-45 overflow-y-auto">

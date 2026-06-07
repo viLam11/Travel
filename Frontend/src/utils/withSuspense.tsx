@@ -2,7 +2,9 @@ import { Suspense, lazy, type LazyExoticComponent, type ComponentType } from 're
 import { LoadingSpinner } from '@/components/common/feedback/LoadingSpinner';
 
 const SuspenseFallback = () => (
+  <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
     <LoadingSpinner size="lg" />
+  </div>
 );
 
 export const withSuspense = (Component: LazyExoticComponent<ComponentType<unknown>>) => (
