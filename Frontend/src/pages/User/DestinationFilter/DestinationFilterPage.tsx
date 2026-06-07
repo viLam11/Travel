@@ -7,7 +7,8 @@ import DestinationCard from '../../../components/page/destinationFilter/Destinat
 import apiClient from '@/services/apiClient';
 import Pagination from '../../../components/common/Pagination';
 import LocationSelector from '@/components/common/LocationSelector';
-import { getDestinationInfo, type SortValue } from '@/constants/regions';
+import { getDestinationInfo, getDestinationByName, type SortValue } from '@/constants/regions';
+import { buildServiceDetailUrl } from '@/utils/serviceUrl';
 import BreadcrumbSection from '../../../components/common/BreadcrumbSection';
 interface DestinationsPageProps {
   onNavigateToHome?: () => void;
@@ -41,17 +42,19 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   const provinceSlug = urlDestination === 'undefined' ? '' : urlDestination;
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
 
-  // Resolve slug/code to numeric ID for backend filter
-  // Priority: 1. provinceCode param, 2. Resolve from slug, 3. Check if slug is already an ID
-  const resolvedProvinceID = queryProvinceCode || getDestinationInfo(provinceSlug || '')?.id || (provinceSlug && !isNaN(Number(provinceSlug)) ? provinceSlug : '');
+  // Resolve slug/code/name to numeric ID for backend filter
+  // Priority: 1. explicit provinceCode param, 2. direct slug lookup, 3. name lookup, 4. raw numeric
+  const resolvedProvinceID = queryProvinceCode
+    || getDestinationInfo(provinceSlug || '')?.id
+    || getDestinationByName(provinceSlug || '')?.id
+    || (provinceSlug && !isNaN(Number(provinceSlug)) ? provinceSlug : '');
 
   // Map frontend slug to backend enum
-  let apiServiceType = paramServiceType;
-  if (paramServiceType === 'ticket') apiServiceType = 'TICKET_VENUE';
-  else if (paramServiceType === 'place') apiServiceType = 'TICKET_VENUE'; 
+  let apiServiceType = '';
+  if (paramServiceType === 'ticket' || paramServiceType === 'place') apiServiceType = 'TICKET_VENUE';
   else if (paramServiceType === 'hotel') apiServiceType = 'HOTEL';
   else if (paramServiceType === 'restaurant') apiServiceType = 'RESTAURANT';
-  else if (paramServiceType === 'all') apiServiceType = 'ALL';
+  // 'all' or empty → no type filter (falls back to TICKET_VENUE default below)
 
   // Fetch API
   const fetchDestinations = async () => {
@@ -66,32 +69,70 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
 
       const abortController = new AbortController();
 
-      // Call API
-      const response: any = await apiClient.services.search({
+      const requestParams = {
         provinceCode: resolvedProvinceID || undefined,
         keyword: searchKeyword || undefined,
-        serviceType: apiServiceType || 'TICKET_VENUE',
-        minPrice: priceRange[0],
+        serviceType: apiServiceType || undefined,  // undefined = no type filter (all types)
+        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,  // skip if 0 to avoid JPA price spec
         maxPrice: priceRange[1] < 100000000 ? priceRange[1] : undefined,
         minRating: minRating > 0 ? minRating : undefined,
         page: currentPage - 1,
         size: 5,
         sortBy: apiSortBy,
         direction: apiDirection,
-        signal: abortController.signal // Pass signal
-      });
+      };
+
+      console.group('[DestinationFilter] fetchDestinations');
+      console.log('URL params:', { destination, provinceCode: queryProvinceCode, serviceType: paramServiceType });
+      console.log('Resolved:', { provinceSlug, resolvedProvinceID, apiServiceType });
+      console.log('Request params →', requestParams);
+      console.groupEnd();
+
+      // Route to the right API: ES keyword search OR JPA location filter
+      let response: any;
+      if (requestParams.keyword) {
+        response = await apiClient.services.search({
+          keyword: requestParams.keyword,
+          provinceCode: requestParams.provinceCode,
+          serviceType: requestParams.serviceType,
+          minPrice: requestParams.minPrice,
+          maxPrice: requestParams.maxPrice,
+          minRating: requestParams.minRating,
+          page: requestParams.page,
+          size: requestParams.size,
+          sortBy: requestParams.sortBy,
+          direction: requestParams.direction,
+          signal: abortController.signal,
+        });
+      } else {
+        response = await apiClient.services.filterByLocation({
+          provinceCode: requestParams.provinceCode,
+          serviceType: requestParams.serviceType,
+          minPrice: requestParams.minPrice,
+          maxPrice: requestParams.maxPrice,
+          minRating: requestParams.minRating,
+          page: requestParams.page,
+          size: requestParams.size,
+          sortBy: requestParams.sortBy,
+          direction: requestParams.direction,
+          signal: abortController.signal,
+        });
+      }
+
+      console.log('[DestinationFilter] Response:', response?.totalElements, 'total,', response?.services?.length, 'in page');
 
       // Handle response
-      if (response && response.services) {
+      if (response?.services) {
         setDestinations(response.services);
         setTotalPages(response.totalPages || 1);
-        setTotalItems(response.totalItems || response.totalElements || response.services.length);
+        setTotalItems(response.totalElements || response.services.length);
       } else {
+        console.warn('[DestinationFilter] unexpected response shape:', response);
         setDestinations([]);
       }
 
     } catch (error) {
-      console.error("Failed to fetch services", error);
+      console.error('[DestinationFilter] Failed to fetch services:', error);
       setDestinations([]);
     } finally {
       setIsLoading(false);
@@ -126,41 +167,12 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   };
 
   const click_card = (id: string | number, item: any) => {
-    console.log('Navigate to:', id);
-    console.log('Item data:', item);
-
-    // Determine service type based on item data from API
-    // Enum Backend: HOTEL, RESTAURANT, TICKET_VENUE, TOUR
-    let typeSlug = 'place';
-    const itemType = (item.serviceType || '').toUpperCase();
-    if (itemType === 'HOTEL') typeSlug = 'hotel';
-    else if (itemType === 'RESTAURANT') typeSlug = 'restaurant';
-    else if (itemType === 'TICKET_VENUE' || itemType === 'TOUR') typeSlug = 'ticket';
-
-    // Create readable slug: id-title-safe
-    const titleSlug = (item.serviceName || item.title || 'service')
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
-
-    const idSlug = `${id}-${titleSlug}`;
-
-    // Region fallback
-    const targetRegion = (region && region !== 'undefined') ? region : 'vietnam';
-    
-    // Province fallback logic
-    let tempProvinceCode = item.province?.code || item.provinceCode || destination || 'ha-noi';
-    if (tempProvinceCode === 'undefined') tempProvinceCode = 'ha-noi';
-    
-    const finalProvinceCode = tempProvinceCode;
-
-    const finalUrl = typeSlug === 'hotel'
-      ? `/hotels/${targetRegion}/${finalProvinceCode}/${idSlug}`
-      : `/destinations/${targetRegion}/${finalProvinceCode}/${typeSlug}/${idSlug}`;
-    console.log('Final Navigation URL:', finalUrl);
-
-    navigate(finalUrl);
+    navigate(buildServiceDetailUrl({
+      id,
+      serviceName: item.serviceName || item.title || 'service',
+      serviceType: item.serviceType || 'DESTINATION',
+      province: item.province || item.provinceCode,
+    }));
   };
 
   // handleBooking moved up
@@ -324,11 +336,9 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                   <div className="bg-gray-50 p-4 rounded-xl">
                     <p className="text-sm font-medium text-gray-700 mb-3 block text-left">Thử tìm ở địa điểm khác:</p>
                     <LocationSelector
-                    onSelect={(_code, name) => {
-                        const slug = name;
-                        // Simple navigation to trigger refresh with new location
-                        navigate(`/destinations/vietnam/${slug}/all`);
-                    }}
+                      onSelect={(code, _name) => {
+                        navigate(`/destinations?provinceCode=${code}&serviceType=${paramServiceType || 'ticket'}`);
+                      }}
                       placeholder="Chọn tỉnh/thành phố..."
                     />
                   </div>
@@ -415,6 +425,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
+                totalResults={totalItems}
+                resultsPerPage={5}
               />
             )}
           </div>

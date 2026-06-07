@@ -1287,13 +1287,13 @@ const ServiceDetailPage: React.FC = () => {
                   <>
                     <button
                       onClick={handlePrevImage}
-                      className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <ChevronLeft className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
                     </button>
                     <button
                       onClick={handleNextImage}
-                      className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="absolute right-3 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 lg:p-3 rounded-full shadow-lg opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-gray-900" />
                     </button>

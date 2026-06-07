@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { buildServiceDetailUrl } from '@/utils/serviceUrl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Badge } from '@/components/ui/admin/badge';
@@ -370,9 +371,12 @@ export default function ServiceListPage() {
     });
 
     const handleView = (service: Service) => {
-        // Navigate to service detail page (user view)
-        const slug = `${service.id}-${service.serviceName.toLowerCase().replace(/\s+/g, '-')}`;
-        navigate(`/destinations/${service.province.fullName}/${service.type}/${slug}`);
+        navigate(buildServiceDetailUrl({
+            id: service.id,
+            serviceName: service.serviceName,
+            serviceType: service.type,
+            province: service.province,
+        }));
     };
 
     const handleEdit = (service: Service) => {

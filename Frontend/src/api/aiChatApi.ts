@@ -5,17 +5,32 @@ export interface AIChatRequest {
   context: string;
 }
 
+export interface ServiceLink {
+  id: string;
+  name: string;
+  serviceType: string;
+  provinceName: string | null;
+  rating: number;
+  averagePrice: number;
+  thumbnailUrl: string;
+  url: string;
+}
+
 export interface AIChatResponse {
   answer: string;
+  serviceLinks?: ServiceLink[];
+  blogLinks?: any[];
 }
 
 export const aiChatApi = {
   ask: async (request: AIChatRequest): Promise<AIChatResponse> => {
     try {
-      const response = await apiClient.post<any>('/api/ai-chat/ask', request);
-      // Backend returns string or object with answer
+      const response: any = await apiClient.post<any>('/api/ai-chat/ask', request);
+      const raw = typeof response === 'string' ? { answer: response } : response;
       return {
-        answer: typeof response === 'string' ? response : (response.answer || response.data || JSON.stringify(response))
+        answer: raw.answer || raw.data || JSON.stringify(raw),
+        serviceLinks: raw.serviceLinks ?? [],
+        blogLinks: raw.blogLinks ?? [],
       };
     } catch (error) {
       console.error('Error in AI Chat API:', error);

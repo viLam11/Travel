@@ -9,7 +9,8 @@ import HotelFilterSidebar from '../../../components/page/hotelFilter/HotelFilter
 import HotelListCard, { type HotelListItem } from '../../../components/page/hotelFilter/HotelListCard';
 import { MOCK_DISCOUNTS } from '@/mocks/discounts';
 import apiClient from '@/services/apiClient';
-import { getDestinationInfo } from '@/constants/regions';
+import { getDestinationInfo, getDestinationByName } from '@/constants/regions';
+import { buildServiceDetailUrl } from '@/utils/serviceUrl';
 
 const HotelFilterPage: React.FC = () => {
     const navigate = useNavigate();
@@ -26,8 +27,11 @@ const HotelFilterPage: React.FC = () => {
     const destinationParam = searchParams.get('destination') || '';
     const queryProvinceCode = searchParams.get('provinceCode') || '';
 
-    // Resolve slug/code to numeric ID for backend filter
-    const resolvedProvinceID = queryProvinceCode || getDestinationInfo(destinationParam || '')?.id || (destinationParam && !isNaN(Number(destinationParam)) ? destinationParam : '');
+    // Resolve slug/code/name to numeric ID for backend filter
+    const resolvedProvinceID = queryProvinceCode
+        || getDestinationInfo(destinationParam || '')?.id
+        || getDestinationByName(destinationParam || '')?.id
+        || (destinationParam && !isNaN(Number(destinationParam)) ? destinationParam : '');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [apiHotels, setApiHotels] = useState<HotelListItem[]>([]);
     const [totalItems, setTotalItems] = useState(0);
@@ -122,6 +126,7 @@ const HotelFilterPage: React.FC = () => {
             id: service.id.toString(),
             name: service.serviceName,
             location: service.province?.full_name || service.province?.fullName || service.address || 'Việt Nam',
+            provinceCode: service.province?.code || service.provinceCode || '',
             rating: service.rating || 0,
             reviews: service.reviewCount || 0,
             price: rawPrice,
@@ -135,10 +140,10 @@ const HotelFilterPage: React.FC = () => {
     const fetchHotels = async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const response: any = await apiClient.services.search({
+            const response: any = await apiClient.services.filterByLocation({
                 provinceCode: resolvedProvinceID || undefined,
                 serviceType: 'HOTEL',
-                minPrice: priceRange[0],
+                minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
                 maxPrice: priceRange[1] < 10000000 ? priceRange[1] : undefined,
                 minRating: selectedStars.length > 0 ? Math.min(...selectedStars) : undefined,
                 page: currentPage - 1,
@@ -191,14 +196,12 @@ const HotelFilterPage: React.FC = () => {
     const pagedHotels = apiHotels.length > 0 ? apiHotels : hotelsToShow.slice((currentPage - 1) * 5, currentPage * 5);
 
     const handleHotelClick = (hotel: HotelListItem) => {
-        // ID slug
-        const titleSlug = hotel.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        // Destination slug (từ location VD: "Tây Hồ, Hà Nội" -> "ha-noi")
-        const locationParts = hotel.location.split(',');
-        const destStr = locationParts[locationParts.length - 1].trim();
-        const destSlug = destStr.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-        navigate(`/hotels/vietnam/${destSlug}/${hotel.id}-${titleSlug}`);
+        navigate(buildServiceDetailUrl({
+            id: hotel.id,
+            serviceName: hotel.name,
+            serviceType: 'HOTEL',
+            province: hotel.provinceCode,
+        }));
     };
 
     return (
@@ -312,6 +315,8 @@ const HotelFilterPage: React.FC = () => {
                                     currentPage={currentPage}
                                     totalPages={totalPages}
                                     onPageChange={setCurrentPage}
+                                    totalResults={totalItems}
+                                    resultsPerPage={5}
                                 />
                             </div>
                         )}

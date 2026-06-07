@@ -9,6 +9,7 @@ export interface HotelListItem {
     id: string;
     name: string;
     location: string;
+    provinceCode?: string; // numeric or slug for URL generation
     rating: number;
     reviews: number;
     price: number;         // original price per night (VND)

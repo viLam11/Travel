@@ -2,6 +2,7 @@
 import React from 'react';
 import { MapPin, Hotel, Compass, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { buildServiceDetailUrl } from '@/utils/serviceUrl';
 import type { LinkedService } from '@/types/blog.types';
 
 interface LinkedServiceCardProps {
@@ -12,11 +13,12 @@ const LinkedServiceCard: React.FC<LinkedServiceCardProps> = ({ service }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (service.type === 'HOTEL') {
-      navigate(`/hotels/${service.id}`);
-    } else {
-      navigate(`/service/${service.id}`);
-    }
+    navigate(buildServiceDetailUrl({
+      id: service.id,
+      serviceName: service.serviceName,
+      serviceType: service.type ?? 'DESTINATION',
+      province: service.province,
+    }));
   };
 
   return (

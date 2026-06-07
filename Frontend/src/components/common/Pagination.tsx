@@ -14,7 +14,7 @@ const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
   onPageChange,
-  totalResults = 1473,
+  totalResults,
   resultsPerPage = 12
 }) => {
   const pages: (number | string)[] = [];
@@ -35,8 +35,10 @@ const Pagination: React.FC<PaginationProps> = ({
     pages.push(totalPages);
   }
 
-  const startResult = (currentPage - 1) * resultsPerPage + 1;
-  const endResult = Math.min(currentPage * resultsPerPage, totalResults);
+  // Use provided totalResults; fall back to totalPages * resultsPerPage when not given
+  const effectiveTotal = totalResults ?? totalPages * resultsPerPage;
+  const startResult = effectiveTotal === 0 ? 0 : (currentPage - 1) * resultsPerPage + 1;
+  const endResult = Math.min(currentPage * resultsPerPage, effectiveTotal);
 
   return (
     <div className="flex flex-col items-center gap-4 mt-10 mb-8">
@@ -90,9 +92,11 @@ const Pagination: React.FC<PaginationProps> = ({
       </div>
 
       {/* Results Info */}
-      <p className="text-sm text-gray-600">
-        Showing results {startResult}-{endResult} of {totalResults.toLocaleString()}
-      </p>
+      {effectiveTotal > 0 && (
+        <p className="text-sm text-gray-600">
+          Hiển thị {startResult}–{endResult} / {effectiveTotal.toLocaleString()} kết quả
+        </p>
+      )}
     </div>
   );
 };

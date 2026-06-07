@@ -1,89 +1,213 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, X, Send, User, MessageCircle, Loader2, Sparkles } from 'lucide-react';
-import { aiChatApi } from '@/api/aiChatApi';
-import { useLocation } from 'react-router-dom';
+import { Bot, X, Send, MessageCircle, Loader2, Sparkles, ChevronDown } from 'lucide-react';
+import { aiChatApi, type ServiceLink } from '@/api/aiChatApi';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface ChatMessage {
     id: string;
     text: string;
     sender: 'user' | 'ai';
     timestamp: Date;
+    serviceLinks?: ServiceLink[];
 }
+
+const sanitizeUrl = (url: string) => url.replace(/([^:])\/\//g, '$1/');
 
 const AIChatWidget: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isServiceChatOpen, setIsServiceChatOpen] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const location = useLocation();
+    const [showScrollBtn, setShowScrollBtn] = useState(false);
 
-    // Sync Service Chat Widget visibility
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // ── Scroll helpers ──────────────────────────────────────────────────────────
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        el.scrollTo({ top: el.scrollHeight, behavior });
+    };
+
+    const handleScroll = () => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setShowScrollBtn(distFromBottom > 100);
+    };
+
+    // Scroll to bottom instantly when widget opens
     useEffect(() => {
-        const handleServiceChatToggle = (e: any) => {
-            if (e.detail) {
-                setIsServiceChatOpen(e.detail.open);
-            }
-        };
+        if (isOpen) {
+            scrollToBottom('instant');
+            setTimeout(() => inputRef.current?.focus(), 150);
+        }
+    }, [isOpen]);
+
+    // Scroll to bottom on every new message
+    useEffect(() => {
+        if (!isOpen) return;
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        // If user is near bottom (< 200px), auto-scroll; otherwise show button
+        if (distFromBottom < 200) scrollToBottom('smooth');
+        else setShowScrollBtn(true);
+    }, [messages, isLoading]);
+
+    // ── Events ──────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        const handleServiceChatToggle = (e: any) => { if (e.detail) setIsOpen(false); };
         window.addEventListener('service-chat-open', handleServiceChatToggle);
         return () => window.removeEventListener('service-chat-open', handleServiceChatToggle);
     }, []);
 
     useEffect(() => {
-        // Broadcast that the AI chat is open/closed
         window.dispatchEvent(new CustomEvent('ai-chat-open', { detail: { open: isOpen } }));
     }, [isOpen]);
 
     // Welcome message
     useEffect(() => {
         if (messages.length === 0) {
-            setMessages([
-                {
-                    id: 'welcome',
-                    text: `Chào bạn, NTTravel có thể giúp gì cho bạn hôm nay?
-
-Bạn đang tìm kiếm dịch vụ gì? Chúng tôi có thể gợi ý một số khách sạn phổ biến:
-*   **Furama Resort Danang**: Giá khoảng 4.500.000 VNĐ
-*   **Caravelle Saigon**: Giá khoảng 4.000.000 VNĐ
-*   **Naman Retreat**: Giá khoảng 7.000.000 VNĐ
-*   **Park Hyatt Saigon**: Giá khoảng 8.500.000 VNĐ
-
-Hãy cho chúng tôi biết bạn cần tìm gì hoặc để chúng tôi tạo kế hoạch du lịch cho bạn!
-
-Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy cập https://nttravel.com/support.`,
-                    sender: 'ai',
-                    timestamp: new Date()
-                }
-            ]);
+            setMessages([{
+                id: 'welcome',
+                text: 'Chào bạn! Tôi là trợ lý AI của NTTravel 👋\n\nTôi có thể giúp bạn:\n* Tìm kiếm khách sạn, tour, vé tham quan\n* Lên kế hoạch du lịch\n* Tư vấn địa điểm phù hợp\n\nBạn muốn đi đâu hôm nay?',
+                sender: 'ai',
+                timestamp: new Date()
+            }]);
         }
     }, [messages.length]);
 
-    const scrollToBottom = () => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+    // ── Navigation ──────────────────────────────────────────────────────────────
+    const handleLinkClick = (url: string) => {
+        const clean = sanitizeUrl(url);
+        if (clean.startsWith('/')) {
+            setIsOpen(false);
+            navigate(clean);
+        } else {
+            window.open(clean, '_blank', 'noopener,noreferrer');
+        }
     };
 
-    // Basic markdown parser for bold, bullet points and links
-    const renderMessage = (text: string) => {
-        // Handle bold: **text**
-        let processed = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // ── Markdown renderer ───────────────────────────────────────────────────────
+    const renderInline = (text: string, keyPrefix: string): React.ReactNode[] => {
+        const linkParts = text.split(/\[([^\]]+)\]\(([^)]+)\)/g);
+        const nodes: React.ReactNode[] = [];
 
-        // Handle bullet points: * text
-        processed = processed.split('\n').map(line => {
-            if (line.trim().startsWith('* ')) {
-                return `<li class="ml-4 list-disc">${line.trim().substring(2)}</li>`;
+        for (let i = 0; i < linkParts.length; i += 3) {
+            const plain = linkParts[i];
+            if (plain) {
+                const boldParts = plain.split(/\*\*(.*?)\*\*/g);
+                boldParts.forEach((bp, bi) => {
+                    if (bi % 2 === 1) {
+                        nodes.push(<strong key={`${keyPrefix}-b${i}-${bi}`}>{bp}</strong>);
+                    } else if (bp) {
+                        const httpParts = bp.split(/(https?:\/\/[^\s<)]+)/g);
+                        httpParts.forEach((hp, hi) => {
+                            if (hi % 2 === 1) {
+                                nodes.push(
+                                    <a key={`${keyPrefix}-http${i}-${bi}-${hi}`} href={hp} target="_blank" rel="noopener noreferrer" className="underline opacity-80 hover:opacity-100 break-all">
+                                        {hp}
+                                    </a>
+                                );
+                            } else if (hp) {
+                                nodes.push(<React.Fragment key={`${keyPrefix}-t${i}-${bi}-${hi}`}>{hp}</React.Fragment>);
+                            }
+                        });
+                    }
+                });
             }
-            return line;
-        }).join('\n');
 
-        // Handle links: https://...
-        processed = processed.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="underline hover:text-blue-200">$1</a>');
-
-        return <div dangerouslySetInnerHTML={{ __html: processed.replace(/\n/g, '<br/>') }} />;
+            if (i + 1 < linkParts.length && linkParts[i + 1]) {
+                const linkText = linkParts[i + 1];
+                const url = sanitizeUrl(linkParts[i + 2] ?? '');
+                nodes.push(
+                    url.startsWith('/') ? (
+                        <button key={`${keyPrefix}-rl${i}`} onClick={() => handleLinkClick(url)} className="underline font-medium opacity-90 hover:opacity-100 cursor-pointer">
+                            {linkText}
+                        </button>
+                    ) : (
+                        <a key={`${keyPrefix}-el${i}`} href={url} target="_blank" rel="noopener noreferrer" className="underline opacity-80 hover:opacity-100">
+                            {linkText}
+                        </a>
+                    )
+                );
+            }
+        }
+        return nodes;
     };
 
+    const renderMessage = (text: string) => {
+        const lines = text.split('\n');
+        const elements: React.ReactNode[] = [];
+        const pendingList: React.ReactNode[] = [];
+
+        const flushList = () => {
+            if (pendingList.length > 0) {
+                elements.push(
+                    <ul key={`ul-${elements.length}`} className="list-disc pl-5 space-y-0.5 my-1">
+                        {[...pendingList]}
+                    </ul>
+                );
+                pendingList.length = 0;
+            }
+        };
+
+        lines.forEach((line, li) => {
+            const t = line.trim();
+            if (t.startsWith('* ') || t.startsWith('- ')) {
+                pendingList.push(<li key={`li-${li}`}>{renderInline(t.slice(2), `li-${li}`)}</li>);
+            } else if (t === '') {
+                flushList();
+            } else {
+                flushList();
+                elements.push(<p key={`p-${li}`} className="leading-relaxed">{renderInline(t, `p-${li}`)}</p>);
+            }
+        });
+        flushList();
+        return <div className="space-y-1.5 text-sm">{elements}</div>;
+    };
+
+    const renderServiceLinks = (links: ServiceLink[]) => {
+        if (!links?.length) return null;
+        return (
+            <div className="mt-3 pt-3 border-t border-orange-100 space-y-2">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Dịch vụ liên quan</p>
+                {links.map(link => (
+                    <div
+                        key={link.id}
+                        onClick={() => handleLinkClick(sanitizeUrl(link.url))}
+                        className="flex items-center gap-2.5 p-2 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 cursor-pointer hover:border-orange-300 hover:shadow-sm transition-all group"
+                    >
+                        {link.thumbnailUrl && (
+                            <img
+                                src={link.thumbnailUrl}
+                                alt={link.name}
+                                className="w-11 h-11 rounded-lg object-cover flex-shrink-0 group-hover:scale-105 transition-transform"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-slate-700 truncate group-hover:text-orange-700 transition-colors">{link.name}</p>
+                            {link.averagePrice > 0 && (
+                                <p className="text-[11px] font-medium text-orange-500 mt-0.5">
+                                    {link.averagePrice.toLocaleString('vi-VN')}₫
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-100 group-hover:bg-orange-500 flex items-center justify-center transition-colors">
+                            <span className="text-base leading-none text-orange-500 group-hover:text-white font-bold">›</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    // ── Send ────────────────────────────────────────────────────────────────────
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim() || isLoading) return;
@@ -94,57 +218,44 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
             sender: 'user',
             timestamp: new Date()
         };
-
         setMessages(prev => [...prev, userMsg]);
         setNewMessage('');
         setIsLoading(true);
-        scrollToBottom();
 
         try {
-            // Get current context (page title or URL)
-            const context = `User is currently on ${window.location.origin}${location.pathname}. Page title: ${document.title}`;
-
-            const response = await aiChatApi.ask({
-                question: userMsg.text,
-                context: context
-            });
-
-            const aiMsg: ChatMessage = {
+            const context = `User is on ${window.location.origin}${location.pathname}. Title: ${document.title}`;
+            const response = await aiChatApi.ask({ question: userMsg.text, context });
+            setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 text: response.answer,
                 sender: 'ai',
-                timestamp: new Date()
-            };
-
-            setMessages(prev => [...prev, aiMsg]);
-        } catch (error) {
-            console.error('Failed to get AI response:', error);
-            const errorMsg: ChatMessage = {
+                timestamp: new Date(),
+                serviceLinks: response.serviceLinks,
+            }]);
+        } catch {
+            setMessages(prev => [...prev, {
                 id: 'error-' + Date.now(),
-                text: 'Xin lỗi, tôi đang gặp một chút trục trặc kỹ thuật. Vui lòng thử lại sau nhé!',
+                text: 'Xin lỗi, tôi đang gặp trục trặc kỹ thuật. Vui lòng thử lại sau nhé!',
                 sender: 'ai',
                 timestamp: new Date()
-            };
-            setMessages(prev => [...prev, errorMsg]);
+            }]);
         } finally {
             setIsLoading(false);
-            scrollToBottom();
+            inputRef.current?.focus();
         }
     };
 
-    const toggleWidget = () => setIsOpen(!isOpen);
-
+    // ── Closed state ─────────────────────────────────────────────────────────
     if (!isOpen) {
-        // Khi chat với chủ dịch vụ đang mở, ẩn nút AI chat để tránh đè lên
         return (
             <button
-                onClick={toggleWidget}
+                onClick={() => setIsOpen(true)}
                 className="fixed bottom-48 md:bottom-28 right-4 md:right-6 bg-gradient-to-r from-orange-500 to-amber-600 text-white p-2.5 md:p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-[9999] flex items-center justify-center group"
                 aria-label="Chat với AI"
             >
                 <div className="absolute -top-1 -right-1 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 border-2 border-white"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 border-2 border-white" />
                 </div>
                 <Bot className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-12 transition-transform" />
                 <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-500 whitespace-nowrap font-medium text-sm">
@@ -154,109 +265,123 @@ Nếu bạn cần tư vấn thêm, vui lòng liên hệ 1900-9999 hoặc truy c�
         );
     }
 
+    // ── Open state ───────────────────────────────────────────────────────────
     return (
-        <div className="fixed bottom-4 right-4 md:bottom-28 md:right-6 w-[calc(100%-2rem)] sm:w-80 md:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(245,_158,_11,_0.2)] border border-orange-100 z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300" style={{ height: 'calc(100vh - 120px)', maxHeight: '520px' }}>
-            {/* Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 flex items-center justify-between shadow-lg">
-                <div className="flex items-center gap-3">
-                    <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                        <Bot className="w-5 h-5 text-white" />
+        <div
+            className="fixed bottom-4 right-4 md:bottom-28 md:right-6 w-[calc(100%-2rem)] sm:w-80 md:w-96 bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-orange-100 z-[9999] flex flex-col overflow-hidden"
+            style={{ height: 'min(calc(100vh - 2rem), 560px)' }}
+        >
+            {/* ── Header ── */}
+            <div className="flex-shrink-0 bg-gradient-to-r from-orange-500 to-amber-600 text-white px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                        <Bot className="w-4 h-4" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-sm tracking-wide flex items-center gap-2">
-                            Trợ Lý AI Travollo
+                        <div className="font-bold text-sm flex items-center gap-1.5">
+                            Trợ Lý AI
                             <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" />
-                        </h3>
-                        <p className="text-[10px] text-orange-100 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                            Luôn sẵn sàng hỗ trợ bạn
-                        </p>
+                        </div>
+                        <div className="text-[10px] text-orange-100 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                            Luôn sẵn sàng hỗ trợ
+                        </div>
                     </div>
                 </div>
-                <button
-                    onClick={toggleWidget}
-                    className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                    <X className="w-5 h-5" />
+                <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                    <X className="w-4 h-4" />
                 </button>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 bg-orange-50/20 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-orange-200">
+            {/* ── Messages ── */}
+            <div
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-3 scroll-smooth"
+                style={{ overscrollBehavior: 'contain' }}
+            >
+                {/* Spacer: pushes messages to bottom when list is short */}
+                <div className="flex-1 min-h-0" />
+
                 {messages.map((msg) => {
                     const isAi = msg.sender === 'ai';
                     return (
-                        <div key={msg.id} className={`flex ${isAi ? 'justify-start' : 'justify-end'} animate-in fade-in slide-in-from-${isAi ? 'left' : 'right'}-2 duration-300`}>
-                            <div className={`flex gap-2 max-w-[85%] ${isAi ? 'flex-row' : 'flex-row-reverse'}`}>
-                                {isAi && (
-                                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex-shrink-0 flex items-center justify-center border border-orange-200">
-                                        <Bot className="w-4 h-4 text-orange-600" />
-                                    </div>
-                                )}
-                                <div className={`group relative rounded-2xl px-4 py-2.5 text-sm shadow-sm ${isAi
-                                    ? 'bg-white text-slate-700 border border-orange-50/50 rounded-tl-none'
-                                    : 'bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-tr-none'
-                                    }`}>
-                                    <div className="leading-relaxed">
-                                        {renderMessage(msg.text)}
-                                    </div>
-                                    <div className={`text-[10px] mt-1.5 opacity-60 ${isAi ? 'text-slate-400' : 'text-orange-100'} font-medium`}>
-                                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
+                        <div key={msg.id} className={`flex ${isAi ? 'items-start' : 'items-end justify-end'} gap-2`}>
+                            {isAi && (
+                                <div className="w-7 h-7 rounded-lg bg-orange-100 flex-shrink-0 flex items-center justify-center border border-orange-200 mt-0.5">
+                                    <Bot className="w-3.5 h-3.5 text-orange-600" />
+                                </div>
+                            )}
+                            <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 shadow-sm ${
+                                isAi
+                                    ? 'bg-white border border-slate-100 rounded-tl-sm text-slate-700'
+                                    : 'bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-br-sm'
+                            }`}>
+                                {renderMessage(msg.text)}
+                                {isAi && renderServiceLinks(msg.serviceLinks ?? [])}
+                                <div className={`text-[9px] mt-1.5 ${isAi ? 'text-slate-400' : 'text-orange-100'} text-right`}>
+                                    {msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                             </div>
                         </div>
                     );
                 })}
+
                 {isLoading && (
-                    <div className="flex justify-start animate-in fade-in duration-300">
-                        <div className="flex gap-2 max-w-[85%]">
-                            <div className="w-8 h-8 rounded-lg bg-orange-100 flex-shrink-0 flex items-center justify-center border border-orange-200">
-                                <Bot className="w-4 h-4 text-orange-600" />
-                            </div>
-                            <div className="bg-white border border-orange-50/50 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
-                                <div className="flex gap-1">
-                                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce"></span>
-                                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                                </div>
+                    <div className="flex items-start gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-orange-100 flex-shrink-0 flex items-center justify-center border border-orange-200">
+                            <Bot className="w-3.5 h-3.5 text-orange-600" />
+                        </div>
+                        <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                            <div className="flex gap-1 items-center h-4">
+                                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" />
+                                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce [animation-delay:300ms]" />
                             </div>
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
+
+                {/* Scroll anchor */}
+                <div className="h-px" id="chat-bottom" />
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-white border-t border-slate-100 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]">
+            {/* Scroll-to-bottom button */}
+            {showScrollBtn && (
+                <button
+                    onClick={() => { scrollToBottom(); setShowScrollBtn(false); }}
+                    className="absolute bottom-[76px] right-4 w-7 h-7 bg-white border border-orange-200 rounded-full shadow-md flex items-center justify-center hover:bg-orange-50 transition-colors z-10"
+                    aria-label="Cuộn xuống"
+                >
+                    <ChevronDown className="w-4 h-4 text-orange-500" />
+                </button>
+            )}
+
+            {/* ── Input ── */}
+            <div className="flex-shrink-0 px-3 pb-3 pt-2 bg-white border-t border-slate-100">
                 <form onSubmit={handleSend} className="flex items-center gap-2">
-                    <div className="relative flex-1 group">
+                    <div className="flex-1 relative">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Nhập câu hỏi cho AI..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent focus:bg-white transition-all outline-none"
+                            placeholder="Hỏi tôi bất cứ điều gì…"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-9 py-2.5 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-orange-400 focus:border-transparent focus:bg-white transition-all outline-none"
                             disabled={isLoading}
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors">
-                            <MessageCircle className="w-4 h-4" />
-                        </div>
+                        <MessageCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 pointer-events-none" />
                     </div>
                     <button
                         type="submit"
                         disabled={!newMessage.trim() || isLoading}
-                        className="bg-gradient-to-r from-orange-500 to-amber-600 text-white p-2.5 rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed flex-shrink-0"
+                        className="w-9 h-9 flex-shrink-0 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-xl flex items-center justify-center hover:shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none"
                     >
-                        {isLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <Send className="w-5 h-5" />
-                        )}
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                 </form>
-                <p className="text-[10px] text-slate-400 mt-2 text-center italic">
-                    AI có thể đưa ra câu trả lời không chính xác. Hãy kiểm tra lại thông tin quan trọng.
+                <p className="text-[9px] text-slate-300 mt-1.5 text-center">
+                    AI có thể đưa ra thông tin không chính xác — hãy kiểm tra lại.
                 </p>
             </div>
         </div>

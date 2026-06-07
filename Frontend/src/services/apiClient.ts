@@ -257,9 +257,10 @@ export class ApiClient {
     //   if (params.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
     //   if (params.minRating !== undefined) queryParams.append('minRating', params.minRating.toString());
     //   queryParams.append('page', (params.page || 0).toString());
+    // Keyword full-text search via Elasticsearch
     search: async (params: {
+      keyword: string;
       provinceCode?: string;
-      keyword?: string;
       serviceType?: string;
       minPrice?: number;
       maxPrice?: number;
@@ -270,42 +271,60 @@ export class ApiClient {
       direction?: string;
       signal?: AbortSignal;
     }): Promise<any> => {
+      const { signal, ...restParams } = params;
+      const self = (this as any);
+      const qs = new URLSearchParams(
+        Object.entries(restParams).filter(([,v]) => v !== undefined && v !== null).map(([k,v]) => [k, String(v)])
+      ).toString();
+      console.log(`[apiClient/search] → GET /services/search?${qs}`);
       try {
-        const { signal, ...restParams } = params;
-        const self = (this as any);
-        console.log("Fetching real API services/search", restParams);
-
-        const response: any = await self.get("/services/search", {
-          params: restParams,
-          signal
-        });
-
-        // Backend returns PageResponse containing "content" array
-        // We ensure data is extracted correctly from the API client response
-        const realData = response;
-        const itemsArray = realData?.content;
-
-        // Fallback to mock if API returns empty content and USE_MOCK is active
-        if (ApiClient.USE_MOCK && (!itemsArray || itemsArray.length === 0)) {
-          console.warn("Real API returned no results for search, falling back to Mock data...");
-          return self.services.getMockSearch(params);
-        }
-
-        // Repackage data to include "services" key for UI consistency (PopularDestinations.tsx expects this)
-        return {
-          services: itemsArray || [],
-          pageNo: realData?.pageNo || 0,
-          totalPages: realData?.totalPages || 0,
-          totalElements: realData?.totalElements || 0,
-          size: realData?.size || 0
-        };
-
+        const response: any = await self.get("/services/search", { params: restParams, signal });
+        const items = response?.content ?? [];
+        console.log(`[apiClient/search] ← ${response?.totalElements} total, ${items.length} in page`);
+        if (ApiClient.USE_MOCK && items.length === 0) return self.services.getMockSearch(params);
+        return { services: items, pageNo: response?.pageNo ?? 0, totalPages: response?.totalPages ?? 0, totalElements: response?.totalElements ?? 0 };
       } catch (error) {
-        const self = (this as any);
-        console.error("API Search failed, using Fallback Mock:", error);
-        if (self.USE_MOCK) { // Chú ý: Dùng self.USE_MOCK hoặc ApiClient.USE_MOCK tùy setup của bạn
-          return self.services.getMockSearch(params);
-        }
+        console.error("[apiClient/search] failed:", error);
+        if (ApiClient.USE_MOCK) return self.services.getMockSearch(params);
+        throw error;
+      }
+    },
+
+    // Province/type/price filtering via JPA — use when no keyword
+    filterByLocation: async (params: {
+      provinceCode?: string;
+      serviceType?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      minRating?: number;
+      page?: number;
+      size?: number;
+      sortBy?: string;
+      direction?: string;
+      signal?: AbortSignal;
+    }): Promise<any> => {
+      const { signal, serviceType, ...rest } = params;
+      const self = (this as any);
+      // /services/filter uses "type", not "serviceType"
+      const filterParams: Record<string, any> = { ...rest };
+      if (serviceType) filterParams.type = serviceType;
+      // Strip undefined/null before building query string
+      const cleanParams = Object.fromEntries(
+        Object.entries(filterParams).filter(([,v]) => v !== undefined && v !== null)
+      );
+      const qs = new URLSearchParams(
+        Object.entries(cleanParams).map(([k,v]) => [k, String(v)])
+      ).toString();
+      console.log(`[apiClient/filter] → GET /services/filter?${qs}`);
+      try {
+        const response: any = await self.get("/services/filter", { params: cleanParams, signal });
+        const items = response?.content ?? [];
+        console.log(`[apiClient/filter] ← ${response?.totalElements} total, ${items.length} in page`);
+        if (ApiClient.USE_MOCK && items.length === 0) return self.services.getMockSearch(params);
+        return { services: items, pageNo: response?.pageNo ?? 0, totalPages: response?.totalPages ?? 0, totalElements: response?.totalElements ?? 0 };
+      } catch (error) {
+        console.error("[apiClient/filter] failed:", error);
+        if (ApiClient.USE_MOCK) return self.services.getMockSearch(params);
         throw error;
       }
     },

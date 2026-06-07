@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import DestinationCard from '../../common/DestinationCard';
 import { ChevronRight } from 'lucide-react';
 import apiClient from '@/services/apiClient';
+import { buildServiceDetailUrl } from '@/utils/serviceUrl';
 
 interface Destination {
   id: string;
@@ -131,13 +132,13 @@ const PopularDestinations: React.FC = () => {
     const allItems = [...destinations, ...hotels];
     const item = allItems.find(d => d.id === id);
     if (!item) return;
-
-    const idSlug = `${id}-${item.title.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
-    if (item.serviceType === 'hotel') {
-        navigate(`/hotels/vietnam/${item.destinationSlug}/${idSlug}`);
-    } else {
-        navigate(`/destinations/vietnam/${item.destinationSlug}/${item.serviceType}/${idSlug}`);
-    }
+    // destinationSlug may be a numeric province code (e.g. "79") or slug — buildServiceDetailUrl resolves both
+    navigate(buildServiceDetailUrl({
+      id,
+      serviceName: item.title,
+      serviceType: item.serviceType,    // frontend slug: 'hotel' | 'ticket' | 'place' | 'restaurant'
+      province: item.destinationSlug,   // province code or slug from API
+    }));
   };
 
   const handleViewAllDestinations = () => {
