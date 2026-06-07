@@ -1,5 +1,6 @@
 // src/pages/ServiceProvider/Services/ProviderMyService.tsx
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/admin/button';
@@ -47,9 +48,15 @@ const ProviderMyService = () => {
     const [bannerDismissed, setBannerDismissed] = useState(false);
     const imageInputRef = useRef<HTMLInputElement>(null);
 
+    const [searchParams] = useSearchParams();
+    // Nếu có ?serviceId=X trên URL (drill-down từ Dashboard), dùng ID đó
+    // Ngược lại dùng serviceId của chính provider đang đăng nhập
+    const urlServiceId = searchParams.get('serviceId');
+
     const hasService = currentUser?.user?.hasService;
     const serviceType = currentUser?.user?.providerType || 'hotel';
-    const serviceId = currentUser?.user?.serviceId;
+    const ownServiceId = currentUser?.user?.serviceId;
+    const serviceId = urlServiceId ? urlServiceId : ownServiceId;
 
     // Fallback to default if not found
     const initialServiceData = {
@@ -119,10 +126,12 @@ const ProviderMyService = () => {
             }
         };
 
-        if (hasService) {
+        // Nếu đang drill-down từ dashboard (urlServiceId), luôn fetch
+        // Nếu là service của chính provider, chỉ fetch khi hasService = true
+        if (urlServiceId || hasService) {
             fetchServiceData();
         }
-    }, [serviceId, hasService]);
+    }, [serviceId, hasService, urlServiceId]);
 
     // Handlers for inputs
     const handleInputChange = (field: string, value: any) => {
@@ -213,7 +222,8 @@ const ProviderMyService = () => {
     const thumbnails = serviceData?.images || [];
 
     // If no service yet, show setup form (First time experience)
-    if (!hasService || serviceId === undefined) {
+    // Chỉ show ServiceSetup nếu KHÔNG có serviceId trên URL và provider chưa có service
+    if (!urlServiceId && (!hasService || serviceId === undefined)) {
         return <ServiceSetup />;
     }
 

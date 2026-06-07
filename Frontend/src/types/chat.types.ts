@@ -15,7 +15,9 @@ export interface ChatMessage {
     text: string;
     timestamp: string; // ISO string
     isRead: boolean;
-    type: 'text' | 'image' | 'system';
+    type: 'text' | 'image' | 'system' | 'service' | 'order'; // Extended types
+    attachmentId?: string; // e.g. serviceId or orderId
+    attachmentData?: any; // To store snapshot of the service/order to render context card
 }
 
 export interface Conversation {

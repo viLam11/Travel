@@ -24,7 +24,6 @@ import {
     ChevronLeft,
     ChevronRight,
     Search,
-    Plus,
     Download,
     ToggleLeft,
     ToggleRight,
@@ -42,7 +41,7 @@ const formatCurrency = (value: number) => {
 };
 
 // Services Table Component
-function ServicesTable({
+export function ServicesTable({
     data,
     onView,
     onEdit,
@@ -359,7 +358,7 @@ export default function ServiceListPage() {
     // Toggle status mutation
     const toggleStatusMutation = useMutation({
         mutationFn: ({ serviceId, status }: { serviceId: string; status: 'active' | 'inactive' }) =>
-            serviceApi.toggleServiceStatus(serviceId, status),
+            serviceApi.toggleServiceStatus(serviceId, status as any),
         onSuccess: () => {
             toast.success('Cập nhật trạng thái thành công!');
             queryClient.invalidateQueries({ queryKey: ['provider-services'] });

@@ -32,6 +32,7 @@ import {
   Inbox,
   TrendingUp,
   TrendingDown,
+  MapPin,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -46,11 +47,15 @@ import {
   type Booking,
 } from '@/data/dashboardData';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import apiClient from '@/services/apiClient';
 import { serviceDetailApi } from '@/api/serviceDetailApi';
 import { discountApi } from '@/api/discountApi';
+import { serviceApi } from '@/api/serviceApi';
 import { shouldUseMock } from '@/config/mockConfig';
+import { ServicesTable } from '../Services/ServiceListPage';
+import type { Service } from '@/types/service.types';
+import ServiceDeleteModal from '../Services/components/ServiceDeleteModal';
 
 
 
@@ -436,6 +441,11 @@ export default function TravelServicesDashboard() {
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [statusBooking, setStatusBooking] = useState<Booking | null>(null);
 
+  // --- Services Table State ---
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+
 
   // --- Walk-in Booking State ---
   const [walkInName, setWalkInName] = useState('');
@@ -465,13 +475,16 @@ export default function TravelServicesDashboard() {
 
   // Derive provider type based on specific role or providerType field
   const userRole = currentUser?.user?.role?.toLowerCase() || '';
-  let providerType: 'hotel' | 'place' = 'place';
+  let providerType: 'hotel' | 'place' | 'both' = 'place';
   
-  if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place') {
+  if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place' || userRole.includes('venue') || currentUser?.user?.rawRoles?.includes('PROVIDER_VENUE')) {
     providerType = 'place';
-  } else if (userRole === 'provider_hotel' || currentUser?.user?.providerType === 'hotel') {
+  } else if (userRole === 'provider_hotel' || currentUser?.user?.providerType === 'hotel' || userRole.includes('hotel') || currentUser?.user?.rawRoles?.includes('PROVIDER_HOTEL')) {
     providerType = 'hotel';
   }
+  // If user has both roles (multi-role)
+  const isMultiRoleProvider = currentUser?.user?.rawRoles?.includes('PROVIDER_HOTEL') && currentUser?.user?.rawRoles?.includes('PROVIDER_VENUE');
+  if (isMultiRoleProvider) providerType = 'both';
 
   const { data: { availableItems, availableDiscounts } = { availableItems: [], availableDiscounts: [] } } = useQuery({
     queryKey: ['walkInItems', providerType, currentUser?.user?.serviceId],
@@ -536,6 +549,24 @@ export default function TravelServicesDashboard() {
     },
     enabled: !!currentUser?.user?.serviceId,
     staleTime: 0, // No stale time to always fetch fresh bookings while keeping cache for instant UI
+  });
+
+  // --- Fetch Services for the Data Table ---
+  const { data: servicesData, isLoading: isLoadingServices } = useQuery({
+    queryKey: ['provider-services'],
+    queryFn: () => serviceApi.getProviderServices(),
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ serviceId, status }: { serviceId: string; status: 'PENDING' | 'APPROVED' | 'REJECTED' }) =>
+        serviceApi.toggleServiceStatus(serviceId, status),
+    onSuccess: () => {
+        toastObj.success('Cập nhật trạng thái thành công!');
+        queryClient.invalidateQueries({ queryKey: ['provider-services'] });
+    },
+    onError: () => {
+        toastObj.error('Có lỗi xảy ra khi cập nhật trạng thái');
+    },
   });
 
   // Filter bookings by providerType
@@ -817,7 +848,7 @@ export default function TravelServicesDashboard() {
     }
   };
 
-  const bookingsTitle = getBookingsTitle();
+  getBookingsTitle();
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 pb-8">
@@ -909,28 +940,34 @@ export default function TravelServicesDashboard() {
         </div>
 
         <div>
-          <ProviderDailyTrendsChart data={trendsData} providerType={providerType} />
+          <ProviderDailyTrendsChart data={trendsData} providerType={providerType as 'hotel' | 'place' | undefined} />
         </div>
       </div>
 
-      {/* Recent Bookings Card */}
+      {/* Services Table Card */}
       <Card className="shadow-sm overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
           <div>
-            <CardTitle className="text-xl font-semibold">{bookingsTitle.title}</CardTitle>
-            <p className="text-base text-muted-foreground mt-1">{bookingsTitle.subtitle}</p>
+            <CardTitle className="text-xl font-semibold">Dịch vụ của tôi</CardTitle>
+            <p className="text-base text-muted-foreground mt-1">Quản lý khách sạn và vé tham quan của bạn</p>
           </div>
           <Button
             variant="outline"
             size="sm"
             className="text-base h-10 px-4"
-            onClick={() => navigate(ROUTES.PROVIDER_BOOKINGS)}
+            onClick={() => {
+              if (providerType === 'both') {
+                setShowAddServiceModal(true);
+              } else {
+                navigate(`/provider/my-service?type=${providerType === 'hotel' ? 'hotel' : 'place'}`);
+              }
+            }}
           >
-            Xem tất cả
+            <Plus className="w-4 h-4 mr-2" /> Thêm dịch vụ
           </Button>
         </CardHeader>
         <CardContent>
-          {isLoadingBookings ? (
+          {isLoadingServices ? (
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-4 py-4 animate-pulse border-b border-border last:border-0">
@@ -942,14 +979,82 @@ export default function TravelServicesDashboard() {
               ))}
             </div>
           ) : (
-            <BookingsTable
-              data={filteredBookings}
-              onViewDetail={(b) => setDetailBooking(b)}
-              onUpdateStatus={(b) => setStatusBooking(b)}
+            <ServicesTable
+              data={servicesData?.services || []}
+              onView={(service) => {
+                  const slug = `${service.id}-${service.serviceName.toLowerCase().replace(/\s+/g, '-')}`;
+                  navigate(`/destinations/${service.province?.fullName || 'unknown'}/${service.type}/${slug}`);
+              }}
+              onEdit={(service) => navigate(`/provider/my-service?serviceId=${service.id}`)}
+              onDelete={(service) => {
+                  setSelectedService(service);
+                  setShowDeleteModal(true);
+              }}
+              onToggleStatus={async (service) => {
+                  try {
+                      const newStatus = service.status === 'active' ? 'inactive' : 'active';
+                      await serviceApi.toggleServiceStatus(service.id, newStatus as any);
+                      queryClient.invalidateQueries({ queryKey: ['provider-services'] });
+                      toastObj.success("Cập nhật trạng thái thành công!");
+                  } catch (e) {
+                      toastObj.error("Cập nhật trạng thái thất bại");
+                  }
+              }}
             />
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Modal for Services */}
+      {selectedService && (
+        <ServiceDeleteModal
+            service={selectedService}
+            open={showDeleteModal}
+            onClose={() => {
+                setShowDeleteModal(false);
+                setSelectedService(null);
+            }}
+            onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['provider-services'] });
+                setShowDeleteModal(false);
+                setSelectedService(null);
+            }}
+        />
+      )}
+
+      {/* Add Service Modal */}
+      {showAddServiceModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAddServiceModal(false)}>
+          <Card className="w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <CardHeader className="flex flex-row items-center justify-between bg-muted/30 pb-4">
+              <CardTitle className="text-xl">Chọn loại dịch vụ muốn tạo</CardTitle>
+              <button type="button" onClick={() => setShowAddServiceModal(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2">
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all"
+                  onClick={() => navigate('/provider/my-service?type=hotel')}
+                >
+                  <Briefcase className="w-8 h-8" />
+                  <span className="font-semibold">Khách sạn / Lưu trú</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-green-50 hover:border-green-200 hover:text-green-700 transition-all"
+                  onClick={() => navigate('/provider/my-service?type=place')}
+                >
+                  <MapPin className="w-8 h-8" />
+                  <span className="font-semibold">Vé tham quan / Tour</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Detail Modal */}
       {detailBooking && (

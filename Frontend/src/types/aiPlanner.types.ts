@@ -67,6 +67,7 @@ export interface PlanUpdate {
     tripTitle: string;
     overview: string;
     itinerary: ItineraryDay[];
+    destination?: string;
 }
 
 export type TimeSlot = 'morning_activities' | 'afternoon_activities' | 'evening_activities';

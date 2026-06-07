@@ -5,8 +5,8 @@ import {
     X, GripVertical, Plus, RotateCcw, Sun, Moon,
     Clock, DollarSign, Wand2, ArrowRightLeft,
     Waves, Landmark, UtensilsCrossed, Mountain, ShoppingBag, Leaf, BedDouble, Camera,
-    CalendarDays, Banknote, RefreshCw, MoveHorizontal, CheckCircle2, PlaneTakeoff, Compass, Receipt,
-    BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, Star, ExternalLink, Search
+    CalendarDays, Banknote, CheckCircle2, PlaneTakeoff, Compass, Receipt,
+    BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, ExternalLink, Search, Copy, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
@@ -134,86 +134,86 @@ function ActivityModal({
                     onClick={onClose}
                     className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden"
-                    >
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
-                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-orange-500" />
-                                {initialData ? 'Chỉnh sửa chi tiết' : 'Thêm hoạt động mới'}
-                            </h3>
-                            <button onClick={onClose} className="p-1.5 hover:bg-white rounded-full text-gray-400 hover:text-gray-600 transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden"
+                >
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
+                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-orange-500" />
+                            {initialData ? 'Chỉnh sửa chi tiết' : 'Thêm hoạt động mới'}
+                        </h3>
+                        <button onClick={onClose} className="p-1.5 hover:bg-white rounded-full text-gray-400 hover:text-gray-600 transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700">Tên địa điểm / Hoạt động</label>
+                            <input
+                                autoFocus
+                                type="text"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                placeholder="VD: Nhà thờ Đức Bà, Ăn tối tại..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all text-sm font-bold"
+                                required
+                            />
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-gray-700">Tên địa điểm / Hoạt động</label>
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    value={name}
-                                    onChange={e => setName(e.target.value)}
-                                    placeholder="VD: Nhà thờ Đức Bà, Ăn tối tại..."
-                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all text-sm font-bold"
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                        <Clock className="w-4 h-4 text-orange-400" /> Thời gian
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={duration}
-                                        onChange={e => setDuration(e.target.value)}
-                                        placeholder="VD: 1.5 giờ"
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                        <DollarSign className="w-4 h-4 text-orange-400" /> Chi phí
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={cost}
-                                        onChange={e => setCost(e.target.value)}
-                                        placeholder="VD: 50.000đ"
-                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
-                                    />
-                                </div>
-                            </div>
-
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <MapPin className="w-4 h-4 text-orange-400" /> Địa chỉ
+                                    <Clock className="w-4 h-4 text-orange-400" /> Thời gian
                                 </label>
                                 <input
                                     type="text"
-                                    value={location}
-                                    onChange={e => setLocation(e.target.value)}
-                                    placeholder="Quận 1, TP. HCM..."
+                                    value={duration}
+                                    onChange={e => setDuration(e.target.value)}
+                                    placeholder="VD: 1.5 giờ"
                                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
                                 />
                             </div>
-
                             <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-gray-700">Mô tả chi tiết</label>
-                                <textarea
-                                    rows={5}
-                                    value={description}
-                                    onChange={e => setDescription(e.target.value)}
-                                    placeholder="Ghi chú thêm về địa điểm này..."
-                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm resize-none italic leading-relaxed"
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    <DollarSign className="w-4 h-4 text-orange-400" /> Chi phí
+                                </label>
+                                <input
+                                    type="text"
+                                    value={cost}
+                                    onChange={e => setCost(e.target.value)}
+                                    placeholder="VD: 50.000đ"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4 text-orange-400" /> Địa chỉ
+                            </label>
+                            <input
+                                type="text"
+                                value={location}
+                                onChange={e => setLocation(e.target.value)}
+                                placeholder="Quận 1, TP. HCM..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700">Mô tả chi tiết</label>
+                            <textarea
+                                rows={5}
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                                placeholder="Ghi chú thêm về địa điểm này..."
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm resize-none italic leading-relaxed"
+                            />
+                        </div>
 
                         <div className="pt-2 flex gap-3">
                             <button
@@ -338,9 +338,8 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
             <div
                 draggable={!isEditing}
                 onDragStart={onDragStart}
-                className={`bg-white border rounded-xl p-3 shadow-sm transition-all duration-200 select-none ${
-                    isEditing ? 'border-orange-500 ring-2 ring-orange-100' : 'border-gray-200 hover:shadow-md hover:border-orange-300'
-                }`}
+                className={`bg-white border rounded-xl p-3 shadow-sm transition-all duration-200 select-none ${isEditing ? 'border-orange-500 ring-2 ring-orange-100' : 'border-gray-200 hover:shadow-md hover:border-orange-300'
+                    }`}
             >
                 <div className="flex items-start gap-2">
                     {!isEditing && (
@@ -562,36 +561,59 @@ function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActiv
 
 // ─── Input Screen ─────────────────────────────────────────────────────────────
 
-
-const SAMPLE_PLAN = [
-    { time: 'Buổi sáng', icon: <Sun className="w-3.5 h-3.5 text-amber-500" />, name: 'Hồ Hoàn Kiếm', loc: 'Hoàn Kiếm', cost: 'Miễn phí', duration: '2 giờ' },
-    { time: 'Buổi chiều', icon: <Cloud className="w-3.5 h-3.5 text-sky-500" />, name: 'Văn Miếu Quốc Tử Giám', loc: 'Đống Đa', cost: '30.000đ', duration: '1.5 giờ' },
-    { time: 'Buổi tối', icon: <Moon className="w-3.5 h-3.5 text-indigo-500" />, name: 'Phố ăn đêm Tạ Hiện', loc: 'Hoàn Kiếm', cost: '150.000đ', duration: '2 giờ' },
+const SAMPLE_PREVIEW = [
+    { time: 'Buổi sáng', icon: 'morning', name: 'Hồ Hoàn Kiếm', loc: 'Hoàn Kiếm', cost: 'Miễn phí', duration: '2 giờ' },
+    { time: 'Buổi chiều', icon: 'afternoon', name: 'Văn Miếu Quốc Tử Giám', loc: 'Đống Đa', cost: '30.000đ', duration: '1.5 giờ' },
+    { time: 'Buổi tối', icon: 'evening', name: 'Phố ăn đêm Tạ Hiện', loc: 'Hoàn Kiếm', cost: '150.000đ', duration: '2 giờ' },
 ];
 
-function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number, info: string) => Promise<void> }) {
-    const navigate = useNavigate();
+const COMMUNITY_PLANS = [
+    { title: 'Đà Lạt 3 ngày 2 đêm', city: 'Lâm Đồng', days: 3, author: 'Admin', activities: 15, desc: 'Lịch trình đi Đà Lạt siêu chill, check-in cafe săn mây và ăn uống thả ga.' },
+    { title: 'Vũng Tàu Cuối Tuần', city: 'Bà Rịa - Vũng Tàu', days: 2, author: 'Trịnh Khắc Vỹ', activities: 8, desc: 'Chuyến đi biển 2 ngày 1 đêm cho nhóm bạn 4 người.' },
+    { title: 'Foodtour Hải Phòng', city: 'Hải Phòng', days: 1, author: 'Bảo Ngọc', activities: 12, desc: 'Bản đồ ẩm thực đất Cảng: Bánh đa cua, bánh mỳ cay, dừa dầm...' },
+    { title: 'Hà Nội 4 ngày khám phá', city: 'Hà Nội', days: 4, author: 'Minh Tuấn', activities: 20, desc: 'Hồ Hoàn Kiếm, Văn Miếu, bún chả Hương Liên và nhiều hơn nữa.' },
+    { title: 'Phú Quốc Nghỉ Dưỡng', city: 'Kiên Giang', days: 5, author: 'Lan Anh', activities: 16, desc: 'Resort 5 sao, lặn ngắm san hô, hoàng hôn đẹp nhất Đông Nam Á.' },
+    { title: 'Hội An - Đà Nẵng', city: 'Quảng Nam', days: 4, author: 'Quốc Bảo', activities: 18, desc: 'Phố Cổ, Cầu Vàng, bãi Mỹ Khê và cơm gà Bà Buội.' },
+];
+
+function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: string, days: number, info: string) => Promise<void>; onManualCreate: (place: string, days: number) => void; }) {
     const [place, setPlace] = useState('');
     const [days, setDays] = useState(3);
     const [interests, setInterests] = useState<string[]>([]);
     const [notes, setNotes] = useState('');
     const [specificLocation, setSpecificLocation] = useState('');
     const [loading, setLoading] = useState(false);
-    const [provinces, setProvinces] = useState<any[]>([]);
+    const [provinces, setProvinces] = useState<{ code: number; name: string }[]>([]);
+    const [provinceOpen, setProvinceOpen] = useState(false);
+    const [provinceSearch, setProvinceSearch] = useState('');
+    const provinceRef = useRef<HTMLDivElement>(null);
+    const [filterCity, setFilterCity] = useState('');
+    const [filterDays, setFilterDays] = useState('');
+
+    const filteredProvinces = provinces.filter(p =>
+        p.name.toLowerCase().includes(provinceSearch.toLowerCase())
+    );
+
+    const filteredPlans = COMMUNITY_PLANS.filter(p => {
+        const cityMatch = !filterCity || p.city.toLowerCase().includes(filterCity.toLowerCase()) || p.title.toLowerCase().includes(filterCity.toLowerCase());
+        const daysMatch = !filterDays || (filterDays === '1-2' ? p.days <= 2 : filterDays === '3-4' ? (p.days >= 3 && p.days <= 4) : p.days >= 5);
+        return cityMatch && daysMatch;
+    });
 
     useEffect(() => {
-        const fetchProvinces = async () => {
-            try {
-                const data = await apiClient.provinces.getAll();
-                setProvinces(data);
-                if (data && data.length > 0) {
-                    setPlace(data[0].name);
-                }
-            } catch (err) {
-                console.error("Failed to fetch provinces", err);
+        apiClient.provinces.getAll()
+            .then(data => setProvinces(data))
+            .catch(err => console.error('Failed to fetch provinces', err));
+    }, []);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (provinceRef.current && !provinceRef.current.contains(e.target as Node)) {
+                setProvinceOpen(false);
             }
         };
-        fetchProvinces();
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
     }, []);
 
     const toggleInterest = (tag: string) =>
@@ -600,13 +622,11 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
     const handleSubmit = async () => {
         if (!place.trim()) return;
         setLoading(true);
-        // Normalize: capitalize first letter of each word to help restricted BE search
         const formattedPlace = place.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-
         const additionalInfo = [
-            specificLocation.trim() ? `Chi tiết vị trí mong muốn: ${specificLocation}` : '',
-            interests.length ? `Sở thích: ${interests.join(', ')}` : '',
-            notes.trim() ? `Ghi chú: ${notes}` : '',
+            specificLocation.trim() ? `Chi tiet vi tri mong muon: ${specificLocation}` : '',
+            interests.length ? `So thich: ${interests.join(', ')}` : '',
+            notes.trim() ? `Ghi chu: ${notes}` : '',
         ].filter(Boolean).join('. ');
         await onGenerate(formattedPlace, days, additionalInfo);
         setLoading(false);
@@ -614,7 +634,7 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-orange-50 via-gray-50 to-white">
-            {/* Hero */}
+            {/* Hero Banner */}
             <div className="bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400 text-white py-14 px-4">
                 <div className="max-w-5xl mx-auto text-center space-y-3">
                     <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm font-medium backdrop-blur-sm">
@@ -625,271 +645,263 @@ function InputScreen({ onGenerate }: { onGenerate: (place: string, days: number,
                     </h1>
                     <p className="text-lg text-white/90">Nhập điểm đến — AI tạo lịch trình, bạn chỉnh theo ý <b>nhanh chóng</b>.</p>
                     {USE_MOCK_AI_PLANNER && (
-                        <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs px-3 py-1.5 rounded-full font-medium">
-                            Chế độ Demo
-                        </span>
+                        <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs px-3 py-1.5 rounded-full font-medium">Chế độ Demo</span>
                     )}
                 </div>
             </div>
 
-            {/* ── CENTERED MAIN FORM ── */}
-            <div className="max-w-2xl mx-auto px-4 -mt-8 relative z-10 pb-12">
-                <div className="bg-white rounded-3xl shadow-xl shadow-orange-900/5 border border-gray-100 overflow-hidden">
-                    <div className="p-7 space-y-5">
-                        {/* Destination */}
-                        <div className="space-y-4 sm:space-y-0 sm:flex sm:gap-4">
-                            <div className="space-y-2 flex-1">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 text-orange-500" /> Tỉnh/Thành phố
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        value={place}
-                                        onChange={e => setPlace(e.target.value)}
-                                        className="appearance-none w-full h-12 px-4 rounded-xl border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base bg-white cursor-pointer"
-                                    >
-                                        {provinces.length === 0 && <option value="">Đang tải...</option>}
-                                        {provinces.map(prov => (
-                                            <option key={prov.code} value={prov.name}>{prov.name}</option>
-                                        ))}
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                        </svg>
+            {/* ── 3-Column Layout: Features | Form | Sample Plan ── */}
+            <div className="max-w-6xl mx-auto px-4 -mt-8 relative z-10 pb-16">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr] gap-8 items-start">
+
+                    {/* LEFT: Feature highlights */}
+                    <div className="hidden lg:flex flex-col gap-4 pt-10">
+                        {[
+                            { icon: <CalendarDays className="w-5 h-5 text-orange-500" />, title: 'Lịch trình rõ ràng', desc: 'Chia theo Ngày · Sáng · Chiều · Tối' },
+                            { icon: <Compass className="w-5 h-5 text-sky-500" />, title: 'Kéo thả tự do', desc: 'Di chuyển hoạt động giữa các ngày' },
+                            { icon: <Banknote className="w-5 h-5 text-green-500" />, title: 'Ước tính chi phí', desc: 'Chi phí ước tính cho từng điểm' },
+                            { icon: <CheckCircle2 className="w-5 h-5 text-purple-500" />, title: 'Hoàn toàn miễn phí', desc: 'Không cần tài khoản Pro' },
+                        ].map(f => (
+                            <div key={f.title} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow text-left">
+                                <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center mb-2">{f.icon}</div>
+                                <p className="font-semibold text-gray-800 text-sm">{f.title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* CENTER: Form */}
+                    <div>
+                        <div className="bg-white rounded-3xl shadow-xl shadow-orange-900/5 border border-gray-100 overflow-hidden">
+                            <div className="px-7 pt-7 pb-5 space-y-5">
+                                {/* Destination Row */}
+                                <div className="flex gap-4">
+                                    {/* Province Combobox */}
+                                    <div className="space-y-2 flex-1" ref={provinceRef}>
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-orange-500" /> Điểm đến dự kiến
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={place}
+                                                onChange={e => { setPlace(e.target.value); setProvinceSearch(e.target.value); setProvinceOpen(true); }}
+                                                onFocus={() => { setProvinceSearch(''); setProvinceOpen(true); }}
+                                                placeholder="Nhập tỉnh/thành phố..."
+                                                className="w-full h-12 px-4 pr-10 rounded-xl border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base bg-white"
+                                            />
+                                            <button type="button" onClick={() => setProvinceOpen(o => !o)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
+                                                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                                            </button>
+                                            {provinceOpen && filteredProvinces.length > 0 && (
+                                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto">
+                                                    {filteredProvinces.map(prov => (
+                                                        <button key={prov.code} type="button" onClick={() => { setPlace(prov.name); setProvinceOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors border-b border-gray-50 last:border-0">
+                                                            {prov.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Specific location */}
+                                    <div className="space-y-2 flex-1">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            Chi tiết vị trí <span className="text-gray-400 font-normal text-xs">(tùy chọn)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={specificLocation}
+                                            onChange={e => setSpecificLocation(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                                            placeholder="VD: Nhà thờ, Chợ nổi..."
+                                            className="w-full h-12 px-4 rounded-xl border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base"
+                                        />
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-2 flex-1">
-                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                    Chi tiết vị trí <span className="text-gray-400 font-normal text-xs">(tùy chọn)</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={specificLocation}
-                                    onChange={e => setSpecificLocation(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                    placeholder="VD: Nhà thờ, Chợ nổi..."
-                                    className="w-full h-12 px-4 rounded-xl border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow text-base"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Days */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-orange-500" /> Số ngày
-                            </label>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden shadow-sm">
-                                    <button onClick={() => setDays(d => Math.max(1, d - 1))} className="px-5 h-11 text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-colors font-bold text-xl">−</button>
-                                    <span className="px-6 h-11 flex items-center justify-center font-bold text-xl text-gray-800 min-w-[56px] border-x border-gray-200">{days}</span>
-                                    <button onClick={() => setDays(d => Math.min(14, d + 1))} className="px-5 h-11 text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-colors font-bold text-xl">+</button>
+                                {/* Days */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 text-orange-500" /> Số ngày
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden shadow-sm h-11">
+                                            <button onClick={() => setDays(d => Math.max(1, d - 1))} className="w-11 h-full text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-colors font-bold text-xl flex items-center justify-center border-r border-gray-200">−</button>
+                                            <input type="number" value={days} onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 1 && v <= 14) setDays(v); }} min={1} max={14} className="w-14 h-full font-bold text-lg text-gray-800 text-center focus:outline-none bg-transparent appearance-none" style={{ MozAppearance: 'textfield' }} />
+                                            <button onClick={() => setDays(d => Math.min(14, d + 1))} className="w-11 h-full text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-colors font-bold text-xl flex items-center justify-center border-l border-gray-200">+</button>
+                                        </div>
+                                        <span className="text-gray-500 text-sm font-medium">{days} ngày · {days - 1} đêm</span>
+                                    </div>
                                 </div>
-                                <span className="text-gray-500 text-sm">{days} ngày · {days - 1} đêm</span>
-                            </div>
-                        </div>
 
-                        {/* Interests */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700">Sở thích <span className="text-gray-400 font-normal">(tuỳ chọn)</span></label>
-                            <div className="flex flex-wrap gap-2">
-                                {INTEREST_TAGS.map(tag => (
-                                    <button
-                                        key={tag.label}
-                                        onClick={() => toggleInterest(tag.label)}
-                                        className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all duration-150 font-medium ${interests.includes(tag.label)
-                                            ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                                            : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50'
-                                            }`}
-                                    >
-                                        {tag.icon}{tag.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Notes */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700">Ghi chú thêm <span className="text-gray-400 font-normal">(tuỳ chọn)</span></label>
-                            <textarea
-                                value={notes}
-                                onChange={e => setNotes(e.target.value)}
-                                placeholder="VD: Đi 2 người, budget 5 triệu..."
-                                rows={3}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow resize-none text-sm"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Submit */}
-                    <div className="px-7 py-5 bg-gray-50 border-t border-gray-100 space-y-3">
-                        <button
-                            onClick={handleSubmit}
-                            disabled={!place.trim() || loading}
-                            className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-300 hover:-translate-y-0.5 text-base"
-                        >
-                            {loading
-                                ? <><Loader2 className="w-5 h-5 animate-spin" /> AI đang lập kế hoạch...</>
-                                : <><Wand2 className="w-5 h-5" /> Tạo kế hoạch ngay</>
-                            }
-                        </button>
-                        
-                        <div className="flex items-center gap-4 py-1">
-                            <div className="flex-1 h-px bg-gray-200"></div>
-                            <span className="text-xs font-medium text-gray-400">hoặc</span>
-                            <div className="flex-1 h-px bg-gray-200"></div>
-                        </div>
-
-                        <button
-                            onClick={() => navigate('/my-plans')}
-                            className="w-full py-3 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:text-orange-600 text-gray-600 font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm group"
-                        >
-                            <BookOpen className="w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-colors" /> Quản lý kế hoạch của bạn
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-
-            {/* ── FEATURES & PREVIEW SECTION ── */}
-            <div className="max-w-6xl mx-auto px-4 pb-16">
-                <div className="text-center mb-10">
-                    <h2 className="text-2xl font-bold text-gray-800">Lên kế hoạch thông minh và dễ dàng</h2>
-                    <p className="text-gray-500 mt-2">Dưới đây là một ví dụ về kế hoạch mà AI có thể tự động tạo cho bạn</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-
-                    {/* Feature cards (Left) */}
-                    <div className="flex flex-col gap-6 order-2 lg:order-1">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            {[
-                                { icon: <CalendarDays className="w-5 h-5 text-orange-500" />, title: 'Lịch trình rõ ràng', desc: 'Chia theo Ngày · Sáng · Chiều · Tối' },
-                                { icon: <MoveHorizontal className="w-5 h-5 text-sky-500" />, title: 'Kéo thả tự do', desc: 'Di chuyển hoạt động giữa các ngày' },
-                                { icon: <Banknote className="w-5 h-5 text-green-500" />, title: 'Ước tính ngân sách', desc: 'Chi phí ước tính cho từng điểm' },
-                                { icon: <RefreshCw className="w-5 h-5 text-purple-500" />, title: 'Tạo lại ngay', desc: 'Không vừa ý? Click tạo là có plan mới' },
-                            ].map(f => (
-                                <div key={f.title} className="bg-white border text-left border-gray-100 rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
-                                    <div className="mb-3 w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">{f.icon}</div>
-                                    <p className="font-semibold text-gray-800">{f.title}</p>
-                                    <p className="text-sm text-gray-500 mt-1">{f.desc}</p>
+                                {/* Interests */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700">Sở thích <span className="text-gray-400 font-normal">(tuỳ chọn)</span></label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {INTEREST_TAGS.map(tag => (
+                                            <button key={tag.label} onClick={() => toggleInterest(tag.label)} className={`cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all duration-150 font-medium ${interests.includes(tag.label) ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50'}`}>
+                                                {tag.icon}{tag.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                        <div className="flex items-center gap-2 justify-center sm:justify-start pl-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-500" />
-                            <span className="text-sm font-medium text-gray-600">Hoàn toàn miễn phí · Không cần tài khoản Pro</span>
+
+                                {/* Notes */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700">Ghi chú thêm <span className="text-gray-400 font-normal">(tuỳ chọn)</span></label>
+                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="VD: Đi 2 người, budget 5 triệu..." rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-shadow resize-none text-sm" />
+                                </div>
+                            </div>
+
+                            {/* Submit Area */}
+                            <div className="px-7 py-5 bg-gray-50 border-t border-gray-100 space-y-3">
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={!place.trim() || loading}
+                                    className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-orange-200 hover:shadow-lg hover:shadow-orange-300 hover:-translate-y-0.5 text-base cursor-pointer"
+                                >
+                                    {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> AI đang lập kế hoạch...</> : <><Wand2 className="w-5 h-5" /> Tạo kế hoạch bằng AI</>}
+                                </button>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1 h-px bg-gray-200" />
+                                    <span className="text-xs text-gray-400 font-medium">hoặc</span>
+                                    <div className="flex-1 h-px bg-gray-200" />
+                                </div>
+
+                                <button
+                                    onClick={() => onManualCreate(place.trim() || 'Chưa xác định', days)}
+                                    className="w-full py-2.5 bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-600 hover:text-orange-600 font-medium rounded-xl flex items-center justify-center gap-2 transition-all text-sm cursor-pointer"
+                                >
+                                    <Edit2 className="w-4 h-4" /> Tự lập lịch trình thủ công
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Sample plan card (Right) */}
-                    <div className="order-1 lg:order-2">
-                        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden transform transition-transform hover:scale-[1.02] duration-300">
-                            <div className="px-5 py-4 bg-orange-50 border-b border-orange-100 flex items-center justify-between">
+                    {/* RIGHT: Sample AI plan preview */}
+                    <div className="hidden lg:flex flex-col gap-4 pt-10">
+                        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                            <div className="px-4 py-3 bg-orange-50 border-b border-orange-100 flex items-center justify-between">
                                 <div>
-                                    <p className="font-bold text-gray-800 text-sm">Ví dụ kế hoạch AI tạo</p>
+                                    <p className="font-bold text-gray-800 text-sm">Ví dụ AI tạo</p>
                                     <p className="text-xs text-gray-500 mt-0.5">Hà Nội · Ngày 1</p>
                                 </div>
-                                <span className="text-xs bg-orange-100 text-orange-600 font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
-                                    <Sparkles className="w-3 h-3" /> AI Generated
+                                <span className="text-xs bg-orange-100 text-orange-600 font-semibold px-2 py-1 rounded-full flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3" /> AI
                                 </span>
                             </div>
-                            <div className="p-4 space-y-3">
-                                {SAMPLE_PLAN.map((item, i) => (
-                                    <div key={i} className="flex items-start gap-3">
-                                        <div className="flex items-center gap-1.5 w-24 shrink-0 pt-0.5">
-                                            {item.icon}
-                                            <span className="text-xs text-gray-500 font-medium">{item.time}</span>
+                            <div className="p-3 space-y-2">
+                                {SAMPLE_PREVIEW.map((item, i) => (
+                                    <div key={i} className="flex items-start gap-2">
+                                        <div className="flex items-center gap-1 w-[72px] shrink-0 pt-0.5">
+                                            {item.icon === 'morning' && <Sun className="w-3.5 h-3.5 text-amber-500" />}
+                                            {item.icon === 'afternoon' && <Cloud className="w-3.5 h-3.5 text-sky-500" />}
+                                            {item.icon === 'evening' && <Moon className="w-3.5 h-3.5 text-indigo-500" />}
+                                            <span className="text-[10px] text-gray-400 font-medium">{item.time}</span>
                                         </div>
-                                        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3">
-                                            <p className="font-semibold text-sm text-gray-800">{item.name}</p>
-                                            <div className="flex items-center gap-3 mt-1.5">
-                                                <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3 text-orange-400" />{item.loc}</span>
-                                                <span className="text-xs text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3 text-orange-400" />{item.duration}</span>
-                                                <span className="text-xs text-gray-500 flex items-center gap-1"><DollarSign className="w-3 h-3 text-orange-400" />{item.cost}</span>
+                                        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                            <p className="font-semibold text-xs text-gray-800">{item.name}</p>
+                                            <div className="flex gap-2 mt-1">
+                                                <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" />{item.duration}</span>
+                                                <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><DollarSign className="w-2.5 h-2.5" />{item.cost}</span>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                                <p className="text-xs text-gray-400 text-center">Sau khi AI tạo — bạn có thể kéo thả để tùy chỉnh thoải mái</p>
+                            <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                                <p className="text-[10px] text-gray-400 text-center">Sau khi tạo — kéo thả để tùy chỉnh thoải mái</p>
                             </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-orange-500 to-amber-400 rounded-2xl p-4 text-white text-center">
+                            <Sparkles className="w-5 h-5 mx-auto mb-1.5 opacity-90" />
+                            <p className="font-bold text-sm">Gemini AI</p>
+                            <p className="text-[11px] opacity-80 mt-0.5">Tạo lịch trình chi tiết trong vài giây</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* ── Social Proof Banner ── */}
-            <div className="bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 py-8 px-4 my-4">
-                <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-white text-center">
-                    {[
-                        { value: '50+', label: 'Điểm đến', sub: 'trong nước & quốc tế', icon: <MapPin className="w-6 h-6 mx-auto mb-1 opacity-80" /> },
-                        { value: '1,200+', label: 'Kế hoạch đã tạo', sub: 'bởi người dùng thực', icon: <CalendarDays className="w-6 h-6 mx-auto mb-1 opacity-80" /> },
-                        { value: 'Gemini', label: 'Powered by', sub: 'Google AI · Chính xác cao', icon: <Sparkles className="w-6 h-6 mx-auto mb-1 opacity-80" /> },
-                        { value: '100%', label: 'Miễn phí', sub: 'Không cần tài khoản Pro', icon: <CheckCircle2 className="w-6 h-6 mx-auto mb-1 opacity-80" /> },
-                    ].map((s, i) => (
-                        <div key={i} className="flex flex-col items-center">
-                            {s.icon}
-                            <p className="text-2xl font-black tracking-tight">{s.value}</p>
-                            <p className="text-sm font-semibold mt-0.5">{s.label}</p>
-                            <p className="text-xs opacity-75 mt-0.5">{s.sub}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* ── How it works ── */}
+            {/* ── PUBLIC PLANS DISCOVERY ── */}
             <div className="max-w-6xl mx-auto px-4 pb-20">
-                {/* Divider */}
-                <div className="flex items-center gap-4 mb-10">
+                <div className="flex items-center gap-4 mb-8">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-orange-200 to-transparent" />
-                    <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest px-2">Cách hoạt động</span>
+                    <h2 className="text-xs font-semibold text-orange-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                        <Compass className="w-3.5 h-3.5" /> Khám phá lịch trình cộng đồng
+                    </h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-orange-200 to-transparent" />
                 </div>
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-800">3 bước đơn giản</h2>
-                    <p className="text-gray-500 mt-1 text-sm">Từ ý tưởng đến kế hoạch hoàn chỉnh trong vài giây</p>
+
+                {/* Filters Row */}
+                <div className="flex flex-wrap gap-3 mb-6 items-center">
+                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 shadow-sm min-w-[220px] flex-1 max-w-sm">
+                        <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                        <input
+                            type="text"
+                            placeholder="Tìm theo địa điểm, tên lịch trình..."
+                            value={filterCity}
+                            onChange={e => setFilterCity(e.target.value)}
+                            className="flex-1 text-sm text-gray-700 focus:outline-none bg-transparent placeholder-gray-400"
+                        />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                        {[
+                            { label: 'Tất cả', value: '' },
+                            { label: '1–2 ngày', value: '1-2' },
+                            { label: '3–4 ngày', value: '3-4' },
+                            { label: '5+ ngày', value: '5+' },
+                        ].map(opt => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setFilterDays(opt.value)}
+                                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all cursor-pointer ${filterDays === opt.value ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-xs text-gray-400 ml-auto shrink-0">{filteredPlans.length} lịch trình</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[
-                        {
-                            step: '01',
-                            icon: <MapPin className="w-6 h-6 text-orange-500" />,
-                            title: 'Chọn điểm đến',
-                            desc: 'Nhập tên thành phố, số ngày và sở thích của bạn.',
-                            color: 'bg-orange-50 border-orange-200 hover:border-orange-300',
-                            numColor: 'text-orange-200',
-                        },
-                        {
-                            step: '02',
-                            icon: <Sparkles className="w-6 h-6 text-amber-500" />,
-                            title: 'AI lên kế hoạch',
-                            desc: 'Gemini AI tự động tạo lịch trình chi tiết theo ngày.',
-                            color: 'bg-amber-50 border-amber-200 hover:border-amber-300',
-                            numColor: 'text-amber-200',
-                        },
-                        {
-                            step: '03',
-                            icon: <MoveHorizontal className="w-6 h-6 text-sky-500" />,
-                            title: 'Tùy chỉnh theo ý',
-                            desc: 'Kéo thả hoạt động, thêm/xóa, sắp xếp lại theo kế hoạch riêng.',
-                            color: 'bg-sky-50 border-sky-200 hover:border-sky-300',
-                            numColor: 'text-sky-200',
-                        },
-                    ].map((item, i) => (
-                        <div key={i} className={`relative border rounded-2xl p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1 ${item.color}`}>
-                            <span className={`absolute top-4 right-5 text-5xl font-black select-none leading-none ${item.numColor}`}>{item.step}</span>
-                            <div className="w-11 h-11 rounded-xl bg-white shadow-sm flex items-center justify-center mb-4 border border-white">
-                                {item.icon}
+
+                {/* Plan Cards */}
+                {filteredPlans.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredPlans.map((plan, i) => (
+                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group cursor-pointer hover:-translate-y-0.5 duration-200">
+                                <div className={`h-28 relative overflow-hidden ${['bg-gradient-to-br from-orange-400 to-amber-300', 'bg-gradient-to-br from-sky-400 to-blue-500', 'bg-gradient-to-br from-green-400 to-emerald-500', 'bg-gradient-to-br from-purple-400 to-indigo-500', 'bg-gradient-to-br from-rose-400 to-pink-500', 'bg-gradient-to-br from-amber-400 to-yellow-500'][i % 6]}`}>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                    <div className="absolute top-2.5 right-2.5 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                                        {plan.days} ngày
+                                    </div>
+                                    <div className="absolute bottom-2.5 left-3 text-white">
+                                        <p className="font-bold text-sm leading-tight">{plan.title}</p>
+                                        <p className="text-[11px] opacity-85 flex items-center gap-1 mt-0.5"><MapPin className="w-2.5 h-2.5" />{plan.city}</p>
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">"{plan.desc}"</p>
+                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                                        <span className="text-xs text-gray-500">Bởi: <span className="font-medium text-gray-700">{plan.author}</span></span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs bg-orange-50 text-orange-600 font-semibold px-2 py-0.5 rounded-full">{plan.activities} HĐ</span>
+                                            <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-orange-500 transition-colors" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <p className="font-bold text-gray-800 text-base">{item.title}</p>
-                            <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{item.desc}</p>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="py-16 text-center">
+                        <Compass className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                        <p className="text-gray-400 font-medium">Không tìm thấy lịch trình phù hợp</p>
+                        <p className="text-xs text-gray-400 mt-1">Thử thay đổi bộ lọc tìm kiếm</p>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -911,8 +923,29 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const [slotOrders, setSlotOrders] = useState<TimeSlot[][]>(() =>
         (planData.itinerary || []).map(() => [...SLOT_ORDER])
     );
-    const firstRender = useRef(true);
-    const place = planData.destination;
+    const [localPlace, setLocalPlace] = useState(planData.destination || '');
+    const [provinces, setProvinces] = useState<{ code: number; name: string }[]>([]);
+    const [provinceOpen, setProvinceOpen] = useState(false);
+    const [provinceSearch, setProvinceSearch] = useState('');
+    const provinceRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        apiClient.provinces.getAll()
+            .then(data => setProvinces(data))
+            .catch(err => console.error('Failed to fetch provinces', err));
+    }, []);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (provinceRef.current && !provinceRef.current.contains(e.target as Node)) {
+                setProvinceOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const place = localPlace;
     const planId = planData.id;
     const isOwner = planData.isOwner;
 
@@ -940,7 +973,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             await aiPlannerApi.updatePlan(planId, {
                 tripTitle: planTitle,
                 overview: planData.overview || '',
-                itinerary: itinerary
+                itinerary: itinerary,
+                destination: localPlace
             });
             setAutoSaveStatus('saved');
             originalItineraryRef.current = JSON.stringify(itinerary);
@@ -954,10 +988,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     };
 
     const hasTitleChange = planTitle !== planData.title;
+    const hasPlaceChange = localPlace !== planData.destination;
 
     // Navigation Blockers
-    const isDirty = hasUnsavedChanges || hasTitleChange || autoSaveStatus === 'saving' || autoSaveStatus === 'error';
-    
+    const isDirty = hasUnsavedChanges || hasTitleChange || hasPlaceChange || autoSaveStatus === 'saving' || autoSaveStatus === 'error';
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (isDirty) {
@@ -993,6 +1027,30 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         };
         checkBlocker();
     }, [blocker]);
+
+    const handleRemoveDay = (dayIdx: number) => {
+        setItinerary(prev => {
+            const next = prev.filter((_, idx) => idx !== dayIdx);
+            return next.map((day, idx) => ({
+                ...day,
+                day_label: `Ngày ${idx + 1}`
+            }));
+        });
+    };
+
+    const handleAddDay = () => {
+        setItinerary(prev => {
+            if (prev.length >= 14) return prev;
+            const newDayNum = prev.length + 1;
+            const newDay: ItineraryDay = {
+                day_label: `Ngày ${newDayNum}`,
+                morning_activities: [],
+                afternoon_activities: [],
+                evening_activities: []
+            };
+            return [...prev, newDay];
+        });
+    };
 
     const [mobileTab, setMobileTab] = useState<'library' | 'timeline' | 'summary'>('timeline');
     const [showLibrary, setShowLibrary] = useState(true);
@@ -1234,6 +1292,19 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         }
     };
 
+    const handleClone = async () => {
+        try {
+            setAutoSaveStatus('saving');
+            const newPlan = await aiPlannerApi.clonePlan(planId);
+            toast.success('Đã nhân bản kế hoạch');
+            window.location.href = `/ai-planner/${newPlan.id}`;
+        } catch (err) {
+            console.error(err);
+            toast.error('Nhân bản thất bại');
+            setAutoSaveStatus('error');
+        }
+    };
+
     // ── Shared sub-components (reused in both mobile and desktop) ──
 
     const LibraryContent = () => {
@@ -1248,136 +1319,188 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             return true;
         });
 
+        const filteredProvinces = provinces.filter(p =>
+            p.name.toLowerCase().includes(provinceSearch.toLowerCase())
+        );
+
         return (
-        <div className="flex flex-col flex-1 min-h-0">
-            {/* Search */}
-            <div className="px-3 pt-2 pb-1.5 shrink-0">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Tìm dịch vụ..."
-                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50"
-                    />
-                </div>
-            </div>
-            {/* Type filters */}
-            {serviceTypes.length > 0 && (
-                <div className="px-3 pb-2 flex gap-1.5 flex-wrap shrink-0 border-b border-gray-100">
-                    {(['ALL', ...serviceTypes] as string[]).map(type => (
+            <div className="flex flex-col flex-1 min-h-0">
+                {/* Destination Selector */}
+                <div className="px-3 pt-2 pb-1 shrink-0" ref={provinceRef}>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Điểm đến gợi ý</label>
+                    <div className="relative">
+                        <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-orange-500 z-10" />
+                        <input
+                            type="text"
+                            value={provinceOpen ? provinceSearch : localPlace}
+                            onChange={e => {
+                                setProvinceSearch(e.target.value);
+                                setProvinceOpen(true);
+                            }}
+                            onFocus={() => {
+                                setProvinceSearch('');
+                                setProvinceOpen(true);
+                            }}
+                            placeholder="Chọn tỉnh/thành..."
+                            className="w-full pl-8 pr-8 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white"
+                        />
                         <button
-                            key={type}
-                            onClick={() => setTypeFilter(type)}
-                            className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${typeFilter === type ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}
+                            type="button"
+                            onClick={() => setProvinceOpen(o => !o)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500"
                         >
-                            {type === 'ALL' ? 'Tất cả' : SERVICE_TYPE_LABELS[type] || type}
+                            <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                            </svg>
                         </button>
-                    ))}
-                </div>
-            )}
-            {/* Cards list */}
-            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
-                {isLoadingLibrary ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
-                        <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
-                        <p className="text-xs">Đang tải gợi ý...</p>
-                    </div>
-                ) : filtered.length > 0 ? (
-                    filtered.map(lib => (
-                        <motion.div key={lib.id} layout className="group relative">
-                            <div
-                                draggable
-                                onDragStart={e => {
-                                    dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
-                                    e.dataTransfer.effectAllowed = 'copy';
-                                    e.dataTransfer.setData('text/plain', lib.id!);
-                                }}
-                                className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
-                            >
-                                {lib.thumbnailUrl ? (
-                                    // ── Card with thumbnail (system service) ──
-                                    <div className="flex gap-0">
-                                        <div className="w-16 shrink-0 self-stretch relative">
-                                            <img
-                                                src={lib.thumbnailUrl}
-                                                alt={lib.name}
-                                                className="w-full h-full object-cover min-h-[68px]"
-                                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                            />
-                                        </div>
-                                        <div className="flex-1 p-2 min-w-0">
-                                            <div className="flex items-start justify-between gap-1">
-                                                <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors leading-tight line-clamp-2 flex-1">{lib.name}</p>
-                                                <button
-                                                    onClick={() => {
-                                                        setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                                        setPickerDay(0);
-                                                        setPickerSlot('morning_activities');
-                                                    }}
-                                                    className="lg:hidden p-1 bg-orange-50 text-orange-500 rounded-md shrink-0 active:scale-95 transition-transform"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                            {lib.serviceType && (
-                                                <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${SERVICE_TYPE_BADGE[lib.serviceType] || 'bg-gray-100 text-gray-600'}`}>
-                                                    {SERVICE_TYPE_LABELS[lib.serviceType] || lib.serviceType}
-                                                </span>
-                                            )}
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] font-semibold text-orange-600">{lib.estimated_cost}</span>
-                                            </div>
-                                            {lib.serviceUrl && (
-                                                <button
-                                                    onClick={e => { e.stopPropagation(); libNavigate(lib.serviceUrl!); }}
-                                                    className="text-[9px] text-orange-400 hover:text-orange-600 font-semibold flex items-center gap-0.5 mt-0.5"
-                                                >
-                                                    <ExternalLink className="w-2.5 h-2.5" /> Xem chi tiết
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    // ── Text-only card (legacy activity) ──
-                                    <div className="flex items-start gap-2 p-3 relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
-                                        <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors" />
-                                        <div className="min-w-0 flex-1 pl-1">
-                                            <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
-                                            <div className="flex gap-2 mt-1.5">
-                                                <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
-                                                <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                                setPickerDay(0);
-                                                setPickerSlot('morning_activities');
-                                            }}
-                                            className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg shrink-0 active:scale-95 transition-transform"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                )}
+                        {provinceOpen && filteredProvinces.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[70] max-h-48 overflow-y-auto">
+                                {filteredProvinces.map(prov => (
+                                    <button
+                                        key={prov.code}
+                                        type="button"
+                                        onClick={() => {
+                                            setLocalPlace(prov.name);
+                                            setProvinceOpen(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors border-b border-gray-50 last:border-0 font-medium"
+                                    >
+                                        {prov.name}
+                                    </button>
+                                ))}
                             </div>
-                        </motion.div>
-                    ))
-                ) : (
-                    <div className="py-10 text-center px-4">
-                        <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                        <p className="text-xs text-gray-400">
-                            {search ? `Không tìm thấy "${search}"` : `Không có gợi ý cho "${place}"`}
-                        </p>
-                        {search && (
-                            <button onClick={() => setSearch('')} className="text-[10px] text-orange-400 hover:text-orange-600 mt-1 font-semibold">Xóa bộ lọc</button>
                         )}
                     </div>
+                </div>
+
+                {/* Search */}
+                <div className="px-3 pt-1 pb-1.5 shrink-0">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Tìm dịch vụ..."
+                            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50"
+                        />
+                    </div>
+                </div>
+                {/* Type filters */}
+                {serviceTypes.length > 0 && (
+                    <div className="px-3 pb-2 flex gap-1.5 flex-wrap shrink-0 border-b border-gray-100">
+                        {(['ALL', ...serviceTypes] as string[]).map(type => (
+                            <button
+                                key={type}
+                                onClick={() => setTypeFilter(type)}
+                                className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${typeFilter === type ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}
+                            >
+                                {type === 'ALL' ? 'Tất cả' : SERVICE_TYPE_LABELS[type] || type}
+                            </button>
+                        ))}
+                    </div>
                 )}
+                {/* Cards list */}
+                <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+                    {isLoadingLibrary ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
+                            <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                            <p className="text-xs">Đang tải gợi ý...</p>
+                        </div>
+                    ) : filtered.length > 0 ? (
+                        filtered.map(lib => (
+                            <motion.div key={lib.id} layout className="group relative">
+                                <div
+                                    draggable
+                                    onDragStart={e => {
+                                        dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
+                                        e.dataTransfer.effectAllowed = 'copy';
+                                        e.dataTransfer.setData('text/plain', lib.id!);
+                                    }}
+                                    className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
+                                >
+                                    {lib.thumbnailUrl ? (
+                                        // ── Card with thumbnail (system service) ──
+                                        <div className="flex gap-0">
+                                            <div className="w-16 shrink-0 self-stretch relative">
+                                                <img
+                                                    src={lib.thumbnailUrl}
+                                                    alt={lib.name}
+                                                    className="w-full h-full object-cover min-h-[68px]"
+                                                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                                />
+                                            </div>
+                                            <div className="flex-1 p-2 min-w-0">
+                                                <div className="flex items-start justify-between gap-1">
+                                                    <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors leading-tight line-clamp-2 flex-1">{lib.name}</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
+                                                            setPickerDay(0);
+                                                            setPickerSlot('morning_activities');
+                                                        }}
+                                                        className="lg:hidden p-1 bg-orange-50 text-orange-500 rounded-md shrink-0 active:scale-95 transition-transform"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                                {lib.serviceType && (
+                                                    <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${SERVICE_TYPE_BADGE[lib.serviceType] || 'bg-gray-100 text-gray-600'}`}>
+                                                        {SERVICE_TYPE_LABELS[lib.serviceType] || lib.serviceType}
+                                                    </span>
+                                                )}
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] font-semibold text-orange-600">{lib.estimated_cost}</span>
+                                                </div>
+                                                {lib.serviceUrl && (
+                                                    <button
+                                                        onClick={e => { e.stopPropagation(); libNavigate(lib.serviceUrl!); }}
+                                                        className="text-[9px] text-orange-400 hover:text-orange-600 font-semibold flex items-center gap-0.5 mt-0.5"
+                                                    >
+                                                        <ExternalLink className="w-2.5 h-2.5" /> Xem chi tiết
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        // ── Text-only card (legacy activity) ──
+                                        <div className="flex items-start gap-2 p-3 relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
+                                            <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
+                                            <div className="min-w-0 flex-1 pl-1">
+                                                <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
+                                                <div className="flex gap-2 mt-1.5">
+                                                    <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
+                                                    <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
+                                                    setPickerDay(0);
+                                                    setPickerSlot('morning_activities');
+                                                }}
+                                                className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg shrink-0 active:scale-95 transition-transform"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <div className="py-10 text-center px-4">
+                            <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                            <p className="text-xs text-gray-400">
+                                {search ? `Không tìm thấy "${search}"` : `Không có gợi ý cho "${place}"`}
+                            </p>
+                            {search && (
+                                <button onClick={() => setSearch('')} className="text-[10px] text-orange-400 hover:text-orange-600 mt-1 font-semibold">Xóa bộ lọc</button>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
         );
     };
 
@@ -1452,11 +1575,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         <button
                             onClick={handleManualSave}
                             disabled={autoSaveStatus === 'saving' || (!hasChanges && autoSaveStatus !== 'error')}
-                            className={`w-full py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                                hasChanges || autoSaveStatus === 'error'
+                            className={`w-full py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${hasChanges || autoSaveStatus === 'error'
                                     ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200'
                                     : 'bg-gray-100 text-gray-400 cursor-default'
-                            }`}
+                                }`}
                         >
                             {autoSaveStatus === 'saving' ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -1471,7 +1593,13 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 })()}
                 {isOwner && (
                     <div className="flex flex-col gap-2 mb-2">
-
+                        <button
+                            onClick={handleClone}
+                            className="w-full py-2 text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 cursor-pointer"
+                        >
+                            <Copy className="w-3.5 h-3.5" />
+                            Nhân bản kế hoạch
+                        </button>
 
                         <button
                             onClick={() => setIsShareModalOpen(true)}
@@ -1500,38 +1628,57 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             {itinerary.map((day, dayIdx) => {
                 const daySlotOrder = slotOrders[dayIdx] || SLOT_ORDER;
                 return (
-                <div key={dayIdx} className={mobile ? 'w-full' : 'min-w-0'}>
-                    <div className="bg-orange-500 text-white rounded-xl px-4 py-3 mb-3 text-center shadow-sm">
-                        <p className="font-bold text-sm">{day.day_label}</p>
+                    <div key={dayIdx} className={mobile ? 'w-full' : 'min-w-0'}>
+                        <div className="bg-orange-500 text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-sm">
+                            <p className="font-bold text-sm">{day.day_label}</p>
+                            {isOwner && itinerary.length > 1 && (
+                                <button
+                                    onClick={() => handleRemoveDay(dayIdx)}
+                                    className="p-1 hover:bg-white/20 rounded-lg transition-colors text-white"
+                                    title="Xóa ngày này"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                        <div className="space-y-3">
+                            {daySlotOrder.map((slot, slotIdx) => (
+                                <DropZone
+                                    key={slot}
+                                    dayIdx={dayIdx}
+                                    slot={slot}
+                                    activities={day[slot] || []}
+                                    onDrop={handleDrop}
+                                    onRemove={handleRemove}
+                                    onEditActivity={handleEditActivity}
+                                    onUpdateActivity={handleUpdateActivity}
+                                    onDragStartCard={handleDragStartCard}
+                                    onAddActivity={handleAddActivity}
+                                    onMoveSlot={(dir) => handleMoveSlot(dayIdx, slot, dir)}
+                                    canMoveUp={slotIdx > 0}
+                                    canMoveDown={slotIdx < daySlotOrder.length - 1}
+                                    onMobileMove={mobile ? (actId, fDay, fSlot) => {
+                                        const act = itinerary[fDay][fSlot].find(a => a.id === actId);
+                                        setMobilePicker({ type: 'move', activityId: actId, fromDayIdx: fDay, fromSlot: fSlot, name: act?.name || '' });
+                                        setPickerDay(fDay);
+                                        setPickerSlot(fSlot);
+                                    } : undefined}
+                                />
+                            ))}
+                        </div>
                     </div>
-                    <div className="space-y-3">
-                        {daySlotOrder.map((slot, slotIdx) => (
-                            <DropZone
-                                key={slot}
-                                dayIdx={dayIdx}
-                                slot={slot}
-                                activities={day[slot] || []}
-                                onDrop={handleDrop}
-                                onRemove={handleRemove}
-                                onEditActivity={handleEditActivity}
-                                onUpdateActivity={handleUpdateActivity}
-                                onDragStartCard={handleDragStartCard}
-                                onAddActivity={handleAddActivity}
-                                onMoveSlot={(dir) => handleMoveSlot(dayIdx, slot, dir)}
-                                canMoveUp={slotIdx > 0}
-                                canMoveDown={slotIdx < daySlotOrder.length - 1}
-                                onMobileMove={mobile ? (actId, fDay, fSlot) => {
-                                    const act = itinerary[fDay][fSlot].find(a => a.id === actId);
-                                    setMobilePicker({ type: 'move', activityId: actId, fromDayIdx: fDay, fromSlot: fSlot, name: act?.name || '' });
-                                    setPickerDay(fDay);
-                                    setPickerSlot(fSlot);
-                                } : undefined}
-                            />
-                        ))}
-                    </div>
-                </div>
                 );
             })}
+            {isOwner && itinerary.length < 14 && (
+                <div className={mobile ? 'w-full' : 'min-w-[280px]'}>
+                    <button
+                        onClick={handleAddDay}
+                        className="w-full h-12 border-2 border-dashed border-gray-300 hover:border-orange-400 text-gray-500 hover:text-orange-500 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors bg-white/50 hover:bg-orange-50/50"
+                    >
+                        <Plus className="w-5 h-5" /> Thêm ngày mới
+                    </button>
+                </div>
+            )}
         </>
     );
 
@@ -1875,6 +2022,31 @@ export default function AIPlannerPage() {
         }
     };
 
+    const handleManualCreate = async (p: string, days: number) => {
+        try {
+            const emptyItinerary = Array.from({ length: days }).map((_, i) => ({
+                day: i + 1,
+                day_label: `Ngày ${i + 1}`,
+                morning_activities: [],
+                afternoon_activities: [],
+                evening_activities: []
+            }));
+
+            const saveResult = await aiPlannerApi.savePlan({
+                title: `Kế hoạch thủ công - ${p} ${days} ngày`,
+                destination: p,
+                days: days,
+                itinerary: emptyItinerary,
+                isPublic: false
+            });
+
+            navigate(`/ai-planner/${saveResult.id}`);
+        } catch (error) {
+            console.error(error);
+            alert('Tạo lịch trình thủ công thất bại, vui lòng thử lại.');
+        }
+    };
+
     if (step === 'plan') {
         if (loadingPlan) {
             return (
@@ -1887,8 +2059,8 @@ export default function AIPlannerPage() {
         if (planData) {
             return <PlanEditor planData={planData} onReset={() => navigate('/ai-planner')} />;
         }
-        return null;
+        return <div className="text-center p-10">Lỗi không tải được kế hoạch.</div>;
     }
 
-    return <InputScreen onGenerate={handleGenerate} />;
+    return <InputScreen onGenerate={handleGenerate} onManualCreate={handleManualCreate} />;
 }

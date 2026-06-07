@@ -158,7 +158,11 @@ export const blogApi = {
     }
 
     try {
-      const response: any = await apiClient.get('/blog/search', { params });
+      const apiParams = { ...params };
+      if (apiParams.sortBy === 'reactionCount') {
+        apiParams.sortBy = 'likeCount'; // ElasticSearch expects likeCount instead of reactionCount
+      }
+      const response: any = await apiClient.get('/blog/search', { params: apiParams });
       
       const content = response.content || (Array.isArray(response) ? response : []);
       return {
@@ -167,8 +171,67 @@ export const blogApi = {
         page: response.pageNo ?? 0,
         totalPages: response.totalPages || 1,
       };
+    } catch (error: any) {
+      console.warn('Error searching blogs (ElasticSearch might be down). Falling back to basic fetch...', error);
+      try {
+        const fallbackRes = await blogApi.getAllPosts(0, 50); // Get some posts to fallback
+        let allPosts = fallbackRes.posts;
+        
+        if (params.keyword) {
+          const keyword = params.keyword.toLowerCase();
+          allPosts = allPosts.filter(p => 
+            p.title.toLowerCase().includes(keyword) || 
+            p.content.toLowerCase().includes(keyword)
+          );
+        }
+        
+        if (params.sortBy === 'reactionCount') {
+          allPosts.sort((a, b) => (b.reactionCount ?? (b as any).likeCount ?? 0) - (a.reactionCount ?? (a as any).likeCount ?? 0));
+        }
+
+        const page = params.page || 0;
+        const size = params.size || 10;
+        const content = allPosts.slice(page * size, (page + 1) * size);
+        
+        return {
+          posts: content,
+          total: allPosts.length,
+          page: page,
+          totalPages: Math.ceil(allPosts.length / size) || 1,
+        };
+      } catch (fallbackError) {
+        throw error;
+      }
+    }
+  },
+
+  /**
+   * Lấy danh sách những người đã react bài viết
+   * GET /blog/{blogID}/reactions
+   */
+  getReactionsForPost: async (blogId: string, page = 0, size = 50): Promise<{
+    reactions: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> => {
+    if (USE_MOCK_DATA) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return { reactions: [], total: 0, page: 0, totalPages: 1 };
+    }
+    try {
+      const response: any = await apiClient.get(`/blog/${blogId}/reactions`, {
+        params: { page, size }
+      });
+      const content = response.content || (Array.isArray(response) ? response : []);
+      return {
+        reactions: content,
+        total: response.totalElements || content.length,
+        page: response.pageNo ?? 0,
+        totalPages: response.totalPages || 1,
+      };
     } catch (error) {
-      console.error('Error searching blogs:', error);
+      console.error(`Error fetching reactions for blog (${blogId}):`, error);
       throw error;
     }
   },

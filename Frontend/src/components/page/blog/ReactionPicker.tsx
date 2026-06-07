@@ -175,7 +175,12 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({
       {/* ── Trigger ── */}
       {children ? (
         <motion.div
-          onClick={() => active ? handleReact(active) : handleReact(REACTION_OPTIONS[0])}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hoverTimer.current) clearTimeout(hoverTimer.current);
+            setShowPicker(false);
+            active ? handleReact(active) : handleReact(REACTION_OPTIONS[0]);
+          }}
           className={`cursor-pointer transition-all duration-300 ${isLoading ? 'opacity-50' : ''}`}
           whileTap={{ scale: 0.94 }}
         >
@@ -187,7 +192,12 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({
         <motion.button
           type="button" disabled={isLoading}
           whileTap={{ scale: 0.94 }}
-          onClick={() => active ? onReact(active.type as ReactionType) : onReact('LIKE')}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hoverTimer.current) clearTimeout(hoverTimer.current);
+            setShowPicker(false);
+            active ? onReact(active.type as ReactionType) : onReact('LIKE');
+          }}
           className={`flex items-center gap-2.5 rounded-2xl font-black transition-all select-none ${isSm ? 'px-4 py-2 text-xs' : 'px-6 py-2.5 text-sm'} ${active ? `${active.bgColor} ${active.color} shadow-md scale-[1.05]` : 'bg-gray-100/50 text-gray-400 hover:bg-gray-100 border border-transparent hover:text-gray-600'}`}
         >
           {active ? (

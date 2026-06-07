@@ -1,7 +1,7 @@
 import type {
     PlanRequest, PlanResponse, PlanData, Activity, ItineraryDay,
     PlanCollabInvitation, PlanCollaboration, PlanOverallResponse,
-    CollabStatus, PlanUpdate, PreferenceService
+    CollabStatus, PlanUpdate, PreferenceService, UserInfo
 } from '@/types/aiPlanner.types';
 import apiClient from '../services/apiClient';
 import { MOCK_PLAN_RESPONSE } from '@/mocks/aiPlanner';
@@ -264,6 +264,9 @@ export const aiPlannerApi = {
             if (mockPlansCache[planId]) {
                 mockPlansCache[planId].title = data.tripTitle;
                 mockPlansCache[planId].itinerary = data.itinerary;
+                if (data.destination) {
+                    mockPlansCache[planId].destination = data.destination;
+                }
                 saveToCache(mockPlansCache);
             }
             return;
@@ -274,6 +277,7 @@ export const aiPlannerApi = {
             tripTitle: data.tripTitle,
             overview: data.overview,
             itinerary: backendItinerary,
+            place: data.destination,
         });
     },
 
@@ -281,10 +285,121 @@ export const aiPlannerApi = {
         if (planId.startsWith('mock-')) {
             return { isPublic, shareUrl: `https://travollo.com/share/${planId}` };
         }
-        // Theo API docs, PATCH có thể đang mong đợi query params thay vì body
-        return apiClient.patch<{ isPublic: boolean; shareUrl?: string }>(`/api/plan-recommend/${planId}`, null, {
-            params: { isPublic }
+        
+        // Cập nhật chế độ hiển thị (visibility) qua PATCH /api/plan-recommend/{planID}/visibility
+        await apiClient.patch(`/api/plan-recommend/${planId}/visibility`, {
+            visibility: isPublic ? 'PUBLIC' : 'PRIVATE'
         });
+        
+        let shareUrl = undefined;
+        if (isPublic) {
+            try {
+                // Lấy link chia sẻ qua POST /api/plan-recommend/{planID}/share-link
+                const linkRes = await apiClient.post<Record<string, string>>(`/api/plan-recommend/${planId}/share-link`, {});
+                shareUrl = linkRes?.shareUrl || linkRes?.shareLink || Object.values(linkRes || {})[0];
+            } catch (err) {
+                console.error("Failed to generate share link:", err);
+            }
+        }
+        
+        return { isPublic, shareUrl };
+    },
+
+    updateVisibility: async (planId: string, visibility: 'PUBLIC' | 'PRIVATE'): Promise<PlanData> => {
+        if (planId.startsWith('mock-')) {
+            await sleep(300);
+            if (mockPlansCache[planId]) {
+                mockPlansCache[planId].isPublic = visibility === 'PUBLIC';
+                saveToCache(mockPlansCache);
+                return mockPlansCache[planId];
+            }
+            throw new Error("Mock plan not found");
+        }
+        const raw = await apiClient.patch<any>(`/api/plan-recommend/${planId}/visibility`, { visibility });
+        return mapBackendPlan(raw);
+    },
+
+    generateShareLink: async (planId: string): Promise<string> => {
+        if (planId.startsWith('mock-')) {
+            return `https://travollo.com/share/${planId}`;
+        }
+        const res = await apiClient.post<Record<string, string>>(`/api/plan-recommend/${planId}/share-link`, {});
+        return res?.shareUrl || res?.shareLink || Object.values(res || {})[0] || '';
+    },
+
+    getPlanByShareToken: async (shareToken: string): Promise<PlanData> => {
+        if (shareToken.startsWith('mock-')) {
+            return MOCK_SHARED_PLAN_DALAT;
+        }
+        const raw = await apiClient.get<any>(`/api/plan-recommend/view/share/${shareToken}`);
+        return mapBackendPlan(raw);
+    },
+
+    getPublicPlans: async (page = 0, size = 10): Promise<{ content: PlanData[]; totalElements: number; totalPages: number }> => {
+        if (USE_MOCK_AI_PLANNER) {
+            await sleep(500);
+            return {
+                content: [MOCK_SHARED_PLAN_DALAT],
+                totalElements: 1,
+                totalPages: 1
+            };
+        }
+        const response = await apiClient.get<any>('/api/plan-recommend/public', {
+            params: { page, size }
+        });
+        const content = Array.isArray(response?.content) ? response.content.map(mapBackendPlan) : [];
+        return {
+            content,
+            totalElements: response?.totalElements || content.length,
+            totalPages: response?.totalPages || 1
+        };
+    },
+
+    getPlanMembers: async (planId: string): Promise<UserInfo[]> => {
+        if (planId.startsWith('mock-')) {
+            return MOCK_SHARED_PLAN_DALAT.members || [];
+        }
+        return apiClient.get<UserInfo[]>(`/api/plan-recommend/${planId}/members`);
+    },
+
+    getAllPlans: async (): Promise<PlanData[]> => {
+        if (USE_MOCK_AI_PLANNER) {
+            return Object.values(mockPlansCache);
+        }
+        const rawList = await apiClient.get<any[]>('/api/plan-recommend/all');
+        return Array.isArray(rawList) ? rawList.map(mapBackendPlan) : [];
+    },
+
+    getAllPlansOfUser: async (): Promise<PlanData[]> => {
+        if (USE_MOCK_AI_PLANNER) {
+            return Object.values(mockPlansCache);
+        }
+        const rawList = await apiClient.get<any[]>('/api/plan-recommend');
+        return Array.isArray(rawList) ? rawList.map(mapBackendPlan) : [];
+    },
+
+
+    clonePlan: async (planId: string): Promise<PlanData> => {
+        if (USE_MOCK_AI_PLANNER || planId.startsWith('mock-')) {
+            await sleep(500);
+            const sourcePlan = planId.startsWith('mock-') ? mockPlansCache[planId] : MOCK_SHARED_PLAN_DALAT;
+            const newPlan = {
+                ...sourcePlan,
+                id: `mock-${Date.now()}`,
+                ownerId: 0,
+                title: `${sourcePlan.title} (Bản sao)`,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isOwner: true,
+                isPublic: false,
+                members: []
+            } as PlanData;
+            mockPlansCache[newPlan.id] = newPlan;
+            saveToCache(mockPlansCache);
+            return newPlan;
+        }
+        const raw = await apiClient.post<any>(`/api/plan-recommend/${planId}/clone`, {});
+        return mapBackendPlan(raw);
     },
 
     getUserPlans: async (): Promise<PlanOverallResponse[]> => {

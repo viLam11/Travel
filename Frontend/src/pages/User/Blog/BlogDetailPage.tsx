@@ -26,6 +26,7 @@ import { blogApi } from '@/api/blogApi';
 import { useAuth } from '@/hooks/useAuth';
 import type { ReactionType } from '@/types/blog.types';
 import toast from 'react-hot-toast';
+import { renderPreview } from '@/utils/blog.util';
 
 const BlogDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -422,7 +423,7 @@ const BlogDetailPage: React.FC = () => {
                 prose-strong:text-gray-900 prose-strong:font-bold
                 prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline
                 prose-img:rounded-2xl prose-img:shadow-md"
-              dangerouslySetInnerHTML={{ __html: post.content }}
+              dangerouslySetInnerHTML={{ __html: renderPreview(post.content) }}
             />
 
             {/* Tags Footer */}

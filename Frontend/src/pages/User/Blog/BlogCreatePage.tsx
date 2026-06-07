@@ -26,11 +26,9 @@ import { serviceApi } from '@/api/serviceApi';
 import type { BlogRequest, BlogStatus } from '@/types/blog.types';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
+import { renderPreview } from '@/utils/blog.util';
 
-const SUGGESTED_TAGS = [
-  'Biển', 'Núi', 'Ẩm thực', 'Trekking', 'Backpacker',
-  'Resort', 'Văn hóa', 'Mùa hè', 'Mùa đông', 'Gia đình', 'Cặp đôi', 'Solo',
-];
+
 
 // ── Simple Toolbar Button ──────────────────────────────────────────────────────
 interface ToolbarBtnProps {
@@ -129,21 +127,7 @@ const SmartTextarea: React.FC<SmartTextareaProps> = ({
   );
 };
 
-// ── Simple Markdown-ish preview renderer ──────────────────────────────────────
-const renderPreview = (md: string): string => {
-  if (!md) return '<p class="text-gray-400 italic">Nội dung bài viết...</p>';
-  return md
-    .replace(/^## (.+)$/gm, '<h2 class="text-2xl font-bold text-gray-900 mt-8 mb-3">$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3 class="text-xl font-semibold text-gray-800 mt-6 mb-2">$1</h3>')
-    .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-orange-400 pl-4 italic text-gray-600 my-4 bg-orange-50 py-2 rounded-r-lg">$1</blockquote>')
-    .replace(/^- (.+)$/gm, '<li class="ml-5 list-disc text-gray-700">$1</li>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em class="italic">$1</em>')
-    .replace(/\n\n/g, '</p><p class="mb-4 text-gray-700 leading-7">')
-    .replace(/\n/g, '<br/>')
-    .replace(/^(.)/m, '<p class="mb-4 text-gray-700 leading-7">$1')
-    + '</p>';
-};
+
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const BlogCreatePage: React.FC = () => {
@@ -154,8 +138,6 @@ const BlogCreatePage: React.FC = () => {
   const [content, setContent] = useState('');
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
   const [linkedServices, setLinkedServices] = useState<any[]>([]);
   const [serviceSearch, setServiceSearch] = useState('');
   const [showServiceSearch, setShowServiceSearch] = useState(false);
@@ -184,12 +166,7 @@ const BlogCreatePage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [serviceSearch]);
 
-  const addTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (!trimmed || tags.includes(trimmed) || tags.length >= 5) return;
-    setTags((prev) => [...prev, trimmed]);
-    setTagInput('');
-  };
+
 
   const toggleService = (service: any) => {
     setLinkedServices((prev) =>
@@ -212,7 +189,6 @@ const BlogCreatePage: React.FC = () => {
         mediaUrls: mediaFiles,
         status: 'PUBLISHED' as BlogStatus,
         taggedServiceIds: linkedServices.map((s) => s.id),
-        tags: tags.join(','),
       };
       await blogApi.createPost(blogReq);
       toast.success('Bài viết đã được đăng tải thành công!');
@@ -288,16 +264,6 @@ const BlogCreatePage: React.FC = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 text-white">
-                {/* Tags */}
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {tags.map((t) => (
-                      <span key={t} className="px-2.5 py-1 bg-orange-500/80 text-xs font-bold rounded-full">
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight drop-shadow">
                   {title || <span className="opacity-50">Tiêu đề bài viết...</span>}
                 </h1>
@@ -443,60 +409,7 @@ Mô tả điểm đến và lý do bạn chọn nơi này...
               </div>
             </div>
 
-            {/* Tags */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5">
-              <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Tag className="w-4 h-4 text-orange-500" />
-                Gắn thẻ
-                <span className="text-xs font-normal text-gray-400">(tối đa 5 thẻ)</span>
-              </label>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-600 text-sm font-semibold rounded-full"
-                  >
-                    #{tag}
-                    <button
-                      onClick={() => setTags((t) => t.filter((x) => x !== tag))}
-                      className="hover:text-orange-800 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTag(tagInput)}
-                  placeholder="Nhập tag và Enter..."
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-400"
-                  disabled={tags.length >= 5}
-                />
-                <button
-                  onClick={() => addTag(tagInput)}
-                  disabled={!tagInput.trim() || tags.length >= 5}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold disabled:bg-gray-200 hover:bg-orange-600 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {SUGGESTED_TAGS.filter((t) => !tags.includes(t)).map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => addTag(tag)}
-                    disabled={tags.length >= 5}
-                    className="px-2.5 py-1 bg-gray-100 hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-xs rounded-full transition-colors disabled:opacity-40"
-                  >
-                    +{tag}
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Link Services */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5">

@@ -4,6 +4,7 @@ import { Send, AlertCircle, CheckCheck, Wifi, WifiOff, MessageCircle } from 'luc
 import { useAuth } from '@/hooks/useAuth';
 import { useProviderChat } from '@/hooks/useProviderChat';
 import type { ChatMessage } from '@/types/chat.types';
+import { BookingContextCard } from '@/components/chat/BookingContextCard';
 
 interface Props {
     className?: string;
@@ -150,6 +151,13 @@ const ProviderChatSystem: React.FC<Props> = ({ className = '' }) => {
                                     }`}
                                 >
                                     <p className="text-sm leading-relaxed break-words">{msg.text}</p>
+                                    {msg.attachmentId && (
+                                        <BookingContextCard 
+                                            attachmentId={msg.attachmentId} 
+                                            attachmentData={msg.attachmentData} 
+                                            type={msg.type} 
+                                        />
+                                    )}
                                     <div className={`flex items-center gap-1 mt-1.5 text-xs ${isProvider ? 'text-blue-100' : 'text-gray-500'}`}>
                                         <span>{formatTime(msg.timestamp)}</span>
                                         {isProvider && msg.isRead && (

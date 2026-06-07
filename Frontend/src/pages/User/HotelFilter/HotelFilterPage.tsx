@@ -10,7 +10,6 @@ import HotelListCard, { type HotelListItem } from '../../../components/page/hote
 import { MOCK_DISCOUNTS } from '@/mocks/discounts';
 import apiClient from '@/services/apiClient';
 import { getDestinationInfo, getDestinationByName } from '@/constants/regions';
-import { buildServiceDetailUrl } from '@/utils/serviceUrl';
 
 const HotelFilterPage: React.FC = () => {
     const navigate = useNavigate();
@@ -196,12 +195,30 @@ const HotelFilterPage: React.FC = () => {
     const pagedHotels = apiHotels.length > 0 ? apiHotels : hotelsToShow.slice((currentPage - 1) * 5, currentPage * 5);
 
     const handleHotelClick = (hotel: HotelListItem) => {
-        navigate(buildServiceDetailUrl({
-            id: hotel.id,
-            serviceName: hotel.name,
-            serviceType: 'HOTEL',
-            province: hotel.provinceCode,
-        }));
+        // ID slug with correct Vietnamese accent normalization
+        const titleSlug = hotel.name
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+
+        // Destination slug (từ location VD: "Tây Hồ, Hà Nội" -> "ha-noi")
+        const locationParts = hotel.location.split(',');
+        const destStr = locationParts[locationParts.length - 1].trim();
+        const destInfo = getDestinationByName(destStr);
+        
+        let destSlug: string = destInfo?.slug || '';
+        if (!destSlug) {
+            destSlug = destStr
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+        }
+
+        navigate(`/hotels/vietnam/${destSlug}/${hotel.id}-${titleSlug}`);
     };
 
     return (
@@ -257,7 +274,7 @@ const HotelFilterPage: React.FC = () => {
                                         <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col sm:flex-row h-auto animate-pulse">
                                             {/* Image Skeleton */}
                                             <div className="w-full sm:w-64 h-52 sm:h-auto bg-gray-200"></div>
-                                            
+
                                             {/* Content Skeleton */}
                                             <div className="flex-1 p-5 flex flex-col justify-between space-y-4">
                                                 <div className="space-y-3">
@@ -272,7 +289,7 @@ const HotelFilterPage: React.FC = () => {
                                                         <div className="h-6 bg-gray-100 rounded-full w-16"></div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex justify-between items-end pt-4 border-t border-gray-50">
                                                     <div className="h-3 bg-gray-100 rounded w-20"></div>
                                                     <div className="flex items-end gap-3">

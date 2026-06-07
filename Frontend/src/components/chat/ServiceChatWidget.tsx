@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { socketService } from '@/services/socketService';
 import { chatApi } from '@/api/chatApi';
 import type { ChatMessage } from '@/types/chat.types';
+import { BookingContextCard } from './BookingContextCard';
 
 interface ServiceChatWidgetProps {
     providerId: string;
@@ -108,7 +109,9 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
             conversationId,
             currentUserId,
             newMessage,
-            'provider'
+            'provider',
+            'service', // message type
+            serviceId // attachmentId
         );
 
         if (result) {
@@ -193,6 +196,13 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
                             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${isMine ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
                                     {msg.text}
+                                    {msg.attachmentId && (
+                                        <BookingContextCard 
+                                            attachmentId={msg.attachmentId} 
+                                            attachmentData={msg.attachmentData} 
+                                            type={msg.type} 
+                                        />
+                                    )}
                                     <div className={`text-[10px] mt-1 text-right ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>

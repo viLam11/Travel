@@ -12,7 +12,7 @@ const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 interface BackendChatMessage {
     id: string;
     content: string;
-    type: 'CHAT' | 'JOIN' | 'LEAVE' | 'text' | 'image' | 'system';
+    type: 'CHAT' | 'JOIN' | 'LEAVE' | 'ORDER_ATTACHMENT' | 'SERVICE_ATTACHMENT' | string;
     createdAt: string;
     isRead?: boolean;
     read?: boolean;
@@ -25,6 +25,15 @@ interface BackendChatMessage {
         userId: string;
         username: string;
         avatarUrl: string;
+    };
+    attachmentId?: string;
+    attachmentType?: string;
+    attachment?: {
+        id: string;
+        title: string;
+        thumbnailUrl: string;
+        price: number;
+        status: string;
     };
 }
 
@@ -39,6 +48,20 @@ interface PageResponse<T> {
 
 const mapBackendToFrontendMessage = (msg: BackendChatMessage): ChatMessage => {
     const messageType = msg.type || 'CHAT';
+    
+    let finalType: 'text' | 'image' | 'system' | 'service' | 'order' = 'text';
+    if (messageType === 'ORDER_ATTACHMENT') {
+        finalType = 'order';
+    } else if (messageType === 'SERVICE_ATTACHMENT') {
+        finalType = 'service';
+    } else if (msg.attachmentType === 'ORDER') {
+        finalType = 'order';
+    } else if (msg.attachmentType === 'SERVICE') {
+        finalType = 'service';
+    } else {
+        finalType = (messageType.toLowerCase() === 'chat' ? 'text' : messageType.toLowerCase()) as any;
+    }
+
     return {
         id: msg.id,
         conversationId: msg.sender?.userId || 'unknown',
@@ -46,7 +69,9 @@ const mapBackendToFrontendMessage = (msg: BackendChatMessage): ChatMessage => {
         text: msg.content || '',
         timestamp: msg.createdAt || new Date().toISOString(),
         isRead: msg.read ?? msg.isRead ?? false,
-        type: messageType.toLowerCase() === 'chat' ? 'text' : (messageType.toLowerCase() as any)
+        type: finalType,
+        attachmentId: msg.attachmentId || undefined,
+        attachmentData: msg.attachment || undefined
     };
 };
 
@@ -59,7 +84,7 @@ export const chatApi = {
 
         try {
             const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/chat-list`);
-            
+
             if (!Array.isArray(lastMessages)) {
                 console.warn('Expected array for chat list, got:', lastMessages);
                 return [];
@@ -95,7 +120,12 @@ export const chatApi = {
             params: { pageSize: 50 }
         });
 
-        return response.content.map(mapBackendToFrontendMessage).reverse(); // Reverse to get chronological order if backend sends newest first
+        console.log("=== RAW HISTORY RESPONSE ===", response);
+
+        return response.content.map(msg => {
+            console.log("=== INDIVIDUAL RAW MSG ===", msg);
+            return mapBackendToFrontendMessage(msg);
+        }).reverse(); // Reverse to get chronological order if backend sends newest first
     },
 
     // Mark messages as read
@@ -103,7 +133,7 @@ export const chatApi = {
         if (USE_MOCK || localStorage.getItem('token')?.startsWith('mock-token-')) {
             return Promise.resolve();
         }
-        
+
         return apiClient.put(`/api/chat/mark-read/${senderId}`, {});
     },
 
@@ -139,7 +169,7 @@ export const chatApi = {
         try {
             // Sử dụng chung endpoint chat-list vì Backend trả về danh sách các tin nhắn mới nhất của user hiện tại (admin)
             const lastMessages = await apiClient.get<BackendChatMessage[]>(`/api/chat/chat-list`);
-            
+
             if (!Array.isArray(lastMessages)) {
                 return [];
             }

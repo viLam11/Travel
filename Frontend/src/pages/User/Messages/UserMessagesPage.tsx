@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MoreVertical, Send, User, ChevronLeft, MessageCircle } from 'lucide-react';
+import { Search, MoreVertical, Send, User, ChevronLeft, MessageCircle, Tag, X, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSearchParams } from 'react-router-dom';
 import { socketService } from '@/services/socketService';
 import { chatApi } from '@/api/chatApi';
 import type { ChatMessage, Conversation } from '@/types/chat.types';
+import { BookingContextCard } from '@/components/chat/BookingContextCard';
+import apiClient from '@/services/apiClient';
 
 const UserMessagesPage: React.FC = () => {
     const { currentUser, isAuthenticated } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const incomingServiceId = searchParams.get('serviceId');
+    const incomingBookingId = searchParams.get('bookingId');
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const activeConversationRef = useRef<Conversation | null>(null);
@@ -15,31 +21,117 @@ const UserMessagesPage: React.FC = () => {
     useEffect(() => {
         activeConversationRef.current = activeConversation;
     }, [activeConversation]);
+
     const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+    // Tự động cuộn xuống dưới cùng khi danh sách tin nhắn thay đổi hoặc mở hội thoại mới
+    useEffect(() => {
+        if (messages.length > 0) {
+            const timer = setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [messages.length, activeConversation?.id]);
+
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
+    
+    // Quick-chat suggestions state
+    const [activeBookingType, setActiveBookingType] = useState<'hotel' | 'ticket' | null>(null);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [pendingAttachment, setPendingAttachment] = useState<{ id: string; type: 'order' | 'service' } | null>(null);
 
     // Mobile view state
     const [showChatArea, setShowChatArea] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatInitializedRef = useRef<string | null>(null);
 
     useEffect(() => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || !currentUser?.user?.userID) return;
 
-        // Load initial conversations
-        chatApi.getConversations(currentUser?.user?.userID?.toString() || 'user_123', 'user').then(data => {
-            setConversations(data);
-            setLoading(false);
-            if (data.length > 0) {
-                // Determine active conversation logic? Wait for user to click or auto-select first
-                // Let's auto-select first for desktop
-                if (window.innerWidth >= 768) {
+        const currentUserIdStr = currentUser.user.userID.toString();
+        if (chatInitializedRef.current === currentUserIdStr) return;
+        chatInitializedRef.current = currentUserIdStr;
+
+        const initializeChat = async () => {
+            try {
+                // 1. Fetch conversations
+                const data = await chatApi.getConversations(currentUserIdStr, 'user');
+                setConversations(data);
+                setLoading(false);
+                
+                // 2. Resolve target provider & service details
+                let targetProviderId = '';
+                let targetServiceId = incomingServiceId || '';
+                let isBooking = false;
+
+                if (incomingBookingId) {
+                    try {
+                        const order = await apiClient.orders.getById(incomingBookingId);
+                        const firstTicket = order?.orderedTickets?.[0];
+                        const firstRoom = order?.orderedRooms?.[0];
+                        const service = firstTicket?.ticket?.ticketVenue || firstRoom?.room?.hotel;
+                        
+                        targetProviderId = service?.provider?.userID?.toString() || service?.provider?.id?.toString() || '';
+                        targetServiceId = service?.id?.toString() || targetServiceId;
+                        isBooking = true;
+
+                        const isHotel = !!firstRoom || service?.serviceType === 'HOTEL';
+                        setActiveBookingType(isHotel ? 'hotel' : 'ticket');
+                        setShowSuggestions(true);
+                    } catch (err) {
+                        console.error('Failed to fetch order details for chat init:', err);
+                    }
+                }
+
+                if (incomingServiceId && !targetProviderId) {
+                    // Fallback to finding existing conversation for service
+                    const existing = data.find(c => c.serviceId === incomingServiceId);
+                    if (existing) {
+                        targetProviderId = existing.id;
+                    }
+                }
+
+                if (incomingBookingId && !targetProviderId && data.length > 0) {
+                    // Fallback to the first conversation provider if backend details are incomplete
+                    targetProviderId = data[0].id;
+                }
+
+                // 3. Select conversation or start new one
+                if (targetProviderId || targetServiceId) {
+                    const existingConv = data.find(c => c.id === targetProviderId || (targetServiceId && c.serviceId === targetServiceId));
+                    const targetConv = existingConv || data[0];
+
+                    if (targetConv) {
+                        await handleSelectConversation(targetConv);
+                        
+                        const msgType = isBooking ? 'order' : 'service';
+                        const attachId = isBooking ? incomingBookingId : targetServiceId;
+
+                        if (attachId) {
+                            setPendingAttachment({ id: attachId, type: msgType as 'order' | 'service' });
+                            setShowSuggestions(true);
+
+                            // Xóa query params trên URL để khi F5 không bị đính kèm lại bản nháp
+                            const newParams = new URLSearchParams(window.location.search);
+                            newParams.delete('bookingId');
+                            newParams.delete('serviceId');
+                            setSearchParams(newParams, { replace: true });
+                        }
+                    }
+                } else if (data.length > 0 && window.innerWidth >= 768) {
                     handleSelectConversation(data[0]);
                 }
+            } catch (err) {
+                console.error('Error initializing chat room:', err);
+                setLoading(false);
             }
-        });
+        };
+
+        initializeChat();
 
         // Initialize socket
         const token = localStorage.getItem('token') || 'mock_token';
@@ -88,6 +180,9 @@ const UserMessagesPage: React.FC = () => {
         setActiveConversation(conversation);
         setShowChatArea(true);
         setLoadingMessages(true);
+        setShowSuggestions(false);
+        setActiveBookingType(null);
+        setPendingAttachment(null); // Clear draft attachment when switching rooms
 
         // In real app, mark as read on BE
         if (conversation.unreadCount > 0) {
@@ -102,6 +197,68 @@ const UserMessagesPage: React.FC = () => {
         scrollToBottom();
     };
 
+    const handleSendSuggestion = (text: string) => {
+        if (!activeConversation || !currentUser?.user) return;
+
+        const sentMsg = socketService.sendMessage(
+            activeConversation.id,
+            currentUser.user.userID.toString() || 'user_123',
+            text,
+            'provider',
+            pendingAttachment ? pendingAttachment.type : 'text',
+            pendingAttachment ? pendingAttachment.id : undefined
+        );
+
+        if (sentMsg) {
+            setMessages(prev => [...prev, sentMsg]);
+            setShowSuggestions(false);
+            setPendingAttachment(null); // Clear draft after sending
+
+            // Update local conversation list
+            setConversations(prev => prev.map(conv => {
+                if (conv.id === activeConversation.id) {
+                    return { ...conv, lastMessage: sentMsg, updatedAt: sentMsg.timestamp };
+                }
+                return conv;
+            }));
+
+            setTimeout(() => scrollToBottom(), 100);
+        }
+    };
+
+    const handleSendPendingAttachment = () => {
+        if (!pendingAttachment || !activeConversation || !currentUser?.user) return;
+
+        const text = pendingAttachment.type === 'order' 
+            ? 'Tôi muốn hỏi về thông tin đặt chỗ này.' 
+            : 'Tôi quan tâm đến dịch vụ này.';
+
+        const sentMsg = socketService.sendMessage(
+            activeConversation.id,
+            currentUser.user.userID.toString() || 'user_123',
+            text,
+            'provider',
+            pendingAttachment.type,
+            pendingAttachment.id
+        );
+
+        if (sentMsg) {
+            setMessages(prev => [...prev, sentMsg]);
+            setPendingAttachment(null); // Clear draft after sending
+            setShowSuggestions(false);
+
+            // Update local conversation list
+            setConversations(prev => prev.map(conv => {
+                if (conv.id === activeConversation.id) {
+                    return { ...conv, lastMessage: sentMsg, updatedAt: sentMsg.timestamp };
+                }
+                return conv;
+            }));
+
+            scrollToBottom();
+        }
+    };
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -114,12 +271,16 @@ const UserMessagesPage: React.FC = () => {
             activeConversation.id,
             currentUser.user.userID.toString() || 'user_123',
             newMessage,
-            'provider'
+            'provider',
+            pendingAttachment ? pendingAttachment.type : 'text',
+            pendingAttachment ? pendingAttachment.id : undefined
         );
 
         if (sentMsg) {
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
+            setPendingAttachment(null); // Clear draft after sending
+            setShowSuggestions(false);
 
             // Update local conversation list
             setConversations(prev => prev.map(conv => {
@@ -305,7 +466,22 @@ const UserMessagesPage: React.FC = () => {
                                                 ? 'bg-orange-500 text-white rounded-tr-none'
                                                 : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
                                                 }`}>
-                                                {msg.text}
+                                                {(msg.type === 'service' || msg.type === 'order') && msg.attachmentId ? (
+                                                    <div className="mb-1.5">
+                                                        <p className="text-xs opacity-80 mb-1.5 flex items-center gap-1">
+                                                            <Tag className="w-3 h-3" />
+                                                            {msg.type === 'order' ? 'Hỏi về đặt chỗ' : 'Hỏi về dịch vụ'}
+                                                        </p>
+                                                        <BookingContextCard
+                                                            attachmentId={msg.attachmentId}
+                                                            attachmentData={msg.attachmentData}
+                                                            type={msg.type}
+                                                        />
+                                                        {msg.text && <p className="mt-1.5">{msg.text}</p>}
+                                                    </div>
+                                                ) : (
+                                                    msg.text
+                                                )}
                                                 <div className={`text-[10px] mt-1 text-right flex items-center justify-end gap-1 ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
                                                     {formatTime(msg.timestamp)}
                                                 </div>
@@ -319,6 +495,81 @@ const UserMessagesPage: React.FC = () => {
 
                         {/* Input Area */}
                         <div className="p-4 bg-white border-t border-gray-200">
+                            {pendingAttachment && (
+                                <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between gap-3 relative animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                        <div className="bg-orange-100 p-2 rounded-xl text-orange-600 flex-shrink-0">
+                                            {pendingAttachment.type === 'order' ? <FileText className="w-5 h-5" /> : <Tag className="w-5 h-5" />}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                {pendingAttachment.type === 'order' ? 'Đính kèm đặt chỗ của tôi' : 'Đính kèm thông tin dịch vụ'}
+                                            </p>
+                                            <p className="text-xs font-semibold text-gray-400 truncate mt-0.5">
+                                                Mã đính kèm: #{pendingAttachment.id.substring(0, 8).toUpperCase()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleSendPendingAttachment}
+                                            className="px-3.5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
+                                        >
+                                            Gửi đính kèm
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPendingAttachment(null);
+                                                setShowSuggestions(false);
+                                            }}
+                                            className="p-1.5 hover:bg-gray-250 text-gray-400 hover:text-gray-600 rounded-lg transition-colors cursor-pointer"
+                                            title="Bỏ đính kèm"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {showSuggestions && pendingAttachment && (
+                                <div className="flex flex-wrap gap-2 mb-3 max-h-32 overflow-y-auto">
+                                    {(() => {
+                                        if (pendingAttachment.type === 'service') {
+                                            return [
+                                                'Có chương trình ưu đãi hay giảm giá nào hiện tại không?',
+                                                'Tôi muốn xin thêm thông tin chi tiết về dịch vụ này.',
+                                                'Giá hiển thị trên trang đã bao gồm thuế và phí chưa?',
+                                                'Tôi có thể đặt trước dịch vụ và thanh toán sau không?'
+                                            ];
+                                        } else if (activeBookingType === 'hotel') {
+                                            return [
+                                                'Tôi muốn hỏi về hướng dẫn check-in và nhận phòng.',
+                                                'Tôi muốn thay đổi ngày nhận hoặc trả phòng.',
+                                                'Tôi muốn yêu cầu hủy đặt phòng này.',
+                                                'Tôi muốn yêu cầu xuất hóa đơn VAT cho đặt phòng này.'
+                                            ];
+                                        } else {
+                                            return [
+                                                'Tôi muốn hỏi về cách đổi hoặc nhận vé cứng.',
+                                                'Tôi muốn thay đổi ngày sử dụng vé dịch vụ.',
+                                                'Tôi muốn yêu cầu hoàn hoặc hủy vé này.',
+                                                'Tôi muốn hỏi địa chỉ hoặc điểm tập trung ở đâu.'
+                                            ];
+                                        }
+                                    })().map((suggestion, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => handleSendSuggestion(suggestion)}
+                                            className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 text-[11px] font-bold rounded-full transition-all border border-orange-100/50 cursor-pointer active:scale-95 whitespace-nowrap"
+                                        >
+                                            {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                             <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                                 <input
                                     type="text"

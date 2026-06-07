@@ -29,13 +29,14 @@ const timeAgo = (iso?: string) => {
 };
 
 // ── ReactionSummaryRow (stacked emoji + total) ────────────────────────────────
-const MOCK_NAMES = ['Duy Nguyễn', 'Minh Khánh', 'Trần Khoa', 'An Lê', 'Mai Phương'];
+
 
 const ReactionSummaryRow: React.FC<{
     reactions: Partial<Record<ReactionType, number>>;
     totalCount: number;
     userReaction?: ReactionType | null;
-}> = ({ reactions, totalCount, userReaction }) => {
+    post: BlogPost;
+}> = ({ reactions, totalCount, userReaction, post }) => {
     const [showList, setShowList] = useState<'ALL' | ReactionType | null>(null);
 
     const breakdown = REACTION_OPTIONS
@@ -45,11 +46,7 @@ const ReactionSummaryRow: React.FC<{
 
     if (totalCount === 0) return null;
 
-    const getTooltipData = (count: number) => {
-        if (count === 1) return { names: [MOCK_NAMES[0]], rest: 0 };
-        if (count === 2) return { names: [MOCK_NAMES[0], MOCK_NAMES[1]], rest: 0 };
-        return { names: [MOCK_NAMES[0], MOCK_NAMES[1], MOCK_NAMES[2]], rest: count - 3 };
-    };
+
 
     return (
         <>
@@ -61,7 +58,6 @@ const ReactionSummaryRow: React.FC<{
                 {breakdown.length > 0 ? (
                     breakdown.slice(0, 3).map((r) => {
                         const opt = REACTION_OPTIONS.find(o => o.type === r.type);
-                        const data = getTooltipData(r.count);
                         
                         return (
                             <div key={r.type} 
@@ -73,11 +69,8 @@ const ReactionSummaryRow: React.FC<{
 
                                 {/* Custom Tooltip FB Style */}
                                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover/emoji:opacity-100 pointer-events-none transition-opacity bg-black/90 text-white text-[13px] px-3 py-2 rounded-lg shadow-xl whitespace-nowrap z-[100] min-w-[max-content]">
-                                    <p className={`font-black uppercase text-[12px] mb-1 tracking-wider ${opt?.color}`}>{opt?.label}</p>
-                                    <div className="flex flex-col gap-0.5 text-gray-200">
-                                        {data.names.map(n => <p key={n}>{n}</p>)}
-                                        {data.rest > 0 && <p className="text-gray-400">và {data.rest.toLocaleString()} người khác...</p>}
-                                    </div>
+                                    <p className={`font-black uppercase text-[12px] tracking-wider ${opt?.color}`}>{opt?.label}</p>
+                                    <p className="text-gray-300 mt-0.5">{r.count.toLocaleString()} người</p>
                                 </div>
                             </div>
                         );
@@ -118,6 +111,7 @@ const ReactionSummaryRow: React.FC<{
             breakdown={reactions} 
             totalCount={totalCount} 
             initialTab={showList || 'ALL'}
+            postId={post.id}
         />
         </>
     );
@@ -463,7 +457,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
 
                 {/* ── Stats Row ── */}
                 <div className="px-5 py-2 flex items-center justify-between text-xs text-gray-400 border-b border-gray-100">
-                    <ReactionSummaryRow reactions={breakdown} totalCount={localCount} userReaction={localReaction} />
+                    <ReactionSummaryRow reactions={breakdown} totalCount={localCount} userReaction={localReaction} post={post} />
                     <div className="flex items-center gap-3">
                         {commentCount > 0 && (
                             <button onClick={() => setShowDrawer(true)}
@@ -516,7 +510,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                         )}
 
                         {inlineComments.length === 0 && commentCount === 0 && (
-                            <p className="text-xs text-gray-400 text-center py-2 flex items-center justify-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-orange-400" /> Chưa có bình luận. Hãy là người đầu tiên!</p>
+                            <p className="text-xs text-gray-400 text-center py-2 flex items-center justify-center gap-1.5"> Chưa có bình luận. Hãy là người đầu tiên!</p>
                         )}
 
                         {/* Show drawer link if there are more comments */}

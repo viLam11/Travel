@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import { Sparkles } from 'lucide-react';
 import ReactionPicker, { REACTION_OPTIONS } from './ReactionPicker';
+import { renderPreview } from '@/utils/blog.util';
 import Lottie from 'lottie-react';
 
 // ── Time Helper ─────────────────────────────────────────────────────────────
@@ -251,9 +252,8 @@ const PostDrawer: React.FC<PostDrawerProps> = ({
                 <img src={thumbnail} alt={post.title} className="w-full h-auto max-h-[500px] object-cover group-hover:scale-[1.02] transition-transform duration-700" />
               </div>
 
-              <div className="prose prose-sm max-w-none text-gray-600 mb-8 leading-relaxed text-[15px] font-medium selection:bg-orange-100 selection:text-orange-900">
-                {post.summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 500)}...
-              </div>
+              <div className="prose prose-sm max-w-none text-gray-800 mb-8 leading-relaxed text-[15px] selection:bg-orange-100 selection:text-orange-900"
+                dangerouslySetInnerHTML={{ __html: renderPreview(post.content) }} />
 
               {hasLinks && (
                 <div className="mb-8 p-6 bg-gray-50 rounded-[32px] border border-gray-100">

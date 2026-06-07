@@ -81,13 +81,15 @@ interface User {
     username?: string;
     fullname?: string;
     email: string;
-    role: string;
+    role: string; // Primary role for backward compatibility
+    rawRoles?: string[]; // Array of all roles: ['PROVIDER_HOTEL', 'PROVIDER_VENUE', etc]
     phoneNumber?: string;
     address?: string;
     avatarUrl?: string;
-    providerType?: 'hotel' | 'place'; // For providers
+    providerType?: 'hotel' | 'place' | 'both'; // For providers
     hasService?: boolean; // For providers - whether they have completed service setup
-    serviceId?: string | number; // For providers - their service ID
+    serviceId?: string | number; // Primary service ID (for backward compatibility)
+    services?: any[]; // Array of all services owned by the provider
     status?: 'active' | 'blocked' | 'pending';
 }
 
@@ -116,6 +118,7 @@ interface AuthContextType {
     register: (userData: RegisterData) => Promise<any>;
     checkAuth: () => Promise<void>;
     completeServiceSetup: () => void;
+    hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -138,9 +141,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userResponse = await apiClient.users.getProfile();
             console.log('[Auth] Profile fetched successfully:', userResponse);
 
-            // Mapping backend DTO to frontend User interface
-            const rawRole = (userResponse.role || 'USER').toString().toUpperCase();
-            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+            // Extract roles array from backend response
+            let rawRoles: string[] = [];
+            if (Array.isArray((userResponse as any).roles)) {
+                rawRoles = (userResponse as any).roles.map((r: any) => r.toString().toUpperCase());
+            } else if (typeof userResponse.role === 'string') {
+                rawRoles = userResponse.role.split(',').map((r: string) => r.trim().toUpperCase());
+            } else {
+                rawRoles = [(userResponse.role || 'USER').toString().toUpperCase()];
+            }
+
+            // Determine primary normalized role
+            const isProvider = rawRoles.some(r => r.startsWith('PROVIDER_'));
+            const isAdmin = rawRoles.some(r => r === 'ADMIN');
+            const normalizedRole = isAdmin ? 'admin' : (isProvider ? 'provider' : 'user');
 
             // Strict check: if active is false or status is blocked, kick out immediately
             if (userResponse.active === false || userResponse.status === 'blocked') {
@@ -165,16 +179,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
 
 
-            // Extract serviceId safely - One provider = One service
+            // Extract serviceId safely and keep all services
             let fetchedServiceId: string | number | undefined = undefined;
+            let providerServices: any[] = [];
 
-            if ((userResponse as any).serviceId) {
-                fetchedServiceId = (userResponse as any).serviceId;
-            } else if (Array.isArray((userResponse as any).services) && (userResponse as any).services.length > 0) {
-                const firstService = (userResponse as any).services[0];
+            if (Array.isArray((userResponse as any).services) && (userResponse as any).services.length > 0) {
+                providerServices = (userResponse as any).services;
+                const firstService = providerServices[0];
                 fetchedServiceId = typeof firstService === 'object' ? firstService.id : firstService;
             } else if (Array.isArray((userResponse as any).serviceIds) && (userResponse as any).serviceIds.length > 0) {
-                fetchedServiceId = (userResponse as any).serviceIds[0];
+                providerServices = (userResponse as any).serviceIds;
+                fetchedServiceId = providerServices[0];
+            } else if ((userResponse as any).serviceId) {
+                fetchedServiceId = (userResponse as any).serviceId;
+                providerServices = [fetchedServiceId];
             }
 
             const user: User = {
@@ -187,11 +205,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 phoneNumber: userResponse.phone || userResponse.phoneNumber,
                 address: userResponse.address,
                 avatarUrl: userResponse.avatarUrl,
-                // Derive providerType from specific provider role
-                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' :
-                    rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                rawRoles: rawRoles,
+                // Derive providerType from specific provider roles
+                providerType: (rawRoles.includes('PROVIDER_HOTEL') && rawRoles.includes('PROVIDER_VENUE')) ? 'both' :
+                              rawRoles.includes('PROVIDER_HOTEL') ? 'hotel' :
+                              rawRoles.includes('PROVIDER_VENUE') ? 'place' : undefined,
                 serviceId: fetchedServiceId,
-                hasService: !!fetchedServiceId,
+                services: providerServices,
+                hasService: providerServices.length > 0 || !!fetchedServiceId,
                 status: (userResponse.active === false && normalizedRole === 'provider') ? 'pending' : (userResponse.status || 'active')
             };
 
@@ -305,10 +326,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // Handle structure where user and role might be sibling or nested
             const rawUser = response.user || response;
-            const rawRole = (response.role || rawUser.role || 'USER').toString().toUpperCase();
+            
+            // Extract roles array
+            let rawRoles: string[] = [];
+            if (Array.isArray(rawUser.roles)) {
+                rawRoles = rawUser.roles.map((r: any) => r.toString().toUpperCase());
+            } else if (typeof rawUser.role === 'string') {
+                rawRoles = rawUser.role.split(',').map((r: string) => r.trim().toUpperCase());
+            } else if (typeof response.role === 'string') {
+                rawRoles = response.role.split(',').map((r: string) => r.trim().toUpperCase());
+            } else {
+                rawRoles = ['USER'];
+            }
 
-            // Map and normalize roles
-            const normalizedRole = rawRole.startsWith('PROVIDER_') ? 'provider' : rawRole.toLowerCase();
+            // Determine primary normalized role
+            const isProvider = rawRoles.some(r => r.startsWith('PROVIDER_'));
+            const isAdmin = rawRoles.some(r => r === 'ADMIN');
+            const normalizedRole = isAdmin ? 'admin' : (isProvider ? 'provider' : 'user');
 
             // Check if account is blocked/inactive
             const userStatus = rawUser.status || 'active';
@@ -320,13 +354,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // Safely extract service info
             let fetchedServiceId: string | number | undefined = undefined;
-            if (rawUser.serviceId) {
-                fetchedServiceId = rawUser.serviceId;
-            } else if (Array.isArray(rawUser.services) && rawUser.services.length > 0) {
-                const firstService = rawUser.services[0];
+            let providerServices: any[] = [];
+            
+            if (Array.isArray(rawUser.services) && rawUser.services.length > 0) {
+                providerServices = rawUser.services;
+                const firstService = providerServices[0];
                 fetchedServiceId = typeof firstService === 'object' ? firstService.id : firstService;
             } else if (Array.isArray(rawUser.serviceIds) && rawUser.serviceIds.length > 0) {
-                fetchedServiceId = rawUser.serviceIds[0];
+                providerServices = rawUser.serviceIds;
+                fetchedServiceId = providerServices[0];
+            } else if (rawUser.serviceId) {
+                fetchedServiceId = rawUser.serviceId;
+                providerServices = [fetchedServiceId];
             }
 
             const user: User = {
@@ -339,10 +378,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 phoneNumber: rawUser.phone || rawUser.phoneNumber,
                 address: rawUser.address,
                 avatarUrl: rawUser.avatarUrl,
-                providerType: rawRole === 'PROVIDER_HOTEL' ? 'hotel' :
-                    rawRole === 'PROVIDER_VENUE' ? 'place' : undefined,
+                rawRoles: rawRoles,
+                providerType: (rawRoles.includes('PROVIDER_HOTEL') && rawRoles.includes('PROVIDER_VENUE')) ? 'both' :
+                              rawRoles.includes('PROVIDER_HOTEL') ? 'hotel' :
+                              rawRoles.includes('PROVIDER_VENUE') ? 'place' : undefined,
                 serviceId: fetchedServiceId,
-                hasService: !!fetchedServiceId,
+                services: providerServices,
+                hasService: providerServices.length > 0 || !!fetchedServiceId,
                 status: userStatus
             };
 
@@ -491,6 +533,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(false);
         }
     };
+    const hasRole = (role: string): boolean => {
+        if (!currentUser?.user) return false;
+        const searchRole = role.toUpperCase();
+        if (currentUser.user.rawRoles && currentUser.user.rawRoles.length > 0) {
+            return currentUser.user.rawRoles.includes(searchRole);
+        }
+        // Fallback for mock users or old data
+        const fallbackRawRole = currentUser.user.providerType === 'hotel' ? 'PROVIDER_HOTEL' : 
+                                currentUser.user.providerType === 'place' ? 'PROVIDER_VENUE' : 
+                                currentUser.user.role.toUpperCase();
+        return fallbackRawRole.includes(searchRole);
+    };
+
     return (
         <AuthContext.Provider value={{
             isAuthenticated,
@@ -500,7 +555,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             logout,
             register,
             checkAuth,
-            completeServiceSetup
+            completeServiceSetup,
+            hasRole
         }}>
             {children}
         </AuthContext.Provider>

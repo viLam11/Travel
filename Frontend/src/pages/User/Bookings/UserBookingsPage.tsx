@@ -10,7 +10,8 @@ import {
   Search,
   Package,
   TrendingUp,
-  Tag
+  Tag,
+  MessageCircle
 } from 'lucide-react';
 import apiClient from '@/services/apiClient';
 
@@ -40,6 +41,7 @@ const UserBookingsPage: React.FC = () => {
     queryFn: async () => {
       const data: any = await apiClient.orders.getAll();
       const list: any[] = Array.isArray(data) ? data : (data?.content ?? data?.orders ?? []);
+      console.log("=== USER BOOKINGS RAW LIST ===", list);
 
       return list.map((item: any) => {
         const isOrderedTicket = !!item.order;
@@ -56,23 +58,27 @@ const UserBookingsPage: React.FC = () => {
           status = 'pending';
         }
 
-        let serviceName = 'Dịch vụ';
-        let location = '';
-        let serviceId = '';
+        let serviceName = item.serviceName || 'Dịch vụ';
+        let location = item.location || '';
+        let serviceId = item.serviceId || item.serviceID || '';
         let type = 'activity';
-        let image = 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600';
+        let image = item.image || 'https://images.unsplash.com/photo-1528127269322-539801943592?w=600';
         let checkIn = '';
         let checkOut = '';
 
         if (isOrderedTicket) {
           const ticket = item.ticket;
           const venue = ticket?.ticketVenue;
+          
           if (venue) {
-            serviceName = venue.serviceName || ticket.name || 'Vé tham quan';
-            location = venue.province?.name || '';
-            serviceId = venue.id || '';
+            serviceName = venue.serviceName || serviceName;
+            location = venue.province?.name || location;
+            serviceId = venue.id || serviceId;
             type = (venue.serviceType || 'activity').toLowerCase();
             image = venue.thumbnailUrl || image;
+          } else if (ticket) {
+            serviceName = ticket.name || serviceName;
+            serviceId = ticket.serviceId || ticket.serviceID || serviceId;
           }
           checkIn = item.validStart || item.order?.createdAt || '';
           checkOut = item.validEnd || '';
@@ -82,11 +88,22 @@ const UserBookingsPage: React.FC = () => {
           const service = firstTicket?.ticket?.ticketVenue || firstRoom?.room?.hotel;
           
           if (service) {
-            serviceName = service.serviceName || 'Dịch vụ';
-            location = service.province?.name || '';
-            serviceId = service.id || '';
+            serviceName = service.serviceName || serviceName;
+            location = service.province?.name || location;
+            serviceId = service.id || serviceId;
             type = (service.serviceType || (firstRoom ? 'hotel' : 'activity')).toLowerCase();
             image = service.thumbnailUrl || image;
+          } else {
+            if (firstTicket?.ticket) {
+              serviceName = firstTicket.ticket.name || serviceName;
+              serviceId = firstTicket.ticket.serviceId || firstTicket.ticket.serviceID || serviceId;
+            } else if (firstRoom?.room) {
+              serviceName = firstRoom.room.name || serviceName;
+              serviceId = firstRoom.room.serviceId || firstRoom.room.serviceID || serviceId;
+            }
+            if (firstRoom) {
+              type = 'hotel';
+            }
           }
           checkIn = item.createdAt || firstTicket?.validStart || firstRoom?.startDate || '';
           checkOut = firstTicket?.validEnd || firstRoom?.endDate || '';
@@ -355,7 +372,21 @@ const UserBookingsPage: React.FC = () => {
                       </div>
 
                       <div className="flex gap-2">
-                         <button 
+                        {/* Chat với Provider - chỉ hiện khi chưa hủy */}
+                        {booking.id && booking.status !== 'cancelled' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/user/messages?bookingId=${booking.id}`);
+                            }}
+                            className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-orange-200 text-orange-600 rounded-xl font-bold text-sm hover:bg-orange-50 hover:border-orange-400 transition-all shadow-sm group/chat cursor-pointer"
+                            title="Chat với Provider về đơn này"
+                          >
+                            <MessageCircle className="w-4 h-4 group-hover/chat:scale-110 transition-transform" />
+                            <span className="hidden sm:inline">Chat</span>
+                          </button>
+                        )}
+                        <button 
                           onClick={(e) => { e.stopPropagation(); booking.serviceId && navigate(`/service/${booking.serviceId}`); }}
                           className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl font-bold text-sm hover:bg-orange-700 transition-all shadow-lg shadow-orange-100 group/btn cursor-pointer"
                         >

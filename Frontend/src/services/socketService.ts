@@ -56,24 +56,33 @@ class SocketService {
             console.log('[SocketService] Connected to server');
             this.updateStatus('CONNECTED');
 
-            // Subscribe to private messages for the current user
             this.client?.subscribe('/user/queue/messages', (message) => {
                 if (message.body) {
                     try {
+                        console.log('[SocketService] Raw WebSocket message body:', message.body);
                         const backendMsg = JSON.parse(message.body);
                         
+                        let finalType = backendMsg.attachmentType;
+                        if (backendMsg.type === 'ORDER_ATTACHMENT') {
+                            finalType = 'order';
+                        } else if (backendMsg.type === 'SERVICE_ATTACHMENT') {
+                            finalType = 'service';
+                        } else if (backendMsg.type?.toString().toLowerCase() === 'chat') {
+                            finalType = 'text';
+                        } else if (!finalType) {
+                            finalType = backendMsg.type?.toString().toLowerCase() as any || 'text';
+                        }
+
                         const chatMsg: ChatMessage = {
                             id: backendMsg.id || ('msg_' + Date.now()),
-                            // conversationId = senderId of this message, because:
-                            // - conv.id = otherUser.userId
-                            // - When provider replies to user → senderId = providerID → conversationId = providerID ✅
-                            // - When user sends to provider → senderId = userID, but this msg goes to provider's queue
                             conversationId: backendMsg.senderId?.toString() || 'unknown',
                             senderId: backendMsg.senderId?.toString() || 'unknown',
                             text: backendMsg.content || backendMsg.text || '',
-                            type: backendMsg.type?.toString().toLowerCase() === 'chat' ? 'text' : (backendMsg.type?.toString().toLowerCase() as any || 'text'),
+                            type: finalType as any,
                             timestamp: backendMsg.timestamp || backendMsg.createdAt || new Date().toISOString(),
-                            isRead: backendMsg.isRead || false
+                            isRead: backendMsg.isRead || false,
+                            attachmentId: backendMsg.attachmentId || backendMsg.attachment_id || undefined,
+                            attachmentData: backendMsg.attachment || backendMsg.attachmentData || backendMsg.attachment_data || undefined
                         };
                         
                         console.log('[SocketService] Mapped (frontend):', chatMsg);
@@ -138,23 +147,48 @@ class SocketService {
         };
     }
 
-    sendMessage(receiverId: string, senderId: string, text: string, _recipientRole: 'user' | 'provider', type: 'text' | 'image' = 'text'): ChatMessage | void {
-        const backendPayload = {
+    sendMessage(
+        receiverId: string,
+        senderId: string,
+        text: string,
+        _recipientRole: 'user' | 'provider',
+        type: 'text' | 'image' | 'system' | 'service' | 'order' = 'text',
+        attachmentId?: string
+    ): ChatMessage | void {
+        console.log('[SocketService] sendMessage called with:', { receiverId, senderId, text, type, attachmentId });
+
+        let backendType = 'CHAT';
+        if (attachmentId) {
+            if (type === 'order') {
+                backendType = 'ORDER_ATTACHMENT';
+            } else if (type === 'service') {
+                backendType = 'SERVICE_ATTACHMENT';
+            }
+        }
+
+        const backendPayload: any = {
             senderId,
             receiverId,
             content: text,
-            type: 'CHAT',
+            type: backendType,
             read: false
         };
 
+        if (attachmentId) {
+            backendPayload.attachmentId = attachmentId;
+            backendPayload.attachmentType = type === 'order' ? 'ORDER' : 'SERVICE';
+        }
+
+        console.log('[SocketService] Constructed backendPayload:', backendPayload);
         const frontendPayload: ChatMessage = {
             id: 'msg_' + Date.now(),
             conversationId: receiverId,
             senderId,
             text,
-            type: type as 'text' | 'image' | 'system',
+            type: type,
             timestamp: new Date().toISOString(),
-            isRead: false
+            isRead: false,
+            attachmentId: attachmentId
         };
 
 

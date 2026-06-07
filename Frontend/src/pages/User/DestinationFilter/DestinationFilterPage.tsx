@@ -37,8 +37,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
 
   // Get query params
   const searchKeyword = searchParams.get('keyword') || ''; // Text search from search bar
-  const urlDestination = destination || searchParams.get('destination') || ''; 
-  const queryProvinceCode = searchParams.get('provinceCode') || ''; 
+  const urlDestination = destination || searchParams.get('destination') || '';
+  const queryProvinceCode = searchParams.get('provinceCode') || '';
   const provinceSlug = urlDestination === 'undefined' ? '' : urlDestination;
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
 
@@ -50,8 +50,9 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
     || (provinceSlug && !isNaN(Number(provinceSlug)) ? provinceSlug : '');
 
   // Map frontend slug to backend enum
-  let apiServiceType = '';
-  if (paramServiceType === 'ticket' || paramServiceType === 'place') apiServiceType = 'TICKET_VENUE';
+  let apiServiceType = paramServiceType;
+  if (paramServiceType === 'ticket') apiServiceType = 'TICKET_VENUE';
+  else if (paramServiceType === 'place') apiServiceType = 'TICKET_VENUE';
   else if (paramServiceType === 'hotel') apiServiceType = 'HOTEL';
   else if (paramServiceType === 'restaurant') apiServiceType = 'RESTAURANT';
   // 'all' or empty → no type filter (falls back to TICKET_VENUE default below)
@@ -143,7 +144,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   React.useEffect(() => {
     fetchDestinations();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [searchKeyword, provinceSlug, queryProvinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]); 
+  }, [searchKeyword, provinceSlug, queryProvinceCode, paramServiceType, priceRange, sortBy, minRating, currentPage]);
 
 
   // Determine page title and breadcrumb
@@ -167,12 +168,42 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   };
 
   const click_card = (id: string | number, item: any) => {
-    navigate(buildServiceDetailUrl({
-      id,
-      serviceName: item.serviceName || item.title || 'service',
-      serviceType: item.serviceType || 'DESTINATION',
-      province: item.province || item.provinceCode,
-    }));
+    console.log('Navigate to:', id);
+    console.log('Item data:', item);
+
+    // Determine service type based on item data from API
+    // Enum Backend: HOTEL, RESTAURANT, TICKET_VENUE, TOUR
+    let typeSlug = 'place';
+    const itemType = (item.serviceType || '').toUpperCase();
+    if (itemType === 'HOTEL') typeSlug = 'hotel';
+    else if (itemType === 'RESTAURANT') typeSlug = 'restaurant';
+    else if (itemType === 'TICKET_VENUE' || itemType === 'TOUR') typeSlug = 'ticket';
+
+    // Create readable slug: id-title-safe
+    const titleSlug = (item.serviceName || item.title || 'service')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+
+    const idSlug = `${id}-${titleSlug}`;
+
+    // Region fallback
+    const targetRegion = (region && region !== 'undefined') ? region : 'vietnam';
+
+    // Province fallback logic
+    let tempProvinceCode = item.province?.code || item.provinceCode || destination || 'ha-noi';
+    if (tempProvinceCode === 'undefined') tempProvinceCode = 'ha-noi';
+
+    const destInfo = getDestinationInfo(tempProvinceCode.toString());
+    const finalProvinceCode = destInfo?.slug || tempProvinceCode;
+
+    const finalUrl = typeSlug === 'hotel'
+      ? `/hotels/${targetRegion}/${finalProvinceCode}/${idSlug}`
+      : `/destinations/${targetRegion}/${finalProvinceCode}/${typeSlug}/${idSlug}`;
+    console.log('Final Navigation URL:', finalUrl);
+
+    navigate(finalUrl);
   };
 
   // handleBooking moved up
@@ -294,7 +325,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                   <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col sm:flex-row h-auto animate-pulse">
                     {/* Image Skeleton */}
                     <div className="w-full sm:w-64 h-48 sm:h-52 bg-gray-200"></div>
-                    
+
                     {/* Content Skeleton */}
                     <div className="flex-1 p-5 flex flex-col justify-between space-y-4">
                       <div className="space-y-3">
@@ -305,7 +336,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                         <div className="h-4 bg-gray-100 rounded w-1/2"></div>
                         <div className="h-4 bg-gray-100 rounded w-2/3"></div>
                       </div>
-                      
+
                       <div className="flex justify-between items-end pt-4 border-t border-gray-50">
                         <div className="space-y-2">
                           <div className="h-3 bg-gray-100 rounded w-16"></div>
@@ -336,8 +367,10 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
                   <div className="bg-gray-50 p-4 rounded-xl">
                     <p className="text-sm font-medium text-gray-700 mb-3 block text-left">Thử tìm ở địa điểm khác:</p>
                     <LocationSelector
-                      onSelect={(code, _name) => {
-                        navigate(`/destinations?provinceCode=${code}&serviceType=${paramServiceType || 'ticket'}`);
+                      onSelect={(_code, name) => {
+                        const slug = name;
+                        // Simple navigation to trigger refresh with new location
+                        navigate(`/destinations/vietnam/${slug}/all`);
                       }}
                       placeholder="Chọn tỉnh/thành phố..."
                     />
@@ -387,11 +420,11 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
 
                   if (activeDiscount) {
                     if (activeDiscount.discountType === 'Percentage') {
-                        discountedPrice = rawPrice * (1 - (activeDiscount.percentage || 0) / 100);
-                        discountLabel = `Giảm ${activeDiscount.percentage}%`;
+                      discountedPrice = rawPrice * (1 - (activeDiscount.percentage || 0) / 100);
+                      discountLabel = `Giảm ${activeDiscount.percentage}%`;
                     } else if (activeDiscount.discountType === 'Fixed') {
-                        discountedPrice = Math.max(0, rawPrice - (activeDiscount.fixedPrice || 0));
-                        discountLabel = `Giảm ${(activeDiscount.fixedPrice || 0).toLocaleString()} ₫`;
+                      discountedPrice = Math.max(0, rawPrice - (activeDiscount.fixedPrice || 0));
+                      discountLabel = `Giảm ${(activeDiscount.fixedPrice || 0).toLocaleString()} ₫`;
                     }
                   }
 

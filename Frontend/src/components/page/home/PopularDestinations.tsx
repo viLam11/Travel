@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import DestinationCard from '../../common/DestinationCard';
 import { ChevronRight } from 'lucide-react';
 import apiClient from '@/services/apiClient';
-import { buildServiceDetailUrl } from '@/utils/serviceUrl';
+import { getDestinationInfo } from '@/constants/regions';
 
 interface Destination {
   id: string;
@@ -53,12 +53,13 @@ const PopularDestinations: React.FC = () => {
   const mapServiceToDestination = (service: any): Destination => {
     const regionSlug = 'vietnam';
     const provinceCodeRaw = service.provinceCode || service.province?.code || service.province?.code_name || '79';
-    const destinationSlug = provinceCodeRaw.toString().replace(/_/g, '-');
+    const destInfo = getDestinationInfo(provinceCodeRaw.toString());
+    const destinationSlug = destInfo?.slug || provinceCodeRaw.toString().replace(/_/g, '-');
 
     let typeSlug = 'place';
     if (service.serviceType === 'HOTEL') typeSlug = 'hotel';
-    if (service.serviceType === 'RESTAURANT') typeSlug = 'restaurant';
-    if (service.serviceType === 'TICKET_VENUE' || service.serviceType === 'DESTINATION') typeSlug = 'place';
+    else if (service.serviceType === 'RESTAURANT') typeSlug = 'restaurant';
+    else if (service.serviceType === 'TICKET_VENUE' || service.serviceType === 'TOUR') typeSlug = 'ticket';
 
     return {
       id: service.id.toString(),
@@ -80,11 +81,12 @@ const PopularDestinations: React.FC = () => {
       try {
         setIsLoadingDestinations(true);
         const response: any = await apiClient.services.search({
+          keyword: '',
           serviceType: 'TICKET_VENUE',
           page: 0,
           size: 6
         });
-
+ 
         if (response && response.services && response.services.length > 0) {
           const mapped = response.services.map(mapServiceToDestination);
           setDestinations(mapped);
@@ -99,16 +101,17 @@ const PopularDestinations: React.FC = () => {
         setIsLoadingDestinations(false);
       }
     };
-
+ 
     const fetchHotels = async () => {
       try {
         setIsLoadingHotels(true);
         const response: any = await apiClient.services.search({
+          keyword: '',
           serviceType: 'HOTEL',
           page: 0,
           size: 6
         });
-
+ 
         if (response && response.services && response.services.length > 0) {
           const mapped = response.services.map(mapServiceToDestination);
           setHotels(mapped);
@@ -132,13 +135,13 @@ const PopularDestinations: React.FC = () => {
     const allItems = [...destinations, ...hotels];
     const item = allItems.find(d => d.id === id);
     if (!item) return;
-    // destinationSlug may be a numeric province code (e.g. "79") or slug — buildServiceDetailUrl resolves both
-    navigate(buildServiceDetailUrl({
-      id,
-      serviceName: item.title,
-      serviceType: item.serviceType,    // frontend slug: 'hotel' | 'ticket' | 'place' | 'restaurant'
-      province: item.destinationSlug,   // province code or slug from API
-    }));
+
+    const idSlug = `${id}-${item.title.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
+    if (item.serviceType === 'hotel') {
+        navigate(`/hotels/vietnam/${item.destinationSlug}/${idSlug}`);
+    } else {
+        navigate(`/destinations/vietnam/${item.destinationSlug}/${item.serviceType}/${idSlug}`);
+    }
   };
 
   const handleViewAllDestinations = () => {
@@ -181,7 +184,7 @@ const PopularDestinations: React.FC = () => {
               <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col sm:flex-row h-auto animate-pulse">
                 {/* Image Skeleton */}
                 <div className="w-full sm:w-[40%] h-48 sm:h-40 bg-gray-200"></div>
-                
+
                 {/* Content Skeleton */}
                 <div className="w-full sm:w-[60%] p-4 flex flex-col justify-between space-y-3">
                   <div className="space-y-2">
@@ -192,7 +195,7 @@ const PopularDestinations: React.FC = () => {
                     <div className="h-3 bg-gray-100 rounded w-1/2"></div>
                     <div className="h-3 bg-gray-100 rounded w-2/3"></div>
                   </div>
-                  
+
                   <div className="flex justify-between items-end pt-2">
                     <div className="space-y-1">
                       <div className="h-3 bg-gray-100 rounded w-12"></div>
@@ -209,7 +212,7 @@ const PopularDestinations: React.FC = () => {
             {items.map((item) => {
               // Real discount logic
               // Mapping already handles basic fields
-              
+
               return (
                 <DestinationCard
                   key={item.id}
