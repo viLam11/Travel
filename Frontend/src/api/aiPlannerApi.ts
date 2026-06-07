@@ -1,7 +1,7 @@
 import type {
     PlanRequest, PlanResponse, PlanData, Activity, ItineraryDay,
     PlanCollabInvitation, PlanCollaboration, PlanOverallResponse,
-    CollabStatus, PlanUpdate
+    CollabStatus, PlanUpdate, PreferenceService
 } from '@/types/aiPlanner.types';
 import apiClient from '../services/apiClient';
 import { MOCK_PLAN_RESPONSE } from '@/mocks/aiPlanner';
@@ -26,7 +26,7 @@ if (typeof window !== 'undefined') {
 // Map backend Activity → frontend Activity
 const mapBackendActivity = (a: any): Activity => ({
     id: a.id || `act-${Math.random().toString(36).slice(2, 8)}`,
-    name: a.activityTitle || a.name || 'Hoạt động',
+    name: a.activityTitle || a.serviceName || a.name || 'Hoạt động',
     description: a.description || '',
     duration: a.duration || '1-2 giờ',
     estimated_cost: a.estimatedPrice != null
@@ -35,6 +35,11 @@ const mapBackendActivity = (a: any): Activity => ({
     location: a.location || '',
     timeOfDay: a.timeOfDay,
     activityTitle: a.activityTitle,
+    isSystemService: a.isSystemService ?? false,
+    serviceUrl: a.serviceUrl || undefined,
+    serviceId: a.serviceId || undefined,
+    thumbnailUrl: a.thumbnailUrl || undefined,
+    serviceType: a.serviceType || undefined,
 });
 
 // Map backend DailyItinerary (day + activities[]) → frontend ItineraryDay
@@ -57,21 +62,26 @@ const mapBackendDay = (day: any, idx: number): ItineraryDay => {
 };
 
 // Map backend TravelPlan → frontend PlanData
-const mapBackendPlan = (raw: any): PlanData => ({
-    id: raw.id || raw.planId || '',
-    ownerId: raw.userId || raw.ownerId || 0,
-    title: raw.tripTitle || raw.title || `Kế hoạch ${raw.place || ''}`,
-    overview: raw.overview || '',
-    destination: raw.place || raw.destination || '',
-    days: (raw.itinerary || []).length,
-    itinerary: (raw.itinerary || []).map(mapBackendDay),
-    isPublic: raw.isPublic ?? false,
-    isOwner: raw.isOwner ?? true,
-    createdAt: raw.createdAt || new Date().toISOString(),
-    updatedAt: raw.updatedAt || new Date().toISOString(),
-    shareUrl: raw.shareUrl,
-    members: raw.members,
-});
+// Handles both old format (raw.itinerary) and new format (raw.plan.itinerary + raw.preferenceServices)
+const mapBackendPlan = (raw: any): PlanData => {
+    const itinerary = raw.plan?.itinerary || raw.itinerary || [];
+    return {
+        id: raw.id || raw.planId || raw.plan?.id || '',
+        ownerId: raw.userId || raw.ownerId || 0,
+        title: raw.tripTitle || raw.title || `Kế hoạch ${raw.place || ''}`,
+        overview: raw.overview || '',
+        destination: raw.place || raw.destination || '',
+        days: itinerary.length,
+        itinerary: itinerary.map(mapBackendDay),
+        isPublic: raw.isPublic ?? false,
+        isOwner: raw.isOwner ?? true,
+        createdAt: raw.createdAt || new Date().toISOString(),
+        updatedAt: raw.updatedAt || new Date().toISOString(),
+        shareUrl: raw.shareUrl,
+        members: raw.members,
+        preferenceServices: (raw.preferenceServices || []) as PreferenceService[],
+    };
+};
 
 // Map frontend ItineraryDay[] → backend format for PATCH
 const mapFrontendDayToBackend = (day: ItineraryDay, idx: number): any => ({
@@ -229,7 +239,7 @@ export const aiPlannerApi = {
             ownerId: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            isOwner: true
+            isOwner: true,
         } as PlanData;
         mockPlansCache[newPlan.id] = newPlan;
         saveToCache(mockPlansCache);

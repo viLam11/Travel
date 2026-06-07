@@ -8,9 +8,25 @@ export interface Activity {
     duration: string;
     estimated_cost: string;
     location: string;
-    // Optional BE fields if they leak into UI
+    // System service fields
+    isSystemService?: boolean;
+    serviceUrl?: string;
+    serviceId?: string;
+    thumbnailUrl?: string;
+    serviceType?: string;
+    // BE compat
     timeOfDay?: string;
     activityTitle?: string;
+}
+
+export interface PreferenceService {
+    id: string;
+    serviceName: string;
+    serviceType: string;
+    thumbnailUrl?: string;
+    url?: string;
+    averagePrice?: number;
+    rating?: number;
 }
 
 export interface ItineraryDay {
@@ -34,6 +50,7 @@ export interface PlanData {
     updatedAt: string;
     shareUrl?: string;
     members?: UserInfo[];
+    preferenceServices?: PreferenceService[];
 }
 
 export interface PlanRequest {

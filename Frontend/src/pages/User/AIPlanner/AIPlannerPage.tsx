@@ -1,19 +1,19 @@
 // src/pages/User/AIPlanner/AIPlannerPage.tsx
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-    Sparkles, MapPin, Calendar, ChevronRight, ChevronLeft, Loader2,
+    Sparkles, MapPin, Calendar, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Loader2,
     X, GripVertical, Plus, RotateCcw, Sun, Moon,
     Clock, DollarSign, Wand2, ArrowRightLeft,
     Waves, Landmark, UtensilsCrossed, Mountain, ShoppingBag, Leaf, BedDouble, Camera,
     CalendarDays, Banknote, RefreshCw, MoveHorizontal, CheckCircle2, PlaneTakeoff, Compass, Receipt,
-    BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings
+    BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, Star, ExternalLink, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { aiPlannerApi, USE_MOCK_AI_PLANNER } from '@/api/aiPlannerApi';
 import apiClient from '@/services/apiClient';
 import { MOCK_LIBRARY_ACTIVITIES } from '@/mocks/aiPlanner';
-import type { ItineraryDay, Activity, TimeSlot, PlanData } from '@/types/aiPlanner.types';
+import type { ItineraryDay, Activity, TimeSlot, PlanData, PreferenceService } from '@/types/aiPlanner.types';
 import SharePlanModal from './components/SharePlanModal';
 import toast from 'react-hot-toast';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -49,6 +49,36 @@ const INTEREST_TAGS: { label: string; icon: React.ReactNode }[] = [
     { label: 'Nghỉ dưỡng', icon: <BedDouble className="w-3.5 h-3.5" /> },
     { label: 'Chụp ảnh', icon: <Camera className="w-3.5 h-3.5" /> },
 ];
+
+const SERVICE_TYPE_LABELS: Record<string, string> = {
+    TICKET_VENUE: 'Vé/Điểm đến',
+    HOTEL: 'Khách sạn',
+    TOUR_SERVICE: 'Tour',
+    RESTAURANT: 'Nhà hàng',
+};
+
+const SERVICE_TYPE_BADGE: Record<string, string> = {
+    TICKET_VENUE: 'bg-amber-100 text-amber-700',
+    HOTEL: 'bg-blue-100 text-blue-700',
+    TOUR_SERVICE: 'bg-green-100 text-green-700',
+    RESTAURANT: 'bg-rose-100 text-rose-700',
+};
+
+const prefToActivity = (pref: PreferenceService): Activity => ({
+    id: pref.id,
+    name: pref.serviceName,
+    description: '',
+    duration: '1-2 giờ',
+    estimated_cost: pref.averagePrice != null && pref.averagePrice > 0
+        ? `${Number(pref.averagePrice).toLocaleString('vi-VN')}₫`
+        : 'Liên hệ',
+    location: '',
+    isSystemService: true,
+    serviceUrl: pref.url,
+    serviceId: pref.id,
+    thumbnailUrl: pref.thumbnailUrl,
+    serviceType: pref.serviceType,
+});
 
 interface DragPayload {
     activityId: string;
@@ -217,6 +247,7 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
     onDragStart: (e: React.DragEvent) => void;
     onMobileMove?: () => void;
 }) {
+    const navigate = useNavigate();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState({ name: activity.name, description: activity.description });
@@ -237,6 +268,66 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
         setIsConfirming(false);
     };
 
+    // ── System service card (has thumbnail) ──
+    if (activity.isSystemService && activity.thumbnailUrl && !isEditing) {
+        return (
+            <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="group relative">
+                <div
+                    draggable
+                    onDragStart={onDragStart}
+                    className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-orange-300 transition-all duration-200 select-none cursor-grab active:cursor-grabbing"
+                >
+                    <div className="flex gap-0">
+                        {/* Thumbnail */}
+                        <div className="w-20 shrink-0 relative self-stretch">
+                            <img
+                                src={activity.thumbnailUrl}
+                                alt={activity.name}
+                                className="w-full h-full object-cover min-h-[72px]"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                            {activity.serviceType && (
+                                <span className={`absolute bottom-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${SERVICE_TYPE_BADGE[activity.serviceType] || 'bg-gray-100 text-gray-600'}`}>
+                                    {SERVICE_TYPE_LABELS[activity.serviceType] || activity.serviceType}
+                                </span>
+                            )}
+                        </div>
+                        {/* Content */}
+                        <div className="flex-1 p-2.5 min-w-0 flex flex-col justify-between">
+                            <div>
+                                <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors truncate">{activity.name}</p>
+                                <p className="text-[11px] font-semibold text-orange-600 mt-0.5">{activity.estimated_cost}</p>
+                                {activity.description && (
+                                    <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1 italic">{activity.description}</p>
+                                )}
+                            </div>
+                            {activity.serviceUrl && (
+                                <button
+                                    onClick={e => { e.stopPropagation(); navigate(activity.serviceUrl!); }}
+                                    className="text-[10px] text-orange-500 hover:text-orange-700 font-semibold flex items-center gap-0.5 mt-1.5 w-fit"
+                                >
+                                    <ExternalLink className="w-3 h-3" /> Xem chi tiết
+                                </button>
+                            )}
+                        </div>
+                        {/* Actions */}
+                        <div className="flex flex-col gap-0.5 p-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={onRemove} className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors" title="Xóa">
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {onMobileMove && (
+                    <button onClick={onMobileMove} className="lg:hidden absolute top-1.5 right-1.5 p-1 bg-orange-50 text-orange-500 rounded-full shadow-sm">
+                        <ArrowRightLeft className="w-3 h-3" />
+                    </button>
+                )}
+            </motion.div>
+        );
+    }
+
+    // ── Regular / editable card ──
     return (
         <motion.div
             layout
@@ -257,7 +348,7 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                             <GripVertical className="w-4 h-4" />
                         </div>
                     )}
-                    
+
                     <div className="flex-1 min-w-0">
                         {isEditing ? (
                             <div className="space-y-2">
@@ -276,7 +367,7 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                 <div className="flex justify-end gap-2 pt-1">
                                     <AnimatePresence mode="wait">
                                         {isConfirming ? (
-                                            <motion.div 
+                                            <motion.div
                                                 key="confirm"
                                                 initial={{ opacity: 0, scale: 0.9 }}
                                                 animate={{ opacity: 1, scale: 1 }}
@@ -288,7 +379,7 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                                 <button onClick={confirmSave} className="text-[10px] bg-green-500 text-white rounded px-3 py-1 font-bold hover:bg-green-600 shadow-sm shadow-green-100">Xác nhận</button>
                                             </motion.div>
                                         ) : (
-                                            <motion.div 
+                                            <motion.div
                                                 key="edit-actions"
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
@@ -307,12 +398,12 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                 <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors">{activity.name}</p>
                                 {activity.description && (
                                     <div className="relative mt-1">
-                                        <p 
+                                        <p
                                             className={`text-[11px] text-gray-500 leading-relaxed italic transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}
                                             dangerouslySetInnerHTML={{ __html: activity.description || '' }}
                                         />
                                         {activity.description.length > 60 && (
-                                            <button 
+                                            <button
                                                 onClick={() => setIsExpanded(!isExpanded)}
                                                 className="cursor-pointer text-[10px] text-orange-500 hover:text-orange-600 font-semibold mt-0.5 flex items-center gap-0.5"
                                             >
@@ -332,6 +423,14 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                         <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
                                             <MapPin className="w-3 h-3 text-orange-400" /><span className="truncate max-w-[100px]">{activity.location}</span>
                                         </span>
+                                    )}
+                                    {activity.isSystemService && activity.serviceUrl && (
+                                        <button
+                                            onClick={e => { e.stopPropagation(); navigate(activity.serviceUrl!); }}
+                                            className="flex items-center gap-0.5 text-[11px] text-orange-500 hover:text-orange-700 font-semibold"
+                                        >
+                                            <ExternalLink className="w-3 h-3" /> Xem
+                                        </button>
                                     )}
                                 </div>
                             </>
@@ -380,7 +479,7 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
 
-function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActivity, onUpdateActivity, onDragStartCard, onAddActivity, onMobileMove }: {
+function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActivity, onUpdateActivity, onDragStartCard, onAddActivity, onMobileMove, onMoveSlot, canMoveUp, canMoveDown }: {
     dayIdx: number; slot: TimeSlot; activities?: Activity[];
     onDrop: (e: React.DragEvent, toDayIdx: number, toSlot: TimeSlot) => void;
     onRemove: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
@@ -389,6 +488,9 @@ function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActiv
     onDragStartCard: (e: React.DragEvent, payload: DragPayload) => void;
     onAddActivity: (dayIdx: number, slot: TimeSlot) => void;
     onMobileMove?: (activityId: string, fromDayIdx: number, fromSlot: TimeSlot) => void;
+    onMoveSlot?: (direction: 'up' | 'down') => void;
+    canMoveUp?: boolean;
+    canMoveDown?: boolean;
 }) {
     const [over, setOver] = useState(false);
     const meta = SLOT_META[slot];
@@ -398,7 +500,27 @@ function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActiv
             <div className={`flex items-center gap-1.5 mb-1 ${meta.color}`}>
                 {meta.icon}
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest">{meta.label}</span>
-                <span className="ml-auto text-[10px] bg-white/50 px-1.5 rounded-full border border-current opacity-70">{activities.length}</span>
+                <span className="text-[10px] bg-white/50 px-1.5 rounded-full border border-current opacity-70">{activities.length}</span>
+                {onMoveSlot && (
+                    <div className="ml-auto flex gap-0.5">
+                        <button
+                            onClick={() => onMoveSlot('up')}
+                            disabled={!canMoveUp}
+                            className={`p-0.5 rounded transition-colors ${canMoveUp ? 'hover:bg-white/60 text-current opacity-60 hover:opacity-100' : 'opacity-20 cursor-not-allowed'}`}
+                            title="Di lên"
+                        >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => onMoveSlot('down')}
+                            disabled={!canMoveDown}
+                            className={`p-0.5 rounded transition-colors ${canMoveDown ? 'hover:bg-white/60 text-current opacity-60 hover:opacity-100' : 'opacity-20 cursor-not-allowed'}`}
+                            title="Di xuống"
+                        >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                )}
             </div>
             <div
                 onDragOver={e => { e.preventDefault(); setOver(true); }}
@@ -784,6 +906,11 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const [members, setMembers] = useState(planData.members || []);
     const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [planTitle, setPlanTitle] = useState(planData.title);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [slotOrders, setSlotOrders] = useState<TimeSlot[][]>(() =>
+        (planData.itinerary || []).map(() => [...SLOT_ORDER])
+    );
     const firstRender = useRef(true);
     const place = planData.destination;
     const planId = planData.id;
@@ -811,7 +938,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         setAutoSaveStatus('saving');
         try {
             await aiPlannerApi.updatePlan(planId, {
-                tripTitle: planData.title,
+                tripTitle: planTitle,
                 overview: planData.overview || '',
                 itinerary: itinerary
             });
@@ -826,8 +953,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         }
     };
 
+    const hasTitleChange = planTitle !== planData.title;
+
     // Navigation Blockers
-    const isDirty = hasUnsavedChanges || autoSaveStatus === 'saving' || autoSaveStatus === 'error';
+    const isDirty = hasUnsavedChanges || hasTitleChange || autoSaveStatus === 'saving' || autoSaveStatus === 'error';
     
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -877,20 +1006,21 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
 
     useEffect(() => {
-        // Fetch preferences (mock + real API attempt)
+        // If the plan already carries preferenceServices (from generate response), use them directly
+        if (planData.preferenceServices && planData.preferenceServices.length > 0) {
+            setLibraryActivities(planData.preferenceServices.map(prefToActivity));
+            setIsLoadingLibrary(false);
+            return;
+        }
+        // Fallback: fetch from legacy getPreferences endpoint
         if (place) {
             setIsLoadingLibrary(true);
-
-            // Start with mock data
             const mockWithIds = MOCK_LIBRARY_ACTIVITIES.map(a => ({ ...a, id: a.id || uid() }));
             setLibraryActivities(mockWithIds);
-
             aiPlannerApi.getPreferences(place)
                 .then(res => {
                     if (res && res.length > 0) {
-                        const apiWithIds = res.map(a => ({ ...a, id: a.id || uid() }));
-                        // Ưu tiên dữ liệu thật từ API thay thế hoàn toàn mock data
-                        setLibraryActivities(apiWithIds);
+                        setLibraryActivities(res.map(a => ({ ...a, id: a.id || uid() })));
                     }
                 })
                 .catch(err => {
@@ -900,7 +1030,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     setIsLoadingLibrary(false);
                 });
         }
-    }, [place]);
+    }, [place, planData.preferenceServices]);
 
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
@@ -1026,6 +1156,18 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         setModalConfig({ isOpen: true, dayIdx, slot });
     }, []);
 
+    const handleMoveSlot = useCallback((dayIdx: number, slot: TimeSlot, direction: 'up' | 'down') => {
+        setSlotOrders(prev => {
+            const next = prev.map(o => [...o]);
+            const order = next[dayIdx];
+            const idx = order.indexOf(slot);
+            const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+            if (swapIdx < 0 || swapIdx >= order.length) return prev;
+            [order[idx], order[swapIdx]] = [order[swapIdx], order[idx]];
+            return next;
+        });
+    }, []);
+
     const handleSaveActivity = (data: Partial<Activity>) => {
         const { dayIdx, slot, actIdx } = modalConfig;
         setItinerary(prev => {
@@ -1095,68 +1237,146 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     // ── Shared sub-components (reused in both mobile and desktop) ──
 
     const LibraryContent = () => {
-        const [expandedId, setExpandedId] = useState<string | null>(null);
+        const [search, setSearch] = useState('');
+        const [typeFilter, setTypeFilter] = useState('ALL');
+        const libNavigate = useNavigate();
+
+        const serviceTypes = [...new Set(libraryActivities.map(l => l.serviceType).filter((t): t is string => Boolean(t)))];
+        const filtered = libraryActivities.filter(lib => {
+            if (search && !lib.name.toLowerCase().includes(search.toLowerCase())) return false;
+            if (typeFilter !== 'ALL' && lib.serviceType !== typeFilter) return false;
+            return true;
+        });
 
         return (
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-            {isLoadingLibrary ? (
-                <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
-                    <p className="text-xs">Đang tải gợi ý...</p>
+        <div className="flex flex-col flex-1 min-h-0">
+            {/* Search */}
+            <div className="px-3 pt-2 pb-1.5 shrink-0">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Tìm dịch vụ..."
+                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50"
+                    />
                 </div>
-            ) : libraryActivities.length > 0 ? (
-                libraryActivities.map(lib => (
-                    <motion.div
-                        key={lib.id}
-                        layout
-                        className="group relative"
-                    >
-                        <div
-                            draggable
-                            onDragStart={e => {
-                                dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
-                                e.dataTransfer.effectAllowed = 'copy';
-                                e.dataTransfer.setData('text/plain', lib.id!);
-                            }}
-                            className="bg-white border border-gray-200 rounded-xl p-3 hover:border-orange-300 hover:shadow-md transition-all relative overflow-hidden"
+            </div>
+            {/* Type filters */}
+            {serviceTypes.length > 0 && (
+                <div className="px-3 pb-2 flex gap-1.5 flex-wrap shrink-0 border-b border-gray-100">
+                    {(['ALL', ...serviceTypes] as string[]).map(type => (
+                        <button
+                            key={type}
+                            onClick={() => setTypeFilter(type)}
+                            className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${typeFilter === type ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}
                         >
-                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
-                            <div className="flex items-start gap-2 pl-1">
-                                <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
-                                <div className="min-w-0 flex-1">
-                                    <p className="font-bold text-sm text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
-                                    <p 
-                                        onClick={() => setExpandedId(prev => prev === lib.id ? null : lib.id!)}
-                                        className={`text-[11px] text-gray-500 mt-0.5 italic cursor-pointer transition-all ${expandedId === lib.id ? '' : 'line-clamp-1'}`}
-                                        dangerouslySetInnerHTML={{ __html: lib.description || '' }}
-                                        title="Nhấn để xem chi tiết"
-                                    />
-                                    <div className="flex gap-2 mt-2">
-                                        <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
-                                        <span className="text-[11px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
-                                    </div>
-                                </div>
-                                {/* Mobile: add button */}
-                                <button
-                                    onClick={() => {
-                                        setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                        setPickerDay(0);
-                                        setPickerSlot('morning_activities');
-                                    }}
-                                    className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg text-xs font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-transform"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                ))
-            ) : (
-                <div className="py-10 text-center px-4">
-                    <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                    <p className="text-xs text-gray-400">Không tìm thấy địa điểm gợi ý cho "{place}"</p>
+                            {type === 'ALL' ? 'Tất cả' : SERVICE_TYPE_LABELS[type] || type}
+                        </button>
+                    ))}
                 </div>
             )}
+            {/* Cards list */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+                {isLoadingLibrary ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
+                        <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+                        <p className="text-xs">Đang tải gợi ý...</p>
+                    </div>
+                ) : filtered.length > 0 ? (
+                    filtered.map(lib => (
+                        <motion.div key={lib.id} layout className="group relative">
+                            <div
+                                draggable
+                                onDragStart={e => {
+                                    dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                    e.dataTransfer.setData('text/plain', lib.id!);
+                                }}
+                                className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
+                            >
+                                {lib.thumbnailUrl ? (
+                                    // ── Card with thumbnail (system service) ──
+                                    <div className="flex gap-0">
+                                        <div className="w-16 shrink-0 self-stretch relative">
+                                            <img
+                                                src={lib.thumbnailUrl}
+                                                alt={lib.name}
+                                                className="w-full h-full object-cover min-h-[68px]"
+                                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                            />
+                                        </div>
+                                        <div className="flex-1 p-2 min-w-0">
+                                            <div className="flex items-start justify-between gap-1">
+                                                <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors leading-tight line-clamp-2 flex-1">{lib.name}</p>
+                                                <button
+                                                    onClick={() => {
+                                                        setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
+                                                        setPickerDay(0);
+                                                        setPickerSlot('morning_activities');
+                                                    }}
+                                                    className="lg:hidden p-1 bg-orange-50 text-orange-500 rounded-md shrink-0 active:scale-95 transition-transform"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                            {lib.serviceType && (
+                                                <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${SERVICE_TYPE_BADGE[lib.serviceType] || 'bg-gray-100 text-gray-600'}`}>
+                                                    {SERVICE_TYPE_LABELS[lib.serviceType] || lib.serviceType}
+                                                </span>
+                                            )}
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] font-semibold text-orange-600">{lib.estimated_cost}</span>
+                                            </div>
+                                            {lib.serviceUrl && (
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); libNavigate(lib.serviceUrl!); }}
+                                                    className="text-[9px] text-orange-400 hover:text-orange-600 font-semibold flex items-center gap-0.5 mt-0.5"
+                                                >
+                                                    <ExternalLink className="w-2.5 h-2.5" /> Xem chi tiết
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // ── Text-only card (legacy activity) ──
+                                    <div className="flex items-start gap-2 p-3 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
+                                        <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors" />
+                                        <div className="min-w-0 flex-1 pl-1">
+                                            <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
+                                            <div className="flex gap-2 mt-1.5">
+                                                <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
+                                                <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
+                                                setPickerDay(0);
+                                                setPickerSlot('morning_activities');
+                                            }}
+                                            className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg shrink-0 active:scale-95 transition-transform"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    ))
+                ) : (
+                    <div className="py-10 text-center px-4">
+                        <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                        <p className="text-xs text-gray-400">
+                            {search ? `Không tìm thấy "${search}"` : `Không có gợi ý cho "${place}"`}
+                        </p>
+                        {search && (
+                            <button onClick={() => setSearch('')} className="text-[10px] text-orange-400 hover:text-orange-600 mt-1 font-semibold">Xóa bộ lọc</button>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
         );
     };
@@ -1226,20 +1446,29 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 )}
             </div>
             <div className="px-4 py-4 border-t border-gray-100 space-y-2">
-                {isOwner && hasUnsavedChanges && (
-                    <button
-                        onClick={handleManualSave}
-                        disabled={autoSaveStatus === 'saving'}
-                        className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 animate-in fade-in slide-in-from-bottom-2"
-                    >
-                        {autoSaveStatus === 'saving' ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <CheckCircle2 className="w-4 h-4" />
-                        )}
-                        Xác nhận lưu thay đổi
-                    </button>
-                )}
+                {isOwner && (() => {
+                    const hasChanges = hasUnsavedChanges || hasTitleChange;
+                    return (
+                        <button
+                            onClick={handleManualSave}
+                            disabled={autoSaveStatus === 'saving' || (!hasChanges && autoSaveStatus !== 'error')}
+                            className={`w-full py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                                hasChanges || autoSaveStatus === 'error'
+                                    ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200'
+                                    : 'bg-gray-100 text-gray-400 cursor-default'
+                            }`}
+                        >
+                            {autoSaveStatus === 'saving' ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : autoSaveStatus === 'saved' || !hasChanges ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                                <CloudUpload className="w-4 h-4" />
+                            )}
+                            {autoSaveStatus === 'saving' ? 'Đang lưu...' : hasChanges ? 'Lưu thay đổi' : 'Đã lưu'}
+                        </button>
+                    );
+                })()}
                 {isOwner && (
                     <div className="flex flex-col gap-2 mb-2">
 
@@ -1268,13 +1497,15 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
 
     const DayColumns = ({ mobile }: { mobile?: boolean }) => (
         <>
-            {itinerary.map((day, dayIdx) => (
+            {itinerary.map((day, dayIdx) => {
+                const daySlotOrder = slotOrders[dayIdx] || SLOT_ORDER;
+                return (
                 <div key={dayIdx} className={mobile ? 'w-full' : 'min-w-0'}>
                     <div className="bg-orange-500 text-white rounded-xl px-4 py-3 mb-3 text-center shadow-sm">
                         <p className="font-bold text-sm">{day.day_label}</p>
                     </div>
                     <div className="space-y-3">
-                        {SLOT_ORDER.map(slot => (
+                        {daySlotOrder.map((slot, slotIdx) => (
                             <DropZone
                                 key={slot}
                                 dayIdx={dayIdx}
@@ -1286,6 +1517,9 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 onUpdateActivity={handleUpdateActivity}
                                 onDragStartCard={handleDragStartCard}
                                 onAddActivity={handleAddActivity}
+                                onMoveSlot={(dir) => handleMoveSlot(dayIdx, slot, dir)}
+                                canMoveUp={slotIdx > 0}
+                                canMoveDown={slotIdx < daySlotOrder.length - 1}
                                 onMobileMove={mobile ? (actId, fDay, fSlot) => {
                                     const act = itinerary[fDay][fSlot].find(a => a.id === actId);
                                     setMobilePicker({ type: 'move', activityId: actId, fromDayIdx: fDay, fromSlot: fSlot, name: act?.name || '' });
@@ -1296,7 +1530,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         ))}
                     </div>
                 </div>
-            ))}
+                );
+            })}
         </>
     );
 
@@ -1311,9 +1546,12 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 <div className={`shrink-0 flex items-center border-b border-gray-100 bg-orange-50 ${showLibrary ? 'px-3 py-3 justify-between' : 'py-3 justify-center'
                     }`}>
                     {showLibrary && (
-                        <h2 className="font-bold text-sm text-gray-800 flex items-center gap-1.5 truncate">
-                            <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" /> Gợi ý địa điểm
-                        </h2>
+                        <div className="min-w-0">
+                            <h2 className="font-bold text-sm text-gray-800 flex items-center gap-1.5 truncate">
+                                <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" /> Dịch vụ gợi ý
+                            </h2>
+                            <p className="text-[10px] text-gray-400 truncate">{libraryActivities.length} dịch vụ · kéo vào lịch trình</p>
+                        </div>
                     )}
                     <button
                         onClick={() => {
@@ -1352,14 +1590,38 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             {/* ── CENTER: Timeline ── */}
             <main className="flex-1 flex flex-col overflow-hidden">
                 {/* Header bar */}
-                <div className="shrink-0 z-10 bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                        <h1 className="font-bold text-base sm:text-lg text-gray-800 flex items-center gap-2 truncate">
-                            <PlaneTakeoff className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0" />
-                            <span className="truncate">{place}</span>
-                            {autoSaveStatus === 'saving' && <Loader2 className="w-3 h-3 animate-spin text-orange-400" />}
-                        </h1>
-                        <p className="text-xs text-gray-500">{itinerary.length} ngày · {totalActivities} hoạt động</p>
+                <div className="shrink-0 z-10 bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        {isEditingTitle ? (
+                            <input
+                                autoFocus
+                                value={planTitle}
+                                onChange={e => setPlanTitle(e.target.value)}
+                                onBlur={() => setIsEditingTitle(false)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') setIsEditingTitle(false);
+                                    if (e.key === 'Escape') { setPlanTitle(planData.title); setIsEditingTitle(false); }
+                                }}
+                                className="font-bold text-base sm:text-lg text-gray-800 bg-orange-50 border-b-2 border-orange-400 focus:outline-none w-full px-1"
+                                placeholder="Tên kế hoạch..."
+                            />
+                        ) : (
+                            <button
+                                onClick={() => isOwner && setIsEditingTitle(true)}
+                                className={`group flex items-center gap-1.5 font-bold text-base sm:text-lg text-gray-800 max-w-full text-left ${isOwner ? 'hover:text-orange-600 cursor-text' : 'cursor-default'}`}
+                                title={isOwner ? 'Nhấn để đổi tên kế hoạch' : undefined}
+                            >
+                                <PlaneTakeoff className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0" />
+                                <span className="truncate">{planTitle}</span>
+                                {isOwner && <Edit2 className="w-3 h-3 text-gray-300 group-hover:text-orange-400 shrink-0 transition-colors" />}
+                                {autoSaveStatus === 'saving' && <Loader2 className="w-3 h-3 animate-spin text-orange-400 shrink-0" />}
+                            </button>
+                        )}
+                        <p className="text-xs text-gray-500 mt-0.5 pl-0.5">
+                            <span className="text-gray-400">{place}</span>
+                            <span className="mx-1.5 text-gray-300">·</span>
+                            {itinerary.length} ngày · {totalActivities} hoạt động
+                        </p>
                     </div>
                     <button
                         onClick={onReset}
@@ -1389,8 +1651,9 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     )}
                     {mobileTab === 'library' && (
                         <div className="flex flex-col h-full pb-16">
-                            <div className="px-4 py-3 border-b border-gray-100 bg-orange-50">
-                                <p className="text-xs text-gray-500">Nhấn vào thẻ để thêm vào lịch trình (kéo thả trên desktop)</p>
+                            <div className="px-4 py-2 border-b border-gray-100 bg-orange-50 flex items-center justify-between">
+                                <p className="text-xs text-gray-500">Nhấn <Plus className="inline w-3 h-3 text-orange-400" /> để thêm vào lịch trình</p>
+                                <span className="text-[10px] text-gray-400 font-medium">{libraryActivities.length} dịch vụ</span>
                             </div>
                             <LibraryContent />
                         </div>
@@ -1587,7 +1850,6 @@ export default function AIPlannerPage() {
 
     const handleGenerate = async (p: string, days: number, info: string) => {
         try {
-            // Bước 1: Gọi ChatGPT/Gemini sinh lịch trình
             const result = await aiPlannerApi.generatePlan({ place: p, numberOfDays: days, additionalInformation: info });
 
             // Case A: Backend already saved and returned an ID
@@ -1596,13 +1858,14 @@ export default function AIPlannerPage() {
                 return;
             }
 
-            // Case B: Mock mode or needs manual save
+            // Case B: Mock mode or needs manual save — preserve preferenceServices in the cached plan
             const saveResult = await aiPlannerApi.savePlan({
                 title: `Kế hoạch ${p} ${days} ngày`,
                 destination: p,
                 days: days,
                 itinerary: injectIds(result.itinerary),
-                isPublic: false
+                isPublic: false,
+                preferenceServices: (result as any).preferenceServices || [],
             });
 
             navigate(`/ai-planner/${saveResult.id}`);
