@@ -74,7 +74,7 @@ export type TimeSlot = 'morning_activities' | 'afternoon_activities' | 'evening_
 
 // ─── COLLABORATION TYPES ──────────────────────
 
-export type Permission = 'EDIT' | 'READ_ONY';
+export type Permission = 'EDIT' | 'READ_ONLY';
 export type CollabStatus = 'PENDING' | 'ACCEPTED' | 'DENIED';
 
 export interface PlanCollabInvitation {
@@ -93,8 +93,16 @@ export interface PlanCollaboration {
     updatedAt: string;
 }
 
+export interface CollaboratorInfo {
+    collabId?: string;
+    user: UserInfo;
+    permission: Permission;
+    status: CollabStatus;
+    invitedAt?: string;
+}
+
 export interface UserInfo {
-    userID: number;
+    userID: string | number;
     fullname: string;
     email: string;
     avatar?: string;
@@ -106,6 +114,8 @@ export interface PlanOverallResponse {
     tripTitle: string;
     overview: string;
     status: string;
+    visibility?: 'PUBLIC' | 'PRIVATE';
+    shareToken?: string;
     collaborationStatus: CollabStatus;
     owner: UserInfo;
     members: UserInfo[];

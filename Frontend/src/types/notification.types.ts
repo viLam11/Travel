@@ -20,7 +20,7 @@ export interface NotificationResponse {
     creatorId?: string;
     creatorName?: string;
     creatorAvatar?: string;
-    read: boolean;
+    isRead: boolean;
 }
 
 export interface NotiCreateRequest {

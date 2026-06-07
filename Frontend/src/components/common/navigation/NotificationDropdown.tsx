@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, UserPlus, MessageSquare, CheckCircle2, AlertCircle, Heart, MessageCircle } from "lucide-react";
+import { Bell, UserPlus, MessageSquare, CheckCircle2, AlertCircle, Heart, MessageCircle, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/admin/button";
@@ -38,6 +38,7 @@ export const NotificationDropdown = () => {
     const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     // Helper: Map backend notification to frontend UI notification
     const mapBackendNoti = (noti: any): NotificationInfo => {
@@ -235,21 +236,36 @@ export const NotificationDropdown = () => {
     };
 
     const handleCollabAction = async (notif: NotificationInfo, status: 'ACCEPTED' | 'DENIED') => {
-        if (!notif.referenceInvitationID) return;
+        if (!notif.referenceInvitationID || actionLoading) return;
+        setActionLoading(notif.id.toString());
         try {
             await aiPlannerApi.handleInvitation(notif.referenceInvitationID.toString(), status);
-            toast.success(status === 'ACCEPTED' ? "Đã chấp nhận lời mời!" : "Đã từ chối lời mời!");
-            
-            // Mark as read, do not auto-navigate if declined
-            await handleRead(notif, status === 'ACCEPTED');
-            
-            // Refresh if on plans page
-            if (window.location.pathname.includes('/my-plans')) {
+
+            // Mark as read optimistically — buttons disappear, notification stays visible
+            setNotifications(prev =>
+                prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)
+            );
+            setUnreadCount(prev => Math.max(0, prev - 1));
+
+            if (NOTIFICATION_MODE === 'SOCKET') {
+                try {
+                    await aiPlannerApi.markNotificationAsRead(notif.id.toString());
+                } catch (_) { /* swallow */ }
+            }
+
+            toast.success(status === 'ACCEPTED' ? '✓ Đã chấp nhận lời mời!' : '✗ Đã từ chối lời mời!');
+            setIsOpen(false);
+
+            if (status === 'ACCEPTED') {
+                navigate('/my-plans?tab=shared');
+            } else if (window.location.pathname.includes('/my-plans')) {
                 window.location.reload();
             }
         } catch (error) {
             console.error("Lỗi khi xử lý lời mời cộng tác:", error);
-            toast.error("Không thể thực hiện thao tác này.");
+            toast.error("Không thể thực hiện thao tác này. Vui lòng thử lại.");
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -303,56 +319,66 @@ export const NotificationDropdown = () => {
                             <p className="text-sm text-gray-400 italic">Bạn không có thông báo nào.</p>
                         </div>
                     ) : (
-                        notifications.map((notification) => (
-                            <DropdownMenuItem 
-                                key={notification.id} 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    if (notification.type === 'PLAN_INVITATION' && !notification.isRead && notification.referenceInvitationID) {
-                                        return;
-                                    }
-                                    handleRead(notification);
-                                }}
-                                className={`flex items-start gap-3 p-3 cursor-pointer ${notification.isRead ? 'opacity-70 hover:bg-gray-50 dark:hover:bg-gray-800 focus:bg-gray-50 dark:focus:bg-gray-800' : 'bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30'}`}
-                            >
-                                <div className="mt-1 flex-shrink-0">
-                                    {getIcon(notification.type)}
-                                </div>
-                                <div className="space-y-1 w-full">
-                                    <p className={`text-sm ${notification.isRead ? 'font-medium text-gray-700 dark:text-gray-300' : 'font-semibold text-gray-900 dark:text-white'}`}>
-                                        {notification.senderName}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                                        {notification.message}
-                                    </p>
-                                    {notification.type === 'PLAN_INVITATION' && !notification.isRead && notification.referenceInvitationID && (
-                                        <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                                            <Button 
-                                                size="sm" 
-                                                className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
-                                                onClick={() => handleCollabAction(notification, 'ACCEPTED')}
-                                            >
-                                                Đồng ý
-                                            </Button>
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                className="h-7 px-3 text-xs border-gray-200 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                                                onClick={() => handleCollabAction(notification, 'DENIED')}
-                                            >
-                                                Từ chối
-                                            </Button>
-                                        </div>
+                        notifications.map((notification) => {
+                            const isPendingInvitation = notification.type === 'PLAN_INVITATION' && !notification.isRead && notification.referenceInvitationID;
+                            const isThisLoading = actionLoading === notification.id.toString();
+                            return (
+                                <DropdownMenuItem
+                                    key={notification.id}
+                                    // Prevent Radix from closing the menu on pointer events for pending invitations
+                                    // (buttons inside handle their own click → close)
+                                    onSelect={(e) => {
+                                        if (isPendingInvitation) {
+                                            e.preventDefault();
+                                            return;
+                                        }
+                                        handleRead(notification);
+                                    }}
+                                    className={`flex items-start gap-3 p-3 cursor-pointer ${notification.isRead ? 'opacity-70 hover:bg-gray-50 dark:hover:bg-gray-800 focus:bg-gray-50 dark:focus:bg-gray-800' : 'bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30'}`}
+                                >
+                                    <div className="mt-1 flex-shrink-0">
+                                        {getIcon(notification.type)}
+                                    </div>
+                                    <div className="space-y-1 w-full">
+                                        <p className={`text-sm ${notification.isRead ? 'font-medium text-gray-700 dark:text-gray-300' : 'font-semibold text-gray-900 dark:text-white'}`}>
+                                            {notification.senderName}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                                            {notification.message}
+                                        </p>
+                                        {isPendingInvitation && (
+                                            <div className="flex gap-2 mt-2">
+                                                <Button
+                                                    size="sm"
+                                                    disabled={isThisLoading}
+                                                    className="h-7 px-3 text-xs bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white cursor-pointer"
+                                                    onClick={(e) => { e.stopPropagation(); handleCollabAction(notification, 'ACCEPTED'); }}
+                                                >
+                                                    {isThisLoading ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
+                                                    Đồng ý
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={isThisLoading}
+                                                    className="h-7 px-3 text-xs border-gray-200 dark:border-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 cursor-pointer"
+                                                    onClick={(e) => { e.stopPropagation(); handleCollabAction(notification, 'DENIED'); }}
+                                                >
+                                                    {isThisLoading ? <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <X className="w-3 h-3 mr-1" />}
+                                                    Từ chối
+                                                </Button>
+                                            </div>
+                                        )}
+                                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                            {new Date(notification.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                    {!notification.isRead && (
+                                        <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
                                     )}
-                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                        {new Date(notification.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </div>
-                                {!notification.isRead && (
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
-                                )}
-                            </DropdownMenuItem>
-                        ))
+                                </DropdownMenuItem>
+                            );
+                        })
                     )}
                 </div>
                 <DropdownMenuSeparator className="dark:bg-gray-800" />

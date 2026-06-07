@@ -92,7 +92,7 @@ const AdminServiceList = () => {
             setIsLoading(true);
             try {
                 const res = await apiClient.services.getAll();
-                const data = Array.isArray(res) ? res : [];
+                const data = Array.isArray(res) ? res : (res?.content ?? []);
                 const mapped = data.map((s: any) => ({
                     id: s.id,
                     name: s.serviceName || 'Unnamed',

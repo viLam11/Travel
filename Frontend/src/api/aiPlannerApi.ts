@@ -1,7 +1,7 @@
 import type {
     PlanRequest, PlanResponse, PlanData, Activity, ItineraryDay,
     PlanCollabInvitation, PlanCollaboration, PlanOverallResponse,
-    CollabStatus, PlanUpdate, PreferenceService, UserInfo
+    CollabStatus, PlanUpdate, PreferenceService, UserInfo, CollaboratorInfo, Permission
 } from '@/types/aiPlanner.types';
 import apiClient from '../services/apiClient';
 import { MOCK_PLAN_RESPONSE } from '@/mocks/aiPlanner';
@@ -14,8 +14,8 @@ import { shouldUseMock } from '@/config/mockConfig';
 const LOCAL_MOCK_OVERRIDE: boolean | null = null;
 export const USE_MOCK_AI_PLANNER = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 
-// Reset mock invitation status on load to allow user to test the notification again
-if (typeof window !== 'undefined') {
+// Reset mock state only in mock mode so real API mode is not polluted
+if (typeof window !== 'undefined' && shouldUseMock(LOCAL_MOCK_OVERRIDE)) {
     localStorage.removeItem('travollo_mock_invitation_status');
     localStorage.removeItem('travollo_mock_invitation_read');
 }
@@ -44,11 +44,23 @@ const mapBackendActivity = (a: any): Activity => ({
 
 // Map backend DailyItinerary (day + activities[]) → frontend ItineraryDay
 const mapBackendDay = (day: any, idx: number): ItineraryDay => {
-    const acts: any[] = day.activities || [];
-    // Normalize timeOfDay values (backend may use 'Morning','morning','MORNING', etc.)
+    const dayLabel = day.day_label || day.dayLabel || `Ngày ${day.day ?? idx + 1}`;
+
+    // Format frontend: day đã có sẵn morning_activities / afternoon_activities / evening_activities
+    if (day.morning_activities != null || day.afternoon_activities != null || day.evening_activities != null) {
+        return {
+            day_label: dayLabel,
+            morning_activities: (day.morning_activities || []).map(mapBackendActivity),
+            afternoon_activities: (day.afternoon_activities || []).map(mapBackendActivity),
+            evening_activities: (day.evening_activities || []).map(mapBackendActivity),
+        };
+    }
+
+    // Format backend: flat activities[] phân loại bởi timeOfDay
+    const acts: any[] = day.activities || day.dailyActivities || [];
     const normalize = (v: string) => (v || '').toLowerCase();
     return {
-        day_label: day.day_label || `Ngày ${day.day ?? idx + 1}`,
+        day_label: dayLabel,
         morning_activities: acts
             .filter(a => normalize(a.timeOfDay) === 'morning')
             .map(mapBackendActivity),
@@ -62,24 +74,28 @@ const mapBackendDay = (day: any, idx: number): ItineraryDay => {
 };
 
 // Map backend TravelPlan → frontend PlanData
-// Handles both old format (raw.itinerary) and new format (raw.plan.itinerary + raw.preferenceServices)
+// Handles:
+//   - Wrapped format: { plan: { id, place, tripTitle, itinerary, ... }, preferenceServices: [...] }
+//   - Flat format: { id, place, tripTitle, itinerary, ... }
 const mapBackendPlan = (raw: any): PlanData => {
-    const itinerary = raw.plan?.itinerary || raw.itinerary || [];
+    // Support both wrapped ({ plan: {...} }) and flat formats
+    const p = raw.plan || raw;
+    const itinerary = p.itinerary ?? p.dailyItinerary ?? [];
     return {
-        id: raw.id || raw.planId || raw.plan?.id || '',
-        ownerId: raw.userId || raw.ownerId || 0,
-        title: raw.tripTitle || raw.title || `Kế hoạch ${raw.place || ''}`,
-        overview: raw.overview || '',
-        destination: raw.place || raw.destination || '',
+        id: p.id || raw.id || raw.planId || '',
+        ownerId: p.userId || p.ownerId || raw.userId || raw.ownerId || 0,
+        title: p.tripTitle || p.title || raw.tripTitle || `Kế hoạch ${p.place || ''}`,
+        overview: p.overview || raw.overview || '',
+        destination: p.place || p.destination || raw.place || '',
         days: itinerary.length,
         itinerary: itinerary.map(mapBackendDay),
-        isPublic: raw.isPublic ?? false,
-        isOwner: raw.isOwner ?? true,
-        createdAt: raw.createdAt || new Date().toISOString(),
-        updatedAt: raw.updatedAt || new Date().toISOString(),
-        shareUrl: raw.shareUrl,
-        members: raw.members,
-        preferenceServices: (raw.preferenceServices || []) as PreferenceService[],
+        isPublic: p.visibility === 'PUBLIC' || p.isPublic || raw.isPublic || false,
+        isOwner: raw.isOwner ?? p.isOwner ?? true,
+        createdAt: p.createdAt || raw.createdAt || new Date().toISOString(),
+        updatedAt: p.updatedAt || raw.updatedAt || new Date().toISOString(),
+        shareUrl: p.shareToken || p.shareUrl || raw.shareUrl,
+        members: raw.members || p.members,
+        preferenceServices: (raw.preferenceServices || p.preferenceServices || []) as PreferenceService[],
     };
 };
 
@@ -281,7 +297,7 @@ export const aiPlannerApi = {
         });
     },
 
-    toggleShare: async (planId: string, isPublic: boolean): Promise<{ isPublic: boolean; shareUrl?: string }> => {
+    toggleShare: async (planId: string, isPublic: boolean): Promise<{ isPublic: boolean; shareToken?: string }> => {
         if (planId.startsWith('mock-')) {
             return { isPublic, shareUrl: `https://travollo.com/share/${planId}` };
         }
@@ -360,6 +376,32 @@ export const aiPlannerApi = {
             return MOCK_SHARED_PLAN_DALAT.members || [];
         }
         return apiClient.get<UserInfo[]>(`/api/plan-recommend/${planId}/members`);
+    },
+
+    getCollaborators: async (planId: string): Promise<CollaboratorInfo[]> => {
+        if (planId.startsWith('mock-')) {
+            await sleep(300);
+            return [
+                { collabId: 'collab-1', user: { userID: 'mock-uid-101', fullname: 'Nguyễn Văn A', email: 'vana@gmail.com' }, permission: 'EDIT', status: 'ACCEPTED', invitedAt: new Date().toISOString() },
+                { collabId: 'collab-2', user: { userID: 'mock-uid-102', fullname: 'Trần Thị B', email: 'thib@gmail.com' }, permission: 'READ_ONLY', status: 'ACCEPTED', invitedAt: new Date().toISOString() },
+                { collabId: 'collab-3', user: { userID: 'mock-uid-103', fullname: 'Lê Văn C', email: 'vanc@gmail.com' }, permission: 'READ_ONLY', status: 'ACCEPTED', invitedAt: new Date().toISOString() },
+            ];
+        }
+        // GET /api/plan-recommend/{planId}/members — returns accepted members of the plan
+        const raw = await apiClient.get<any>(`/api/plan-recommend/${planId}/members`);
+        const list: any[] = Array.isArray(raw) ? raw : [];
+        return list.map(r => ({
+            collabId: undefined,
+            user: {
+                userID: r.userID,                                    // UUID string from backend
+                fullname: r.fullname || r.username || 'Người dùng', // fullname can be null
+                email: r.email || '',
+                avatar: r.avatarUrl || r.avatar,                     // backend field is avatarUrl
+            },
+            permission: 'READ_ONLY' as Permission,  // not provided by /members endpoint
+            status: 'ACCEPTED' as CollabStatus,      // /members only returns accepted members
+            invitedAt: r.createdAt,
+        }));
     },
 
     getAllPlans: async (): Promise<PlanData[]> => {
@@ -453,7 +495,7 @@ export const aiPlannerApi = {
                 planId: 'mock-shared-plan-dalat',
                 ownerId: '99',
                 memberId: 'me',
-                permission: 'READ_ONY',
+                permission: 'READ_ONLY',
                 status: status,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
@@ -463,7 +505,8 @@ export const aiPlannerApi = {
             await sleep(500);
             return { id: collabId, status } as PlanCollaboration;
         }
-        return apiClient.post(`/api/plan-recommend/collab/${collabId}/handle`, status, {
+        // Backend expects raw string enum: "ACCEPTED" | "DENIED" (not an object)
+        return apiClient.post(`/api/plan-recommend/collab/${collabId}/handle`, JSON.stringify(status), {
             headers: { 'Content-Type': 'application/json' }
         });
     },
@@ -514,33 +557,27 @@ export const aiPlannerApi = {
     // ─── NOTIFICATION APIs ──────────────────────
 
     getUnreadNotificationsCount: async (): Promise<number> => {
-        let mockUnread = 0;
-        const invitationStatus = localStorage.getItem('travollo_mock_invitation_status') || 'PENDING';
-        const invitationRead = localStorage.getItem('travollo_mock_invitation_read') === 'true';
-        if (invitationStatus === 'PENDING' && !invitationRead) {
-            mockUnread = 1;
-        }
-
         if (USE_MOCK_AI_PLANNER) {
             await sleep(300);
-            return mockUnread || 1;
+            const invitationStatus = localStorage.getItem('travollo_mock_invitation_status') || 'PENDING';
+            const invitationRead = localStorage.getItem('travollo_mock_invitation_read') === 'true';
+            return (invitationStatus === 'PENDING' && !invitationRead) ? 1 : 0;
         }
         try {
             const response = await apiClient.get<number>('/api/notifications/unread-count');
-            return (response || 0) + mockUnread;
+            return response || 0;
         } catch (err) {
             console.error("Failed to fetch unread count", err);
-            return mockUnread;
+            return 0;
         }
     },
 
     getUserNotifications: async (page: number = 0, size: number = 10): Promise<any> => {
-        const invitationStatus = localStorage.getItem('travollo_mock_invitation_status') || 'PENDING';
-        const invitationRead = localStorage.getItem('travollo_mock_invitation_read') === 'true';
-        
-        let mockNotification: any = null;
-        if (invitationStatus === 'PENDING') {
-            mockNotification = {
+        if (USE_MOCK_AI_PLANNER) {
+            await sleep(500);
+            const invitationStatus = localStorage.getItem('travollo_mock_invitation_status') || 'PENDING';
+            const invitationRead = localStorage.getItem('travollo_mock_invitation_read') === 'true';
+            const mockNotification = invitationStatus === 'PENDING' ? {
                 id: 'mock-noti-collab',
                 type: 'PLAN_INVITATION',
                 title: 'Lời mời cộng tác',
@@ -549,11 +586,7 @@ export const aiPlannerApi = {
                 creatorName: 'Minh Khánh',
                 read: invitationRead,
                 referenceInvitationID: 'mock-collab-123'
-            };
-        }
-
-        if (USE_MOCK_AI_PLANNER) {
-            await sleep(500);
+            } : null;
             return {
                 content: mockNotification ? [mockNotification] : [],
                 totalElements: mockNotification ? 1 : 0
@@ -562,24 +595,10 @@ export const aiPlannerApi = {
 
         try {
             const response = await apiClient.get<any>('/api/notifications', { params: { page, size } });
-            if (response && Array.isArray(response.content)) {
-                const content = [...response.content];
-                if (mockNotification) {
-                    content.unshift(mockNotification);
-                }
-                return {
-                    ...response,
-                    content,
-                    totalElements: (response.totalElements || 0) + (mockNotification ? 1 : 0)
-                };
-            }
             return response;
         } catch (error) {
             console.error("Failed to fetch user notifications:", error);
-            return {
-                content: mockNotification ? [mockNotification] : [],
-                totalElements: mockNotification ? 1 : 0
-            };
+            return { content: [], totalElements: 0 };
         }
     },
 

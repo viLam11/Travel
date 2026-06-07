@@ -6,7 +6,8 @@ import {
     Clock, DollarSign, Wand2, ArrowRightLeft,
     Waves, Landmark, UtensilsCrossed, Mountain, ShoppingBag, Leaf, BedDouble, Camera,
     CalendarDays, Banknote, CheckCircle2, PlaneTakeoff, Compass, Receipt,
-    BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, ExternalLink, Search, Copy, Trash2
+    BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, ExternalLink, Search, Copy, Trash2,
+    Globe, FolderOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
@@ -567,14 +568,6 @@ const SAMPLE_PREVIEW = [
     { time: 'Buổi tối', icon: 'evening', name: 'Phố ăn đêm Tạ Hiện', loc: 'Hoàn Kiếm', cost: '150.000đ', duration: '2 giờ' },
 ];
 
-const COMMUNITY_PLANS = [
-    { title: 'Đà Lạt 3 ngày 2 đêm', city: 'Lâm Đồng', days: 3, author: 'Admin', activities: 15, desc: 'Lịch trình đi Đà Lạt siêu chill, check-in cafe săn mây và ăn uống thả ga.' },
-    { title: 'Vũng Tàu Cuối Tuần', city: 'Bà Rịa - Vũng Tàu', days: 2, author: 'Trịnh Khắc Vỹ', activities: 8, desc: 'Chuyến đi biển 2 ngày 1 đêm cho nhóm bạn 4 người.' },
-    { title: 'Foodtour Hải Phòng', city: 'Hải Phòng', days: 1, author: 'Bảo Ngọc', activities: 12, desc: 'Bản đồ ẩm thực đất Cảng: Bánh đa cua, bánh mỳ cay, dừa dầm...' },
-    { title: 'Hà Nội 4 ngày khám phá', city: 'Hà Nội', days: 4, author: 'Minh Tuấn', activities: 20, desc: 'Hồ Hoàn Kiếm, Văn Miếu, bún chả Hương Liên và nhiều hơn nữa.' },
-    { title: 'Phú Quốc Nghỉ Dưỡng', city: 'Kiên Giang', days: 5, author: 'Lan Anh', activities: 16, desc: 'Resort 5 sao, lặn ngắm san hô, hoàng hôn đẹp nhất Đông Nam Á.' },
-    { title: 'Hội An - Đà Nẵng', city: 'Quảng Nam', days: 4, author: 'Quốc Bảo', activities: 18, desc: 'Phố Cổ, Cầu Vàng, bãi Mỹ Khê và cơm gà Bà Buội.' },
-];
 
 function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: string, days: number, info: string) => Promise<void>; onManualCreate: (place: string, days: number) => void; }) {
     const [place, setPlace] = useState('');
@@ -589,13 +582,16 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
     const provinceRef = useRef<HTMLDivElement>(null);
     const [filterCity, setFilterCity] = useState('');
     const [filterDays, setFilterDays] = useState('');
+    const [apiPublicPlans, setApiPublicPlans] = useState<PlanData[]>([]);
+    const [publicPlansLoading, setPublicPlansLoading] = useState(true);
+    const navigate = useNavigate();
 
     const filteredProvinces = provinces.filter(p =>
         p.name.toLowerCase().includes(provinceSearch.toLowerCase())
     );
 
-    const filteredPlans = COMMUNITY_PLANS.filter(p => {
-        const cityMatch = !filterCity || p.city.toLowerCase().includes(filterCity.toLowerCase()) || p.title.toLowerCase().includes(filterCity.toLowerCase());
+    const filteredPlans = apiPublicPlans.filter(p => {
+        const cityMatch = !filterCity || p.destination.toLowerCase().includes(filterCity.toLowerCase()) || p.title.toLowerCase().includes(filterCity.toLowerCase());
         const daysMatch = !filterDays || (filterDays === '1-2' ? p.days <= 2 : filterDays === '3-4' ? (p.days >= 3 && p.days <= 4) : p.days >= 5);
         return cityMatch && daysMatch;
     });
@@ -614,6 +610,13 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    useEffect(() => {
+        aiPlannerApi.getPublicPlans(0, 9)
+            .then(res => setApiPublicPlans(res.content))
+            .catch(() => setApiPublicPlans([]))
+            .finally(() => setPublicPlansLoading(false));
     }, []);
 
     const toggleInterest = (tag: string) =>
@@ -777,6 +780,21 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
                                 >
                                     <Edit2 className="w-4 h-4" /> Tự lập lịch trình thủ công
                                 </button>
+
+                                <div className="grid grid-cols-2 gap-2 pt-1">
+                                    <button
+                                        onClick={() => navigate('/my-plans')}
+                                        className="py-2 bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-500 hover:text-orange-500 font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
+                                    >
+                                        <FolderOpen className="w-3.5 h-3.5" /> Kế hoạch của tôi
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/public-plans')}
+                                        className="py-2 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-500 hover:text-blue-600 font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
+                                    >
+                                        <Globe className="w-3.5 h-3.5" /> Khám phá công khai
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -864,36 +882,61 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
                             </button>
                         ))}
                     </div>
-                    <span className="text-xs text-gray-400 ml-auto shrink-0">{filteredPlans.length} lịch trình</span>
+                    <span className="text-xs text-gray-400 shrink-0">{publicPlansLoading ? '...' : `${filteredPlans.length} lịch trình`}</span>
+                    <button
+                        onClick={() => navigate('/my-plans')}
+                        className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0"
+                    >
+                        <FolderOpen className="w-3.5 h-3.5" /> Quản lý lịch trình của tôi
+                    </button>
                 </div>
 
                 {/* Plan Cards */}
-                {filteredPlans.length > 0 ? (
+                {publicPlansLoading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {filteredPlans.map((plan, i) => (
-                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group cursor-pointer hover:-translate-y-0.5 duration-200">
-                                <div className={`h-28 relative overflow-hidden ${['bg-gradient-to-br from-orange-400 to-amber-300', 'bg-gradient-to-br from-sky-400 to-blue-500', 'bg-gradient-to-br from-green-400 to-emerald-500', 'bg-gradient-to-br from-purple-400 to-indigo-500', 'bg-gradient-to-br from-rose-400 to-pink-500', 'bg-gradient-to-br from-amber-400 to-yellow-500'][i % 6]}`}>
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                                    <div className="absolute top-2.5 right-2.5 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                        {plan.days} ngày
-                                    </div>
-                                    <div className="absolute bottom-2.5 left-3 text-white">
-                                        <p className="font-bold text-sm leading-tight">{plan.title}</p>
-                                        <p className="text-[11px] opacity-85 flex items-center gap-1 mt-0.5"><MapPin className="w-2.5 h-2.5" />{plan.city}</p>
-                                    </div>
-                                </div>
-                                <div className="p-4">
-                                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">"{plan.desc}"</p>
-                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                                        <span className="text-xs text-gray-500">Bởi: <span className="font-medium text-gray-700">{plan.author}</span></span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs bg-orange-50 text-orange-600 font-semibold px-2 py-0.5 rounded-full">{plan.activities} HĐ</span>
-                                            <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-orange-500 transition-colors" />
-                                        </div>
-                                    </div>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
+                                <div className="h-28 bg-gray-200" />
+                                <div className="p-4 space-y-2">
+                                    <div className="h-3 bg-gray-200 rounded w-3/4" />
+                                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                                    <div className="h-3 bg-gray-100 rounded w-full mt-3" />
                                 </div>
                             </div>
                         ))}
+                    </div>
+                ) : filteredPlans.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredPlans.map((plan, i) => {
+                            const actCount = plan.itinerary.reduce(
+                                (sum, d) => sum + d.morning_activities.length + d.afternoon_activities.length + d.evening_activities.length, 0
+                            );
+                            const authorName = plan.members?.[0]?.fullname || 'Cộng đồng';
+                            return (
+                                <div key={plan.id} onClick={() => navigate(`/ai-planner/${plan.id}`)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group cursor-pointer hover:-translate-y-0.5 duration-200">
+                                    <div className={`h-28 relative overflow-hidden ${['bg-gradient-to-br from-orange-400 to-amber-300', 'bg-gradient-to-br from-sky-400 to-blue-500', 'bg-gradient-to-br from-green-400 to-emerald-500', 'bg-gradient-to-br from-purple-400 to-indigo-500', 'bg-gradient-to-br from-rose-400 to-pink-500', 'bg-gradient-to-br from-amber-400 to-yellow-500'][i % 6]}`}>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                        <div className="absolute top-2.5 right-2.5 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                                            {plan.days} ngày
+                                        </div>
+                                        <div className="absolute bottom-2.5 left-3 text-white">
+                                            <p className="font-bold text-sm leading-tight">{plan.title}</p>
+                                            <p className="text-[11px] opacity-85 flex items-center gap-1 mt-0.5"><MapPin className="w-2.5 h-2.5" />{plan.destination}</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">"{plan.overview || 'Lịch trình cộng đồng'}"</p>
+                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                                            <span className="text-xs text-gray-500">Bởi: <span className="font-medium text-gray-700">{authorName}</span></span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs bg-orange-50 text-orange-600 font-semibold px-2 py-0.5 rounded-full">{actCount} HĐ</span>
+                                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-orange-500 transition-colors" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="py-16 text-center">
@@ -911,10 +954,11 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
 
 function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => void }) {
     const { confirm } = useConfirm();
+    const navigate = useNavigate();
     const [itinerary, setItinerary] = useState<ItineraryDay[]>(planData.itinerary);
     const [isPublic, setIsPublic] = useState(planData.isPublic);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [shareUrl, setShareUrl] = useState(planData.shareUrl);
+    const [shareToken, setShareToken] = useState(planData.shareUrl);
     const [members, setMembers] = useState(planData.members || []);
     const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1276,7 +1320,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         try {
             const res = await aiPlannerApi.toggleShare(planId, newPublic);
             setIsPublic(res.isPublic);
-            if (res.shareUrl) setShareUrl(res.shareUrl);
+            if (res.shareToken) setShareToken(res.shareToken);
         } catch (err) {
             console.error(err);
             toast.error('Cập nhật trạng thái chia sẻ thất bại');
@@ -1285,8 +1329,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
 
     const fetchMembers = async () => {
         try {
-            const data = await aiPlannerApi.getPlan(planId);
-            if (data.members) setMembers(data.members);
+            const data = await aiPlannerApi.getPlanMembers(planId);
+            setMembers(data);
         } catch (err) {
             console.error(err);
         }
@@ -1770,13 +1814,23 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                             {itinerary.length} ngày · {totalActivities} hoạt động
                         </p>
                     </div>
-                    <button
-                        onClick={onReset}
-                        className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-orange-500 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors border border-gray-200 shrink-0 cursor-pointer"
-                    >
-                        <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span className="hidden sm:inline">Tạo lại</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={() => navigate('/my-plans')}
+                            className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-orange-500 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors border border-gray-200 cursor-pointer"
+                            title="Quản lý kế hoạch của tôi"
+                        >
+                            <FolderOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Kế hoạch</span>
+                        </button>
+                        <button
+                            onClick={onReset}
+                            className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 hover:text-orange-500 px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors border border-gray-200 cursor-pointer"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">Tạo lại</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Desktop: CSS grid fills width, no unnecessary scroll */}
@@ -1948,7 +2002,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 onClose={() => setIsShareModalOpen(false)}
                 planId={planId}
                 isPublic={isPublic}
-                shareUrl={shareUrl}
+                shareToken={shareToken}
                 onTogglePublic={handleTogglePublic}
                 members={members}
                 onMemberChange={fetchMembers}

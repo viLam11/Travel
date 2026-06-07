@@ -61,10 +61,13 @@ const ProviderHelpPage = lazy(() => import("@/pages/ServiceProvider/Help/Provide
 const ProviderNotificationsPage = lazy(() => import("@/pages/ServiceProvider/Notifications/ProviderNotificationsPage"));
 const NotFoundPage = lazy(() => import("@/pages/User/not-found/NotFoundPage"));
 const AIPlannerPage = lazy(() => import("@/pages/User/AIPlanner/AIPlannerPage"));
+const SharedPlanViewPage = lazy(() => import("@/pages/User/AIPlanner/SharedPlanViewPage"));
+const PublicPlansPage = lazy(() => import("@/pages/User/AIPlanner/PublicPlansPage"));
 const BlogListPage = lazy(() => import("@/pages/User/Blog/BlogListPage"));
 const BlogDetailPage = lazy(() => import("@/pages/User/Blog/BlogDetailPage"));
 const BlogCreatePage = lazy(() => import("@/pages/User/Blog/BlogCreatePage"));
 const MyPlansPage = lazy(() => import("@/pages/User/AIPlanner/MyPlansPage"));
+const UserNotificationsPage = lazy(() => import("@/pages/User/Notifications/UserNotificationsPage"));
 
 // ==================== ROUTE CONFIGURATION ====================
 
@@ -131,12 +134,24 @@ const routes: RouteObject[] = [
         element: withSuspense(AIPlannerPage as LazyExoticComponent<ComponentType<unknown>>),
       },
       {
+        path: 'ai-planner/share/:shareToken',
+        element: withSuspense(SharedPlanViewPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: 'public-plans',
+        element: withSuspense(PublicPlansPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
         path: 'ai-planner/:planId',
         element: withSuspense(AIPlannerPage as LazyExoticComponent<ComponentType<unknown>>),
       },
       {
         path: 'my-plans',
         element: withSuspense(MyPlansPage as LazyExoticComponent<ComponentType<unknown>>),
+      },
+      {
+        path: 'user/notifications',
+        element: withSuspense(UserNotificationsPage as LazyExoticComponent<ComponentType<unknown>>),
       },
       // {
       //   path: ROUTES.DESTINATIONS,

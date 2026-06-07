@@ -66,7 +66,7 @@ export const AdminServiceApprovalsPage: React.FC = () => {
         try {
             setIsLoading(true);
             const res = await apiClient.services.getAll();
-            const services = Array.isArray(res) ? res : [];
+            const services = Array.isArray(res) ? res : (res?.content ?? []);
             const mapped: ServiceUpdateReq[] = services.map((s: any) => ({
                 id: s.id,
                 providerId: s.provider?.userID?.toString() || 'Unknown',
