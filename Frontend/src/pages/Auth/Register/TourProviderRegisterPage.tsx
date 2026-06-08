@@ -110,8 +110,7 @@ const TourProviderRegisterPage: React.FC = () => {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                role: 'PROVIDER',
-                providerType: 'place', // Tour/Place provider
+                providerType: 'ticket',
             });
 
             toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');

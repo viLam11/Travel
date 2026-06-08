@@ -95,7 +95,7 @@ export function ServicesTable({
                     <p className="font-medium">{row.getValue("serviceName")}</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                         <MapPin className="w-3 h-3" />
-                        <span>{row.original.province.fullName}</span>
+                        <span>{row.original.province?.fullName || ''}</span>
                     </div>
                 </div>
             ),

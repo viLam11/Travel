@@ -198,13 +198,15 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({
             setShowPicker(false);
             active ? onReact(active.type as ReactionType) : onReact('LIKE');
           }}
-          className={`flex items-center gap-2.5 rounded-2xl font-black transition-all select-none ${isSm ? 'px-4 py-2 text-xs' : 'px-6 py-2.5 text-sm'} ${active ? `${active.bgColor} ${active.color} shadow-md scale-[1.05]` : 'bg-gray-100/50 text-gray-400 hover:bg-gray-100 border border-transparent hover:text-gray-600'}`}
+          className={`flex items-center transition-all select-none
+            ${isSm ? 'gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl' : 'gap-2.5 px-6 py-2.5 text-sm font-black rounded-2xl'}
+            ${active ? `${active.bgColor} ${active.color} shadow-md scale-[1.05]` : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
         >
           {active ? (
             <motion.div
               initial={{ scale: 0.2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-6 h-6"
+              className={isSm ? 'w-4 h-4' : 'w-6 h-6'}
             >
               <Lottie animationData={active.lottieData} loop={true} />
             </motion.div>
@@ -214,7 +216,7 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({
             </svg>
           )}
           <span>{active ? active.label : 'Thích'}</span>
-          {reactionCount > 0 && <span className={`font-black tabular-nums transition-opacity ${active ? 'opacity-60' : 'opacity-40'}`}>{reactionCount.toLocaleString()}</span>}
+          {reactionCount > 0 && <span className={`tabular-nums transition-opacity ${active ? 'opacity-60' : 'opacity-40'}`}>{reactionCount.toLocaleString()}</span>}
         </motion.button>
       )}
 

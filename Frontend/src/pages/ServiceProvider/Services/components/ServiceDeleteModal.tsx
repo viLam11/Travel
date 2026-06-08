@@ -83,7 +83,7 @@ export default function ServiceDeleteModal({
                             <div className="flex-1">
                                 <h3 className="font-semibold">{service.serviceName}</h3>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    {service.province.fullName}
+                                    {service.province?.fullName || ''}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                     {service.type === 'hotel' ? 'Khách sạn' : 'Vé tham quan'}

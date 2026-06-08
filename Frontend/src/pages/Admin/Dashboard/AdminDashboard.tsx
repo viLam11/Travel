@@ -1,8 +1,8 @@
 // src/pages/Admin/Dashboard/AdminDashboard.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
 import { Badge } from '@/components/ui/admin/badge';
 import {
@@ -10,8 +10,6 @@ import {
     MapPin,
     Users,
     Banknote,
-    TrendingUp,
-    TrendingDown,
     Calendar,
     Eye,
     CheckCircle,
@@ -20,7 +18,6 @@ import {
     ArrowRight,
     Loader2,
     Search,
-    Filter,
     FileText
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
@@ -34,26 +31,41 @@ import {
 import { Input } from '@/components/ui/admin/input';
 import apiClient from '@/services/apiClient';
 
-// Import Chart Components
 import MonthlyRevenueChart from '@/components/ui/admin/charts/MonthlyRevenueChart';
 import BookingTrendsChart from '@/components/ui/admin/charts/BookingTrendsChart';
 
-// Format currency
-const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-};
+const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 
-// --- Stats Card Component ---
-function StatsCard({ stat }: { stat: any }) {
+const FALLBACK_CITY_DATA = [
+    { cityName: 'Đà Nẵng', totalVisits: 1872 },
+    { cityName: 'Nha Trang', totalVisits: 1563 },
+    { cityName: 'Phú Quốc', totalVisits: 1341 },
+    { cityName: 'Hạ Long', totalVisits: 1124 },
+    { cityName: 'Hội An', totalVisits: 815 },
+];
+
+const FALLBACK_REVENUE_DATA = [
+    { month: 'Jan', revenue: 115000000, previousYear: 98000000 },
+    { month: 'Feb', revenue: 132000000, previousYear: 112000000 },
+    { month: 'Mar', revenue: 148000000, previousYear: 125000000 },
+    { month: 'Apr', revenue: 138000000, previousYear: 118000000 },
+    { month: 'May', revenue: 156000000, previousYear: 135000000 },
+    { month: 'Jun', revenue: 171000000, previousYear: 148000000 },
+];
+
+// --- Stats Card Component (memoised — only re-renders when stat identity changes) ---
+const StatsCard = memo(function StatsCard({ stat }: { stat: {
+    title: string; value: string; icon: React.ElementType;
+    color: string; iconBg: string; change?: string; trend?: string;
+} }) {
     const Icon = stat.icon;
-    
     return (
         <Card className="bg-card border border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
             <CardContent className="p-5 flex justify-between items-start gap-4">
                 <div className="flex-1 space-y-1">
                     <p className="text-sm text-muted-foreground font-medium uppercase tracking-tight">{stat.title}</p>
                     <h3 className="text-2xl font-bold text-foreground">{stat.value}</h3>
-                    
                     {stat.change && (
                         <div className="mt-2 flex items-center gap-1.5">
                             <span className={`text-xs font-bold ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
@@ -69,11 +81,12 @@ function StatsCard({ stat }: { stat: any }) {
             </CardContent>
         </Card>
     );
-}
+});
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
     const { success } = useToast();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [services, setServices] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -84,156 +97,112 @@ export default function AdminDashboard() {
     const [selectedService, setSelectedService] = useState<{ id: string | number; name: string } | null>(null);
     const [rejectReason, setRejectReason] = useState('');
 
-    const [systemStats, setSystemStats] = useState({
-        totalServices: 0,
-        totalUsers: 0,
-        monthlyRevenue: 0,
-        monthlyOrders: 0
-    });
-
+    const [systemStats, setSystemStats] = useState({ totalServices: 0, totalUsers: 0, monthlyRevenue: 0, monthlyOrders: 0 });
     const [revenueData, setRevenueData] = useState<any[]>([]);
     const [cityTrafficData, setCityTrafficData] = useState<any[]>([]);
+    const fetchedRef = useRef(false);
 
     useEffect(() => {
+        // Prevent double-invoke from React StrictMode
+        if (fetchedRef.current) return;
+        fetchedRef.current = true;
+
         const fetchDashboardData = async () => {
             setIsLoading(true);
             try {
-                // Fetch stats from real API
                 const startDate = new Date(new Date().getFullYear(), 0, 1).toISOString();
                 const endDate = new Date().toISOString();
 
-                const [servicesRes, usersRes, revenueRes, ordersRes] = await Promise.allSettled([
-                    apiClient.services.list(0, 1),
-                    apiClient.users.getAll(),
+                // Phase 1: fast calls that don't fetch large datasets
+                const [servicesRes, revenueRes, ordersRes, topCitiesRes] = await Promise.allSettled([
+                    apiClient.services.list(0, 5),
                     apiClient.statistics.getSystemRevenue(startDate, endDate),
-                    apiClient.orders.getAll(0, 1)
+                    apiClient.orders.getAll(0, 1),
+                    apiClient.statistics.getTopCities(startDate, endDate),
                 ]);
 
-                const totalServices = servicesRes.status === 'fulfilled' ? ((servicesRes.value as any).totalElements || 0) : 124;
-                const totalUsers = usersRes.status === 'fulfilled' ? ((usersRes.value as any).length || 0) : 1560;
-                const monthlyRevenue = revenueRes.status === 'fulfilled' ? ((revenueRes.value as any).totalRevenue || 0) : 1850000000;
-                const monthlyOrders = ordersRes.status === 'fulfilled' ? ((ordersRes.value as any).totalElements || 0) : 432;
+                // ── Stats ────────────────────────────────────────────────────
+                const servicesPayload = servicesRes.status === 'fulfilled' ? (servicesRes.value as any) : null;
+                const totalServices   = servicesPayload?.totalElements ?? (Array.isArray(servicesPayload) ? servicesPayload.length : 0);
+                const revenuePayload  = revenueRes.status === 'fulfilled' ? (revenueRes.value as any) : null;
+                const monthlyRevenue  = revenuePayload?.totalRevenue ?? 0;
+                const ordersPayload   = ordersRes.status === 'fulfilled' ? (ordersRes.value as any) : null;
+                const monthlyOrders   = ordersPayload?.totalElements ?? 0;
 
-                setSystemStats({ totalServices, totalUsers, monthlyRevenue, monthlyOrders });
+                setSystemStats(prev => ({ ...prev, totalServices, monthlyRevenue, monthlyOrders }));
 
-                let fetchedRevenueData = [];
-                if (revenueRes.status === 'fulfilled' && (revenueRes.value as any)?.details && (revenueRes.value as any).details.length > 0) {
-                    fetchedRevenueData = (revenueRes.value as any).details.map((item: any) => ({
-                        month: item.date || item.month || 'Jan',
-                        revenue: item.amount || item.revenue || 0,
-                        previousYear: (item.amount || item.revenue || 0) * 0.8
-                    }));
-                } else {
-                    fetchedRevenueData = [
-                        { month: 'Jan', revenue: 115000000, previousYear: 98000000 },
-                        { month: 'Feb', revenue: 132000000, previousYear: 112000000 },
-                        { month: 'Mar', revenue: 148000000, previousYear: 125000000 },
-                        { month: 'Apr', revenue: 138000000, previousYear: 118000000 },
-                        { month: 'May', revenue: 156000000, previousYear: 135000000 },
-                        { month: 'Jun', revenue: 171000000, previousYear: 148000000 }
-                    ];
-                }
-                setRevenueData(fetchedRevenueData);
+                // ── Revenue chart ────────────────────────────────────────────
+                const details = revenuePayload?.details;
+                setRevenueData(
+                    Array.isArray(details) && details.length > 0
+                        ? details.map((item: any) => ({
+                            month: item.date || item.month || 'Jan',
+                            revenue: item.amount || item.revenue || 0,
+                            previousYear: (item.amount || item.revenue || 0) * 0.8,
+                        }))
+                        : FALLBACK_REVENUE_DATA
+                );
 
-                let fetchedCityTrafficData = [];
-                try {
-                    const topCitiesRes = await apiClient.statistics.getTopCities(startDate, endDate);
-                    if (topCitiesRes && Array.isArray(topCitiesRes) && topCitiesRes.length > 0) {
-                        fetchedCityTrafficData = topCitiesRes;
-                    } else if (topCitiesRes && (topCitiesRes as any).content && Array.isArray((topCitiesRes as any).content)) {
-                        fetchedCityTrafficData = (topCitiesRes as any).content;
-                    } else {
-                        fetchedCityTrafficData = [
-                            { cityName: 'Đà Nẵng', totalVisits: 1872 },
-                            { cityName: 'Nha Trang', totalVisits: 1563 },
-                            { cityName: 'Phú Quốc', totalVisits: 1341 },
-                            { cityName: 'Hạ Long', totalVisits: 1124 },
-                            { cityName: 'Hội An', totalVisits: 815 }
-                        ];
-                    }
-                } catch (e) {
-                    fetchedCityTrafficData = [
-                        { cityName: 'Đà Nẵng', totalVisits: 1872 },
-                        { cityName: 'Nha Trang', totalVisits: 1563 },
-                        { cityName: 'Phú Quốc', totalVisits: 1341 },
-                        { cityName: 'Hạ Long', totalVisits: 1124 },
-                        { cityName: 'Hội An', totalVisits: 815 }
-                    ];
-                }
-                setCityTrafficData(fetchedCityTrafficData);
+                // ── Top-cities chart ─────────────────────────────────────────
+                const citiesPayload = topCitiesRes.status === 'fulfilled' ? (topCitiesRes.value as any) : null;
+                const citiesArray   = Array.isArray(citiesPayload) ? citiesPayload
+                    : Array.isArray(citiesPayload?.content) ? citiesPayload.content
+                    : null;
+                setCityTrafficData(citiesArray && citiesArray.length > 0 ? citiesArray : FALLBACK_CITY_DATA);
 
-                // Fetch real services for approval
-                const realServicesRes = await apiClient.services.list(0, 5);
-                const fetchedServices = Array.isArray(realServicesRes) ? realServicesRes : (realServicesRes.content || []);
-                
-                if (fetchedServices.length > 0) {
-                   const mapped = fetchedServices.map((s: any) => ({
-                      id: s.id,
-                      name: s.serviceName || "Dịch vụ mới",
-                      type: s.serviceType?.toLowerCase() || 'hotel',
-                      provider: s.provider?.fullname || s.provider?.username || "N/A",
-                      location: s.province?.name || s.location || "N/A",
-                      status: s.status?.toLowerCase() || 'pending',
-                      createdAt: s.createdAt || new Date().toISOString()
-                   }));
-                   setServices(mapped);
+                // ── Pending services table (reuse the services call above) ───
+                const rows: any[] = Array.isArray(servicesPayload)
+                    ? servicesPayload
+                    : (servicesPayload?.content ?? []);
+                if (rows.length > 0) {
+                    setServices(rows.map((s: any) => ({
+                        id: s.id,
+                        name: s.serviceName || 'Dịch vụ mới',
+                        type: s.serviceType?.toLowerCase() || 'hotel',
+                        provider: s.provider?.fullname || s.provider?.username || 'N/A',
+                        location: s.province?.name || s.location || 'N/A',
+                        status: s.status?.toLowerCase() || 'pending',
+                        createdAt: s.createdAt || new Date().toISOString(),
+                    })));
                 }
             } catch (err) {
-                console.error("Failed to fetch admin dashboard data:", err);
+                console.error('Failed to fetch admin dashboard data:', err);
             } finally {
                 setIsLoading(false);
+            }
+
+            // Phase 2: fetch user count separately — /users/all returns full User[] with no pagination
+            // so we fire it after the page is already rendered to avoid blocking the main render.
+            try {
+                const usersPayload = await apiClient.users.getAll() as any;
+                const totalUsers = usersPayload?.totalElements ?? (Array.isArray(usersPayload) ? usersPayload.length : 0);
+                setSystemStats(prev => ({ ...prev, totalUsers }));
+            } catch {
+                // user count is non-critical, silently ignore
             }
         };
 
         fetchDashboardData();
     }, []);
 
-    const stats = [
-        {
-            title: 'Tổng dịch vụ',
-            value: systemStats.totalServices.toLocaleString(),
-            icon: Building2,
-            color: 'text-blue-600 dark:text-blue-400',
-            iconBg: 'bg-blue-100 dark:bg-blue-500/20',
-            change: '+12.5%',
-            trend: 'up',
-        },
-        {
-            title: 'Tổng người dùng',
-            value: systemStats.totalUsers.toLocaleString(),
-            icon: Users,
-            color: 'text-indigo-600 dark:text-indigo-400',
-            iconBg: 'bg-indigo-100 dark:bg-indigo-500/20',
-            change: '+8.2%',
-            trend: 'up',
-        },
-        {
-            title: 'Doanh thu tháng',
-            value: formatCurrency(systemStats.monthlyRevenue),
-            icon: Banknote,
-            color: 'text-green-600 dark:text-green-400',
-            iconBg: 'bg-green-100 dark:bg-green-500/20',
-            change: '+24.3%',
-            trend: 'up',
-        },
-        {
-            title: 'Tổng đơn hàng',
-            value: systemStats.monthlyOrders.toLocaleString(),
-            icon: Calendar,
-            color: 'text-purple-600 dark:text-purple-400',
-            iconBg: 'bg-purple-100 dark:bg-purple-500/20',
-            change: '+15.7%',
-            trend: 'up',
-        },
-    ];
+    // Memoised — only recalculates when systemStats values change
+    const stats = useMemo(() => [
+        { title: 'Tổng dịch vụ',    value: systemStats.totalServices.toLocaleString(), icon: Building2, color: 'text-blue-600 dark:text-blue-400',   iconBg: 'bg-blue-100 dark:bg-blue-500/20',   change: '+12.5%', trend: 'up' },
+        { title: 'Tổng người dùng', value: systemStats.totalUsers.toLocaleString(),    icon: Users,     color: 'text-indigo-600 dark:text-indigo-400', iconBg: 'bg-indigo-100 dark:bg-indigo-500/20', change: '+8.2%',  trend: 'up' },
+        { title: 'Doanh thu tháng', value: formatCurrency(systemStats.monthlyRevenue), icon: Banknote,  color: 'text-green-600 dark:text-green-400',   iconBg: 'bg-green-100 dark:bg-green-500/20',   change: '+24.3%', trend: 'up' },
+        { title: 'Tổng đơn hàng',   value: systemStats.monthlyOrders.toLocaleString(), icon: Calendar,  color: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-100 dark:bg-purple-500/20', change: '+15.7%', trend: 'up' },
+    ], [systemStats]);
 
-    const pendingServices = services.filter((service: any) =>
-        service.status === 'pending' &&
-        (service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            service.provider.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    // Memoised filter — doesn't recalculate on unrelated state changes
+    const pendingServices = useMemo(() =>
+        services.filter(s =>
+            s.status === 'pending' &&
+            (s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             s.provider.toLowerCase().includes(searchTerm.toLowerCase()))
+        ),
+    [services, searchTerm]);
 
-    const handleQuickApprove = async () => {
+    const handleQuickApprove = useCallback(async () => {
         if (!selectedService) return;
         setIsActionLoading(selectedService.id.toString());
         try {
@@ -242,13 +211,13 @@ export default function AdminDashboard() {
             success(`Đã duyệt thành công dịch vụ "${selectedService.name}"`);
             setIsApproveOpen(false);
         } catch (err) {
-            console.error("Approve failed:", err);
+            console.error('Approve failed:', err);
         } finally {
             setIsActionLoading(null);
         }
-    };
+    }, [selectedService, success]);
 
-    const handleQuickReject = async () => {
+    const handleQuickReject = useCallback(async () => {
         if (!selectedService) return;
         setIsActionLoading(selectedService.id.toString());
         try {
@@ -258,26 +227,32 @@ export default function AdminDashboard() {
             setIsRejectOpen(false);
             setRejectReason('');
         } catch (err) {
-            console.error("Reject failed:", err);
+            console.error('Reject failed:', err);
         } finally {
             setIsActionLoading(null);
         }
-    };
+    }, [selectedService, success]);
 
     return (
         <div className="w-full max-w-7xl mx-auto space-y-8 pb-8 animate-in fade-in duration-500">
-            {/* Header Section */}
+            {/* Header */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tổng quan hệ thống</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Chào Admin, hôm nay hệ thống đang hoạt động ổn định với <span className="font-bold text-primary">{systemStats.monthlyOrders} đơn hàng mới</span>.</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Chào Admin, hôm nay hệ thống đang hoạt động ổn định với{' '}
+                        <span className="font-bold text-primary">{systemStats.monthlyOrders} đơn hàng mới</span>.
+                    </p>
                 </div>
                 <div className="flex gap-3">
                     <Button variant="outline" className="text-sm px-4 h-9">
                         <FileText className="w-4 h-4 mr-2" />
                         Xuất báo cáo
                     </Button>
-                    <Button onClick={() => navigate(ROUTES.ADMIN_APPROVALS)} className="bg-primary hover:bg-primary/90 text-sm px-4 h-9 transition-all cursor-pointer shadow-sm">
+                    <Button
+                        onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}
+                        className="bg-primary hover:bg-primary/90 text-sm px-4 h-9 transition-all cursor-pointer shadow-sm"
+                    >
                         Phê duyệt dịch vụ mới
                     </Button>
                 </div>
@@ -286,69 +261,47 @@ export default function AdminDashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {isLoading ? (
-                    [1, 2, 3, 4].map((i) => (
+                    [1, 2, 3, 4].map(i => (
                         <div key={i} className="h-[128px] bg-muted/40 border border-border/40 animate-pulse rounded-2xl p-5 flex flex-col justify-between">
-                            <div className="w-24 h-4 bg-muted-foreground/20 rounded animate-pulse" />
-                            <div className="w-32 h-8 bg-muted-foreground/30 rounded animate-pulse" />
-                            <div className="w-20 h-4 bg-muted-foreground/20 rounded animate-pulse" />
+                            <div className="w-24 h-4 bg-muted-foreground/20 rounded" />
+                            <div className="w-32 h-8 bg-muted-foreground/30 rounded" />
+                            <div className="w-20 h-4 bg-muted-foreground/20 rounded" />
                         </div>
                     ))
                 ) : (
-                    stats.map((stat, index) => (
-                        <StatsCard key={index} stat={stat} />
-                    ))
+                    stats.map((stat, i) => <StatsCard key={i} stat={stat} />)
                 )}
             </div>
 
-            {/* Charts Section */}
+            {/* Charts — chart components already include their own Card+CardHeader */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="border-none shadow-lg rounded-3xl overflow-hidden bg-card">
-                    <CardHeader className="p-6 border-b border-border/40">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-emerald-500" />
-                                Doanh thu hệ thống
-                            </CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                        <div className="h-[350px]">
-                            <MonthlyRevenueChart data={revenueData} />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-lg rounded-3xl overflow-hidden bg-card">
-                    <CardHeader className="p-6 border-b border-border/40">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-xl font-bold flex items-center gap-2">
-                                <Calendar className="w-5 h-5 text-orange-500" />
-                                Lưu lượng theo thành phố
-                            </CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                        <div className="h-[350px]">
-                            <BookingTrendsChart data={cityTrafficData} />
-                        </div>
-                    </CardContent>
-                </Card>
+                {isLoading ? (
+                    <>
+                        <div className="h-[420px] rounded-3xl bg-muted/40 border border-border/40 animate-pulse" />
+                        <div className="h-[420px] rounded-3xl bg-muted/40 border border-border/40 animate-pulse" />
+                    </>
+                ) : (
+                    <>
+                        <MonthlyRevenueChart data={revenueData} />
+                        <BookingTrendsChart data={cityTrafficData} />
+                    </>
+                )}
             </div>
 
-            {/* Pending Services Section */}
+            {/* Pending Services */}
             <Card className="border-none shadow-xl rounded-3xl overflow-hidden bg-card">
                 <CardHeader className="p-8 border-b border-border/40 bg-muted/20">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-1">
-                            <CardTitle className="text-2xl font-bold">Dịch vụ chờ phê duyệt</CardTitle>
-                            <p className="text-muted-foreground">Các yêu cầu đăng ký mới cần được xử lý để hiển thị trên hệ thống.</p>
+                            <h2 className="text-2xl font-bold">Dịch vụ chờ phê duyệt</h2>
+                            <p className="text-muted-foreground text-sm">Các yêu cầu đăng ký mới cần được xử lý để hiển thị trên hệ thống.</p>
                         </div>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input 
-                                placeholder="Tìm dịch vụ, đối tác..." 
+                            <Input
+                                placeholder="Tìm dịch vụ, đối tác..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={e => setSearchTerm(e.target.value)}
                                 className="pl-10 h-11 w-full md:w-80 rounded-xl bg-background border-border shadow-sm"
                             />
                         </div>
@@ -370,7 +323,9 @@ export default function AdminDashboard() {
                                 {isLoading ? (
                                     [1, 2, 3].map(i => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={5} className="px-8 py-6"><div className="h-12 bg-muted rounded-xl" /></td>
+                                            <td colSpan={5} className="px-8 py-6">
+                                                <div className="h-12 bg-muted rounded-xl" />
+                                            </td>
                                         </tr>
                                     ))
                                 ) : pendingServices.length === 0 ? (
@@ -383,7 +338,7 @@ export default function AdminDashboard() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    pendingServices.map((service) => (
+                                    pendingServices.map(service => (
                                         <tr key={service.id} className="hover:bg-muted/50 transition-colors group">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
@@ -403,7 +358,7 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                                                    <MapPin className="w-4 h-4" />
                                                     <span className="text-sm font-medium">{service.location}</span>
                                                 </div>
                                             </td>
@@ -412,28 +367,13 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex gap-2 justify-end">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="hover:bg-blue-50 hover:text-blue-600 rounded-xl cursor-pointer"
-                                                        onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}
-                                                    >
+                                                    <Button variant="ghost" size="icon" className="hover:bg-blue-50 hover:text-blue-600 rounded-xl cursor-pointer" onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}>
                                                         <Eye className="w-5 h-5" />
                                                     </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="hover:bg-green-50 hover:text-green-600 rounded-xl cursor-pointer"
-                                                        onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsApproveOpen(true); }}
-                                                    >
+                                                    <Button variant="ghost" size="icon" className="hover:bg-green-50 hover:text-green-600 rounded-xl cursor-pointer" onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsApproveOpen(true); }}>
                                                         <CheckCircle className="w-5 h-5" />
                                                     </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="hover:bg-red-50 hover:text-red-600 rounded-xl cursor-pointer"
-                                                        onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsRejectOpen(true); setRejectReason(''); }}
-                                                    >
+                                                    <Button variant="ghost" size="icon" className="hover:bg-red-50 hover:text-red-600 rounded-xl cursor-pointer" onClick={() => { setSelectedService({ id: service.id, name: service.name }); setIsRejectOpen(true); setRejectReason(''); }}>
                                                         <XCircle className="w-5 h-5" />
                                                     </Button>
                                                 </div>
@@ -448,13 +388,14 @@ export default function AdminDashboard() {
                         <div className="p-6 text-center border-t border-border/40">
                             <Button variant="ghost" className="text-primary font-bold hover:bg-primary/10 rounded-xl" onClick={() => navigate(ROUTES.ADMIN_APPROVALS)}>
                                 Xem tất cả yêu cầu phê duyệt
+                                <ArrowRight className="w-4 h-4 ml-1" />
                             </Button>
                         </div>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Quick Approve Dialog */}
+            {/* Approve Dialog */}
             <Dialog open={isApproveOpen} onOpenChange={setIsApproveOpen}>
                 <DialogContent className="rounded-3xl border-none shadow-2xl p-8">
                     <DialogHeader className="space-y-3">
@@ -463,19 +404,20 @@ export default function AdminDashboard() {
                         </div>
                         <DialogTitle className="text-2xl font-bold text-center">Phê duyệt dịch vụ</DialogTitle>
                         <DialogDescription className="text-center text-base">
-                            Bạn có chắc chắn muốn duyệt dịch vụ <strong className="text-gray-900">{selectedService?.name}</strong>? Sau khi duyệt, dịch vụ sẽ hiển thị ngay lập tức với khách hàng.
+                            Bạn có chắc chắn muốn duyệt dịch vụ <strong className="text-gray-900">{selectedService?.name}</strong>?
+                            Sau khi duyệt, dịch vụ sẽ hiển thị ngay lập tức với khách hàng.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex gap-4 mt-8">
                         <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold cursor-pointer" onClick={() => setIsApproveOpen(false)}>Hủy bỏ</Button>
                         <Button className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-600/20 cursor-pointer" onClick={handleQuickApprove} disabled={isActionLoading === selectedService?.id.toString()}>
-                            {isActionLoading === selectedService?.id.toString() ? <Loader2 className="w-5 h-5 animate-spin" /> : "Xác nhận duyệt"}
+                            {isActionLoading === selectedService?.id.toString() ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác nhận duyệt'}
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Quick Reject Dialog */}
+            {/* Reject Dialog */}
             <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
                 <DialogContent className="rounded-3xl border-none shadow-2xl p-8">
                     <DialogHeader className="space-y-3">
@@ -492,14 +434,14 @@ export default function AdminDashboard() {
                         <Input
                             placeholder="Ví dụ: Hình ảnh không rõ nét, thiếu thông tin pháp lý..."
                             value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
+                            onChange={e => setRejectReason(e.target.value)}
                             className="h-12 rounded-xl border-gray-200 focus:border-red-500 focus:ring-red-500/20"
                         />
                     </div>
                     <div className="flex gap-4">
                         <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold cursor-pointer" onClick={() => setIsRejectOpen(false)}>Quay lại</Button>
                         <Button variant="destructive" className="flex-1 h-12 font-bold rounded-xl shadow-lg shadow-red-500/20 cursor-pointer" onClick={handleQuickReject} disabled={!rejectReason.trim() || isActionLoading === selectedService?.id.toString()}>
-                             {isActionLoading === selectedService?.id.toString() ? <Loader2 className="w-5 h-5 animate-spin" /> : "Gửi từ chối"}
+                            {isActionLoading === selectedService?.id.toString() ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gửi từ chối'}
                         </Button>
                     </div>
                 </DialogContent>

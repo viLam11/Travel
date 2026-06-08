@@ -59,6 +59,8 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   const queryProvinceCode = searchParams.get('provinceCode') || '';
   const provinceSlug     = urlDestination === 'undefined' ? '' : urlDestination;
   const paramServiceType = searchParams.get('serviceType') || serviceType || '';
+  // region có thể đến từ path param (:region) hoặc query param (?region=)
+  const resolvedRegion   = (region && region !== 'undefined') ? region : (searchParams.get('region') || '');
 
   const resolvedProvinceID =
     queryProvinceCode
@@ -76,7 +78,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
   // ─── TanStack Query ──────────────────────────────────────────────────────────
   const queryKey = [
     'destinations', 'filter',
-    searchKeyword, resolvedProvinceID, effectiveServiceType,
+    searchKeyword, resolvedRegion, resolvedProvinceID, effectiveServiceType,
     debouncedPrice, sortBy, minRating, currentPage,
   ] as const;
 
@@ -85,6 +87,7 @@ const DestinationsPage: React.FC<DestinationsPageProps> = () => {
     queryFn: async ({ signal }) => {
       const { sortBy: apiSortBy, direction } = sortToApi(sortBy);
       const base = {
+        region:       resolvedRegion || undefined,
         provinceCode: resolvedProvinceID || undefined,
         serviceType:  effectiveServiceType,
         minPrice:     debouncedPrice[0] > 0           ? debouncedPrice[0] : undefined,

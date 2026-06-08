@@ -245,7 +245,7 @@ const AdminAddServicePage: React.FC = () => {
     setIsSubmitting(true);
     try {
       // Find province code if location is a name
-      const province = provinces.find(p => p.name.toLowerCase() === formData.location.toLowerCase() || p.fullName.toLowerCase() === formData.location.toLowerCase());
+      const province = provinces.find(p => p.name.toLowerCase() === formData.location.toLowerCase() || (p.fullName || '').toLowerCase() === formData.location.toLowerCase());
       const provinceCode = province ? province.code : "79"; // default to HCM if not found
 
       const params = {

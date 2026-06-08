@@ -93,23 +93,15 @@ export class ApiClient {
     },
 
     register: (data: any): ApiResponse<any> => {
-      // Backend expects role like PROVIDER_HOTEL or PROVIDER_VENUE
-      // but DOES NOT have a 'providerType' field in the User entity.
-      // If 'both' is selected, we map the role value or pass both roles.
-      // According to backend: "nếu là cả 2 thì nó sẽ chứa cả 2 role" -> let's check if role can be 'PROVIDER_BOTH' or backend handles list.
-      // If backend maps by registering role, let's see how BE parses role string.
-      // Typically, for registering both, BE might support role name "PROVIDER_BOTH" or we can pass a specific role.
-      // Let's pass "PROVIDER_BOTH" or similar, or map based on BE endpoints.
-      // Wait, let's look at what the backend accepts. If we look at backend user model, roles is a list.
-      // But register DTO might accept a single role string first and then assign roles.
-      // Let's map providerType === 'both' to 'PROVIDER_BOTH'.
       const { providerType, ...transformedData } = data;
-      if (data.role === 'PROVIDER' && providerType) {
-        if (providerType === 'both') {
-          transformedData.role = 'PROVIDER_BOTH';
-        } else {
-          transformedData.role = providerType === 'hotel' ? 'PROVIDER_HOTEL' : 'PROVIDER_TICKET';
-        }
+      if (providerType === 'hotel') {
+        transformedData.roles = ['PROVIDER_HOTEL'];
+      } else if (providerType === 'ticket') {
+        transformedData.roles = ['PROVIDER_TICKET'];
+      } else if (providerType === 'venue') {
+        transformedData.roles = ['PROVIDER_VENUE'];
+      } else {
+        transformedData.roles = ['USER'];
       }
       return this.post("/auth/register/local", transformedData);
     },
@@ -304,6 +296,7 @@ export class ApiClient {
 
     // Province/type/price filtering via JPA — use when no keyword
     filterByLocation: async (params: {
+      region?: string;
       provinceCode?: string;
       serviceType?: string;
       minPrice?: number;

@@ -1,4 +1,3 @@
-// src/pages/auth/RegisterPage.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,16 +41,10 @@ const RegisterPage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
 
     if (errors[name as keyof FormErrors]) {
-      setErrors({
-        ...errors,
-        [name]: "",
-      });
+      setErrors({ ...errors, [name]: "" });
     }
   };
 
@@ -63,7 +56,7 @@ const RegisterPage: React.FC = () => {
     } else if (formData.username.length < 3) {
       newErrors.username = "Tên đăng nhập phải có ít nhất 3 ký tự";
     } else if (!/^[a-zA-Z0-9._]+$/.test(formData.username)) {
-      newErrors.username = "Tên đăng nhập không được có dấu, khoảng trắng hoặc ký tự đặc biệt (ngoại trừ . và _)";
+      newErrors.username = "Chỉ được dùng chữ, số, dấu chấm và gạch dưới";
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -98,56 +91,28 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
 
     try {
-      // Call real Backend API
       await register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
       });
 
-      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
-
-      // Navigate to verify email page
-      navigate("/verify-email", {
-        state: {
-          email: formData.email,
-        }
-      });
+      toast.success('Đăng ký thành công! Kiểm tra email để xác thực tài khoản.');
+      navigate("/verify-email", { state: { email: formData.email } });
 
     } catch (error: any) {
-      console.error("Registration failed:", error);
-      // Attempt to extract the error message
-      let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
-
-      if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (error?.response?.data) {
-        // Handle backend ErrorResponse structure { status, message }
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        }
-      }
-
-      // Debug: Log the extracted error message
-      console.log("Extracted errorMessage:", errorMessage);
-
-      // Special handling for specific errors to map to fields
+      const errorMessage = error instanceof Error ? error.message : "Đăng ký thất bại. Vui lòng thử lại.";
       const lowerMessage = errorMessage.toLowerCase();
+
       if (lowerMessage.includes("username") || lowerMessage.includes("tên đăng nhập")) {
         setErrors({ ...errors, username: "Tên đăng nhập đã tồn tại" });
       } else if (lowerMessage.includes("email")) {
-        setErrors({ ...errors, email: "Email đã tồn tại" });
+        setErrors({ ...errors, email: "Email đã được sử dụng" });
       } else {
         toast.error(errorMessage);
       }
@@ -163,46 +128,30 @@ const RegisterPage: React.FC = () => {
     >
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 w-full max-w-md px-4 sm:px-0">
 
-        {/* Header */}
-        <div className="mb-4 text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-500 mb-1">
-            Đăng Ký
-          </h1>
-          <p className="text-sm sm:text-base text-gray-500">Tạo tài khoản mới</p>
+        <div className="mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Tạo tài khoản</h1>
+          <p className="text-sm text-gray-500">Đăng ký để bắt đầu khám phá</p>
         </div>
 
-        {/* Username */}
-        {/* Username */}
         <FormInput
           label="Tên đăng nhập"
           name="username"
           type="text"
           value={formData.username}
           onChange={handleInputChange}
-          placeholder="Nhập tên người dùng"
+          placeholder="Nhập tên đăng nhập"
           error={errors.username}
           required
           icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           }
         />
 
-        {/* Email */}
         <EmailInput
-          label="Địa chỉ Email"
+          label="Email"
           name="email"
           value={formData.email}
           onChange={handleInputChange}
@@ -211,7 +160,6 @@ const RegisterPage: React.FC = () => {
           required
         />
 
-        {/* Password */}
         <div>
           <PasswordInput
             label="Mật khẩu"
@@ -222,42 +170,21 @@ const RegisterPage: React.FC = () => {
             error={errors.password}
             required
           />
-
-          {/* Progressive Password Validation - Show only unmet requirements */}
           {formData.password && (
-            <div className="mt-1.5 space-y-1">
-              {/* Show error only if requirement is not met */}
+            <div className="mt-1.5 space-y-0.5">
               {formData.password.length < 8 && (
-                <p className="text-red-500 text-xs flex items-center">
-                  <svg className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  Mật khẩu phải có ít nhất 8 ký tự
-                </p>
+                <p className="text-red-500 text-xs">Ít nhất 8 ký tự</p>
               )}
-
               {formData.password.length >= 8 && !/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) && (
-                <p className="text-red-500 text-xs flex items-center">
-                  <svg className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  Mật khẩu phải có chữ hoa và chữ thường
-                </p>
+                <p className="text-red-500 text-xs">Cần có chữ hoa và chữ thường</p>
               )}
-
               {formData.password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])/.test(formData.password) && !/(?=.*\d)/.test(formData.password) && (
-                <p className="text-red-500 text-xs flex items-center">
-                  <svg className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  Mật khẩu phải có ít nhất một số
-                </p>
+                <p className="text-red-500 text-xs">Cần có ít nhất một số</p>
               )}
             </div>
           )}
         </div>
 
-        {/* Confirm Password */}
         <PasswordInput
           label="Xác nhận mật khẩu"
           name="confirmPassword"
@@ -268,7 +195,6 @@ const RegisterPage: React.FC = () => {
           required
         />
 
-        {/* Terms and Conditions - Compact */}
         <div className="flex items-start gap-2">
           <input
             type="checkbox"
@@ -279,26 +205,19 @@ const RegisterPage: React.FC = () => {
           />
           <label className="text-xs sm:text-sm text-gray-600 leading-tight">
             Tôi đồng ý với{" "}
-            <button
-              type="button"
-              className="text-orange-500 hover:text-orange-600 underline"
-            >
+            <button type="button" className="text-orange-500 hover:text-orange-600 underline">
               Điều khoản dịch vụ
-            </button>{" "}
-            và{" "}
-            <button
-              type="button"
-              className="text-orange-500 hover:text-orange-600 underline"
-            >
+            </button>
+            {" "}và{" "}
+            <button type="button" className="text-orange-500 hover:text-orange-600 underline">
               Chính sách bảo mật
             </button>
           </label>
         </div>
         {errors.agreeToTerms && (
-          <p className="text-red-500 text-xs sm:text-sm -mt-2">{errors.agreeToTerms}</p>
+          <p className="text-red-500 text-xs -mt-2">{errors.agreeToTerms}</p>
         )}
 
-        {/* Submit Button */}
         <AuthButton
           type="submit"
           variant="primary"
@@ -306,29 +225,26 @@ const RegisterPage: React.FC = () => {
           disabled={loading}
           className="w-full"
         >
-          TẠO TÀI KHOẢN
+          Tạo tài khoản
         </AuthButton>
 
-        {/* Divider */}
-        <div className="relative my-3">
+        <div className="relative my-2">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-200"></div>
           </div>
-          <div className="relative flex justify-center text-xs sm:text-sm">
-            <span className="px-3 sm:px-4 bg-white text-gray-500">HOẶC</span>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-3 bg-white text-gray-400">hoặc</span>
           </div>
         </div>
 
-        {/* Social Login */}
         <SocialLogin />
 
-        {/* Login Link */}
-        <div className="text-center mt-3">
-          <span className="text-xs sm:text-sm text-gray-600">Đã có tài khoản? </span>
+        <div className="text-center">
+          <span className="text-sm text-gray-500">Đã có tài khoản? </span>
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="text-xs sm:text-sm text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline cursor-pointer"
+            className="text-sm text-orange-500 hover:text-orange-600 font-medium cursor-pointer"
           >
             Đăng nhập
           </button>

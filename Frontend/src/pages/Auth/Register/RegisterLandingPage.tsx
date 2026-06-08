@@ -1,104 +1,54 @@
-// src/pages/Auth/Register/RegisterLandingPage.tsx
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/admin/card';
-import { Button } from '@/components/ui/admin/button';
-import { User, Briefcase, ArrowRight } from 'lucide-react';
+import { User, Briefcase } from 'lucide-react';
 
 export default function RegisterLandingPage() {
     const navigate = useNavigate();
 
-    const accountTypes = [
-        {
-            id: 'customer',
-            title: 'Khách hàng',
-            description: 'Đăng ký để tìm kiếm, đặt phòng khách sạn, vé tham quan, tour du lịch và lập kế hoạch hành trình lý tưởng.',
-            icon: User,
-            color: 'blue',
-            gradient: 'from-blue-50 to-blue-100',
-            iconBg: 'bg-blue-100',
-            iconColor: 'text-blue-600',
-            buttonColor: 'bg-blue-600 hover:bg-blue-700',
-            path: '/register/customer',
-        },
-        {
-            id: 'provider',
-            title: 'Đối tác dịch vụ',
-            description: 'Đăng ký kinh doanh, bán phòng khách sạn/homestay hoặc cung cấp các tour du lịch & vé hoạt động trải nghiệm.',
-            icon: Briefcase,
-            color: 'orange',
-            gradient: 'from-orange-50 to-orange-100',
-            iconBg: 'bg-orange-100',
-            iconColor: 'text-orange-600',
-            buttonColor: 'bg-orange-600 hover:bg-orange-700',
-            path: '/register/provider',
-        },
-    ];
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-            <div className="w-full max-w-4xl">
-                {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-3">
-                        Chọn loại tài khoản
-                    </h1>
-                    <p className="text-lg text-gray-600">
-                        Đăng ký để bắt đầu sử dụng Travello
-                    </p>
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+            <div className="w-full max-w-sm">
+                <div className="text-center mb-8">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-1">Tạo tài khoản</h1>
+                    <p className="text-sm text-gray-500">Bạn muốn đăng ký với tư cách gì?</p>
                 </div>
 
-                {/* Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    {accountTypes.map((type) => {
-                        const Icon = type.icon;
-                        return (
-                            <Card
-                                key={type.id}
-                                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
-                                onClick={() => navigate(type.path)}
-                            >
-                                <CardContent className={`p-8 bg-gradient-to-br ${type.gradient} h-full flex flex-col`}>
-                                    {/* Icon */}
-                                    <div className={`${type.iconBg} w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                        <Icon className={`w-8 h-8 ${type.iconColor}`} />
-                                    </div>
+                <div className="space-y-3">
+                    <button
+                        onClick={() => navigate('/register/customer')}
+                        className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-colors text-left group"
+                    >
+                        <div className="w-10 h-10 bg-gray-100 group-hover:bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                            <User className="w-5 h-5 text-gray-500 group-hover:text-orange-600 transition-colors" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-800">Khách hàng</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Đặt phòng, tour, vé tham quan</p>
+                        </div>
+                    </button>
 
-                                    {/* Content */}
-                                    <div className="flex-1">
-                                        <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                                            {type.title}
-                                        </h3>
-                                        <p className="text-gray-600 leading-relaxed mb-6">
-                                            {type.description}
-                                        </p>
-                                    </div>
-
-                                    {/* Button */}
-                                    <Button
-                                        className={`w-full ${type.buttonColor} text-white group-hover:gap-3 transition-all`}
-                                        size="lg"
-                                    >
-                                        Đăng ký ngay
-                                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                    <button
+                        onClick={() => navigate('/register/provider')}
+                        className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-colors text-left group"
+                    >
+                        <div className="w-10 h-10 bg-gray-100 group-hover:bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                            <Briefcase className="w-5 h-5 text-gray-500 group-hover:text-orange-600 transition-colors" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-800">Đối tác dịch vụ</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Kinh doanh khách sạn, tour, vé hoạt động</p>
+                        </div>
+                    </button>
                 </div>
 
-                {/* Footer */}
-                <div className="text-center">
-                    <p className="text-gray-600">
-                        Đã có tài khoản?{' '}
-                        <button
-                            onClick={() => navigate('/login')}
-                            className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
-                        >
-                            Đăng nhập ngay
-                        </button>
-                    </p>
-                </div>
+                <p className="text-center text-sm text-gray-500 mt-6">
+                    Đã có tài khoản?{' '}
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="text-orange-500 hover:text-orange-600 font-medium"
+                    >
+                        Đăng nhập
+                    </button>
+                </p>
             </div>
         </div>
     );

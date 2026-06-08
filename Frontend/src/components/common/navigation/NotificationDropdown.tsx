@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, UserPlus, MessageSquare, CheckCircle2, AlertCircle, Heart, MessageCircle, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,14 +35,19 @@ interface NotificationInfo {
 export const NotificationDropdown = () => {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    const currentUserRef = useRef(currentUser);
+    const hasFetchedRef = useRef(false);
     const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+    // Keep ref in sync so socket handlers always see the latest user without re-subscribing
+    useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
+
     // Helper: Map backend notification to frontend UI notification
     const mapBackendNoti = (noti: any): NotificationInfo => {
-        const uRole = currentUser?.user?.role?.toLowerCase() || 'user';
+        const uRole = currentUserRef.current?.user?.role?.toLowerCase() || 'user';
         const isP = uRole === 'provider' || uRole.startsWith('provider_');
         const defaultChatUrl = uRole === 'admin' ? '/admin/messages' : (isP ? '/provider/messages' : '/user/messages');
 
@@ -113,7 +118,7 @@ export const NotificationDropdown = () => {
                     setNotifications(mappedList);
                 }
             } else {
-                const uRole = currentUser?.user?.role?.toLowerCase() || 'user';
+                const uRole = currentUserRef.current?.user?.role?.toLowerCase() || 'user';
                 const isP = uRole === 'provider' || uRole.startsWith('provider_');
                 const defaultChatUrl = uRole === 'admin' ? '/admin/messages' : (isP ? '/provider/messages' : '/user/messages');
 
@@ -160,59 +165,57 @@ export const NotificationDropdown = () => {
         );
     };
 
+    // Fetch once — only after currentUser is available for the first time
     useEffect(() => {
+        if (hasFetchedRef.current || !currentUser) return;
+        hasFetchedRef.current = true;
         fetchNotifications();
+    }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        let unsubscribeNoti = () => {};
-        let unsubscribeMsg = () => {};
+    // Socket subscriptions — set up once on mount, never torn down on re-renders
+    // Uses currentUserRef inside handlers so they always see the latest user
+    useEffect(() => {
+        if (NOTIFICATION_MODE !== 'SOCKET') return;
 
-        if (NOTIFICATION_MODE === 'SOCKET') {
-            // Lắng nghe thông báo hệ thống/plan/order
-            unsubscribeNoti = socketService.onNotification((noti) => {
-                console.log('[NotificationDropdown] Received real-time notification:', noti);
-                handleNewIncomingNotification(noti);
-            });
+        const unsubscribeNoti = socketService.onNotification((noti) => {
+            handleNewIncomingNotification(noti);
+        });
 
-            // Lắng nghe tin nhắn chat để hiển thị ở thông báo tổng (nếu bật)
-            unsubscribeMsg = socketService.onMessage((msg) => {
-                const isNotifyEnabled = localStorage.getItem('chat_notify_enabled') !== 'false';
-                
-                // Chỉ hiển thị ở thông báo tổng nếu người dùng BẬT tính năng này
-                if (isNotifyEnabled && msg.senderId !== currentUser?.user?.userID?.toString()) {
-                    console.log('[NotificationDropdown] Received real-time message to show in general notifications:', msg);
-                    
-                    const chatNoti: NotificationInfo = {
-                        id: msg.id || Date.now(),
-                        senderName: 'Tin nhắn mới', // Hoặc lấy tên người gửi nếu có trong msg
-                        message: msg.text,
-                        targetUrl: (currentUser?.user?.role || '').toLowerCase().includes('provider') ? '/provider/messages' : '/user/messages',
-                        isRead: false,
-                        createdAt: msg.timestamp || new Date().toISOString(),
-                        type: 'CHAT'
-                    };
+        const unsubscribeMsg = socketService.onMessage((msg) => {
+            const isNotifyEnabled = localStorage.getItem('chat_notify_enabled') !== 'false';
+            if (!isNotifyEnabled) return;
+            if (msg.senderId === currentUserRef.current?.user?.userID?.toString()) return;
 
-                    setNotifications(prev => [chatNoti, ...prev].slice(0, 20));
-                    setUnreadCount(prev => prev + 1);
+            const role = (currentUserRef.current?.user?.role || '').toLowerCase();
+            const chatNoti: NotificationInfo = {
+                id: msg.id || Date.now(),
+                senderName: 'Tin nhắn mới',
+                message: msg.text,
+                targetUrl: role.includes('provider') ? '/provider/messages' : '/user/messages',
+                isRead: false,
+                createdAt: msg.timestamp || new Date().toISOString(),
+                type: 'CHAT'
+            };
 
-                    toast.success(
-                        <div className="flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-blue-500" />
-                            <div>
-                                <p className="font-bold text-xs">Tin nhắn mới</p>
-                                <p className="text-[10px] line-clamp-1">{msg.text}</p>
-                            </div>
-                        </div>,
-                        { duration: 4000, position: 'top-right' }
-                    );
-                }
-            });
-        }
+            setNotifications(prev => [chatNoti, ...prev].slice(0, 20));
+            setUnreadCount(prev => prev + 1);
+            toast.success(
+                <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-blue-500" />
+                    <div>
+                        <p className="font-bold text-xs">Tin nhắn mới</p>
+                        <p className="text-[10px] line-clamp-1">{msg.text}</p>
+                    </div>
+                </div>,
+                { duration: 4000, position: 'top-right' }
+            );
+        });
 
         return () => {
             unsubscribeNoti();
             unsubscribeMsg();
         };
-    }, [currentUser]);
+    }, []); // mount only — socket listeners never need to be re-registered
 
     const handleRead = async (notif: NotificationInfo, shouldNavigate = true) => {
         setNotifications(prev => 

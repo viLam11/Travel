@@ -1,14 +1,13 @@
 // src/components/page/blog/BlogCard.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
-    MoreHorizontal, Bookmark, ExternalLink, Send, Hotel, Heart, Sparkles,
-    MessageCircle, Eye, Clock, MapPin, Share2,
+    MoreHorizontal, Bookmark, ExternalLink, Send, Hotel, Heart,
+    MessageCircle, Eye, Clock, MapPin, Share2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { useNavigate } from 'react-router-dom';
-import type { BlogPost, ReactionType } from '@/types/blog.types';
+import type { BlogPost, BlogComment, ReactionType } from '@/types/blog.types';
 import ReactionPicker, { REACTION_OPTIONS } from './ReactionPicker';
-import PostDrawer from './PostDrawer';
 import ReactionListModal from './ReactionListModal';
 import { blogApi } from '@/api/blogApi';
 import { useAuth } from '@/hooks/useAuth';
@@ -164,6 +163,81 @@ const InlineCommentItem: React.FC<{ comment: InlineComment }> = ({ comment }) =>
     </div>
 );
 
+// ── MediaCarousel ─────────────────────────────────────────────────────────────
+interface MediaCarouselProps {
+    images: string[];
+    title?: string;
+    onExpand?: () => void;
+}
+
+const MediaCarousel: React.FC<MediaCarouselProps> = ({ images, title, onExpand }) => {
+    const [current, setCurrent] = useState(0);
+
+    if (images.length === 0) return null;
+
+    const prev = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrent(i => (i - 1 + images.length) % images.length);
+    };
+    const next = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrent(i => (i + 1) % images.length);
+    };
+
+    return (
+        <div className="relative overflow-hidden bg-black aspect-video select-none">
+            <div
+                className="flex h-full transition-transform duration-300 ease-in-out"
+                style={{ transform: `translateX(-${current * 100}%)` }}
+            >
+                {images.map((src, i) => (
+                    <div key={i} className="flex-shrink-0 w-full h-full cursor-pointer" onClick={onExpand}>
+                        <img
+                            src={src}
+                            alt={`${title || 'ảnh'} ${i + 1}`}
+                            className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-500"
+                            loading="lazy"
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {images.length > 1 && (
+                <>
+                    <button
+                        onClick={prev}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/75 text-white rounded-full flex items-center justify-center transition-all z-10 shadow-lg"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={next}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/75 text-white rounded-full flex items-center justify-center transition-all z-10 shadow-lg"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+
+                    <div className="absolute top-2 right-2 bg-black/55 text-white text-xs font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                        {current + 1}/{images.length}
+                    </div>
+
+                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {images.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={e => { e.stopPropagation(); setCurrent(i); }}
+                                className={`rounded-full transition-all duration-200 ${
+                                    i === current ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/55 hover:bg-white/80'
+                                }`}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 // ── BlogCard ──────────────────────────────────────────────────────────────────
 interface BlogCardProps {
     post: BlogPost;
@@ -226,17 +300,33 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
 
     // Inline comment state
     const [showComments, setShowComments] = useState(false);
-    const [inlineComments, setInlineComments] = useState<InlineComment[]>([]);
+    const [newComments, setNewComments] = useState<InlineComment[]>([]);
+    const [loadedComments, setLoadedComments] = useState<BlogComment[]>([]);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [commentsFetched, setCommentsFetched] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [commentCount, setCommentCount] = useState(post.commentCount ?? 0);
 
-    // PostDrawer state (for "Xem tất cả bình luận")
-    const [showDrawer, setShowDrawer] = useState(false);
+    // Load comments inline when section first expands
+    useEffect(() => {
+        if (!showComments || commentsFetched) return;
+        setCommentsFetched(true);
+        setIsLoadingComments(true);
+        blogApi.getPostById(post.id)
+            .then(detail => setLoadedComments((detail as any).comments || []))
+            .catch(() => {})
+            .finally(() => setIsLoadingComments(false));
+    }, [showComments, commentsFetched, post.id]);
 
     // Field mapping
-    const thumbnail = post.thumbnailUrl || (post as any).coverImage ||
-        'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1200&q=80';
+    const rawMediaUrls: string[] = post.mediaUrls || (post as any).mediaUrls || [];
+    const images = Array.from(new Set(
+        [post.thumbnailUrl, (post as any).coverImage, ...rawMediaUrls]
+            .filter((u): u is string => Boolean(u))
+    ));
+    // thumbnail used only for featured variant (always needs an image)
+    const thumbnail = images[0] || 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1200&q=80';
     const authorName = post.authorName || (post as any).author?.name || 'Ẩn danh';
     const authorAvatar = post.authorAvatarUrl || (post as any).author?.avatar ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=fb923c&color=fff`;
@@ -310,11 +400,11 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
             id: `opt_${Date.now()}`, content: text, authorName: meName,
             authorAvatarUrl: meAvatar, createdAt: new Date().toISOString(),
         };
-        setInlineComments(prev => [optimistic, ...prev]);
+        setNewComments(prev => [optimistic, ...prev]);
         setCommentText(''); setCommentCount(c => c + 1);
         try { await blogApi.addComment(post.id, text); }
         catch {
-            setInlineComments(prev => prev.filter(c => c.id !== optimistic.id));
+            setNewComments(prev => prev.filter(c => c.id !== optimistic.id));
             setCommentCount(c => Math.max(0, c - 1));
             toast.error('Không thể đăng bình luận');
         }
@@ -486,22 +576,20 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                     </div>
                 )}
 
-                {/* ── Thumbnail ── */}
-                {thumbnail && (
-                    <div className="overflow-hidden cursor-pointer aspect-video"
-                        onClick={() => navigate(`/blog/${post.id}`)}>
-                        <img src={thumbnail} alt={post.title}
-                            className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-500" />
-                    </div>
-                )}
+                {/* ── Media Carousel ── */}
+                <MediaCarousel
+                    images={images}
+                    title={post.title}
+                    onExpand={() => navigate(`/blog/${post.id}`)}
+                />
 
                 {/* ── Stats Row ── */}
                 <div className="px-5 py-2 flex items-center justify-between text-xs text-gray-400 border-b border-gray-100">
                     <ReactionSummaryRow reactions={breakdown} totalCount={localCount} userReaction={localReaction} post={post} />
                     <div className="flex items-center gap-3">
                         {commentCount > 0 && (
-                            <button onClick={() => setShowDrawer(true)}
-                                className="hover:text-orange-500 transition-colors cursor-pointer font-medium">
+                            <button onClick={handleCommentClick}
+                                className={`hover:text-orange-500 transition-colors cursor-pointer font-medium ${showComments ? 'text-orange-500' : ''}`}>
                                 {commentCount} bình luận
                             </button>
                         )}
@@ -510,8 +598,8 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                 </div>
 
                 {/* ── Action Bar ── */}
-                <div className="px-3 py-0.5 flex items-center border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                    <div className="flex-1 flex justify-center py-0.5 overflow-visible">
+                <div className="px-3 py-1 flex items-center border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                    <div className="flex-1 flex justify-center overflow-visible">
                         <ReactionPicker
                             postId={post.id}
                             currentReaction={localReaction}
@@ -524,8 +612,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                     </div>
                     <div className="w-px h-5 bg-gray-100" />
                     <button onClick={handleCommentClick}
-                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${showComments ? 'text-orange-500 bg-orange-50' : 'text-gray-500 hover:bg-gray-100 hover:text-orange-500'
-                            }`}>
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${showComments ? 'text-orange-500 bg-orange-50' : 'text-gray-500 hover:bg-gray-100 hover:text-orange-500'}`}>
                         <MessageCircle className="w-4 h-4" />
                         <span>Bình luận</span>
                         {commentCount > 0 && !showComments && (
@@ -542,29 +629,39 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
 
                 {/* ── Inline Comment Section ── */}
                 {showComments && (
-                    <div className="px-4 pb-4 pt-3 bg-gray-50/50 rounded-b-2xl">
-                        {inlineComments.length > 0 && (
-                            <div className="space-y-2.5 mb-3 max-h-48 overflow-y-auto pr-1">
-                                {inlineComments.map(c => <InlineCommentItem key={c.id} comment={c} />)}
+                    <div className="px-4 pb-4 pt-3 bg-gray-50/50 rounded-b-2xl" onClick={e => e.stopPropagation()}>
+                        {/* Newly submitted (optimistic) */}
+                        {newComments.length > 0 && (
+                            <div className="space-y-2.5 mb-3">
+                                {newComments.map(c => <InlineCommentItem key={c.id} comment={c} />)}
                             </div>
                         )}
 
-                        {inlineComments.length === 0 && commentCount === 0 && (
-                            <p className="text-xs text-gray-400 text-center py-2 flex items-center justify-center gap-1.5"> Chưa có bình luận. Hãy là người đầu tiên!</p>
-                        )}
-
-                        {/* Show drawer link if there are more comments */}
-                        {commentCount > inlineComments.length && (
-                            <button onClick={() => setShowDrawer(true)}
-                                className="text-xs font-bold text-orange-500 hover:text-orange-600 hover:underline mb-2.5 block cursor-pointer">
-                                Xem tất cả {commentCount} bình luận →
-                            </button>
+                        {/* Loaded from API */}
+                        {isLoadingComments ? (
+                            <div className="flex justify-center py-5">
+                                <div className="w-5 h-5 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+                            </div>
+                        ) : loadedComments.length > 0 ? (
+                            <div className="space-y-2.5 mb-3 max-h-72 overflow-y-auto pr-1">
+                                {loadedComments.map(c => (
+                                    <InlineCommentItem key={c.id} comment={{
+                                        id: c.id,
+                                        content: c.content,
+                                        authorName: c.authorName || (c as any).author?.name || 'Ẩn danh',
+                                        authorAvatarUrl: c.authorAvatarUrl || (c as any).author?.avatar,
+                                        createdAt: c.createdAt,
+                                    }} />
+                                ))}
+                            </div>
+                        ) : newComments.length === 0 && (
+                            <p className="text-xs text-gray-400 text-center py-3">Chưa có bình luận. Hãy là người đầu tiên!</p>
                         )}
 
                         {/* Input */}
-                        <div className="flex gap-2 items-end">
+                        <div className="flex gap-2 items-center mt-1">
                             <img src={meAvatar} alt={meName} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-                            <div className="flex-1 flex items-end bg-white rounded-2xl border border-gray-200 px-3 py-2 gap-2 focus-within:border-orange-300 focus-within:ring-1 focus-within:ring-orange-200 transition-all">
+                            <div className="flex-1 flex items-center bg-white rounded-2xl border border-gray-200 px-3 py-2 gap-2 focus-within:border-orange-300 focus-within:ring-1 focus-within:ring-orange-200 transition-all">
                                 <input
                                     ref={commentInputRef}
                                     type="text" value={commentText}
@@ -588,17 +685,6 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                     </div>
                 )}
             </article>
-
-            {/* ── Post Drawer ──────────────────────────────────────────────────────── */}
-            <PostDrawer
-                post={post}
-                isOpen={showDrawer}
-                onClose={() => setShowDrawer(false)}
-                currentReaction={localReaction}
-                reactionCount={localCount}
-                reactionBreakdown={breakdown}
-                onReact={handleReact}
-            />
         </>
     );
 };

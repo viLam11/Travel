@@ -1,4 +1,3 @@
-// src/pages/Auth/Register/HotelProviderRegisterPage.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +7,6 @@ import EmailInput from "../../../components/page/auth/EmailInput";
 import PasswordInput from "../../../components/page/auth/PasswordInput";
 import AuthButton from "../../../components/page/auth/AuthButton";
 import FormInput from "../../../components/page/auth/FormInput";
-import { Briefcase, Hotel, MapPin } from "lucide-react";
 
 interface FormData {
     username: string;
@@ -27,7 +25,7 @@ interface FormErrors {
 }
 
 const HotelProviderRegisterPage: React.FC = () => {
-    const [providerType, setProviderType] = useState<'hotel' | 'place' | 'both'>('hotel');
+    const [providerType, setProviderType] = useState<'hotel' | 'ticket'>('hotel');
     const [formData, setFormData] = useState<FormData>({
         username: "",
         email: "",
@@ -49,10 +47,7 @@ const HotelProviderRegisterPage: React.FC = () => {
         });
 
         if (errors[name as keyof FormErrors]) {
-            setErrors({
-                ...errors,
-                [name]: "",
-            });
+            setErrors({ ...errors, [name]: "" });
         }
     };
 
@@ -64,7 +59,7 @@ const HotelProviderRegisterPage: React.FC = () => {
         } else if (formData.username.length < 3) {
             newErrors.username = "Tên đăng nhập phải có ít nhất 3 ký tự";
         } else if (!/^[a-zA-Z0-9._]+$/.test(formData.username)) {
-            newErrors.username = "Tên đăng nhập không được có dấu, khoảng trắng hoặc ký tự đặc biệt (ngoại trừ . và _)";
+            newErrors.username = "Chỉ được dùng chữ, số, dấu chấm và gạch dưới";
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -99,52 +94,29 @@ const HotelProviderRegisterPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         setLoading(true);
 
         try {
-            // Register as provider with selected type (hotel, place, or both)
             await register({
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                role: 'PROVIDER',
-                providerType: providerType,
+                providerType,
             });
 
-            toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
-
-            // Navigate to verify email page
-            navigate("/verify-email", {
-                state: {
-                    email: formData.email,
-                }
-            });
+            toast.success('Đăng ký thành công! Kiểm tra email để xác thực tài khoản.');
+            navigate("/verify-email", { state: { email: formData.email } });
 
         } catch (error: any) {
-            console.error("Registration failed:", error);
-            let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
-
-            if (typeof error === 'string') {
-                errorMessage = error;
-            } else if (error instanceof Error) {
-                errorMessage = error.message;
-            } else if (error?.response?.data) {
-                if (typeof error.response.data === 'string') {
-                    errorMessage = error.response.data;
-                } else if (error.response.data.message) {
-                    errorMessage = error.response.data.message;
-                }
-            }
-
+            const errorMessage = error instanceof Error ? error.message : "Đăng ký thất bại. Vui lòng thử lại.";
             const lowerMessage = errorMessage.toLowerCase();
+
             if (lowerMessage.includes("username") || lowerMessage.includes("tên đăng nhập")) {
                 setErrors({ ...errors, username: "Tên đăng nhập đã tồn tại" });
             } else if (lowerMessage.includes("email")) {
-                setErrors({ ...errors, email: "Email đã tồn tại" });
+                setErrors({ ...errors, email: "Email đã được sử dụng" });
             } else {
                 toast.error(errorMessage);
             }
@@ -156,69 +128,48 @@ const HotelProviderRegisterPage: React.FC = () => {
     return (
         <AuthLayout
             heroTitle="Travello for Business"
-            heroSubtitle="Quản lý dịch vụ du lịch của bạn một cách chuyên nghiệp và hiệu quả"
+            heroSubtitle="Quản lý dịch vụ du lịch của bạn một cách chuyên nghiệp"
         >
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 w-full max-w-md px-4 sm:px-0">
 
-                {/* Header */}
-                <div className="mb-4 text-center">
-                    {/* <div className="flex justify-center mb-3">
-                        <div className="bg-orange-100 p-3 rounded-full">
-                            <Briefcase className="w-8 h-8 text-orange-600" />
-                        </div>
-                    </div> */}
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-500 mb-1">
-                        Đối Tác Dịch Vụ
+                <div className="mb-4">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+                        Đăng ký đối tác
                     </h1>
-                    <p className="text-sm sm:text-base text-gray-500 font-medium">Tạo tài khoản kinh doanh dịch vụ</p>
+                    <p className="text-sm text-gray-500">Tạo tài khoản để bắt đầu kinh doanh</p>
                 </div>
 
-                {/* Business Type selection */}
-                <div className="mb-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Loại hình kinh doanh <span className="text-orange-500">*</span>
+                {/* Provider type */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Loại dịch vụ
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="flex gap-2">
                         <button
                             type="button"
                             onClick={() => setProviderType('hotel')}
-                            className={`p-2.5 rounded-xl border-2 text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
                                 providerType === 'hotel'
-                                    ? 'border-orange-500 bg-orange-50 font-bold text-orange-700 shadow-sm'
-                                    : 'border-gray-100 hover:border-orange-200 bg-gray-50 text-gray-500'
+                                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
                             }`}
                         >
-                            <Hotel className="w-4.5 h-4.5" />
-                            <span className="text-[10px] sm:text-xs font-bold leading-tight">Lưu trú</span>
+                            Lưu trú
                         </button>
                         <button
                             type="button"
-                            onClick={() => setProviderType('place')}
-                            className={`p-2.5 rounded-xl border-2 text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                                providerType === 'place'
-                                    ? 'border-orange-500 bg-orange-50 font-bold text-orange-700 shadow-sm'
-                                    : 'border-gray-100 hover:border-orange-200 bg-gray-50 text-gray-500'
+                            onClick={() => setProviderType('ticket')}
+                            className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                                providerType === 'ticket'
+                                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
                             }`}
                         >
-                            <MapPin className="w-4.5 h-4.5" />
-                            <span className="text-[10px] sm:text-xs font-bold leading-tight">Tour/Vé</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setProviderType('both')}
-                            className={`p-2.5 rounded-xl border-2 text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                                providerType === 'both'
-                                    ? 'border-orange-500 bg-orange-50 font-bold text-orange-700 shadow-sm'
-                                    : 'border-gray-100 hover:border-orange-200 bg-gray-50 text-gray-500'
-                            }`}
-                        >
-                            <Briefcase className="w-4.5 h-4.5" />
-                            <span className="text-[10px] sm:text-xs font-bold leading-tight">Cả hai</span>
+                            Tour / Vé
                         </button>
                     </div>
                 </div>
 
-                {/* Username */}
                 <FormInput
                     label="Tên đăng nhập"
                     name="username"
@@ -229,35 +180,23 @@ const HotelProviderRegisterPage: React.FC = () => {
                     error={errors.username}
                     required
                     icon={
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                             <circle cx="12" cy="7" r="4"></circle>
                         </svg>
                     }
                 />
 
-                {/* Email */}
                 <EmailInput
-                    label="Địa chỉ Email"
+                    label="Email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="hotel@example.com"
+                    placeholder="business@example.com"
                     error={errors.email}
                     required
                 />
 
-                {/* Password */}
                 <PasswordInput
                     label="Mật khẩu"
                     name="password"
@@ -268,7 +207,6 @@ const HotelProviderRegisterPage: React.FC = () => {
                     required
                 />
 
-                {/* Confirm Password */}
                 <PasswordInput
                     label="Xác nhận mật khẩu"
                     name="confirmPassword"
@@ -279,7 +217,6 @@ const HotelProviderRegisterPage: React.FC = () => {
                     required
                 />
 
-                {/* Terms */}
                 <div className="flex items-start gap-2">
                     <input
                         type="checkbox"
@@ -292,18 +229,17 @@ const HotelProviderRegisterPage: React.FC = () => {
                         Tôi đồng ý với{" "}
                         <button type="button" className="text-orange-500 hover:text-orange-600 underline">
                             Điều khoản dịch vụ
-                        </button>{" "}
-                        và{" "}
+                        </button>
+                        {" "}và{" "}
                         <button type="button" className="text-orange-500 hover:text-orange-600 underline">
                             Chính sách bảo mật
                         </button>
                     </label>
                 </div>
                 {errors.agreeToTerms && (
-                    <p className="text-red-500 text-xs sm:text-sm -mt-2">{errors.agreeToTerms}</p>
+                    <p className="text-red-500 text-xs -mt-2">{errors.agreeToTerms}</p>
                 )}
 
-                {/* Submit Button */}
                 <AuthButton
                     type="submit"
                     variant="primary"
@@ -311,16 +247,15 @@ const HotelProviderRegisterPage: React.FC = () => {
                     disabled={loading}
                     className="w-full"
                 >
-                    TẠO TÀI KHOẢN
+                    Tạo tài khoản
                 </AuthButton>
 
-                {/* Login Link */}
-                <div className="text-center mt-3">
-                    <span className="text-xs sm:text-sm text-gray-600">Đã có tài khoản? </span>
+                <div className="text-center mt-2">
+                    <span className="text-sm text-gray-500">Đã có tài khoản? </span>
                     <button
                         type="button"
                         onClick={() => navigate("/login")}
-                        className="text-xs sm:text-sm text-orange-500 hover:text-orange-600 font-semibold transition-colors underline-offset-2 hover:underline cursor-pointer"
+                        className="text-sm text-orange-500 hover:text-orange-600 font-medium cursor-pointer"
                     >
                         Đăng nhập
                     </button>

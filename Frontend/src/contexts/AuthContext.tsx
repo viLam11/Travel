@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { toast } from 'react-hot-toast';
 import apiClient from '@/services/apiClient';
 
@@ -101,7 +101,7 @@ interface User {
     phoneNumber?: string;
     address?: string;
     avatarUrl?: string;
-    providerType?: 'hotel' | 'place' | 'both'; // For providers
+    providerType?: 'hotel' | 'ticket' | 'venue'; // Maps to PROVIDER_HOTEL | PROVIDER_TICKET | PROVIDER_VENUE
     hasService?: boolean; // For providers - whether they have completed service setup
     serviceId?: string | number; // Primary service ID (for backward compatibility)
     services?: any[]; // Array of all services owned by the provider
@@ -120,8 +120,8 @@ interface RegisterData {
     password: string;
     phone?: string;
     address?: string;
-    role?: string; // USER, PROVIDER, etc.
-    providerType?: 'hotel' | 'place' | 'both'; // For providers only
+    role?: 'USER' | 'PROVIDER_HOTEL' | 'PROVIDER_TICKET' | 'PROVIDER_VENUE' | 'ADMIN';
+    providerType?: 'hotel' | 'ticket' | 'venue'; // For providers only
 }
 
 interface AuthContextType {
@@ -142,6 +142,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<LoginResponse | null>(null);
+    // Guard against React StrictMode double-invocation of the init effect
+    const authInitialized = useRef(false);
 
     const checkAuth = async () => {
         const token = localStorage.getItem('token');
@@ -250,6 +252,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     useEffect(() => {
+        // Prevent double-invocation from React StrictMode
+        if (authInitialized.current) return;
+        authInitialized.current = true;
+
         console.log('[Auth] Initializing authentication state...');
         // Check localStorage for immediate display
         const token = localStorage.getItem('token');
