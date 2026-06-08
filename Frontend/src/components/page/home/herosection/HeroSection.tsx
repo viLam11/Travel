@@ -19,10 +19,10 @@ interface Province {
 
 const backgroundImages = [
   bgImage,
-  'https://images.unsplash.com/photo-1528127269322-539801943592?w=1920&q=80', // Ha Long Bay
-  'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=1920&q=80', // Hoi An
-  'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1920&q=80', // Hanoi
-  'https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=1920&q=80', // Beach
+  'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&q=60&fm=webp', // Ha Long Bay
+  'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=1200&q=60&fm=webp', // Hoi An
+  'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1200&q=60&fm=webp', // Hanoi
+  'https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=1200&q=60&fm=webp', // Beach
 ];
 
 const HeroSection: React.FC = () => {
@@ -220,6 +220,8 @@ const HeroSection: React.FC = () => {
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
               index === currentSlide ? 'opacity-100' : 'opacity-0'
             }`}
+            width="1920"
+            height="700"
             loading={index === 0 ? 'eager' : 'lazy'}
             fetchPriority={index === 0 ? 'high' : 'low'}
           />
@@ -285,11 +287,12 @@ const HeroSection: React.FC = () => {
 
             {/* Service Type Select */}
             <div className="relative">
-              <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
+              <label htmlFor="service-type-select" className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
                 Loại dịch vụ
               </label>
               <div className="relative">
                 <select
+                  id="service-type-select"
                   value={formData.serviceType}
                   onChange={(e) => setFormData({ ...formData, serviceType: e.target.value as 'place' | 'hotel' })}
                   className="w-full px-3 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent hover:border-orange-400 transition-all appearance-none bg-white cursor-pointer"
@@ -302,12 +305,13 @@ const HeroSection: React.FC = () => {
             </div>
 
             <div className="relative overflow-visible" ref={destinationRef}>
-              <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
+              <label htmlFor="destination-input" className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
                 Địa điểm
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
+                  id="destination-input"
                   type="text"
                   placeholder="Chọn hoặc tìm địa điểm"
                   value={formData.destination}
@@ -340,12 +344,13 @@ const HeroSection: React.FC = () => {
             </div>
 
             <div className="relative overflow-visible" ref={datePickerRef}>
-              <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
+              <label htmlFor="date-range-input" className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 block text-left">
                 {formData.serviceType === 'hotel' ? 'Check-in - Check-out' : 'Thời gian'}
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
+                  id="date-range-input"
                   type="text"
                   placeholder={formData.serviceType === 'hotel' ? 'Chọn ngày nhận - trả phòng' : 'Chọn ngày đi - về'}
                   value={formatDateRange()}

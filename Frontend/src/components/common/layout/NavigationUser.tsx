@@ -57,7 +57,7 @@ const Navigation: React.FC<NavigationProps> = ({
             className="flex-shrink-0 cursor-pointer flex flex-row items-center"
             onClick={() => navigate('/homepage')}
           >
-            <img src="/LOGO.png" alt="Logo" className="h-12" />
+            <img src="/LOGO.png" alt="Logo" className="h-12" width="48" height="48" />
             <div className="font-bold text-xl sm:text-2xl text-[#eb662b]">Travello</div>
           </div>
 
@@ -112,8 +112,8 @@ const Navigation: React.FC<NavigationProps> = ({
                 }
               }}
               className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/destinations')
-                ? 'text-orange-500 font-semibold border-orange-500'
-                : 'text-gray-700 hover:text-orange-500 border-transparent'
+                ? 'text-orange-600 font-semibold border-orange-600'
+                : 'text-gray-700 hover:text-orange-600 border-transparent'
                 }`}
             >
               Địa điểm
@@ -121,8 +121,8 @@ const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={() => navigate('/hotels')}
               className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/hotels')
-                ? 'text-orange-500 font-semibold border-orange-500'
-                : 'text-gray-700 hover:text-orange-500 border-transparent'
+                ? 'text-orange-600 font-semibold border-orange-600'
+                : 'text-gray-700 hover:text-orange-600 border-transparent'
                 }`}
             >
               Khách sạn
@@ -136,8 +136,8 @@ const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={() => navigate('/blog')}
               className={`cursor-pointer text-sm lg:text-base font-medium transition-colors whitespace-nowrap pb-0.5 border-b-2 ${isActive('/blog')
-                ? 'text-orange-500 font-semibold border-orange-500'
-                : 'text-gray-700 hover:text-orange-500 border-transparent'
+                ? 'text-orange-600 font-semibold border-orange-600'
+                : 'text-gray-700 hover:text-orange-600 border-transparent'
                 }`}
             >
               Bài viết
@@ -145,8 +145,8 @@ const Navigation: React.FC<NavigationProps> = ({
             <button
               onClick={() => navigate('/ai-planner')}
               className={`cursor-pointer flex items-center gap-1.5 text-sm lg:text-base font-semibold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap border ${isActive('/ai-planner')
-                ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-200'
-                : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200'
+                ? 'bg-orange-600 text-white border-orange-600 shadow-sm shadow-orange-200'
+                : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'
                 }`}
             >
               <Sparkles className="w-4 h-4" /> Lập kế hoạch
