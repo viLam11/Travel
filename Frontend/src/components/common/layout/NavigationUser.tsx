@@ -178,13 +178,22 @@ const Navigation: React.FC<NavigationProps> = ({
                   </button>
                 </UserDropdownMenu>
 
-                {/* Admin Badge (nếu là admin) */}
+                {/* Admin Badge */}
                 {currentUser?.user?.role === 'admin' && (
                   <button
                     onClick={() => navigate('/admin/dashboard')}
                     className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap"
                   >
-                    Dashboard
+                    Admin
+                  </button>
+                )}
+                {/* Switch to Provider Dashboard (for users who also have a provider role) */}
+                {currentUser?.user?.role === 'provider' && (
+                  <button
+                    onClick={() => navigate('/provider/dashboard')}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap"
+                  >
+                    Kênh dịch vụ
                   </button>
                 )}
               </>
@@ -288,6 +297,14 @@ const Navigation: React.FC<NavigationProps> = ({
                       className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all"
                     >
                       Admin Dashboard
+                    </button>
+                  )}
+                  {currentUser?.user?.role === 'provider' && (
+                    <button
+                      onClick={() => { navigate('/provider/dashboard'); setIsMobileMenuOpen(false); }}
+                      className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all"
+                    >
+                      Kênh dịch vụ của tôi
                     </button>
                   )}
                   <button

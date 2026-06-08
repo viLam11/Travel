@@ -13,8 +13,9 @@ import {
     CheckSquare,
     Tags,
     Flag,
+    Globe,
 } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { ROUTES } from "@/constants/routes"
 
 import { NavQuickActions, NavMain, NavSecondary, NavUser } from "@/components/common/navigation"
@@ -179,6 +180,7 @@ const getNavItems = (currentPath: string, currentUser: any) => {
 export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { currentUser } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const userRole = currentUser?.user?.role?.toLowerCase() || '';
     const isAdmin = userRole === 'admin';
@@ -215,6 +217,19 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
                 <NavSecondary items={navItems.navSecondary} className="mt-auto" />
             </SidebarContent>
             <SidebarFooter>
+                {/* Switch to user-facing site */}
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={() => navigate('/homepage')}
+                            tooltip="Xem trang người dùng"
+                            className="text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                            <Globe className="shrink-0" />
+                            <span>Xem trang người dùng</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
                 <NavUser user={{
                     name: currentUser?.user?.name || currentUser?.user?.fullname || "Người dùng",
                     email: currentUser?.user?.email || "",

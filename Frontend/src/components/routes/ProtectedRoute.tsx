@@ -38,9 +38,12 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({
         const userRole = currentUser.user.role.toLowerCase();
 
         const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
-        const roleMatches = requiredRole.toLowerCase() === 'provider' 
-            ? isProvider 
-            : userRole === requiredRole.toLowerCase();
+        // providers can also access user routes (e.g. /user/profile, /user/bookings)
+        const roleMatches = requiredRole.toLowerCase() === 'provider'
+            ? isProvider
+            : requiredRole.toLowerCase() === 'user'
+                ? (userRole === 'user' || isProvider)
+                : userRole === requiredRole.toLowerCase();
 
         // If specific role required, check match
         if (!roleMatches) {

@@ -104,29 +104,9 @@ const LoginPage: React.FC = () => {
     setErrors({});
 
     try {
-      // Use the login function from useAuth hook
+      // login() internally calls checkAuth() which updates React state →
+      // the useEffect above will fire and handle the redirect automatically
       await login(formData.email, formData.password);
-
-      // Get the fresh user data from localStorage to avoid stale state in render closure
-      const storedUserStr = localStorage.getItem('currentUser');
-      let userRole = '';
-      if (storedUserStr) {
-        try {
-          const parsed = JSON.parse(storedUserStr);
-          userRole = parsed?.user?.role?.toLowerCase() || '';
-        } catch (e) {
-          console.error("Lỗi parse currentUser từ localStorage:", e);
-        }
-      }
-      const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
-
-      // Role-based redirect
-      const redirectPath = userRole === 'admin' 
-        ? '/admin/dashboard' 
-        : (isProvider ? '/provider/dashboard' : '/homepage');
-        
-      navigate(redirectPath);
-
     } catch (error: any) {
       console.error("Đăng nhập thất bại (LoginPage):", error);
 

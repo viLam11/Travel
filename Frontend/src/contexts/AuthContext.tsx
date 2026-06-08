@@ -5,6 +5,21 @@ import apiClient from '@/services/apiClient';
 // MOCK AUTH MODE - Set to true to test with mock users
 const USE_MOCK_AUTH = false; // Change to true to test with mock users
 
+// Handle Spring Security GrantedAuthority objects, string roles, ROLE_ prefix
+const parseRoleEntry = (r: any): string => {
+    let str = '';
+    if (typeof r === 'string') str = r;
+    else if (r && typeof r === 'object') str = r.authority || r.name || r.role || r.value || '';
+    else str = String(r ?? '');
+    return str.trim().toUpperCase().replace(/^ROLE_/, '');
+};
+
+const extractRawRoles = (roleData: any): string[] => {
+    if (Array.isArray(roleData)) return roleData.map(parseRoleEntry).filter(Boolean);
+    if (typeof roleData === 'string') return roleData.split(',').map(s => parseRoleEntry(s)).filter(Boolean);
+    return [];
+};
+
 
 // Mock Users for Testing
 const MOCK_USERS = {
@@ -141,15 +156,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userResponse = await apiClient.users.getProfile();
             console.log('[Auth] Profile fetched successfully:', userResponse);
 
-            // Extract roles array from backend response
-            let rawRoles: string[] = [];
-            if (Array.isArray((userResponse as any).roles)) {
-                rawRoles = (userResponse as any).roles.map((r: any) => r.toString().toUpperCase());
-            } else if (typeof userResponse.role === 'string') {
-                rawRoles = userResponse.role.split(',').map((r: string) => r.trim().toUpperCase());
-            } else {
-                rawRoles = [(userResponse.role || 'USER').toString().toUpperCase()];
-            }
+            // Extract roles array from backend response (handles string[], object[], comma-string, ROLE_ prefix)
+            const rawRoles: string[] = extractRawRoles((userResponse as any).roles ?? (userResponse as any).role ?? 'USER');
+            console.log('[Auth] Parsed rawRoles (checkAuth):', rawRoles);
 
             // Determine primary normalized role
             const isProvider = rawRoles.some(r => r.startsWith('PROVIDER_'));
@@ -327,17 +336,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Handle structure where user and role might be sibling or nested
             const rawUser = response.user || response;
             
-            // Extract roles array
-            let rawRoles: string[] = [];
-            if (Array.isArray(rawUser.roles)) {
-                rawRoles = rawUser.roles.map((r: any) => r.toString().toUpperCase());
-            } else if (typeof rawUser.role === 'string') {
-                rawRoles = rawUser.role.split(',').map((r: string) => r.trim().toUpperCase());
-            } else if (typeof response.role === 'string') {
-                rawRoles = response.role.split(',').map((r: string) => r.trim().toUpperCase());
-            } else {
-                rawRoles = ['USER'];
-            }
+            // Extract roles array (handles string[], object[], comma-string, ROLE_ prefix)
+            const rawRoles: string[] = extractRawRoles(rawUser.roles ?? rawUser.role ?? response.role ?? 'USER');
+            console.log('[Auth] Parsed rawRoles (login):', rawRoles);
 
             // Determine primary normalized role
             const isProvider = rawRoles.some(r => r.startsWith('PROVIDER_'));
