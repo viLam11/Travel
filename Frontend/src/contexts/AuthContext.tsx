@@ -101,7 +101,7 @@ interface User {
     phoneNumber?: string;
     address?: string;
     avatarUrl?: string;
-    providerType?: 'hotel' | 'ticket' | 'venue'; // Maps to PROVIDER_HOTEL | PROVIDER_TICKET | PROVIDER_VENUE
+    providerType?: 'hotel' | 'ticket' | 'venue' | 'place' | 'both'; // Maps to PROVIDER_HOTEL | PROVIDER_TICKET | PROVIDER_VENUE
     hasService?: boolean; // For providers - whether they have completed service setup
     serviceId?: string | number; // Primary service ID (for backward compatibility)
     services?: any[]; // Array of all services owned by the provider
@@ -121,7 +121,7 @@ interface RegisterData {
     phone?: string;
     address?: string;
     role?: 'USER' | 'PROVIDER_HOTEL' | 'PROVIDER_TICKET' | 'PROVIDER_VENUE' | 'ADMIN';
-    providerType?: 'hotel' | 'ticket' | 'venue'; // For providers only
+    providerType?: 'hotel' | 'ticket' | 'venue' | 'place' | 'both'; // For providers only
 }
 
 interface AuthContextType {

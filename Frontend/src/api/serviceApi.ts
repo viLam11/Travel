@@ -140,7 +140,22 @@ export const serviceApi = {
                 page: response.pageNo ?? response.number ?? 0,
                 totalPages: response.totalPages || 1,
             };
-        } catch (error) {
+        } catch (error: any) {
+            const isNotFoundError = 
+                error?.response?.status === 404 || 
+                error?.status === 404 ||
+                error?.response?.data?.status_code === 404 ||
+                String(error?.response?.data?.message || '').toLowerCase().includes('not found service') ||
+                String(error?.message || '').toLowerCase().includes('not found service');
+
+            if (isNotFoundError) {
+                return {
+                    services: [],
+                    total: 0,
+                    page: 0,
+                    totalPages: 1,
+                };
+            }
             console.error('Error fetching provider services:', error);
             throw error;
         }

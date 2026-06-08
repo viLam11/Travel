@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast as sonnerToast } from 'sonner';
 import { Toaster } from '@/components/ui/admin/sonner';
 import { useTheme } from '@/hooks/useTheme';
@@ -62,9 +62,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
         };
     };
 
-    const toast = (message: string, type: ToastType = 'info') => {
+    // Wrap tất cả functions trong useCallback để có stable reference qua mỗi render.
+    // QUAN TRỌNG: Nếu không memo, useEffect bên dưới phụ thuộc vào `toast`
+    // sẽ chạy lại mỗi render => gây cascade re-render toàn app.
+    const toast = useCallback((message: string, type: ToastType = 'info') => {
         const options = getBaseToastOptions(type);
-
         switch (type) {
             case 'success':
                 sonnerToast.success(message, options);
@@ -78,13 +80,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
             default:
                 sonnerToast.info(message, options);
         }
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // getBaseToastOptions không có deps ngoài → bỏ qua safely
 
-    const success = (message: string) => toast(message, 'success');
+    const success = useCallback((message: string) => toast(message, 'success'), [toast]);
 
-    const error = (message: string, err?: Error | unknown) => {
+    const error = useCallback((message: string, err?: Error | unknown) => {
         let errorMessage = message;
-
         if (err) {
             if (err instanceof Error) {
                 errorMessage += `: ${err.message}`;
@@ -92,54 +94,52 @@ export function ToastProvider({ children }: ToastProviderProps) {
                 errorMessage += `: ${err}`;
             }
         }
-
         toast(errorMessage, 'error');
-    };
+    }, [toast]);
 
-    const info = (message: string) => toast(message, 'info');
-    const warning = (message: string) => toast(message, 'warning');
+    const info = useCallback((message: string) => toast(message, 'info'), [toast]);
+    const warning = useCallback((message: string) => toast(message, 'warning'), [toast]);
 
-    const promiseToast = <T,>(
+    const promiseToast = useCallback(<T,>(
         promise: Promise<T>,
         options: {
             loading: string;
             success: string | ((data: T) => string);
-            error: string | ((error: Error) => string)
+            error: string | ((error: Error) => string);
         }
-    ) => {
-        const enhancedPromise = promise.catch((error) => {
-            throw error;
+    ): Promise<T> => {
+        const enhancedPromise = promise.catch((e) => {
+            throw e;
         });
-
         sonnerToast.promise(enhancedPromise, {
             loading: options.loading,
             success: options.success,
             error: options.error,
             duration: 4000,
         });
-
         return enhancedPromise;
-    };
+    }, []);
 
+    // Khởi tạo global error handler một lần duy nhất (toast đã stable)
     useEffect(() => {
         configureErrorHandler({
             enableToastNotifications: true,
             enableConsoleLogging: false,
         });
-
         setToastIntegration(
             (message: string) => toast(message, 'error')
         );
     }, [toast]);
 
-    const value: ToastContextProps = {
+    // Memoize context value để consumer không re-render khi ToastProvider re-render
+    const value: ToastContextProps = useMemo(() => ({
         toast,
         success,
         error,
         info,
         warning,
         promise: promiseToast,
-    };
+    }), [toast, success, error, info, warning, promiseToast]);
 
     return (
         <ToastContext.Provider value={value}>
@@ -202,4 +202,4 @@ export function useToast(): ToastContextProps {
     }
 
     return context;
-} 
+}

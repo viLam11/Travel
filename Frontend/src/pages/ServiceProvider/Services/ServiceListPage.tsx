@@ -1,5 +1,4 @@
-// src/pages/ServiceProvider/Services/ServiceListPage.tsx
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { buildServiceDetailUrl } from '@/utils/serviceUrl';
@@ -37,7 +36,7 @@ import ServiceDeleteModal from './components/ServiceDeleteModal';
 
 // Utility: Format currency VND
 const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
 };
 
 // Row model factories OUTSIDE component — calling these inside the component body
@@ -155,7 +154,7 @@ const staticServiceColumns: ColumnDef<Service>[] = [
 ];
 
 // Services Table Component
-export function ServicesTable({
+export const ServicesTable = memo(function ServicesTable({
     data,
     onView,
     onEdit,
@@ -174,7 +173,7 @@ export function ServicesTable({
     const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'all'>('all');
 
     // Actions column needs callback closures — combined with static columns here
-    const columns: ColumnDef<Service>[] = [
+    const columns: ColumnDef<Service>[] = useMemo(() => [
         ...staticServiceColumns,
         {
             id: "actions",
@@ -216,13 +215,16 @@ export function ServicesTable({
                 </div>
             ),
         },
-    ];
+    ], [onView, onEdit, onDelete, onToggleStatus]);
 
-    const filteredData = data.filter(service => {
+    // Bọc trong useMemo để tránh tạo array reference mới mỗi render.
+    // useReactTable yêu cầu `data` phải là stable reference — nếu không
+    // TanStack Table sẽ detect thay đổi liên tục => re-render vô hạn.
+    const filteredData = useMemo(() => data.filter(service => {
         if (typeFilter !== 'all' && service.type !== typeFilter) return false;
         if (statusFilter !== 'all' && service.status !== statusFilter) return false;
         return true;
-    });
+    }), [data, typeFilter, statusFilter]);
 
     const table = useReactTable({
         data: filteredData,
@@ -356,7 +358,7 @@ export function ServicesTable({
             </div>
         </div>
     );
-}
+});
 
 // Main Component
 export default function ServiceListPage() {
@@ -386,28 +388,33 @@ export default function ServiceListPage() {
         },
     });
 
-    const handleView = (service: Service) => {
+    const handleView = useCallback((service: Service) => {
         navigate(buildServiceDetailUrl({
             id: service.id,
             serviceName: service.serviceName,
-            serviceType: service.type,
+            serviceType: service.serviceType ?? service.type ?? '',
             province: service.province,
         }));
-    };
+    }, [navigate]);
 
-    const handleEdit = (service: Service) => {
+    const handleEdit = useCallback((service: Service) => {
         navigate(`/provider/services/edit/${service.id}`);
-    };
+    }, [navigate]);
 
-    const handleDelete = (service: Service) => {
+    const handleDelete = useCallback((service: Service) => {
         setSelectedService(service);
         setShowDeleteModal(true);
-    };
+    }, []);
 
-    const handleToggleStatus = (service: Service) => {
+    // Dùng mutate function trực tiếp (không đưa toggleStatusMutation vào deps).
+    // useMutation trả về object reference mới mỗi lần render => nếu để
+    // toggleStatusMutation trong deps, handleToggleStatus sẽ tạo mới mỗi render
+    // => columns trong ServicesTable recreate => useReactTable cascade re-render.
+    const toggleStatusMutate = toggleStatusMutation.mutate;
+    const handleToggleStatus = useCallback((service: Service) => {
         const newStatus = service.status === 'active' ? 'inactive' : 'active';
-        toggleStatusMutation.mutate({ serviceId: service.id, status: newStatus });
-    };
+        toggleStatusMutate({ serviceId: service.id, status: newStatus });
+    }, [toggleStatusMutate]);
 
 
 
