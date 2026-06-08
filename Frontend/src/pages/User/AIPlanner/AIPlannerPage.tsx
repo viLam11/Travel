@@ -7,7 +7,7 @@ import {
     Waves, Landmark, UtensilsCrossed, Mountain, ShoppingBag, Leaf, BedDouble, Camera,
     CalendarDays, Banknote, CheckCircle2, PlaneTakeoff, Compass, Receipt,
     BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, ExternalLink, Search, Copy, Trash2,
-    Globe, FolderOpen
+    Globe, FolderOpen, TrendingUp, Wallet, Users, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
@@ -31,6 +31,22 @@ const injectIds = (itin: ItineraryDay[]) => {
         evening_activities: day.evening_activities.map(a => ({ ...a, id: a.id || uid() })),
     }));
 };
+
+// ─── Cost Helpers ─────────────────────────────────────────────────────────────
+const parseCostAmount = (costStr?: string): number => {
+    if (!costStr || costStr === 'Miễn phí' || costStr === 'Liên hệ') return 0;
+    return parseInt(costStr.replace(/[^\d]/g, ''), 10) || 0;
+};
+
+const getActivityCost = (act: Activity): number =>
+    act.cost_amount != null ? act.cost_amount : parseCostAmount(act.estimated_cost);
+
+const formatVND = (n: number): string =>
+    n === 0 ? '0₫' : `${n.toLocaleString('vi-VN')}₫`;
+
+const calcDayCost = (day: ItineraryDay): number =>
+    [...day.morning_activities, ...day.afternoon_activities, ...day.evening_activities]
+        .reduce((s, a) => s + getActivityCost(a), 0);
 
 const SLOT_META: Record<TimeSlot, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
     morning_activities: { label: 'Buổi sáng', icon: <Sun className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -103,7 +119,9 @@ function ActivityModal({
     const [name, setName] = useState(initialData?.name || '');
     const [description, setDescription] = useState(initialData?.description || '');
     const [duration, setDuration] = useState(initialData?.duration || '1 giờ');
-    const [cost, setCost] = useState(initialData?.estimated_cost || 'Miễn phí');
+    const [costAmount, setCostAmount] = useState<number>(
+        initialData?.cost_amount ?? parseCostAmount(initialData?.estimated_cost)
+    );
     const [location, setLocation] = useState(initialData?.location || '');
 
     useEffect(() => {
@@ -111,7 +129,7 @@ function ActivityModal({
             setName(initialData?.name || '');
             setDescription(initialData?.description || '');
             setDuration(initialData?.duration || '1 giờ');
-            setCost(initialData?.estimated_cost || 'Miễn phí');
+            setCostAmount(initialData?.cost_amount ?? parseCostAmount(initialData?.estimated_cost));
             setLocation(initialData?.location || '');
         }
     }, [isOpen, initialData]);
@@ -121,7 +139,8 @@ function ActivityModal({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) return;
-        onSave({ name: name.trim(), description, duration, estimated_cost: cost, location });
+        const formattedCost = costAmount > 0 ? formatVND(costAmount) : 'Miễn phí';
+        onSave({ name: name.trim(), description, duration, cost_amount: costAmount, estimated_cost: formattedCost, location });
         onClose();
     };
 
@@ -180,17 +199,37 @@ function ActivityModal({
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                    <DollarSign className="w-4 h-4 text-orange-400" /> Chi phí
+                                    <DollarSign className="w-4 h-4 text-orange-400" /> Chi phí (VND)
                                 </label>
-                                <input
-                                    type="text"
-                                    value={cost}
-                                    onChange={e => setCost(e.target.value)}
-                                    placeholder="VD: 50.000đ"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        value={costAmount || ''}
+                                        onChange={e => setCostAmount(parseInt(e.target.value) || 0)}
+                                        placeholder="0"
+                                        min={0}
+                                        step={10000}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm pr-6"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">₫</span>
+                                </div>
                             </div>
                         </div>
+                        <div className="flex gap-1.5 flex-wrap -mt-1">
+                            {[0, 50000, 100000, 200000, 500000, 1000000].map(preset => (
+                                <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => setCostAmount(preset)}
+                                    className={`px-2.5 py-0.5 text-[11px] rounded-full border transition-all cursor-pointer ${costAmount === preset ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}
+                                >
+                                    {preset === 0 ? 'Miễn phí' : preset >= 1000000 ? `${preset / 1000000}tr` : `${preset / 1000}k`}
+                                </button>
+                            ))}
+                        </div>
+                        {costAmount > 0 && (
+                            <p className="text-xs text-orange-600 font-semibold -mt-1">{formatVND(costAmount)}</p>
+                        )}
 
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
@@ -240,37 +279,19 @@ function ActivityModal({
 
 // ─── Activity Card ────────────────────────────────────────────────────────────
 
-function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMobileMove }: {
+function ActivityCard({ activity, onRemove, onEdit, onDragStart, onMobileMove, onSelect }: {
     activity: Activity;
     onRemove: () => void;
-    onEdit: () => void;
-    onUpdate: (data: Partial<Activity>) => void;
+    onEdit?: () => void;
     onDragStart: (e: React.DragEvent) => void;
     onMobileMove?: () => void;
+    onSelect?: () => void;
 }) {
     const navigate = useNavigate();
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editData, setEditData] = useState({ name: activity.name, description: activity.description });
-    const [isConfirming, setIsConfirming] = useState(false);
-
-    const handleSave = () => {
-        if (!editData.name.trim()) return;
-        if (editData.name === activity.name && editData.description === activity.description) {
-            setIsEditing(false);
-            return;
-        }
-        setIsConfirming(true);
-    };
-
-    const confirmSave = () => {
-        onUpdate(editData);
-        setIsEditing(false);
-        setIsConfirming(false);
-    };
 
     // ── System service card (has thumbnail) ──
-    if (activity.isSystemService && activity.thumbnailUrl && !isEditing) {
+    if (activity.isSystemService && activity.thumbnailUrl) {
         return (
             <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="group relative">
                 <div
@@ -279,7 +300,6 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                     className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-orange-300 transition-all duration-200 select-none cursor-grab active:cursor-grabbing"
                 >
                     <div className="flex gap-0">
-                        {/* Thumbnail */}
                         <div className="w-20 shrink-0 relative self-stretch">
                             <img
                                 src={activity.thumbnailUrl}
@@ -293,8 +313,10 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                 </span>
                             )}
                         </div>
-                        {/* Content */}
-                        <div className="flex-1 p-2.5 min-w-0 flex flex-col justify-between">
+                        <div
+                            className="flex-1 p-2.5 min-w-0 flex flex-col justify-between cursor-pointer"
+                            onClick={e => { e.stopPropagation(); onSelect?.(); }}
+                        >
                             <div>
                                 <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors truncate">{activity.name}</p>
                                 <p className="text-[11px] font-semibold text-orange-600 mt-0.5">{activity.estimated_cost}</p>
@@ -311,9 +333,13 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
                                 </button>
                             )}
                         </div>
-                        {/* Actions */}
                         <div className="flex flex-col gap-0.5 p-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={onRemove} className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors" title="Xóa">
+                            {onEdit && (
+                                <button onClick={e => { e.stopPropagation(); onEdit(); }} className="p-1 hover:bg-orange-50 text-gray-300 hover:text-orange-500 rounded transition-colors" title="Chỉnh sửa">
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                            <button onClick={e => { e.stopPropagation(); onRemove(); }} className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded transition-colors" title="Xóa">
                                 <X className="w-3.5 h-3.5" />
                             </button>
                         </div>
@@ -328,141 +354,68 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
         );
     }
 
-    // ── Regular / editable card ──
+    // ── Regular card ──
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="group relative"
-        >
+        <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="group relative">
             <div
-                draggable={!isEditing}
+                draggable
                 onDragStart={onDragStart}
-                className={`bg-white border rounded-xl p-3 shadow-sm transition-all duration-200 select-none ${isEditing ? 'border-orange-500 ring-2 ring-orange-100' : 'border-gray-200 hover:shadow-md hover:border-orange-300'
-                    }`}
+                className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm hover:shadow-md hover:border-orange-300 transition-all duration-200 select-none"
             >
                 <div className="flex items-start gap-2">
-                    {!isEditing && (
-                        <div className="mt-0.5 shrink-0 text-gray-300 group-hover:text-orange-400 transition-colors hidden lg:block cursor-grab active:cursor-grabbing">
-                            <GripVertical className="w-4 h-4" />
-                        </div>
-                    )}
-
-                    <div className="flex-1 min-w-0">
-                        {isEditing ? (
-                            <div className="space-y-2">
-                                <input
-                                    autoFocus
-                                    className="w-full text-sm font-bold border-b border-orange-200 focus:outline-none focus:border-orange-500 bg-orange-50/30 px-1 py-0.5"
-                                    value={editData.name}
-                                    onChange={e => setEditData(prev => ({ ...prev, name: e.target.value }))}
-                                />
-                                <textarea
-                                    className="w-full text-[11px] border border-gray-200 rounded p-1 focus:outline-none focus:border-orange-500 resize-none"
-                                    rows={3}
-                                    value={editData.description}
-                                    onChange={e => setEditData(prev => ({ ...prev, description: e.target.value }))}
-                                />
-                                <div className="flex justify-end gap-2 pt-1">
-                                    <AnimatePresence mode="wait">
-                                        {isConfirming ? (
-                                            <motion.div
-                                                key="confirm"
-                                                initial={{ opacity: 0, scale: 0.9 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.9 }}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <span className="text-[10px] text-orange-600 font-bold animate-pulse">Lưu thay đổi?</span>
-                                                <button onClick={() => setIsConfirming(false)} className="text-[10px] text-gray-400 hover:text-gray-600 font-medium px-2 py-1">Quay lại</button>
-                                                <button onClick={confirmSave} className="text-[10px] bg-green-500 text-white rounded px-3 py-1 font-bold hover:bg-green-600 shadow-sm shadow-green-100">Xác nhận</button>
-                                            </motion.div>
-                                        ) : (
-                                            <motion.div
-                                                key="edit-actions"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                exit={{ opacity: 0 }}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <button onClick={() => setIsEditing(false)} className="text-[10px] text-gray-400 hover:text-gray-600 font-medium px-2 py-1">Hủy</button>
-                                                <button onClick={handleSave} className="text-[10px] bg-orange-500 text-white rounded px-3 py-1 font-bold hover:bg-orange-600 shadow-sm shadow-orange-200">Lưu</button>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors">{activity.name}</p>
-                                {activity.description && (
-                                    <div className="relative mt-1">
-                                        <p
-                                            className={`text-[11px] text-gray-500 leading-relaxed italic transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}
-                                            dangerouslySetInnerHTML={{ __html: activity.description || '' }}
-                                        />
-                                        {activity.description.length > 60 && (
-                                            <button
-                                                onClick={() => setIsExpanded(!isExpanded)}
-                                                className="cursor-pointer text-[10px] text-orange-500 hover:text-orange-600 font-semibold mt-0.5 flex items-center gap-0.5"
-                                            >
-                                                {isExpanded ? 'Thu gọn' : 'Xem thêm'}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-3 mt-2 flex-wrap">
-                                    <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
-                                        <Clock className="w-3 h-3 text-orange-400" />{activity.duration}
-                                    </span>
-                                    <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
-                                        <DollarSign className="w-3 h-3 text-orange-400" />{activity.estimated_cost}
-                                    </span>
-                                    {activity.location && (
-                                        <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
-                                            <MapPin className="w-3 h-3 text-orange-400" /><span className="truncate max-w-[100px]">{activity.location}</span>
-                                        </span>
-                                    )}
-                                    {activity.isSystemService && activity.serviceUrl && (
-                                        <button
-                                            onClick={e => { e.stopPropagation(); navigate(activity.serviceUrl!); }}
-                                            className="flex items-center gap-0.5 text-[11px] text-orange-500 hover:text-orange-700 font-semibold"
-                                        >
-                                            <ExternalLink className="w-3 h-3" /> Xem
-                                        </button>
-                                    )}
-                                </div>
-                            </>
-                        )}
+                    <div className="mt-0.5 shrink-0 text-gray-300 group-hover:text-orange-400 transition-colors hidden lg:block cursor-grab active:cursor-grabbing">
+                        <GripVertical className="w-4 h-4" />
                     </div>
-
-                    {!isEditing && (
-                        <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="p-1.5 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-md transition-colors"
-                                title="Sửa nhanh (Tên/Mô tả)"
-                            >
+                    <div
+                        className="flex-1 min-w-0"
+                        onClick={() => onSelect?.()}
+                        style={onSelect ? { cursor: 'pointer' } : undefined}
+                    >
+                        <p className="font-bold text-sm text-gray-800 leading-tight group-hover:text-orange-600 transition-colors">{activity.name}</p>
+                        {activity.description && (
+                            <div className="relative mt-1">
+                                <p
+                                    className={`text-[11px] text-gray-500 leading-relaxed italic transition-all duration-300 ${isExpanded ? '' : 'line-clamp-2'}`}
+                                    dangerouslySetInnerHTML={{ __html: activity.description || '' }}
+                                />
+                                {activity.description.length > 60 && (
+                                    <button
+                                        onClick={e => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+                                        className="cursor-pointer text-[10px] text-orange-500 hover:text-orange-600 font-semibold mt-0.5 flex items-center gap-0.5"
+                                    >
+                                        {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                                <Clock className="w-3 h-3 text-orange-400" />{activity.duration}
+                            </span>
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                                <DollarSign className="w-3 h-3 text-orange-400" />{activity.estimated_cost}
+                            </span>
+                            {activity.location && (
+                                <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                                    <MapPin className="w-3 h-3 text-orange-400" /><span className="truncate max-w-[100px]">{activity.location}</span>
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEdit && (
+                            <button onClick={onEdit} className="p-1.5 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-md transition-colors" title="Chỉnh sửa chi tiết">
                                 <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                                onClick={onEdit}
-                                className="p-1.5 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-md transition-colors"
-                                title="Sửa chi tiết (Vị trí/Chi phí...)"
-                            >
-                                <Settings className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={onRemove}
-                                className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-md transition-colors"
-                                title="Xóa"
-                            >
-                                <X className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    )}
-
+                        )}
+                        <button
+                            onClick={onRemove}
+                            className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-md transition-colors"
+                            title="Xóa"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                     {onMobileMove && (
                         <button
                             onClick={onMobileMove}
@@ -479,7 +432,7 @@ function ActivityCard({ activity, onRemove, onEdit, onUpdate, onDragStart, onMob
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
 
-function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActivity, onUpdateActivity, onDragStartCard, onAddActivity, onMobileMove, onMoveSlot, canMoveUp, canMoveDown }: {
+function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActivity, onUpdateActivity, onDragStartCard, onAddActivity, onMobileMove, onMoveSlot, canMoveUp, canMoveDown, onSelectActivity }: {
     dayIdx: number; slot: TimeSlot; activities?: Activity[];
     onDrop: (e: React.DragEvent, toDayIdx: number, toSlot: TimeSlot) => void;
     onRemove: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
@@ -491,6 +444,7 @@ function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActiv
     onMoveSlot?: (direction: 'up' | 'down') => void;
     canMoveUp?: boolean;
     canMoveDown?: boolean;
+    onSelectActivity?: (dayIdx: number, slot: TimeSlot, actIdx: number) => void;
 }) {
     const [over, setOver] = useState(false);
     const meta = SLOT_META[slot];
@@ -538,9 +492,9 @@ function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActiv
                             activity={act}
                             onRemove={() => onRemove(dayIdx, slot, idx)}
                             onEdit={() => onEditActivity(dayIdx, slot, idx)}
-                            onUpdate={(data) => onUpdateActivity(dayIdx, slot, idx, data)}
                             onDragStart={e => onDragStartCard(e, { activityId: act.id!, fromDayIdx: dayIdx, fromSlot: slot })}
                             onMobileMove={onMobileMove ? () => onMobileMove(act.id!, dayIdx, slot) : undefined}
+                            onSelect={onSelectActivity ? () => onSelectActivity(dayIdx, slot, idx) : undefined}
                         />
                     ))}
                 </AnimatePresence>
@@ -559,6 +513,8 @@ function DropZone({ dayIdx, slot, activities = [], onDrop, onRemove, onEditActiv
         </div>
     );
 }
+
+// ─── Chat Panel ──────────────────────────────────────────────────────────────
 
 // ─── Input Screen ─────────────────────────────────────────────────────────────
 
@@ -968,6 +924,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         (planData.itinerary || []).map(() => [...SLOT_ORDER])
     );
     const [localPlace, setLocalPlace] = useState(planData.destination || '');
+    const [budget, setBudget] = useState<number>(planData.budget ?? 0);
     const [provinces, setProvinces] = useState<{ code: number; name: string }[]>([]);
     const [provinceOpen, setProvinceOpen] = useState(false);
     const [provinceSearch, setProvinceSearch] = useState('');
@@ -1018,7 +975,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 tripTitle: planTitle,
                 overview: planData.overview || '',
                 itinerary: itinerary,
-                destination: localPlace
+                destination: localPlace,
+                budget,
             });
             setAutoSaveStatus('saved');
             originalItineraryRef.current = JSON.stringify(itinerary);
@@ -1075,11 +1033,9 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const handleRemoveDay = (dayIdx: number) => {
         setItinerary(prev => {
             const next = prev.filter((_, idx) => idx !== dayIdx);
-            return next.map((day, idx) => ({
-                ...day,
-                day_label: `Ngày ${idx + 1}`
-            }));
+            return next.map((day, idx) => ({ ...day, day_label: `Ngày ${idx + 1}` }));
         });
+        setSelectedDayIdx(prev => Math.max(0, prev >= dayIdx ? prev - 1 : prev));
     };
 
     const handleAddDay = () => {
@@ -1096,7 +1052,27 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         });
     };
 
-    const [mobileTab, setMobileTab] = useState<'library' | 'timeline' | 'summary'>('timeline');
+    const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+    const [selectedActivityPos, setSelectedActivityPos] = useState<{ dayIdx: number; slot: TimeSlot; actIdx: number } | null>(null);
+    // Lifted edit state to avoid remount when ActivityDetailContent is re-created each render
+    const [detailEdit, setDetailEdit] = useState({ name: '', description: '', duration: '1 giờ', cost: 0, location: '' });
+    const [detailSaved, setDetailSaved] = useState(false);
+    const [viewMode, setViewMode] = useState<'day' | 'overview'>('day');
+    const [mobileTab, setMobileTab] = useState<'library' | 'timeline' | 'summary' | 'members'>('timeline');
+    const [rightTab, setRightTab] = useState<'summary' | 'members' | 'detail'>('summary');
+    // Library search
+    const [libMode, setLibMode] = useState<'suggest' | 'search'>('suggest');
+    const [libSearchText, setLibSearchText] = useState('');
+    const [libSearchProvCode, setLibSearchProvCode] = useState('');
+    const [libSearchProvName, setLibSearchProvName] = useState('');
+    const [libSearchResults, setLibSearchResults] = useState<Activity[]>([]);
+    const [isLoadingLibSearch, setIsLoadingLibSearch] = useState(false);
+    const [libSearchProvOpen, setLibSearchProvOpen] = useState(false);
+    const [libSearchProvInput, setLibSearchProvInput] = useState('');
+    // Lifted from LibraryContent to prevent remount-on-rerender losing focus
+    const [libSuggestSearch, setLibSuggestSearch] = useState('');
+    const [libTypeFilter, setLibTypeFilter] = useState('ALL');
     const [showLibrary, setShowLibrary] = useState(true);
     const [showSummary, setShowSummary] = useState(true);
     const [libWidth, setLibWidth] = useState(288); // px, w-72 = 288
@@ -1114,25 +1090,95 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             setIsLoadingLibrary(false);
             return;
         }
-        // Fallback: fetch from legacy getPreferences endpoint
+        // Fetch services from API using province filter
         if (place) {
             setIsLoadingLibrary(true);
-            const mockWithIds = MOCK_LIBRARY_ACTIVITIES.map(a => ({ ...a, id: a.id || uid() }));
-            setLibraryActivities(mockWithIds);
-            aiPlannerApi.getPreferences(place)
+            const province = provinces.find(p => p.name === place || p.name.toLowerCase() === place.toLowerCase());
+            const provinceCode = province?.code?.toString();
+            apiClient.services.filterByLocation({
+                provinceCode,
+                page: 0,
+                size: 40,
+            })
                 .then(res => {
-                    if (res && res.length > 0) {
-                        setLibraryActivities(res.map(a => ({ ...a, id: a.id || uid() })));
+                    const services: Activity[] = (res?.services ?? []).map((s: any) => ({
+                        id: s.id?.toString() || uid(),
+                        name: s.serviceName || '',
+                        description: '',
+                        duration: '1-2 giờ',
+                        estimated_cost: s.averagePrice && s.averagePrice > 0 ? formatVND(s.averagePrice) : 'Liên hệ',
+                        cost_amount: s.averagePrice ?? 0,
+                        location: s.province?.full_name || s.province?.fullName || s.address || '',
+                        isSystemService: true,
+                        serviceId: s.id?.toString(),
+                        thumbnailUrl: s.thumbnailUrl,
+                        serviceType: s.serviceType,
+                    }));
+                    if (services.length > 0) {
+                        setLibraryActivities(services);
+                    } else {
+                        // Fall back to AI preferences if filter returns empty
+                        return aiPlannerApi.getPreferences(place).then(pref => {
+                            if (pref?.length) setLibraryActivities(pref.map(a => ({ ...a, id: a.id || uid() })));
+                        });
                     }
                 })
-                .catch(err => {
-                    console.error("Fetch preferences error:", err);
+                .catch(() => {
+                    aiPlannerApi.getPreferences(place)
+                        .then(res => { if (res?.length) setLibraryActivities(res.map(a => ({ ...a, id: a.id || uid() }))); })
+                        .catch(() => {});
                 })
-                .finally(() => {
-                    setIsLoadingLibrary(false);
-                });
+                .finally(() => setIsLoadingLibrary(false));
         }
-    }, [place, planData.preferenceServices]);
+    }, [place, provinces, planData.preferenceServices]);
+
+    // Sync detail edit fields when a different activity is selected (avoid remount issue)
+    useEffect(() => {
+        if (selectedActivity) {
+            setDetailEdit({
+                name: selectedActivity.name || '',
+                description: selectedActivity.description || '',
+                duration: selectedActivity.duration || '1 giờ',
+                cost: selectedActivity.cost_amount ?? parseCostAmount(selectedActivity.estimated_cost),
+                location: selectedActivity.location || '',
+            });
+            setDetailSaved(false);
+        }
+    }, [selectedActivity?.id]);
+
+    // Library search mode — debounced API call
+    useEffect(() => {
+        if (libMode !== 'search') return;
+        if (!libSearchText && !libSearchProvCode) { setLibSearchResults([]); return; }
+        setIsLoadingLibSearch(true);
+        const ctrl = new AbortController();
+        const timer = setTimeout(async () => {
+            try {
+                const res = libSearchText
+                    ? await apiClient.services.search({ keyword: libSearchText, provinceCode: libSearchProvCode || undefined, page: 0, size: 40, signal: ctrl.signal })
+                    : await apiClient.services.filterByLocation({ provinceCode: libSearchProvCode, page: 0, size: 40, signal: ctrl.signal });
+                const services: Activity[] = (res?.services ?? []).map((s: any) => ({
+                    id: s.id?.toString() || uid(),
+                    name: s.serviceName || '',
+                    description: '',
+                    duration: '1-2 giờ',
+                    estimated_cost: s.averagePrice && s.averagePrice > 0 ? formatVND(s.averagePrice) : 'Liên hệ',
+                    cost_amount: s.averagePrice ?? 0,
+                    location: s.province?.full_name || s.province?.fullName || s.address || '',
+                    isSystemService: true,
+                    serviceId: s.id?.toString(),
+                    thumbnailUrl: s.thumbnailUrl,
+                    serviceType: s.serviceType,
+                }));
+                setLibSearchResults(services);
+            } catch (err: any) {
+                if (err?.name !== 'AbortError') setLibSearchResults([]);
+            } finally {
+                setIsLoadingLibSearch(false);
+            }
+        }, 500);
+        return () => { clearTimeout(timer); ctrl.abort(); };
+    }, [libMode, libSearchText, libSearchProvCode]);
 
     useEffect(() => {
         const onMove = (e: MouseEvent) => {
@@ -1352,195 +1398,230 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     // ── Shared sub-components (reused in both mobile and desktop) ──
 
     const LibraryContent = () => {
-        const [search, setSearch] = useState('');
-        const [typeFilter, setTypeFilter] = useState('ALL');
-        const libNavigate = useNavigate();
+        // No hooks here — all state lives in PlanEditor to prevent remount-on-rerender focus loss
+        const suggestSearch = libSuggestSearch;
+        const setSuggestSearch = setLibSuggestSearch;
+        const typeFilter = libTypeFilter;
+        const setTypeFilter = setLibTypeFilter;
 
-        const serviceTypes = [...new Set(libraryActivities.map(l => l.serviceType).filter((t): t is string => Boolean(t)))];
-        const filtered = libraryActivities.filter(lib => {
-            if (search && !lib.name.toLowerCase().includes(search.toLowerCase())) return false;
+        // Suggest mode
+        const suggestTypes = [...new Set(libraryActivities.map(l => l.serviceType).filter((t): t is string => Boolean(t)))];
+        const suggestFiltered = libraryActivities.filter(lib => {
+            if (suggestSearch && !lib.name.toLowerCase().includes(suggestSearch.toLowerCase())) return false;
             if (typeFilter !== 'ALL' && lib.serviceType !== typeFilter) return false;
             return true;
         });
 
-        const filteredProvinces = provinces.filter(p =>
-            p.name.toLowerCase().includes(provinceSearch.toLowerCase())
+        // Search mode
+        const searchTypes = [...new Set(libSearchResults.map(l => l.serviceType).filter((t): t is string => Boolean(t)))];
+        const searchFiltered = libSearchResults.filter(lib =>
+            typeFilter === 'ALL' || lib.serviceType === typeFilter
+        );
+
+        const displayList = libMode === 'suggest' ? suggestFiltered : searchFiltered;
+        const displayTypes = libMode === 'suggest' ? suggestTypes : searchTypes;
+        const isLoading = libMode === 'suggest' ? isLoadingLibrary : isLoadingLibSearch;
+
+        const filteredProvinces = provinces.filter(p => p.name.toLowerCase().includes(provinceSearch.toLowerCase()));
+        const libSearchProvinceList = provinces.filter(p => p.name.toLowerCase().includes(libSearchProvInput.toLowerCase()));
+
+        const renderCard = (lib: Activity) => (
+            <motion.div key={lib.id} layout className="group relative">
+                <div
+                    draggable
+                    onDragStart={e => {
+                        dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
+                        e.dataTransfer.effectAllowed = 'copy';
+                        e.dataTransfer.setData('text/plain', lib.id!);
+                    }}
+                    className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
+                >
+                    {lib.thumbnailUrl ? (
+                        <div className="flex gap-0">
+                            <div className="w-16 shrink-0 self-stretch relative">
+                                <img src={lib.thumbnailUrl} alt={lib.name} className="w-full h-full object-cover min-h-[68px]"
+                                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                            </div>
+                            <div className="flex-1 p-2 min-w-0">
+                                <div className="flex items-start justify-between gap-1">
+                                    <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors leading-tight line-clamp-2 flex-1">{lib.name}</p>
+                                    <button onClick={() => { setMobilePicker({ type: 'add', libId: lib.id, name: lib.name }); setPickerDay(0); setPickerSlot('morning_activities'); }}
+                                        className="lg:hidden p-1 bg-orange-50 text-orange-500 rounded-md shrink-0 active:scale-95 transition-transform">
+                                        <Plus className="w-3 h-3" />
+                                    </button>
+                                </div>
+                                {lib.serviceType && (
+                                    <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${SERVICE_TYPE_BADGE[lib.serviceType] || 'bg-gray-100 text-gray-600'}`}>
+                                        {SERVICE_TYPE_LABELS[lib.serviceType] || lib.serviceType}
+                                    </span>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-semibold text-orange-600">{lib.estimated_cost}</span>
+                                </div>
+                                {lib.location && <p className="text-[9px] text-gray-400 mt-0.5 truncate">{lib.location}</p>}
+                                {lib.serviceUrl && (
+                                    <button onClick={e => { e.stopPropagation(); navigate(lib.serviceUrl!); }}
+                                        className="text-[9px] text-orange-400 hover:text-orange-600 font-semibold flex items-center gap-0.5 mt-0.5">
+                                        <ExternalLink className="w-2.5 h-2.5" /> Xem chi tiết
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-start gap-2 p-3 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
+                            <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
+                            <div className="min-w-0 flex-1 pl-1">
+                                <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
+                                <div className="flex gap-2 mt-1.5">
+                                    <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
+                                    <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
+                                </div>
+                            </div>
+                            <button onClick={() => { setMobilePicker({ type: 'add', libId: lib.id, name: lib.name }); setPickerDay(0); setPickerSlot('morning_activities'); }}
+                                className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg shrink-0 active:scale-95 transition-transform">
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
         );
 
         return (
             <div className="flex flex-col flex-1 min-h-0">
-                {/* Destination Selector */}
-                <div className="px-3 pt-2 pb-1 shrink-0" ref={provinceRef}>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Điểm đến gợi ý</label>
-                    <div className="relative">
-                        <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-orange-500 z-10" />
-                        <input
-                            type="text"
-                            value={provinceOpen ? provinceSearch : localPlace}
-                            onChange={e => {
-                                setProvinceSearch(e.target.value);
-                                setProvinceOpen(true);
-                            }}
-                            onFocus={() => {
-                                setProvinceSearch('');
-                                setProvinceOpen(true);
-                            }}
-                            placeholder="Chọn tỉnh/thành..."
-                            className="w-full pl-8 pr-8 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setProvinceOpen(o => !o)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500"
-                        >
-                            <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
-                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                            </svg>
+                {/* Mode toggle */}
+                <div className="px-3 pt-2 pb-1.5 shrink-0">
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                        <button onClick={() => { setLibMode('suggest'); setTypeFilter('ALL'); }}
+                            className={`flex-1 py-1.5 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer ${libMode === 'suggest' ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-orange-50 hover:text-orange-600'}`}>
+                            <MapPin className="w-3 h-3" /> Gợi ý
                         </button>
-                        {provinceOpen && filteredProvinces.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[70] max-h-48 overflow-y-auto">
-                                {filteredProvinces.map(prov => (
-                                    <button
-                                        key={prov.code}
-                                        type="button"
-                                        onClick={() => {
-                                            setLocalPlace(prov.name);
-                                            setProvinceOpen(false);
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors border-b border-gray-50 last:border-0 font-medium"
-                                    >
-                                        {prov.name}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        <button onClick={() => { setLibMode('search'); setTypeFilter('ALL'); }}
+                            className={`flex-1 py-1.5 text-[11px] font-semibold flex items-center justify-center gap-1 border-l border-gray-200 transition-colors cursor-pointer ${libMode === 'search' ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-orange-50 hover:text-orange-600'}`}>
+                            <Search className="w-3 h-3" /> Tìm kiếm
+                        </button>
                     </div>
                 </div>
 
-                {/* Search */}
-                <div className="px-3 pt-1 pb-1.5 shrink-0">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        <input
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Tìm dịch vụ..."
-                            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50"
-                        />
-                    </div>
-                </div>
+                {/* Suggest mode controls */}
+                {libMode === 'suggest' && (
+                    <>
+                        <div className="px-3 pb-1 shrink-0" ref={provinceRef}>
+                            <div className="relative">
+                                <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-orange-500 z-10" />
+                                <input type="text"
+                                    value={provinceOpen ? provinceSearch : localPlace}
+                                    onChange={e => { setProvinceSearch(e.target.value); setProvinceOpen(true); }}
+                                    onFocus={() => { setProvinceSearch(''); setProvinceOpen(true); }}
+                                    placeholder="Chọn tỉnh/thành..."
+                                    className="w-full pl-8 pr-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white" />
+                                {provinceOpen && filteredProvinces.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[70] max-h-40 overflow-y-auto">
+                                        {filteredProvinces.map(prov => (
+                                            <button key={prov.code} type="button" onClick={() => { setLocalPlace(prov.name); setProvinceOpen(false); }}
+                                                className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors border-b border-gray-50 last:border-0 font-medium">
+                                                {prov.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="px-3 pb-1.5 shrink-0">
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                <input value={suggestSearch} onChange={e => setSuggestSearch(e.target.value)}
+                                    placeholder="Lọc trong danh sách..."
+                                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50" />
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Search mode controls */}
+                {libMode === 'search' && (
+                    <>
+                        <div className="px-3 pb-1 shrink-0">
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                <input value={libSearchText} onChange={e => setLibSearchText(e.target.value)}
+                                    placeholder="Tìm dịch vụ toàn hệ thống..."
+                                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50" />
+                            </div>
+                        </div>
+                        <div className="px-3 pb-1.5 shrink-0 relative">
+                            <div className="relative">
+                                <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 z-10" />
+                                <input type="text"
+                                    value={libSearchProvOpen ? libSearchProvInput : libSearchProvName}
+                                    onChange={e => { setLibSearchProvInput(e.target.value); setLibSearchProvOpen(true); }}
+                                    onFocus={() => { setLibSearchProvInput(''); setLibSearchProvOpen(true); }}
+                                    placeholder="Tỉnh/thành (tùy chọn)..."
+                                    className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50" />
+                                {libSearchProvName && !libSearchProvOpen && (
+                                    <button onClick={() => { setLibSearchProvCode(''); setLibSearchProvName(''); }}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
+                                {libSearchProvOpen && libSearchProvinceList.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[70] max-h-40 overflow-y-auto">
+                                        {libSearchProvinceList.map(prov => (
+                                            <button key={prov.code} type="button"
+                                                onClick={() => { setLibSearchProvCode(prov.code.toString()); setLibSearchProvName(prov.name); setLibSearchProvOpen(false); }}
+                                                className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors border-b border-gray-50 last:border-0 font-medium">
+                                                {prov.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            {libSearchProvName && libSearchText && (
+                                <p className="text-[10px] text-orange-500 mt-1">
+                                    Tìm <span className="font-bold">"{libSearchText}"</span> tại {libSearchProvName}
+                                </p>
+                            )}
+                            {libSearchProvName && !libSearchText && (
+                                <p className="text-[10px] text-orange-500 mt-1">Dịch vụ tại {libSearchProvName}</p>
+                            )}
+                        </div>
+                    </>
+                )}
+
                 {/* Type filters */}
-                {serviceTypes.length > 0 && (
+                {displayTypes.length > 0 && (
                     <div className="px-3 pb-2 flex gap-1.5 flex-wrap shrink-0 border-b border-gray-100">
-                        {(['ALL', ...serviceTypes] as string[]).map(type => (
-                            <button
-                                key={type}
-                                onClick={() => setTypeFilter(type)}
-                                className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${typeFilter === type ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}
-                            >
+                        {(['ALL', ...displayTypes] as string[]).map(type => (
+                            <button key={type} onClick={() => setTypeFilter(type)}
+                                className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${typeFilter === type ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}>
                                 {type === 'ALL' ? 'Tất cả' : SERVICE_TYPE_LABELS[type] || type}
                             </button>
                         ))}
                     </div>
                 )}
+
                 {/* Cards list */}
                 <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
-                    {isLoadingLibrary ? (
+                    {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-3">
                             <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
-                            <p className="text-xs">Đang tải gợi ý...</p>
+                            <p className="text-xs">{libMode === 'suggest' ? 'Đang tải gợi ý...' : 'Đang tìm kiếm...'}</p>
                         </div>
-                    ) : filtered.length > 0 ? (
-                        filtered.map(lib => (
-                            <motion.div key={lib.id} layout className="group relative">
-                                <div
-                                    draggable
-                                    onDragStart={e => {
-                                        dragPayload.current = { activityId: lib.id!, fromDayIdx: null, fromSlot: null };
-                                        e.dataTransfer.effectAllowed = 'copy';
-                                        e.dataTransfer.setData('text/plain', lib.id!);
-                                    }}
-                                    className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
-                                >
-                                    {lib.thumbnailUrl ? (
-                                        // ── Card with thumbnail (system service) ──
-                                        <div className="flex gap-0">
-                                            <div className="w-16 shrink-0 self-stretch relative">
-                                                <img
-                                                    src={lib.thumbnailUrl}
-                                                    alt={lib.name}
-                                                    className="w-full h-full object-cover min-h-[68px]"
-                                                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                                />
-                                            </div>
-                                            <div className="flex-1 p-2 min-w-0">
-                                                <div className="flex items-start justify-between gap-1">
-                                                    <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors leading-tight line-clamp-2 flex-1">{lib.name}</p>
-                                                    <button
-                                                        onClick={() => {
-                                                            setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                                            setPickerDay(0);
-                                                            setPickerSlot('morning_activities');
-                                                        }}
-                                                        className="lg:hidden p-1 bg-orange-50 text-orange-500 rounded-md shrink-0 active:scale-95 transition-transform"
-                                                    >
-                                                        <Plus className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                                {lib.serviceType && (
-                                                    <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${SERVICE_TYPE_BADGE[lib.serviceType] || 'bg-gray-100 text-gray-600'}`}>
-                                                        {SERVICE_TYPE_LABELS[lib.serviceType] || lib.serviceType}
-                                                    </span>
-                                                )}
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[10px] font-semibold text-orange-600">{lib.estimated_cost}</span>
-                                                </div>
-                                                {lib.serviceUrl && (
-                                                    <button
-                                                        onClick={e => { e.stopPropagation(); libNavigate(lib.serviceUrl!); }}
-                                                        className="text-[9px] text-orange-400 hover:text-orange-600 font-semibold flex items-center gap-0.5 mt-0.5"
-                                                    >
-                                                        <ExternalLink className="w-2.5 h-2.5" /> Xem chi tiết
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        // ── Text-only card (legacy activity) ──
-                                        <div className="flex items-start gap-2 p-3 relative overflow-hidden">
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-100 group-hover:bg-orange-400 transition-colors" />
-                                            <GripVertical className="hidden lg:block w-3.5 h-3.5 text-gray-300 mt-0.5 group-hover:text-orange-400 shrink-0 transition-colors cursor-grab" />
-                                            <div className="min-w-0 flex-1 pl-1">
-                                                <p className="font-bold text-xs text-gray-800 group-hover:text-orange-600 transition-colors">{lib.name}</p>
-                                                <div className="flex gap-2 mt-1.5">
-                                                    <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3 text-orange-400" />{lib.duration}</span>
-                                                    <span className="text-[10px] font-medium text-gray-500 flex items-center gap-0.5"><DollarSign className="w-3 h-3 text-orange-400" />{lib.estimated_cost}</span>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setMobilePicker({ type: 'add', libId: lib.id, name: lib.name });
-                                                    setPickerDay(0);
-                                                    setPickerSlot('morning_activities');
-                                                }}
-                                                className="lg:hidden p-1.5 bg-orange-50 text-orange-500 rounded-lg shrink-0 active:scale-95 transition-transform"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        ))
+                    ) : libMode === 'search' && !libSearchText && !libSearchProvCode ? (
+                        <div className="py-10 text-center px-4">
+                            <Search className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                            <p className="text-xs text-gray-400 font-medium">Nhập từ khóa để tìm kiếm</p>
+                            <p className="text-[10px] text-gray-400 mt-1">Hoặc chọn tỉnh/thành để xem dịch vụ theo vùng</p>
+                        </div>
+                    ) : displayList.length > 0 ? (
+                        displayList.map(lib => renderCard(lib))
                     ) : (
                         <div className="py-10 text-center px-4">
                             <MapPin className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                             <p className="text-xs text-gray-400">
-                                {search ? `Không tìm thấy "${search}"` : `Không có gợi ý cho "${place}"`}
+                                {libMode === 'suggest' ? `Không có gợi ý cho "${place}"` : 'Không tìm thấy kết quả'}
                             </p>
-                            {search && (
-                                <button onClick={() => setSearch('')} className="text-[10px] text-orange-400 hover:text-orange-600 mt-1 font-semibold">Xóa bộ lọc</button>
-                            )}
                         </div>
                     )}
                 </div>
@@ -1548,133 +1629,357 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         );
     };
 
-    const SummaryContent = () => (
-        <>
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Trạng thái lưu</span>
-                <div className="flex items-center gap-1.5">
-                    {autoSaveStatus === 'saving' && (
-                        <div className="flex items-center gap-1 text-[10px] text-orange-500 font-medium animate-pulse">
-                            <CloudUpload className="w-3 h-3" /> Đang lưu...
+    const SummaryContent = () => {
+        const dayCosts = itinerary.map(calcDayCost);
+        const totalEstimated = dayCosts.reduce((s, c) => s + c, 0);
+        const budgetPct = budget > 0 ? Math.min(100, Math.round(totalEstimated / budget * 100)) : 0;
+        const hasChanges = hasUnsavedChanges || hasTitleChange || hasPlaceChange;
+
+        return (
+            <div className="flex flex-col h-full">
+                {/* Save status header */}
+                <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Trạng thái</span>
+                    <div className="flex items-center gap-1">
+                        {autoSaveStatus === 'saving' && <div className="flex items-center gap-1 text-[10px] text-orange-500 font-medium animate-pulse"><CloudUpload className="w-3 h-3" /> Đang lưu...</div>}
+                        {autoSaveStatus === 'saved' && <div className="flex items-center gap-1 text-[10px] text-green-500 font-medium"><CheckCircle2 className="w-3 h-3" /> Đã lưu</div>}
+                        {autoSaveStatus === 'error' && <div className="flex items-center gap-1 text-[10px] text-red-500 font-medium"><XCircle className="w-3 h-3" /> Lỗi lưu</div>}
+                        {autoSaveStatus === 'idle' && <div className="flex items-center gap-1 text-[10px] text-gray-400 font-medium"><Cloud className="w-3 h-3" /> Đã đồng bộ</div>}
+                    </div>
+                </div>
+
+                {/* Scrollable body */}
+                <div className="flex-1 overflow-y-auto">
+                    {/* Trip info */}
+                    <div className="px-4 py-3 space-y-0 border-b border-gray-100 divide-y divide-gray-50">
+                        {[
+                            { label: 'Điểm đến', value: place || '—', icon: <MapPin className="w-3.5 h-3.5 text-orange-400" /> },
+                            { label: 'Số ngày', value: `${itinerary.length} ngày`, icon: <CalendarDays className="w-3.5 h-3.5 text-orange-400" /> },
+                            { label: 'Hoạt động', value: `${totalActivities} địa điểm`, icon: <Compass className="w-3.5 h-3.5 text-orange-400" /> },
+                        ].map(item => (
+                            <div key={item.label} className="flex justify-between items-center py-2">
+                                <span className="text-xs text-gray-500 flex items-center gap-1.5">{item.icon}{item.label}</span>
+                                <span className="text-xs font-semibold text-gray-800">{item.value}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Budget & Cost section */}
+                    <div className="px-4 py-3 space-y-3 border-b border-gray-100">
+                        <div className="flex items-center gap-1.5">
+                            <Wallet className="w-3.5 h-3.5 text-green-500" />
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ngân sách & Chi phí</span>
+                        </div>
+
+                        {/* Budget input */}
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-gray-500 font-medium">Ngân sách dự kiến (₫)</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={budget || ''}
+                                    onChange={e => setBudget(parseInt(e.target.value) || 0)}
+                                    placeholder="Nhập ngân sách..."
+                                    min={0}
+                                    step={100000}
+                                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 pr-5"
+                                />
+                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">₫</span>
+                            </div>
+                            {budget > 0 && (
+                                <p className="text-[10px] text-green-600 font-semibold">{formatVND(budget)}</p>
+                            )}
+                        </div>
+
+                        {/* Budget progress */}
+                        {budget > 0 && (
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[10px]">
+                                    <span className="text-gray-500">Đã dùng</span>
+                                    <span className={`font-bold ${budgetPct > 90 ? 'text-red-500' : budgetPct > 70 ? 'text-amber-500' : 'text-green-600'}`}>{budgetPct}%</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all ${budgetPct > 90 ? 'bg-red-500' : budgetPct > 70 ? 'bg-amber-500' : 'bg-green-500'}`}
+                                        style={{ width: `${budgetPct}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-[10px] text-gray-400">
+                                    <span>Ước tính: {formatVND(totalEstimated)}</span>
+                                    <span>Còn: {formatVND(Math.max(0, budget - totalEstimated))}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Total estimated */}
+                        <div className="bg-orange-50 border border-orange-100 rounded-xl p-2.5">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-600 flex items-center gap-1.5">
+                                    <TrendingUp className="w-3.5 h-3.5 text-orange-400" />Tổng ước tính
+                                </span>
+                                <span className="text-sm font-black text-orange-600">{totalEstimated > 0 ? formatVND(totalEstimated) : '—'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Per-day cost breakdown */}
+                    {itinerary.length > 0 && (
+                        <div className="px-4 py-3 space-y-2 border-b border-gray-100">
+                            <div className="flex items-center gap-1.5">
+                                <Receipt className="w-3.5 h-3.5 text-orange-400" />
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Chi phí theo ngày</span>
+                            </div>
+                            <div className="space-y-1">
+                                {itinerary.map((day, i) => {
+                                    const cost = dayCosts[i];
+                                    const actCount = day.morning_activities.length + day.afternoon_activities.length + day.evening_activities.length;
+                                    return (
+                                        <div key={i} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
+                                            <div>
+                                                <span className="text-[11px] font-semibold text-gray-700">{day.day_label}</span>
+                                                <span className="text-[9px] text-gray-400 ml-1">({actCount} HĐ)</span>
+                                            </div>
+                                            <span className={`text-[11px] font-bold ${cost > 0 ? 'text-gray-800' : 'text-gray-300'}`}>
+                                                {cost > 0 ? formatVND(cost) : '—'}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
-                    {autoSaveStatus === 'saved' && (
-                        <div className="flex items-center gap-1 text-[10px] text-green-500 font-medium">
-                            <CheckCircle2 className="w-3 h-3" /> Đã lưu
-                        </div>
-                    )}
-                    {autoSaveStatus === 'error' && (
-                        <div className="flex items-center gap-1 text-[10px] text-red-500 font-medium">
-                            <XCircle className="w-3 h-3" /> Lỗi lưu
-                        </div>
-                    )}
-                    {autoSaveStatus === 'idle' && (
-                        <div className="flex items-center gap-1 text-[10px] text-gray-400 font-medium">
-                            <Cloud className="w-3 h-3" /> Đã đồng bộ
+
+                    {USE_MOCK_AI_PLANNER && (
+                        <div className="mx-4 my-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                            <p className="font-semibold">Demo Mode</p>
                         </div>
                     )}
                 </div>
-            </div>
-            <div className="flex-1 px-4 py-4 space-y-0 overflow-y-auto text-sm divide-y divide-gray-100">
-                {[
-                    { label: 'Điểm đến', value: place, icon: <MapPin className="w-3.5 h-3.5 text-orange-400" /> },
-                    { label: 'Số ngày', value: `${itinerary.length} ngày`, icon: <CalendarDays className="w-3.5 h-3.5 text-orange-400" /> },
-                    { label: 'Hoạt động', value: `${totalActivities} địa điểm`, icon: <Compass className="w-3.5 h-3.5 text-orange-400" /> },
-                ].map(item => (
-                    <div key={item.label} className="flex justify-between items-center py-2.5">
-                        <span className="text-gray-500 flex items-center gap-1.5">{item.icon}{item.label}</span>
-                        <span className="font-semibold text-gray-800">{item.value}</span>
-                    </div>
-                ))}
-                <div className="pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Chi phí</p>
-                    <div className="flex justify-between items-center py-1">
-                        <span className="text-gray-500 flex items-center gap-1.5">
-                            <Banknote className="w-3.5 h-3.5 text-green-400" />Ước tính
-                        </span>
-                        <span className="text-xs text-gray-400 italic">Xem trong từng HĐ</span>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-gray-500 flex items-center gap-1.5">
-                            <Receipt className="w-3.5 h-3.5 text-orange-400" />Chi phí thực tế
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="VD: 2.500.000đ"
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-300 text-gray-700 placeholder-gray-300"
-                        />
-                    </div>
-                </div>
-                {USE_MOCK_AI_PLANNER && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 pt-3">
-                        <p className="font-semibold">Demo Mode</p>
-                        {/* <p className="mt-0.5">Đổi <code className="bg-amber-100 px-1 rounded">USE_MOCK = false</code> dùng AI thật.</p> */}
-                    </div>
-                )}
-            </div>
-            <div className="px-4 py-4 border-t border-gray-100 space-y-2">
-                {isOwner && (() => {
-                    const hasChanges = hasUnsavedChanges || hasTitleChange;
-                    return (
+
+                {/* Actions */}
+                <div className="px-4 py-3 border-t border-gray-100 space-y-2 shrink-0">
+                    {isOwner && (
                         <button
                             onClick={handleManualSave}
                             disabled={autoSaveStatus === 'saving' || (!hasChanges && autoSaveStatus !== 'error')}
                             className={`w-full py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 ${hasChanges || autoSaveStatus === 'error'
-                                    ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200'
-                                    : 'bg-gray-100 text-gray-400 cursor-default'
-                                }`}
+                                ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200'
+                                : 'bg-gray-100 text-gray-400 cursor-default'
+                            }`}
                         >
-                            {autoSaveStatus === 'saving' ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : autoSaveStatus === 'saved' || !hasChanges ? (
-                                <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                                <CloudUpload className="w-4 h-4" />
-                            )}
+                            {autoSaveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : hasChanges ? <CloudUpload className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                             {autoSaveStatus === 'saving' ? 'Đang lưu...' : hasChanges ? 'Lưu thay đổi' : 'Đã lưu'}
                         </button>
-                    );
-                })()}
-                {isOwner && (
-                    <div className="flex flex-col gap-2 mb-2">
-                        <button
-                            onClick={handleClone}
-                            className="w-full py-2 text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 cursor-pointer"
-                        >
-                            <Copy className="w-3.5 h-3.5" />
-                            Nhân bản kế hoạch
+                    )}
+                    {isOwner && (
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <button onClick={handleClone} className="py-1.5 text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-200 rounded-xl flex items-center justify-center gap-1 hover:bg-gray-100 cursor-pointer">
+                                <Copy className="w-3 h-3" /> Nhân bản
+                            </button>
+                            <button
+                                onClick={() => setIsShareModalOpen(true)}
+                                className={`py-1.5 text-[11px] font-semibold rounded-xl flex items-center justify-center gap-1 border cursor-pointer transition-colors ${isPublic ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                            >
+                                <Share2 className="w-3 h-3" /> {isPublic ? 'Đang chia sẻ' : 'Chia sẻ'}
+                            </button>
+                        </div>
+                    )}
+                    {isOwner && (
+                        <button onClick={() => setItinerary(planData.itinerary)} className="w-full py-2 border border-gray-200 hover:bg-gray-50 text-xs font-medium text-gray-500 rounded-xl flex items-center justify-center gap-1.5 transition-colors">
+                            <RotateCcw className="w-3.5 h-3.5" /> Khôi phục ban đầu
                         </button>
-
-                        <button
-                            onClick={() => setIsShareModalOpen(true)}
-                            className={`w-full py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors border ${isPublic ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'} cursor-pointer`}
-                        >
-                            <Share2 className="w-3.5 h-3.5" />
-                            {isPublic ? '🔗 Đang chia sẻ public' : 'Chia sẻ & Cộng tác'}
-                        </button>
-                    </div>
-                )}
-
-                {isOwner && (
-                    <button
-                        onClick={() => setItinerary(planData.itinerary)}
-                        className="w-full py-2.5 border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-600 rounded-xl flex items-center justify-center gap-2 transition-colors"
-                    >
-                        <RotateCcw className="w-4 h-4" /> Khôi phục ban đầu
-                    </button>
-                )}
+                    )}
+                </div>
             </div>
-        </>
+        );
+    };
+
+    const MembersContent = () => (
+        <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                {(!members || members.length === 0) ? (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400 py-8">
+                        <Users className="w-8 h-8 opacity-25 mb-2" />
+                        <p className="text-xs font-medium">Chưa có thành viên</p>
+                        <p className="text-[10px] mt-1 text-center">Mời cộng tác viên qua nút Chia sẻ</p>
+                    </div>
+                ) : members.map(m => (
+                    <div key={m.userID} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                            {m.fullname.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-800 truncate">{m.fullname}</p>
+                            <p className="text-[10px] text-gray-400 truncate">{m.email}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {isOwner && (
+                <div className="px-4 py-3 border-t border-gray-100 shrink-0">
+                    <button
+                        onClick={() => setIsShareModalOpen(true)}
+                        className="w-full py-2 text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-200 rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-100 transition-colors"
+                    >
+                        <Share2 className="w-3.5 h-3.5" /> Mời thêm thành viên
+                    </button>
+                </div>
+            )}
+        </div>
     );
 
-    const DayColumns = ({ mobile }: { mobile?: boolean }) => (
+    const ActivityDetailContent = () => {
+        const act = selectedActivity;
+        const pos = selectedActivityPos;
+
+        if (!act || !pos) return (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center">
+                <Compass className="w-8 h-8 opacity-20 mb-2" />
+                <p className="text-xs font-medium">Chọn một hoạt động</p>
+                <p className="text-[10px] mt-1">Nhấp vào bất kỳ hoạt động nào để chỉnh sửa chi tiết</p>
+            </div>
+        );
+
+        const origCost = act.cost_amount ?? parseCostAmount(act.estimated_cost);
+        const hasChanges = detailEdit.name !== act.name || detailEdit.description !== (act.description || '') ||
+            detailEdit.duration !== act.duration || detailEdit.cost !== origCost || detailEdit.location !== (act.location || '');
+
+        const handleSave = () => {
+            if (!detailEdit.name.trim()) return;
+            const formattedCost = detailEdit.cost > 0 ? formatVND(detailEdit.cost) : 'Miễn phí';
+            const updated: Partial<Activity> = {
+                name: detailEdit.name.trim(), description: detailEdit.description,
+                duration: detailEdit.duration, cost_amount: detailEdit.cost,
+                estimated_cost: formattedCost, location: detailEdit.location,
+            };
+            handleUpdateActivity(pos.dayIdx, pos.slot, pos.actIdx, updated);
+            setSelectedActivity(prev => prev ? { ...prev, ...updated } : prev);
+            setDetailSaved(true);
+            setTimeout(() => setDetailSaved(false), 2000);
+        };
+
+        return (
+            <div className="flex flex-col h-full">
+                {act.thumbnailUrl && (
+                    <div className="h-24 shrink-0 overflow-hidden relative">
+                        <img src={act.thumbnailUrl} alt={act.name} className="w-full h-full object-cover" />
+                        {act.serviceType && (
+                            <span className={`absolute bottom-1.5 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${SERVICE_TYPE_BADGE[act.serviceType] || 'bg-gray-100 text-gray-600'}`}>
+                                {SERVICE_TYPE_LABELS[act.serviceType] || act.serviceType}
+                            </span>
+                        )}
+                    </div>
+                )}
+                <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5">
+                    <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tên hoạt động</label>
+                        <input
+                            value={detailEdit.name}
+                            onChange={e => setDetailEdit(p => ({ ...p, name: e.target.value }))}
+                            className="mt-1 w-full text-sm font-bold px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                            placeholder="Tên hoạt động..."
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-orange-400" /> Thời gian
+                            </label>
+                            <input
+                                value={detailEdit.duration}
+                                onChange={e => setDetailEdit(p => ({ ...p, duration: e.target.value }))}
+                                className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                                placeholder="VD: 2 giờ"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <DollarSign className="w-3 h-3 text-orange-400" /> Chi phí (₫)
+                            </label>
+                            <input
+                                type="number"
+                                value={detailEdit.cost || ''}
+                                onChange={e => setDetailEdit(p => ({ ...p, cost: parseInt(e.target.value) || 0 }))}
+                                min={0} step={10000}
+                                className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                                placeholder="0"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                        {[0, 50000, 100000, 200000, 500000, 1000000].map(p => (
+                            <button key={p} type="button" onClick={() => setDetailEdit(prev => ({ ...prev, cost: p }))}
+                                className={`px-2 py-0.5 text-[10px] rounded-full border transition-all cursor-pointer ${detailEdit.cost === p ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}>
+                                {p === 0 ? 'Miễn phí' : p >= 1000000 ? `${p / 1000000}tr` : `${p / 1000}k`}
+                            </button>
+                        ))}
+                    </div>
+                    {detailEdit.cost > 0 && <p className="text-xs text-orange-600 font-semibold">{formatVND(detailEdit.cost)}</p>}
+                    <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-orange-400" /> Địa chỉ
+                        </label>
+                        <input
+                            value={detailEdit.location}
+                            onChange={e => setDetailEdit(p => ({ ...p, location: e.target.value }))}
+                            className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                            placeholder="Địa chỉ cụ thể..."
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ghi chú</label>
+                        <textarea
+                            value={detailEdit.description}
+                            onChange={e => setDetailEdit(p => ({ ...p, description: e.target.value }))}
+                            rows={3}
+                            className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none italic bg-white"
+                            placeholder="Ghi chú thêm..."
+                        />
+                    </div>
+                    {act.serviceUrl && (
+                        <button onClick={() => navigate(act.serviceUrl!)}
+                            className="w-full py-2 border border-orange-300 text-orange-600 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-orange-50 transition-colors">
+                            <ExternalLink className="w-3.5 h-3.5" /> Xem dịch vụ
+                        </button>
+                    )}
+                </div>
+                <div className="px-3 py-3 border-t border-gray-100 shrink-0 space-y-1.5">
+                    <button onClick={handleSave} disabled={!hasChanges || !detailEdit.name.trim()}
+                        className={`w-full py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                            detailSaved ? 'bg-green-500 text-white' :
+                            hasChanges && detailEdit.name.trim() ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-200' :
+                            'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {detailSaved ? 'Đã lưu!' : 'Lưu thay đổi'}
+                    </button>
+                    <button onClick={() => { setSelectedActivity(null); setSelectedActivityPos(null); setRightTab('summary'); }}
+                        className="w-full py-1.5 text-xs text-gray-400 hover:text-orange-500 flex items-center justify-center gap-1 transition-colors">
+                        <ChevronLeft className="w-3.5 h-3.5" /> Quay lại
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const DayColumns = ({ mobile, overview }: { mobile?: boolean; overview?: boolean }) => (
         <>
             {itinerary.map((day, dayIdx) => {
                 const daySlotOrder = slotOrders[dayIdx] || SLOT_ORDER;
                 return (
-                    <div key={dayIdx} className={mobile ? 'w-full' : 'min-w-0'}>
+                    <div key={dayIdx} className={mobile ? 'w-full' : overview ? 'min-w-[280px] w-[280px]' : 'min-w-0'}>
                         <div className="bg-orange-500 text-white rounded-xl px-4 py-3 mb-3 flex items-center justify-between shadow-sm">
-                            <p className="font-bold text-sm">{day.day_label}</p>
+                            <div>
+                                <p className="font-bold text-sm">{day.day_label}</p>
+                                {(() => {
+                                    const cost = calcDayCost(day);
+                                    return cost > 0 ? (
+                                        <p className="text-[10px] text-white/75 mt-0.5 flex items-center gap-1">
+                                            <Banknote className="w-3 h-3" />{formatVND(cost)}
+                                        </p>
+                                    ) : null;
+                                })()}
+                            </div>
                             {isOwner && itinerary.length > 1 && (
                                 <button
                                     onClick={() => handleRemoveDay(dayIdx)}
@@ -1707,6 +2012,11 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                         setPickerDay(fDay);
                                         setPickerSlot(fSlot);
                                     } : undefined}
+                                    onSelectActivity={(dIdx, s, aIdx) => {
+                                        setSelectedActivity(itinerary[dIdx][s][aIdx]);
+                                        setSelectedActivityPos({ dayIdx: dIdx, slot: s, actIdx: aIdx });
+                                        setRightTab('detail');
+                                    }}
                                 />
                             ))}
                         </div>
@@ -1762,7 +2072,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         {showLibrary ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
                 </div>
-                {showLibrary ? <LibraryContent /> : (
+                {showLibrary ? LibraryContent() : (
                     <div className="flex-1 flex items-center justify-center">
                         <span className="text-xs text-gray-400 font-medium select-none"
                             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>Kho HĐ</span>
@@ -1833,15 +2143,106 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     </div>
                 </div>
 
-                {/* Desktop: CSS grid fills width, no unnecessary scroll */}
-                <div className="hidden lg:block flex-1 overflow-x-auto overflow-y-auto">
-                    <div
-                        className="grid gap-4 p-5 items-start"
-                        style={{ gridTemplateColumns: `repeat(${itinerary.length}, minmax(220px, 1fr))` }}
-                    >
-                        <DayColumns />
+                {/* Desktop: view toggle bar */}
+                <div className="hidden lg:flex shrink-0 items-center gap-2 overflow-x-auto px-4 py-2 border-b border-gray-100 bg-white">
+                    {/* View mode toggle */}
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden shrink-0">
+                        <button
+                            onClick={() => setViewMode('day')}
+                            className={`px-3 py-1.5 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${viewMode === 'day' ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-orange-50 hover:text-orange-600'}`}
+                        >
+                            <CalendarDays className="w-3 h-3" /> Từng ngày
+                        </button>
+                        <button
+                            onClick={() => setViewMode('overview')}
+                            className={`px-3 py-1.5 text-[11px] font-semibold flex items-center gap-1 border-l border-gray-200 transition-colors cursor-pointer ${viewMode === 'overview' ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-orange-50 hover:text-orange-600'}`}
+                        >
+                            <LayoutGrid className="w-3 h-3" /> Tổng quan
+                        </button>
                     </div>
+                    {viewMode === 'day' && <div className="w-px h-5 bg-gray-200 shrink-0" />}
+                    {viewMode === 'day' && itinerary.map((day, i) => {
+                        const cost = calcDayCost(day);
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => setSelectedDayIdx(i)}
+                                className={`shrink-0 flex flex-col items-start px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${selectedDayIdx === i ? 'bg-orange-500 text-white shadow-md' : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'}`}
+                            >
+                                <span className="text-xs font-bold whitespace-nowrap">{day.day_label}</span>
+                                {cost > 0 && <span className={`text-[9px] font-medium ${selectedDayIdx === i ? 'text-white/70' : 'text-orange-500'}`}>{formatVND(cost)}</span>}
+                            </button>
+                        );
+                    })}
+                    {viewMode === 'day' && isOwner && itinerary.length < 14 && (
+                        <button
+                            onClick={handleAddDay}
+                            className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-orange-500 border-2 border-dashed border-gray-200 hover:border-orange-300 flex items-center gap-1 transition-all cursor-pointer"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> Thêm ngày
+                        </button>
+                    )}
                 </div>
+
+                {/* Desktop: single-day view */}
+                {viewMode === 'day' && (
+                    <div className="hidden lg:block flex-1 overflow-y-auto">
+                        <div className="max-w-2xl mx-auto px-5 py-4 space-y-4">
+                            {itinerary[selectedDayIdx] && (() => {
+                                const day = itinerary[selectedDayIdx];
+                                const daySlotOrder = slotOrders[selectedDayIdx] || SLOT_ORDER;
+                                return (
+                                    <>
+                                        {isOwner && itinerary.length > 1 && (
+                                            <div className="flex items-center justify-between pb-1">
+                                                <p className="text-xs text-gray-400 font-medium">
+                                                    {day.morning_activities.length + day.afternoon_activities.length + day.evening_activities.length} hoạt động
+                                                </p>
+                                                <button
+                                                    onClick={() => handleRemoveDay(selectedDayIdx)}
+                                                    className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" /> Xóa ngày này
+                                                </button>
+                                            </div>
+                                        )}
+                                        {daySlotOrder.map((slot, slotIdx) => (
+                                            <DropZone
+                                                key={slot}
+                                                dayIdx={selectedDayIdx}
+                                                slot={slot}
+                                                activities={day[slot] || []}
+                                                onDrop={handleDrop}
+                                                onRemove={handleRemove}
+                                                onEditActivity={handleEditActivity}
+                                                onUpdateActivity={handleUpdateActivity}
+                                                onDragStartCard={handleDragStartCard}
+                                                onAddActivity={handleAddActivity}
+                                                onMoveSlot={(dir) => handleMoveSlot(selectedDayIdx, slot, dir)}
+                                                canMoveUp={slotIdx > 0}
+                                                canMoveDown={slotIdx < daySlotOrder.length - 1}
+                                                onSelectActivity={(dIdx, s, aIdx) => {
+                                                    setSelectedActivity(itinerary[dIdx][s][aIdx]);
+                                                    setSelectedActivityPos({ dayIdx: dIdx, slot: s, actIdx: aIdx });
+                                                    setRightTab('detail');
+                                                }}
+                                            />
+                                        ))}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                )}
+
+                {/* Desktop: overview — all days side by side */}
+                {viewMode === 'overview' && (
+                    <div className="hidden lg:flex flex-1 overflow-x-auto overflow-y-auto">
+                        <div className="flex gap-4 px-4 py-4 items-start" style={{ minWidth: 'max-content' }}>
+                            <DayColumns overview />
+                        </div>
+                    </div>
+                )}
 
                 {/* Mobile: tab content */}
                 <div className="lg:hidden flex-1 overflow-y-auto">
@@ -1856,12 +2257,17 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 <p className="text-xs text-gray-500">Nhấn <Plus className="inline w-3 h-3 text-orange-400" /> để thêm vào lịch trình</p>
                                 <span className="text-[10px] text-gray-400 font-medium">{libraryActivities.length} dịch vụ</span>
                             </div>
-                            <LibraryContent />
+                            {LibraryContent()}
                         </div>
                     )}
                     {mobileTab === 'summary' && (
                         <div className="flex flex-col h-full pb-16">
                             <SummaryContent />
+                        </div>
+                    )}
+                    {mobileTab === 'members' && (
+                        <div className="flex flex-col h-full pb-16">
+                            <MembersContent />
                         </div>
                     )}
                 </div>
@@ -1875,35 +2281,43 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 />
             )}
 
-            {/* ── RIGHT: Summary (desktop, collapsible + resizable) ── */}
+            {/* ── RIGHT: Summary / Chat (desktop, collapsible + resizable) ── */}
             <aside
                 className="hidden lg:flex flex-col bg-white border-l border-gray-200 shadow-sm overflow-hidden shrink-0"
                 style={{ width: showSummary ? sumWidth : 40 }}
             >
-                <div className={`shrink-0 flex items-center border-b border-gray-100 bg-orange-50 ${showSummary ? 'px-3 py-3 justify-between' : 'py-3 justify-center'
-                    }`}>
+                <div className={`shrink-0 flex items-center border-b border-gray-100 bg-orange-50 ${showSummary ? 'px-2 py-2 justify-between' : 'py-3 justify-center'}`}>
                     <button
-                        onClick={() => {
-                            const newShow = !showSummary;
-                            setShowSummary(newShow);
-                            if (newShow) {
-                                setSumWidth(prev => Math.max(224, prev));
-                            } else {
-                                setSumWidth(40);
-                            }
-                        }}
+                        onClick={() => { const n = !showSummary; setShowSummary(n); if (n) setSumWidth(prev => Math.max(240, prev)); else setSumWidth(40); }}
                         className="p-1 rounded text-gray-400 hover:text-orange-500 transition-colors shrink-0 cursor-pointer"
                     >
                         {showSummary ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                     </button>
                     {showSummary && (
-                        <h2 className="font-bold text-sm text-gray-800 truncate">Tổng kết</h2>
+                        <div className="flex gap-1 flex-1 ml-1">
+                            {([
+                                { id: 'summary' as const, label: 'Chi phí', icon: <BarChart2 className="w-3 h-3" /> },
+                                { id: 'members' as const, label: 'Thành viên', icon: <Users className="w-3 h-3" /> },
+                                { id: 'detail' as const, label: 'Chi tiết', icon: <Compass className="w-3 h-3" /> },
+                            ]).map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setRightTab(t.id)}
+                                    className={`flex-1 py-1 text-[9px] font-semibold rounded-lg flex items-center justify-center gap-0.5 transition-colors cursor-pointer ${rightTab === t.id ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-white hover:text-orange-500'}`}
+                                >
+                                    {t.icon}{t.label}
+                                </button>
+                            ))}
+                        </div>
                     )}
                 </div>
-                {showSummary ? <SummaryContent /> : (
+                {showSummary ? (
+                    rightTab === 'summary' ? <SummaryContent /> :
+                    rightTab === 'members' ? <MembersContent /> :
+                    <ActivityDetailContent />
+                ) : (
                     <div className="flex-1 flex items-center justify-center">
-                        <span className="text-xs text-gray-400 font-medium select-none"
-                            style={{ writingMode: 'vertical-rl' }}>Tổng kết</span>
+                        <span className="text-xs text-gray-400 font-medium select-none" style={{ writingMode: 'vertical-rl' }}>Chi phí</span>
                     </div>
                 )}
             </aside>
@@ -1913,7 +2327,8 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 {([
                     { id: 'library', label: 'Địa điểm', icon: <BookOpen className="w-5 h-5" /> },
                     { id: 'timeline', label: 'Lịch trình', icon: <CalendarDays className="w-5 h-5" /> },
-                    { id: 'summary', label: 'Tổng kết', icon: <BarChart2 className="w-5 h-5" /> },
+                    { id: 'summary', label: 'Chi phí', icon: <BarChart2 className="w-5 h-5" /> },
+                    { id: 'members', label: 'Thành viên', icon: <Users className="w-5 h-5" /> },
                 ] as const).map(tab => (
                     <button
                         key={tab.id}

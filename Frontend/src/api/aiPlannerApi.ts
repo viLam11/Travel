@@ -100,13 +100,19 @@ const mapBackendPlan = (raw: any): PlanData => {
 };
 
 // Map frontend ItineraryDay[] → backend format for PATCH
+const getEstimatedPrice = (a: Activity): number => {
+    if (a.cost_amount != null) return a.cost_amount;
+    if (!a.estimated_cost || a.estimated_cost === 'Miễn phí' || a.estimated_cost === 'Liên hệ') return 0;
+    return parseInt(a.estimated_cost.replace(/[^\d]/g, ''), 10) || 0;
+};
+
 const mapFrontendDayToBackend = (day: ItineraryDay, idx: number): any => ({
     day: idx + 1,
     day_label: day.day_label,
     activities: [
-        ...day.morning_activities.map(a => ({ ...a, timeOfDay: 'Morning', activityTitle: a.name, estimatedPrice: 0 })),
-        ...day.afternoon_activities.map(a => ({ ...a, timeOfDay: 'Afternoon', activityTitle: a.name, estimatedPrice: 0 })),
-        ...day.evening_activities.map(a => ({ ...a, timeOfDay: 'Evening', activityTitle: a.name, estimatedPrice: 0 })),
+        ...day.morning_activities.map(a => ({ ...a, timeOfDay: 'Morning', activityTitle: a.name, estimatedPrice: getEstimatedPrice(a) })),
+        ...day.afternoon_activities.map(a => ({ ...a, timeOfDay: 'Afternoon', activityTitle: a.name, estimatedPrice: getEstimatedPrice(a) })),
+        ...day.evening_activities.map(a => ({ ...a, timeOfDay: 'Evening', activityTitle: a.name, estimatedPrice: getEstimatedPrice(a) })),
     ],
 });
 
@@ -289,12 +295,15 @@ export const aiPlannerApi = {
         }
         // Convert frontend ItineraryDay[] → backend DailyItinerary[] before sending
         const backendItinerary = data.itinerary.map(mapFrontendDayToBackend);
-        return apiClient.patch(`/api/plan-recommend/${planId}`, {
+        const requestBody = {
             tripTitle: data.tripTitle,
             overview: data.overview,
             itinerary: backendItinerary,
             place: data.destination,
-        });
+            budget: data.budget,
+        };
+        console.log('[updatePlan] request body:', JSON.stringify(requestBody, null, 2));
+        return apiClient.patch(`/api/plan-recommend/${planId}`, requestBody);
     },
 
     toggleShare: async (planId: string, isPublic: boolean): Promise<{ isPublic: boolean; shareToken?: string }> => {

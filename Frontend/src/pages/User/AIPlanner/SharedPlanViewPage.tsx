@@ -3,13 +3,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     MapPin, Calendar, Clock, DollarSign, Sun, Moon, Cloud,
-    Loader2, ArrowLeft, Copy, Check, Users, Globe, PlaneTakeoff
+    Loader2, ArrowLeft, Copy, Check, Users, Globe, PlaneTakeoff,
+    Banknote, TrendingUp, Receipt
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { aiPlannerApi } from '@/api/aiPlannerApi';
 import type { PlanData, ItineraryDay, Activity } from '@/types/aiPlanner.types';
 import toast from 'react-hot-toast';
 import Avatar from '@/components/common/avatar/Avatar';
+
+const parseCost = (s?: string): number => {
+    if (!s || s === 'Miễn phí' || s === 'Liên hệ') return 0;
+    return parseInt(s.replace(/[^\d]/g, ''), 10) || 0;
+};
+const fmtVND = (n: number) => n === 0 ? '0₫' : `${n.toLocaleString('vi-VN')}₫`;
 
 const SLOT_META = {
     morning_activities: { label: 'Buổi sáng', icon: <Sun className="w-4 h-4" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -47,6 +54,8 @@ function ActivityItem({ activity }: { activity: Activity }) {
 
 function DayCard({ day, dayIndex }: { day: ItineraryDay; dayIndex: number }) {
     const slots: SlotKey[] = ['morning_activities', 'afternoon_activities', 'evening_activities'];
+    const dayCost = [...day.morning_activities, ...day.afternoon_activities, ...day.evening_activities]
+        .reduce((s, a) => s + (a.cost_amount ?? parseCost(a.estimated_cost)), 0);
 
     return (
         <motion.div
@@ -55,8 +64,13 @@ function DayCard({ day, dayIndex }: { day: ItineraryDay; dayIndex: number }) {
             transition={{ delay: dayIndex * 0.08 }}
             className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
         >
-            <div className="bg-gradient-to-r from-orange-500 to-amber-400 text-white px-5 py-3">
+            <div className="bg-gradient-to-r from-orange-500 to-amber-400 text-white px-5 py-3 flex items-center justify-between">
                 <p className="font-bold">{day.day_label}</p>
+                {dayCost > 0 && (
+                    <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                        <Banknote className="w-3 h-3" />{fmtVND(dayCost)}
+                    </span>
+                )}
             </div>
             <div className="p-4 space-y-4">
                 {slots.map(slot => {
@@ -146,6 +160,12 @@ export default function SharedPlanViewPage() {
     const totalActivities = planData.itinerary.reduce((s, d) =>
         s + d.morning_activities.length + d.afternoon_activities.length + d.evening_activities.length, 0);
 
+    const dayCosts = planData.itinerary.map(day =>
+        [...day.morning_activities, ...day.afternoon_activities, ...day.evening_activities]
+            .reduce((s, a) => s + (a.cost_amount ?? parseCost(a.estimated_cost)), 0)
+    );
+    const totalCost = dayCosts.reduce((s, c) => s + c, 0);
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Hero Header */}
@@ -197,6 +217,12 @@ export default function SharedPlanViewPage() {
                             <MapPin className="w-4 h-4" />
                             <span>{totalActivities} hoạt động</span>
                         </div>
+                        {totalCost > 0 && (
+                            <div className="flex items-center gap-1.5 text-white/90 text-sm">
+                                <Receipt className="w-4 h-4" />
+                                <span>~{fmtVND(totalCost)}</span>
+                            </div>
+                        )}
                         {planData.members && planData.members.length > 0 && (
                             <div className="flex items-center gap-1.5 text-white/90 text-sm">
                                 <Users className="w-4 h-4" />
@@ -218,6 +244,29 @@ export default function SharedPlanViewPage() {
                                 <span className="text-xs font-semibold text-gray-800">{m.fullname}</span>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Cost Summary */}
+            {totalCost > 0 && (
+                <div className="max-w-4xl mx-auto px-4 pt-4">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="px-5 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-green-600" />
+                            <span className="font-bold text-green-800 text-sm">Tổng chi phí ước tính</span>
+                            <span className="ml-auto text-lg font-black text-green-700">{fmtVND(totalCost)}</span>
+                        </div>
+                        <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {planData.itinerary.map((day, i) => (
+                                <div key={i} className="text-center">
+                                    <p className="text-[10px] text-gray-500 font-medium">{day.day_label}</p>
+                                    <p className={`text-sm font-bold mt-0.5 ${dayCosts[i] > 0 ? 'text-gray-800' : 'text-gray-300'}`}>
+                                        {dayCosts[i] > 0 ? fmtVND(dayCosts[i]) : '—'}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

@@ -6,7 +6,8 @@ export interface Activity {
     name: string;
     description: string;
     duration: string;
-    estimated_cost: string;
+    estimated_cost: string;   // display string e.g. "50.000₫"
+    cost_amount?: number;     // numeric VND amount for calculations
     location: string;
     // System service fields
     isSystemService?: boolean;
@@ -51,6 +52,15 @@ export interface PlanData {
     shareUrl?: string;
     members?: UserInfo[];
     preferenceServices?: PreferenceService[];
+    budget?: number;
+}
+
+export interface PlanChatMessage {
+    id: string;
+    authorId: string | number;
+    authorName: string;
+    text: string;
+    createdAt: string;
 }
 
 export interface PlanRequest {
@@ -68,6 +78,7 @@ export interface PlanUpdate {
     overview: string;
     itinerary: ItineraryDay[];
     destination?: string;
+    budget?: number;
 }
 
 export type TimeSlot = 'morning_activities' | 'afternoon_activities' | 'evening_activities';
