@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/admin/card';
 import { Button } from '@/components/ui/admin/button';
-import { User, Hotel, MapPin, ArrowRight } from 'lucide-react';
+import { User, Briefcase, ArrowRight } from 'lucide-react';
 
 export default function RegisterLandingPage() {
     const navigate = useNavigate();
@@ -11,7 +11,7 @@ export default function RegisterLandingPage() {
         {
             id: 'customer',
             title: 'Khách hàng',
-            description: 'Đăng ký để đặt phòng và khám phá các điểm đến tuyệt vời',
+            description: 'Đăng ký để tìm kiếm, đặt phòng khách sạn, vé tham quan, tour du lịch và lập kế hoạch hành trình lý tưởng.',
             icon: User,
             color: 'blue',
             gradient: 'from-blue-50 to-blue-100',
@@ -21,34 +21,22 @@ export default function RegisterLandingPage() {
             path: '/register/customer',
         },
         {
-            id: 'hotel',
-            title: 'Chủ khách sạn',
-            description: 'Quản lý khách sạn, phòng và đặt chỗ của bạn một cách dễ dàng',
-            icon: Hotel,
+            id: 'provider',
+            title: 'Đối tác dịch vụ',
+            description: 'Đăng ký kinh doanh, bán phòng khách sạn/homestay hoặc cung cấp các tour du lịch & vé hoạt động trải nghiệm.',
+            icon: Briefcase,
             color: 'orange',
             gradient: 'from-orange-50 to-orange-100',
             iconBg: 'bg-orange-100',
             iconColor: 'text-orange-600',
             buttonColor: 'bg-orange-600 hover:bg-orange-700',
-            path: '/register/hotel-owner',
-        },
-        {
-            id: 'tour',
-            title: 'Nhà cung cấp Tour',
-            description: 'Cung cấp dịch vụ tham quan và trải nghiệm du lịch độc đáo',
-            icon: MapPin,
-            color: 'green',
-            gradient: 'from-green-50 to-green-100',
-            iconBg: 'bg-green-100',
-            iconColor: 'text-green-600',
-            buttonColor: 'bg-green-600 hover:bg-green-700',
-            path: '/register/tour-provider',
+            path: '/register/provider',
         },
     ];
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-            <div className="w-full max-w-6xl">
+            <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-bold text-gray-900 mb-3">
@@ -60,7 +48,7 @@ export default function RegisterLandingPage() {
                 </div>
 
                 {/* Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     {accountTypes.map((type) => {
                         const Icon = type.icon;
                         return (

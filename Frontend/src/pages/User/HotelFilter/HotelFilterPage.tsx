@@ -10,6 +10,7 @@ import HotelFilterSidebar from '../../../components/page/hotelFilter/HotelFilter
 import HotelListCard, { type HotelListItem } from '../../../components/page/hotelFilter/HotelListCard';
 import apiClient from '@/services/apiClient';
 import { getDestinationInfo, getDestinationByName } from '@/constants/regions';
+import LocationSelector from '@/components/common/LocationSelector';
 
 const STALE_MS = 5 * 60 * 1000;
 const MAX_PRICE = 10_000_000;
@@ -189,18 +190,30 @@ const HotelFilterPage: React.FC = () => {
 
                     <main className="flex-1 min-w-0">
                         {/* Active filter pills */}
-                        {(selectedStars.length > 0 || selectedAmenities.length > 0 || sortBy !== 'popular') && (
+                        {(selectedStars.length > 0 || selectedAmenities.length > 0 || sortBy !== 'popular' || priceRange[0] > 0 || priceRange[1] < MAX_PRICE) && (
                             <div className="flex flex-wrap gap-2 mb-5">
                                 {sortBy !== 'popular' && (
                                     <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
                                         Sắp xếp: {sortBy === 'price-low' ? 'Giá thấp→cao' : sortBy === 'price-high' ? 'Giá cao→thấp' : 'Đánh giá cao'}
-                                        <button onClick={() => setSortBy('popular')} className="hover:text-orange-900">✕</button>
+                                        <button onClick={() => setSortBy('popular')} className="hover:text-orange-900 cursor-pointer">✕</button>
+                                    </span>
+                                )}
+                                {(priceRange[0] > 0 || priceRange[1] < MAX_PRICE) && (
+                                    <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                                        Giá: {(priceRange[0] / 1_000_000).toFixed(1)}tr - {(priceRange[1] / 1_000_000).toFixed(1)}tr
+                                        <button onClick={() => setPriceRange([0, MAX_PRICE])} className="hover:text-orange-900 cursor-pointer">✕</button>
                                     </span>
                                 )}
                                 {selectedStars.map(s => (
                                     <span key={s} className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
                                         {s}★
-                                        <button onClick={() => setSelectedStars(prev => prev.filter(x => x !== s))} className="hover:text-orange-900">✕</button>
+                                        <button onClick={() => setSelectedStars(prev => prev.filter(x => x !== s))} className="hover:text-orange-900 cursor-pointer">✕</button>
+                                    </span>
+                                ))}
+                                {selectedAmenities.map(am => (
+                                    <span key={am} className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                                        Tiện ích: {am === 'wifi' ? 'Wifi' : am === 'parking' ? 'Bãi đỗ xe' : am === 'pool' ? 'Bể bơi' : am === 'restaurant' ? 'Nhà hàng' : am === 'gym' ? 'Phòng gym' : am}
+                                        <button onClick={() => setSelectedAmenities(prev => prev.filter(x => x !== am))} className="hover:text-orange-900 cursor-pointer">✕</button>
                                     </span>
                                 ))}
                             </div>
@@ -248,15 +261,39 @@ const HotelFilterPage: React.FC = () => {
                                     ))}
                                 </div>
                             ) : hotels.length === 0 ? (
-                                <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
-                                    <p className="text-gray-500 text-lg font-medium mb-2">Không tìm thấy khách sạn phù hợp</p>
-                                    <p className="text-gray-400 text-sm">Thử điều chỉnh bộ lọc để xem thêm kết quả</p>
-                                    <button
-                                        onClick={() => { setPriceRange([0, MAX_PRICE]); setSelectedStars([]); setSelectedAmenities([]); setSortBy('popular'); }}
-                                        className="mt-4 text-orange-500 hover:text-orange-600 text-sm font-semibold underline cursor-pointer"
-                                    >
-                                        Xóa tất cả bộ lọc
-                                    </button>
+                                <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 px-4">
+                                    <div className="flex justify-center mb-6">
+                                        <div className="p-4 bg-orange-50 rounded-full">
+                                            <Hotel className="w-12 h-12 text-orange-400" />
+                                        </div>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy khách sạn phù hợp</h3>
+                                    <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                                        Không có khách sạn nào tại địa điểm này với bộ lọc hiện tại.
+                                    </p>
+                                    <div className="max-w-sm mx-auto space-y-4">
+                                        <div className="bg-gray-50 p-4 rounded-xl">
+                                            <p className="text-sm font-medium text-gray-700 mb-3 block text-left">Thử tìm ở địa điểm khác:</p>
+                                            <LocationSelector
+                                                onSelect={(code, name) => {
+                                                    const slug = name.toLowerCase()
+                                                        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                                                        .replace(/đ/g, 'd')
+                                                        .replace(/\s+/g, '-')
+                                                        .replace(/[^a-z0-9-]/g, '');
+                                                    setSidebarProvinceCode(code);
+                                                    navigate(`/hotels/vietnam/${slug}`);
+                                                }}
+                                                placeholder="Chọn tỉnh/thành phố..."
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => { setPriceRange([0, MAX_PRICE]); setSelectedStars([]); setSelectedAmenities([]); setSortBy('popular'); }}
+                                            className="text-orange-500 hover:text-orange-600 font-medium text-sm hover:underline cursor-pointer"
+                                        >
+                                            Xóa tất cả bộ lọc
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 hotels.map(hotel => (

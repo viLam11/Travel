@@ -198,7 +198,7 @@ export function AdminSideBar({ ...props }: React.ComponentProps<typeof Sidebar>)
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link to={dashboardUrl}>
+                            <Link to={dashboardUrl} className="cursor-pointer">
                                 <div className="font-bold text-xl text-blue-600">
                                     Travello
                                 </div>

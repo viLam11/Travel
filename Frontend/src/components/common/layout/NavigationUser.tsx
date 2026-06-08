@@ -80,7 +80,8 @@ const Navigation: React.FC<NavigationProps> = ({
           <div className="flex items-center gap-2 lg:hidden">
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 text-gray-700 hover:text-orange-500"
+              className="p-2 text-gray-700 hover:text-orange-500 cursor-pointer"
+              aria-label="Tìm kiếm"
             >
               <Search className="w-5 h-5" />
             </button>
@@ -93,7 +94,8 @@ const Navigation: React.FC<NavigationProps> = ({
                   setIsMobileMenuOpen(!isMobileMenuOpen);
                 }
               }}
-              className="p-2 text-gray-700 hover:text-orange-500"
+              className="p-2 text-gray-700 hover:text-orange-500 cursor-pointer"
+              aria-label={isMobileMenuOpen ? "Đóng menu" : "Mở menu"}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -182,7 +184,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 {currentUser?.user?.role === 'admin' && (
                   <button
                     onClick={() => navigate('/admin/dashboard')}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap"
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap cursor-pointer"
                   >
                     Admin
                   </button>
@@ -191,7 +193,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 {currentUser?.user?.role === 'provider' && (
                   <button
                     onClick={() => navigate('/provider/dashboard')}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap"
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap cursor-pointer"
                   >
                     Kênh dịch vụ
                   </button>
@@ -201,13 +203,13 @@ const Navigation: React.FC<NavigationProps> = ({
               <>
                 <button
                   onClick={() => navigate('/register')}
-                  className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap"
+                  className="text-sm lg:text-base text-gray-700 hover:text-orange-500 font-medium transition-colors whitespace-nowrap cursor-pointer"
                 >
                   Đăng ký
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-full font-medium transition-colors text-sm lg:text-base whitespace-nowrap cursor-pointer"
                 >
                   Đăng nhập
                 </button>
@@ -236,25 +238,25 @@ const Navigation: React.FC<NavigationProps> = ({
           <div className="space-y-1">
             <button
               onClick={() => { navigate('/destinations'); setIsMobileMenuOpen(false); }}
-              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all ${isActive('/destinations') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all cursor-pointer ${isActive('/destinations') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               Địa điểm
             </button>
             <button
               onClick={() => { navigate('/hotels'); setIsMobileMenuOpen(false); }}
-              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all ${isActive('/hotels') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all cursor-pointer ${isActive('/hotels') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               Khách sạn
             </button>
             <button
               onClick={() => { navigate('/blog'); setIsMobileMenuOpen(false); }}
-              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all ${isActive('/blog') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all cursor-pointer ${isActive('/blog') ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50'}`}
             >
               Bài viết
             </button>
             <button
               onClick={() => { navigate('/ai-planner'); setIsMobileMenuOpen(false); }}
-              className={`flex items-center gap-2 w-full px-4 py-3 rounded-xl font-semibold transition-all ${isActive('/ai-planner') ? 'bg-orange-100 text-orange-700' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}
+              className={`flex items-center gap-2 w-full px-4 py-3 rounded-xl font-semibold transition-all cursor-pointer ${isActive('/ai-planner') ? 'bg-orange-100 text-orange-700' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}
             >
               <Sparkles className="w-4 h-4" /> Lập kế hoạch AI
             </button>
@@ -278,7 +280,7 @@ const Navigation: React.FC<NavigationProps> = ({
                       navigate('/user/profile');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center w-full px-4 py-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all"
+                    className="flex items-center w-full px-4 py-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all cursor-pointer"
                   >
                     Hồ sơ của tôi
                   </button>
@@ -287,14 +289,14 @@ const Navigation: React.FC<NavigationProps> = ({
                       navigate('/my-plans');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center w-full px-4 py-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all"
+                    className="flex items-center w-full px-4 py-3 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all cursor-pointer"
                   >
                     Kế hoạch du lịch của tôi
                   </button>
                   {currentUser?.user?.role === 'admin' && (
                     <button
                       onClick={() => { navigate('/admin/dashboard'); setIsMobileMenuOpen(false); }}
-                      className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all"
+                      className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all cursor-pointer"
                     >
                       Admin Dashboard
                     </button>
@@ -302,14 +304,14 @@ const Navigation: React.FC<NavigationProps> = ({
                   {currentUser?.user?.role === 'provider' && (
                     <button
                       onClick={() => { navigate('/provider/dashboard'); setIsMobileMenuOpen(false); }}
-                      className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all"
+                      className="flex items-center w-full px-4 py-3 rounded-xl text-orange-600 font-medium hover:bg-orange-50 transition-all cursor-pointer"
                     >
                       Kênh dịch vụ của tôi
                     </button>
                   )}
                   <button
                     onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
-                    className="flex items-center w-full px-4 py-3 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-all"
+                    className="flex items-center w-full px-4 py-3 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-all cursor-pointer"
                   >
                     Đăng xuất
                   </button>

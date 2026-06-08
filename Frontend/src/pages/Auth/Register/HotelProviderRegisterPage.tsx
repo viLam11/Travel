@@ -8,7 +8,7 @@ import EmailInput from "../../../components/page/auth/EmailInput";
 import PasswordInput from "../../../components/page/auth/PasswordInput";
 import AuthButton from "../../../components/page/auth/AuthButton";
 import FormInput from "../../../components/page/auth/FormInput";
-import { Hotel } from "lucide-react";
+import { Briefcase, Hotel, MapPin } from "lucide-react";
 
 interface FormData {
     username: string;
@@ -27,6 +27,7 @@ interface FormErrors {
 }
 
 const HotelProviderRegisterPage: React.FC = () => {
+    const [providerType, setProviderType] = useState<'hotel' | 'place' | 'both'>('hotel');
     const [formData, setFormData] = useState<FormData>({
         username: "",
         email: "",
@@ -105,13 +106,13 @@ const HotelProviderRegisterPage: React.FC = () => {
         setLoading(true);
 
         try {
-            // Register as hotel provider
+            // Register as provider with selected type (hotel, place, or both)
             await register({
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
                 role: 'PROVIDER',
-                providerType: 'hotel', // Hotel provider
+                providerType: providerType,
             });
 
             toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
@@ -155,21 +156,66 @@ const HotelProviderRegisterPage: React.FC = () => {
     return (
         <AuthLayout
             heroTitle="Travello for Business"
-            heroSubtitle="Quản lý khách sạn của bạn một cách chuyên nghiệp và hiệu quả"
+            heroSubtitle="Quản lý dịch vụ du lịch của bạn một cách chuyên nghiệp và hiệu quả"
         >
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 w-full max-w-md px-4 sm:px-0">
 
                 {/* Header */}
                 <div className="mb-4 text-center">
-                    <div className="flex justify-center mb-3">
+                    {/* <div className="flex justify-center mb-3">
                         <div className="bg-orange-100 p-3 rounded-full">
-                            <Hotel className="w-8 h-8 text-orange-600" />
+                            <Briefcase className="w-8 h-8 text-orange-600" />
                         </div>
-                    </div>
+                    </div> */}
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-orange-500 mb-1">
-                        Chủ Khách Sạn
+                        Đối Tác Dịch Vụ
                     </h1>
-                    <p className="text-sm sm:text-base text-gray-500">Tạo tài khoản quản lý khách sạn</p>
+                    <p className="text-sm sm:text-base text-gray-500 font-medium">Tạo tài khoản kinh doanh dịch vụ</p>
+                </div>
+
+                {/* Business Type selection */}
+                <div className="mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Loại hình kinh doanh <span className="text-orange-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setProviderType('hotel')}
+                            className={`p-2.5 rounded-xl border-2 text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                                providerType === 'hotel'
+                                    ? 'border-orange-500 bg-orange-50 font-bold text-orange-700 shadow-sm'
+                                    : 'border-gray-100 hover:border-orange-200 bg-gray-50 text-gray-500'
+                            }`}
+                        >
+                            <Hotel className="w-4.5 h-4.5" />
+                            <span className="text-[10px] sm:text-xs font-bold leading-tight">Lưu trú</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProviderType('place')}
+                            className={`p-2.5 rounded-xl border-2 text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                                providerType === 'place'
+                                    ? 'border-orange-500 bg-orange-50 font-bold text-orange-700 shadow-sm'
+                                    : 'border-gray-100 hover:border-orange-200 bg-gray-50 text-gray-500'
+                            }`}
+                        >
+                            <MapPin className="w-4.5 h-4.5" />
+                            <span className="text-[10px] sm:text-xs font-bold leading-tight">Tour/Vé</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProviderType('both')}
+                            className={`p-2.5 rounded-xl border-2 text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                                providerType === 'both'
+                                    ? 'border-orange-500 bg-orange-50 font-bold text-orange-700 shadow-sm'
+                                    : 'border-gray-100 hover:border-orange-200 bg-gray-50 text-gray-500'
+                            }`}
+                        >
+                            <Briefcase className="w-4.5 h-4.5" />
+                            <span className="text-[10px] sm:text-xs font-bold leading-tight">Cả hai</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Username */}

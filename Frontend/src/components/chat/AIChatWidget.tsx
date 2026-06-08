@@ -288,7 +288,7 @@ const AIChatWidget: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors" aria-label="Đóng chat">
                     <X className="w-4 h-4" />
                 </button>
             </div>
@@ -376,6 +376,7 @@ const AIChatWidget: React.FC = () => {
                         type="submit"
                         disabled={!newMessage.trim() || isLoading}
                         className="w-9 h-9 flex-shrink-0 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-xl flex items-center justify-center hover:shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none"
+                        aria-label="Gửi tin nhắn"
                     >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>

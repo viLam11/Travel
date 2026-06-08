@@ -121,7 +121,7 @@ interface RegisterData {
     phone?: string;
     address?: string;
     role?: string; // USER, PROVIDER, etc.
-    providerType?: 'hotel' | 'place'; // For providers only
+    providerType?: 'hotel' | 'place' | 'both'; // For providers only
 }
 
 interface AuthContextType {

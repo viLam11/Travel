@@ -583,7 +583,8 @@ const ServiceDetailPage: React.FC = () => {
     requireAuth(() => {
       // Pre-fill room type if room is provided
       if (room) {
-        setRoomType(room.title);
+        // Luôn hiển thị tất cả các phòng để người dùng có thể tham khảo thêm các loại phòng khác
+        setRoomType("Bất kỳ phòng trống");
 
         // Tự động chọn phòng này (auto-select)
         if (room.id) {

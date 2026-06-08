@@ -308,7 +308,7 @@ export const aiPlannerApi = {
 
     toggleShare: async (planId: string, isPublic: boolean): Promise<{ isPublic: boolean; shareToken?: string }> => {
         if (planId.startsWith('mock-')) {
-            return { isPublic, shareUrl: `https://travollo.com/share/${planId}` };
+            return { isPublic, shareToken: planId };
         }
         
         // Cập nhật chế độ hiển thị (visibility) qua PATCH /api/plan-recommend/{planID}/visibility
@@ -316,18 +316,22 @@ export const aiPlannerApi = {
             visibility: isPublic ? 'PUBLIC' : 'PRIVATE'
         });
         
-        let shareUrl = undefined;
+        let shareToken = undefined;
         if (isPublic) {
             try {
                 // Lấy link chia sẻ qua POST /api/plan-recommend/{planID}/share-link
                 const linkRes = await apiClient.post<Record<string, string>>(`/api/plan-recommend/${planId}/share-link`, {});
-                shareUrl = linkRes?.shareUrl || linkRes?.shareLink || Object.values(linkRes || {})[0];
+                const rawUrl = linkRes?.shareUrl || linkRes?.shareLink || Object.values(linkRes || {})[0];
+                if (rawUrl) {
+                    const parts = rawUrl.split('/share/');
+                    shareToken = parts.length > 1 ? parts[1] : rawUrl.split('/').pop();
+                }
             } catch (err) {
                 console.error("Failed to generate share link:", err);
             }
         }
         
-        return { isPublic, shareUrl };
+        return { isPublic, shareToken };
     },
 
     updateVisibility: async (planId: string, visibility: 'PUBLIC' | 'PRIVATE'): Promise<PlanData> => {

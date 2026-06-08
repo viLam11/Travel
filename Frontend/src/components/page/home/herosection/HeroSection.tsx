@@ -211,17 +211,21 @@ const HeroSection: React.FC = () => {
 
   return (
     <div className="relative min-h-[600px] sm:h-[700px] overflow-visible pb-12 sm:pb-0">
-      <div className="absolute inset-0 w-[90vw] rounded-b-[40px] mx-auto overflow-hidden pointer-events-none ">
+      <div className="absolute inset-0 w-[90vw] rounded-b-[40px] mx-auto overflow-hidden pointer-events-none z-0">
         {backgroundImages.map((image, index) => (
-          <div
+          <img
             key={index}
-            className={`absolute inset-0 bg-center bg-cover bg-no-repeat transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
-              }`}
-            style={{
-              backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(${image})`,
-            }}
+            src={image}
+            alt={`Hero Background ${index + 1}`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchPriority={index === 0 ? 'high' : 'low'}
           />
         ))}
+        {/* Overlay dark filter for readability */}
+        <div className="absolute inset-0 bg-black/30" />
 
         <button
           onClick={prevSlide}

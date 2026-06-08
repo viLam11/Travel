@@ -309,33 +309,63 @@ const BlogCreatePage: React.FC = () => {
               </div>
               <div className="px-6 py-4">
                 <div className="flex gap-3 items-center">
-                  <label className="flex-1 cursor-pointer">
-                    <div className="px-4 py-2.5 border border-dashed border-gray-300 rounded-xl text-sm text-center hover:bg-gray-50 transition-colors">
-                      <span className="text-orange-500 font-semibold">Chọn ảnh</span> hoặc kéo thả vào đây
-                    </div>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          const files = Array.from(e.target.files);
-                          setMediaFiles(files);
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('border-orange-500', 'bg-orange-50/50');
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-orange-500', 'bg-orange-50/50');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-orange-500', 'bg-orange-50/50');
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+                        if (files.length > 0) {
+                          setMediaFiles(prev => [...prev, ...files]);
                           const urls = files.map(file => URL.createObjectURL(file));
-                          setPreviewUrls(urls);
+                          setPreviewUrls(prev => [...prev, ...urls]);
                           setImgError(false);
                         }
-                      }}
-                    />
-                  </label>
+                      }
+                    }}
+                    className="flex-1 px-4 py-6 border-2 border-dashed border-gray-300 rounded-2xl text-sm text-center hover:bg-gray-50 hover:border-orange-400 transition-all cursor-pointer"
+                  >
+                    <label className="cursor-pointer block w-full h-full">
+                      <span className="text-orange-500 font-semibold">Chọn ảnh</span> hoặc kéo thả vào đây
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onClick={(e) => {
+                          // Reset value so that uploading the same file again triggers onChange
+                          (e.target as HTMLInputElement).value = '';
+                        }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            const files = Array.from(e.target.files);
+                            setMediaFiles(prev => [...prev, ...files]);
+                            const urls = files.map(file => URL.createObjectURL(file));
+                            setPreviewUrls(prev => [...prev, ...urls]);
+                            setImgError(false);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                   {previewUrls.length > 0 && (
                     <button
                       onClick={() => {
+                        // Cleanup object URLs to avoid memory leaks
+                        previewUrls.forEach(url => URL.revokeObjectURL(url));
                         setMediaFiles([]);
                         setPreviewUrls([]);
                       }}
-                      className="px-3 py-2 text-gray-400 hover:text-red-400 border border-gray-200 rounded-xl hover:border-red-200 transition-all"
+                      className="px-3 py-2 text-gray-400 hover:text-red-400 border border-gray-200 rounded-xl hover:border-red-200 transition-all cursor-pointer self-stretch flex items-center justify-center"
+                      title="Xóa tất cả ảnh"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -344,13 +374,27 @@ const BlogCreatePage: React.FC = () => {
                 {previewUrls.length > 0 && !imgError && (
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {previewUrls.map((url, idx) => (
-                      <div key={idx} className="rounded-xl overflow-hidden h-32 border border-gray-100">
+                      <div key={url + idx} className="relative rounded-xl overflow-hidden h-32 border border-gray-100 group">
                         <img
                           src={url}
                           alt="cover preview"
                           className="w-full h-full object-cover"
                           onError={() => setImgError(true)}
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMediaFiles(prev => prev.filter((_, i) => i !== idx));
+                            setPreviewUrls(prev => {
+                              URL.revokeObjectURL(prev[idx]);
+                              return prev.filter((_, i) => i !== idx);
+                            });
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-600 text-white rounded-full transition-colors cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md"
+                          title="Xóa ảnh này"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>

@@ -93,11 +93,15 @@ const routes: RouteObject[] = [
   },
   {
     path: '/register/hotel-owner',
-    element: withSuspense(HotelProviderRegisterPage as LazyExoticComponent<ComponentType<unknown>>),
+    element: <Navigate to="/register/provider" replace />,
   },
   {
     path: '/register/tour-provider',
-    element: withSuspense(TourProviderRegisterPage as LazyExoticComponent<ComponentType<unknown>>),
+    element: <Navigate to="/register/provider" replace />,
+  },
+  {
+    path: '/register/provider',
+    element: withSuspense(HotelProviderRegisterPage as LazyExoticComponent<ComponentType<unknown>>),
   },
   {
     path: ROUTES.FORGOT_PASSWORD,

@@ -18,6 +18,26 @@ export default defineConfig({
   define: {
     global: 'window',
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router-dom') || id.includes('react-router') || id.includes('@remix-run')) {
+              return 'react-router';
+            }
+            if (id.includes('lucide-react')) {
+              return 'lucide-icons';
+            }
+            if (id.includes('@tanstack')) {
+              return 'react-query';
+            }
+            return 'vendor';
+          }
+        }
+      }
+    }
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,
