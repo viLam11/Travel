@@ -19,11 +19,15 @@ interface BackendChatMessage {
     sender: {
         userId: string;
         username: string;
+        fullname?: string;
+        fullName?: string;
         avatarUrl: string;
     };
     receiver: {
         userId: string;
         username: string;
+        fullname?: string;
+        fullName?: string;
         avatarUrl: string;
     };
     attachmentId?: string;
@@ -95,8 +99,18 @@ export const chatApi = {
                 return {
                     id: String(otherUser.userId), // Use other user's ID as conversation ID for simplicity in 1-1 chat
                     participants: [
-                        { id: String(msg.sender.userId), name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
-                        { id: String(msg.receiver.userId), name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
+                        { 
+                            id: String(msg.sender.userId), 
+                            name: msg.sender.fullname || msg.sender.fullName || msg.sender.username, 
+                            avatar: msg.sender.avatarUrl, 
+                            role: String(msg.sender.userId) === String(userId) ? 'user' : 'provider' 
+                        },
+                        { 
+                            id: String(msg.receiver.userId), 
+                            name: msg.receiver.fullname || msg.receiver.fullName || msg.receiver.username, 
+                            avatar: msg.receiver.avatarUrl, 
+                            role: String(msg.receiver.userId) === String(userId) ? 'user' : 'provider' 
+                        }
                     ],
                     lastMessage: mapBackendToFrontendMessage(msg),
                     unreadCount: (msg.read ?? msg.isRead) ? 0 : (String(msg.receiver.userId) === String(userId) ? 1 : 0),
@@ -183,8 +197,18 @@ export const chatApi = {
                 return {
                     id: String(otherUser.userId),
                     participants: [
-                        { id: String(msg.sender.userId), name: msg.sender.username, avatar: msg.sender.avatarUrl, role: 'user' },
-                        { id: String(msg.receiver.userId), name: msg.receiver.username, avatar: msg.receiver.avatarUrl, role: 'user' }
+                        { 
+                            id: String(msg.sender.userId), 
+                            name: msg.sender.fullname || msg.sender.fullName || msg.sender.username, 
+                            avatar: msg.sender.avatarUrl, 
+                            role: String(msg.sender.userId) === String(currentUserId) ? 'admin' : 'provider' 
+                        },
+                        { 
+                            id: String(msg.receiver.userId), 
+                            name: msg.receiver.fullname || msg.receiver.fullName || msg.receiver.username, 
+                            avatar: msg.receiver.avatarUrl, 
+                            role: String(msg.receiver.userId) === String(currentUserId) ? 'admin' : 'provider' 
+                        }
                     ],
                     lastMessage: mapBackendToFrontendMessage(msg),
                     unreadCount: (msg.read || msg.isRead) ? 0 : (String(msg.receiver.userId) === String(currentUserId) ? 1 : 0),
