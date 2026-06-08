@@ -138,7 +138,11 @@ export const chatApi = {
 
         return response.content.map(msg => {
             console.log("=== INDIVIDUAL RAW MSG ===", msg);
-            return mapBackendToFrontendMessage(msg);
+            const mapped = mapBackendToFrontendMessage(msg);
+            // conversationId luôn phải là ID của người đối diện (otherUserId)
+            // để khớp với activeConversation.id trong socket listener
+            mapped.conversationId = otherUserId;
+            return mapped;
         }).reverse(); // Reverse to get chronological order if backend sends newest first
     },
 

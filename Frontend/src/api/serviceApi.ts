@@ -171,7 +171,8 @@ export const serviceApi = {
         }
 
         try {
-            return await apiClient.get(`/services/${serviceId}`);
+            const res = await apiClient.get<any>(`/services/${serviceId}`);
+            return res?.result || res?.data || res;
         } catch (error) {
             console.error('Error fetching service:', error);
             throw error;

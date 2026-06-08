@@ -1,14 +1,17 @@
 // src/pages/ServiceProvider/Messages/ProviderMessagesPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Search, MoreVertical, Send, User, Menu, MessageCircle, Zap, FileText, X, ShieldCheck } from 'lucide-react';
+import { Search, MoreVertical, Send, User, Menu, MessageCircle, Zap, FileText, X, ShieldCheck, Tag } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { socketService } from '@/services/socketService';
 import { chatApi } from '@/api/chatApi';
 import { userApi } from '@/api/userApi';
 import { toast } from 'react-hot-toast';
+import { BookingContextCard } from '@/components/chat/BookingContextCard';
 import type { ChatMessage, Conversation } from '@/types/chat.types';
 import { ROUTES } from '@/constants/routes';
+import apiClient from '@/services/apiClient';
+
 
 const ProviderMessagesPage: React.FC = () => {
     const { currentUser, isAuthenticated } = useAuth();
@@ -19,6 +22,8 @@ const ProviderMessagesPage: React.FC = () => {
 
     // Flag to track if we've handled the redirect state
     const handledRedirect = useRef(false);
+    // Ref lưu tin nhắn optimistic của Provider chờ server echo lại
+    const pendingOptimisticRef = useRef<Array<{ id: string; text: string; senderId: string }>>([]);
 
     // Update ref whenever state changes
     useEffect(() => {
@@ -103,8 +108,19 @@ const ProviderMessagesPage: React.FC = () => {
             
             setMessages(prev => {
                 if (currentActive?.id === msg.conversationId) {
+                    // Tìm optimistic message của Provider khớp (theo text.trim() + senderId)
+                    const pendingIdx = pendingOptimisticRef.current.findIndex(
+                        p => p.text.trim() === msg.text.trim() && p.senderId === msg.senderId
+                    );
+                    let baseList = prev;
+                    if (pendingIdx !== -1) {
+                        const pendingEntry = pendingOptimisticRef.current[pendingIdx];
+                        pendingOptimisticRef.current.splice(pendingIdx, 1);
+                        baseList = prev.filter(p => p.id !== pendingEntry.id);
+                    }
+                    if (baseList.some(p => p.id === msg.id)) return prev;
                     setTimeout(() => scrollToBottom(), 100);
-                    return [...prev, msg];
+                    return [...baseList, msg];
                 }
                 return prev;
             });
@@ -160,6 +176,7 @@ const ProviderMessagesPage: React.FC = () => {
         setActiveConversation(conversation);
         if (window.innerWidth < 768) setShowSidebar(false);
         setLoadingMessages(true);
+        pendingOptimisticRef.current = []; // Reset pending khi đổi conversation
 
         if (conversation.unreadCount > 0) {
             await chatApi.markAsRead(conversation.id);
@@ -170,6 +187,30 @@ const ProviderMessagesPage: React.FC = () => {
         setMessages(msgs);
         setLoadingMessages(false);
         scrollToBottom();
+
+        // Lấy tên dịch vụ từ tin nhắn đính kèm gần nhất để cập nhật banner dịch vụ cho Provider
+        const attachMsgs = msgs.filter(m => (m.type === 'service' || m.type === 'order') && m.attachmentId);
+        const latestAttachMsg = attachMsgs.length > 0 ? attachMsgs[attachMsgs.length - 1] : null;
+        if (latestAttachMsg?.attachmentId) {
+            try {
+                if (latestAttachMsg.type === 'service') {
+                    const svc = await apiClient.services.getById(latestAttachMsg.attachmentId);
+                    if (svc?.serviceName) {
+                        setActiveConversation(prev => prev ? { ...prev, serviceName: svc.serviceName } : prev);
+                        setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, serviceName: svc.serviceName } : c));
+                    }
+                } else {
+                    const order = await apiClient.orders.getById(latestAttachMsg.attachmentId);
+                    const svc = order?.orderedTickets?.[0]?.ticket?.ticketVenue || order?.orderedRooms?.[0]?.room?.hotel;
+                    if (svc?.serviceName) {
+                        setActiveConversation(prev => prev ? { ...prev, serviceName: svc.serviceName } : prev);
+                        setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, serviceName: svc.serviceName } : c));
+                    }
+                }
+            } catch {
+                // Không lấy được tên dịch vụ → giữ nguyên
+            }
+        }
     };
 
     const scrollToBottom = () => {
@@ -178,7 +219,8 @@ const ProviderMessagesPage: React.FC = () => {
 
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !activeConversation || !currentUser?.user) return;
+        const trimmedText = newMessage.trim();
+        if (!trimmedText || !activeConversation || !currentUser?.user) return;
 
         const receiver = activeConversation.participants.find(p => p.id?.toString() !== currentUser.user.userID.toString());
         const receiverId = receiver?.id?.toString() || activeConversation.id;
@@ -186,11 +228,16 @@ const ProviderMessagesPage: React.FC = () => {
         const sentMsg = socketService.sendMessage(
             receiverId,
             currentUser.user.userID.toString() || 'provider_101',
-            newMessage,
+            trimmedText, // Gửi text đã trim
             (receiver?.role === 'admin' ? 'admin' : 'user') as 'user' | 'provider'
         );
 
         if (sentMsg) {
+            pendingOptimisticRef.current.push({
+                id: sentMsg.id,
+                text: sentMsg.text,
+                senderId: sentMsg.senderId
+            });
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
 
@@ -433,7 +480,7 @@ const ProviderMessagesPage: React.FC = () => {
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
                             {loadingMessages ? (
                                 <div className="flex justify-center items-center h-full">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
                                 </div>
                             ) : messages.length === 0 ? (
                                 <div className="text-center text-gray-400 my-auto bg-white/50 dark:bg-gray-800/50 p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 mx-auto max-w-sm backdrop-blur-sm">
@@ -448,6 +495,29 @@ const ProviderMessagesPage: React.FC = () => {
                                     const isMine = msg.senderId.toString() === (currentUser?.user?.userID?.toString() || 'provider_101');
                                     // Logic for grouping messages could go here to remove duplicate avatars/timestamps
                                     const showTime = index === 0 || new Date(msg.timestamp).getTime() - new Date(messages[index - 1].timestamp).getTime() > 5 * 60 * 1000;
+
+                                    // Robust attachment mapping
+                                    const msgTypeLower = msg.type?.toLowerCase();
+                                    const isAttachment = (msgTypeLower === 'service' || msgTypeLower === 'order' || msgTypeLower === 'service_attachment' || msgTypeLower === 'order_attachment') && (!!msg.attachmentId || !!msg.attachmentData);
+                                    const resolvedAttachmentType = (msgTypeLower === 'order' || msgTypeLower === 'order_attachment') ? 'order' : 'service';
+
+                                    // Check if this attachment is already the current context
+                                    let isFirstTimeForThisAttachment = true;
+                                    if (isAttachment) {
+                                        const currentAttachId = msg.attachmentId || msg.attachmentData?.id;
+                                        for (let j = index - 1; j >= 0; j--) {
+                                            const prevMsg = messages[j];
+                                            const prevMsgTypeLower = prevMsg.type?.toLowerCase();
+                                            const prevIsAttachment = (prevMsgTypeLower === 'service' || prevMsgTypeLower === 'order' || prevMsgTypeLower === 'service_attachment' || prevMsgTypeLower === 'order_attachment') && (!!prevMsg.attachmentId || !!prevMsg.attachmentData);
+                                            if (prevIsAttachment) {
+                                                const prevAttachId = prevMsg.attachmentId || prevMsg.attachmentData?.id;
+                                                if (prevAttachId === currentAttachId) {
+                                                    isFirstTimeForThisAttachment = false;
+                                                }
+                                                break;
+                                            }
+                                        }
+                                    }
 
                                     return (
                                         <div key={msg.id} className="flex flex-col">
@@ -469,7 +539,33 @@ const ProviderMessagesPage: React.FC = () => {
                                                     ? 'bg-indigo-600 dark:bg-indigo-600 text-white rounded-br-sm'
                                                     : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-sm'
                                                     }`}>
-                                                    <div className="leading-relaxed whitespace-pre-wrap">{msg.text}</div>
+                                                    {isAttachment ? (
+                                                        <div className="mb-1.5 text-gray-800 dark:text-gray-200">
+                                                            {isFirstTimeForThisAttachment ? (
+                                                                <>
+                                                                    <p className="text-xs opacity-80 mb-1.5 flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400">
+                                                                        <Tag className="w-3 h-3" />
+                                                                        {resolvedAttachmentType === 'order' ? 'Hỏi về đặt chỗ' : 'Hỏi về dịch vụ'}
+                                                                    </p>
+                                                                    <BookingContextCard
+                                                                        attachmentId={msg.attachmentId || ''}
+                                                                        attachmentData={msg.attachmentData}
+                                                                        type={resolvedAttachmentType}
+                                                                    />
+                                                                </>
+                                                            ) : (
+                                                                <div className="text-[11px] font-medium px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-md inline-flex items-center gap-1 mb-1.5 border border-gray-200/55 dark:border-gray-700 select-none">
+                                                                    <Tag className="w-2.5 h-2.5" />
+                                                                    <span>Hỏi tiếp về {resolvedAttachmentType === 'order' ? 'đặt chỗ này' : 'dịch vụ này'}</span>
+                                                                </div>
+                                                            )}
+                                                            {msg.text && <p className="mt-1.5 leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="leading-relaxed whitespace-pre-wrap">
+                                                            {msg.text}
+                                                        </div>
+                                                    )}
                                                     <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 font-medium ${isMine ? 'text-indigo-200' : 'text-gray-400 dark:text-gray-500'}`}>
                                                         {formatTime(msg.timestamp)}
                                                         {isMine && (

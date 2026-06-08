@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, User } from 'lucide-react';
+import { MessageCircle, X, Send, User, Tag } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { socketService } from '@/services/socketService';
 import { chatApi } from '@/api/chatApi';
 import type { ChatMessage } from '@/types/chat.types';
-import { BookingContextCard } from './BookingContextCard';
+import { BookingContextCard } from '@/components/chat/BookingContextCard';
 
 interface ServiceChatWidgetProps {
     providerId: string;
@@ -77,9 +77,24 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
 
             // Listen for new messages
             const destroyMsgListener = socketService.onMessage((msg) => {
-                // ... same logic but using conversationId from scope ...
-                if (msg.conversationId === conversationId) {
-                    setMessages(prev => [...prev, msg]);
+                // Kiểm tra tin nhắn có thuộc conversation này không
+                // conversationId trong widget = providerId, còn msg.conversationId từ socket
+                // có thể là senderId hoặc receiverId tuỳ chiều
+                const belongsHere = msg.conversationId === conversationId
+                    || msg.senderId === conversationId;
+
+                if (belongsHere) {
+                    setMessages(prev => {
+                        // Loại bỏ tin nhắn optimistic trùng (cùng text.trim() + sender)
+                        const filtered = prev.filter(
+                            p => !(p.id.startsWith('msg_') && p.text.trim() === msg.text.trim() && p.senderId === msg.senderId)
+                        );
+                        // Tránh thêm trùng nếu ID thật đã tồn tại
+                        if (filtered.some(p => p.id === msg.id)) {
+                            return prev;
+                        }
+                        return [...filtered, msg];
+                    });
                     scrollToBottom();
                 }
             });
@@ -101,17 +116,24 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !isAuthenticated || !currentUser?.user || !conversationId) return;
+        const trimmedText = newMessage.trim();
+        if (!trimmedText || !isAuthenticated || !currentUser?.user || !conversationId) return;
 
         const currentUserId = currentUser.user.userID.toString();
+
+        // Kiểm tra xem context gần nhất trong cuộc hội thoại có phải là dịch vụ này không
+        // Nếu user vừa hỏi dịch vụ A, giờ sang hỏi dịch vụ B, ta phải gửi lại attachment
+        // để provider biết user đang hỏi về dịch vụ nào.
+        const lastContextMsg = [...messages].reverse().find(msg => msg.attachmentId);
+        const needsContextSwitch = !lastContextMsg || lastContextMsg.attachmentId !== serviceId;
 
         const result = socketService.sendMessage(
             conversationId,
             currentUserId,
-            newMessage,
+            trimmedText,
             'provider',
-            'service', // message type
-            serviceId // attachmentId
+            needsContextSwitch ? 'service' : 'text', // message type
+            needsContextSwitch ? serviceId : undefined // attachmentId
         );
 
         if (result) {
@@ -190,19 +212,55 @@ const ServiceChatWidget: React.FC<ServiceChatWidgetProps> = ({ providerId, provi
                         Hãy gửi tin nhắn đầu tiên để được tư vấn!
                     </div>
                 ) : (
-                    messages.map((msg) => {
+                    messages.map((msg, index) => {
                         const isMine = msg.senderId.toString() === (currentUser?.user?.userID?.toString() || 'user_123');
+                        const msgTypeLower = msg.type?.toLowerCase();
+                        const isAttachment = (msgTypeLower === 'service' || msgTypeLower === 'order' || msgTypeLower === 'service_attachment' || msgTypeLower === 'order_attachment') && (!!msg.attachmentId || !!msg.attachmentData);
+                        const resolvedAttachmentType = (msgTypeLower === 'order' || msgTypeLower === 'order_attachment') ? 'order' : 'service';
+
+                        // Kiểm tra xem đây có phải là đính kèm mở đầu ngữ cảnh mới không
+                        let isFirstTimeForThisAttachment = true;
+                        if (isAttachment) {
+                            const currentAttachId = msg.attachmentId || msg.attachmentData?.id;
+                            for (let j = index - 1; j >= 0; j--) {
+                                const prevMsg = messages[j];
+                                const prevMsgTypeLower = prevMsg.type?.toLowerCase();
+                                const prevIsAttachment = (prevMsgTypeLower === 'service' || prevMsgTypeLower === 'order' || prevMsgTypeLower === 'service_attachment' || prevMsgTypeLower === 'order_attachment') && (!!prevMsg.attachmentId || !!prevMsg.attachmentData);
+                                if (prevIsAttachment) {
+                                    const prevAttachId = prevMsg.attachmentId || prevMsg.attachmentData?.id;
+                                    if (prevAttachId === currentAttachId) {
+                                        isFirstTimeForThisAttachment = false;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+
                         return (
                             <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${isMine ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
-                                    {msg.text}
-                                    {msg.attachmentId && (
-                                        <BookingContextCard 
-                                            attachmentId={msg.attachmentId} 
-                                            attachmentData={msg.attachmentData} 
-                                            type={msg.type} 
-                                        />
+                                <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMine ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
+                                    {isAttachment && (
+                                        <div className="mb-1.5 select-none">
+                                            {isFirstTimeForThisAttachment ? (
+                                                <BookingContextCard
+                                                    attachmentId={msg.attachmentId || ''}
+                                                    attachmentData={msg.attachmentData}
+                                                    type={resolvedAttachmentType}
+                                                    mini={true}
+                                                />
+                                            ) : (
+                                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 mb-1.5 border select-none ${
+                                                    isMine 
+                                                        ? 'bg-orange-600/50 border-orange-400/30 text-orange-100' 
+                                                        : 'bg-gray-100 border-gray-200 text-gray-500'
+                                                }`}>
+                                                    <Tag className="w-2.5 h-2.5" />
+                                                    <span>Hỏi tiếp về {resolvedAttachmentType === 'order' ? 'đặt chỗ này' : 'dịch vụ này'}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
+                                    <div className="leading-relaxed whitespace-pre-wrap">{msg.text}</div>
                                     <div className={`text-[10px] mt-1 text-right ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>

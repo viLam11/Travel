@@ -6,9 +6,10 @@ interface BookingContextCardProps {
     attachmentId: string;
     attachmentData?: any;
     type?: 'service' | 'order' | string;
+    mini?: boolean;
 }
 
-export const BookingContextCard: React.FC<BookingContextCardProps> = ({ attachmentId, attachmentData, type }) => {
+export const BookingContextCard: React.FC<BookingContextCardProps> = ({ attachmentId, attachmentData, type, mini }) => {
     const [localData, setLocalData] = useState<any>(null);
     const [loading, setLoading] = useState(!!attachmentId);
 
@@ -110,6 +111,14 @@ export const BookingContextCard: React.FC<BookingContextCardProps> = ({ attachme
     };
 
     if (loading) {
+        if (mini) {
+            return (
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-orange-200">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang tải...</span>
+                </div>
+            );
+        }
         return (
             <div className="mt-2 p-4 bg-gray-50 border border-gray-100 rounded-2xl shadow-sm flex items-center gap-2.5 justify-center w-80 max-w-full">
                 <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
@@ -119,6 +128,14 @@ export const BookingContextCard: React.FC<BookingContextCardProps> = ({ attachme
     }
 
     if (localData) {
+        if (mini) {
+            return (
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-orange-100 bg-orange-600/40 border border-orange-400/20 px-2 py-0.5 rounded-md w-fit select-none leading-none">
+                    <Tag className="w-2.5 h-2.5 flex-shrink-0" />
+                    <span>Hỏi về: {localData.title}</span>
+                </div>
+            );
+        }
         if (localData.isServiceOnly) {
             return (
                 <div className="mt-2 p-3.5 bg-white border border-gray-100 rounded-2xl shadow-md w-80 max-w-full text-gray-800">
@@ -135,7 +152,7 @@ export const BookingContextCard: React.FC<BookingContextCardProps> = ({ attachme
                             </div>
                         )}
                         <div className="min-w-0 flex-1">
-                            <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest block mb-0.5">Dịch vụ đề xuất</span>
+                            <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest block mb-0.5">Đang hỏi về dịch vụ</span>
                             <h4 className="text-sm font-bold text-gray-900 line-clamp-1">
                                 {localData.title}
                             </h4>

@@ -48,6 +48,8 @@ const UserMessagesPage: React.FC = () => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatInitializedRef = useRef<string | null>(null);
+    // Ref lưu các tin nhắn optimistic đang chờ server xác nhận (để dedup khi nhận echo)
+    const pendingOptimisticRef = useRef<Array<{ id: string; text: string; senderId: string }>>([]);
 
     useEffect(() => {
         if (!isAuthenticated || !currentUser?.user?.userID) return;
@@ -143,8 +145,25 @@ const UserMessagesPage: React.FC = () => {
             // Update messages if it's the active conversation
             setMessages(prev => {
                 if (currentActive?.id === msg.conversationId) {
+                    // Tìm optimistic message khớp (theo text.trim() + senderId)
+                    const pendingIdx = pendingOptimisticRef.current.findIndex(
+                        p => p.text.trim() === msg.text.trim() && p.senderId === msg.senderId
+                    );
+
+                    let baseList = prev;
+                    if (pendingIdx !== -1) {
+                        // Xóa optimistic entry khỏi ref
+                        const pendingEntry = pendingOptimisticRef.current[pendingIdx];
+                        pendingOptimisticRef.current.splice(pendingIdx, 1);
+                        // Xóa optimistic message khỏi danh sách
+                        baseList = prev.filter(p => p.id !== pendingEntry.id);
+                    }
+
+                    // Tránh thêm trùng nếu ID thật đã tồn tại
+                    if (baseList.some(p => p.id === msg.id)) return prev;
+
                     setTimeout(() => scrollToBottom(), 100);
-                    return [...prev, msg];
+                    return [...baseList, msg];
                 }
                 return prev;
             });
@@ -183,6 +202,7 @@ const UserMessagesPage: React.FC = () => {
         setShowSuggestions(false);
         setActiveBookingType(null);
         setPendingAttachment(null); // Clear draft attachment when switching rooms
+        pendingOptimisticRef.current = []; // Reset pending khi đổi conversation
 
         // In real app, mark as read on BE
         if (conversation.unreadCount > 0) {
@@ -195,6 +215,31 @@ const UserMessagesPage: React.FC = () => {
         setMessages(msgs);
         setLoadingMessages(false);
         scrollToBottom();
+
+        // Lấy tên dịch vụ từ tin nhắn đính kèm gần nhất để hiển thị ở header banner
+        const attachMsgs = msgs.filter(m => (m.type === 'service' || m.type === 'order') && m.attachmentId);
+        const latestAttachMsg = attachMsgs.length > 0 ? attachMsgs[attachMsgs.length - 1] : null;
+        
+        if (latestAttachMsg?.attachmentId) {
+            try {
+                if (latestAttachMsg.type === 'service') {
+                    const svc = await apiClient.services.getById(latestAttachMsg.attachmentId);
+                    if (svc?.serviceName) {
+                        setActiveConversation(prev => prev ? { ...prev, serviceName: svc.serviceName } : prev);
+                        setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, serviceName: svc.serviceName } : c));
+                    }
+                } else {
+                    const order = await apiClient.orders.getById(latestAttachMsg.attachmentId);
+                    const svc = order?.orderedTickets?.[0]?.ticket?.ticketVenue || order?.orderedRooms?.[0]?.room?.hotel;
+                    if (svc?.serviceName) {
+                        setActiveConversation(prev => prev ? { ...prev, serviceName: svc.serviceName } : prev);
+                        setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, serviceName: svc.serviceName } : c));
+                    }
+                }
+            } catch {
+                // Không tìm được tên dịch vụ → giữ nguyên tên cũ
+            }
+        }
     };
 
     const handleSendSuggestion = (text: string) => {
@@ -265,18 +310,25 @@ const UserMessagesPage: React.FC = () => {
 
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !activeConversation || !currentUser?.user) return;
+        const trimmedText = newMessage.trim();
+        if (!trimmedText || !activeConversation || !currentUser?.user) return;
 
         const sentMsg = socketService.sendMessage(
             activeConversation.id,
             currentUser.user.userID.toString() || 'user_123',
-            newMessage,
+            trimmedText, // Gửi text đã trim để khớp với bản backend echo lại
             'provider',
             pendingAttachment ? pendingAttachment.type : 'text',
             pendingAttachment ? pendingAttachment.id : undefined
         );
 
         if (sentMsg) {
+            // Đăng ký vào pendingOptimistic TRƯỚC khi setMessages để tránh race condition
+            pendingOptimisticRef.current.push({
+                id: sentMsg.id,
+                text: sentMsg.text,
+                senderId: sentMsg.senderId
+            });
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
             setPendingAttachment(null); // Clear draft after sending
@@ -458,32 +510,58 @@ const UserMessagesPage: React.FC = () => {
                                     Hãy gửi tin nhắn để bắt đầu cuộc trò chuyện.
                                 </div>
                             ) : (
-                                messages.map(msg => {
+                                messages.map((msg, index) => {
                                     const isMine = msg.senderId.toString() === (currentUser?.user?.userID?.toString() || 'user_123');
+                                    const msgTypeLower = msg.type?.toLowerCase();
+                                    const isAttachment = (msgTypeLower === 'service' || msgTypeLower === 'order' || msgTypeLower === 'service_attachment' || msgTypeLower === 'order_attachment') && (!!msg.attachmentId || !!msg.attachmentData);
+                                    const resolvedAttachmentType = (msgTypeLower === 'order' || msgTypeLower === 'order_attachment') ? 'order' : 'service';
+
+                                    // Kiểm tra xem đây có phải là đính kèm mở đầu ngữ cảnh mới không
+                                    let isFirstTimeForThisAttachment = true;
+                                    if (isAttachment) {
+                                        const currentAttachId = msg.attachmentId || msg.attachmentData?.id;
+                                        for (let j = index - 1; j >= 0; j--) {
+                                            const prevMsg = messages[j];
+                                            const prevMsgTypeLower = prevMsg.type?.toLowerCase();
+                                            const prevIsAttachment = (prevMsgTypeLower === 'service' || prevMsgTypeLower === 'order' || prevMsgTypeLower === 'service_attachment' || prevMsgTypeLower === 'order_attachment') && (!!prevMsg.attachmentId || !!prevMsg.attachmentData);
+                                            if (prevIsAttachment) {
+                                                const prevAttachId = prevMsg.attachmentId || prevMsg.attachmentData?.id;
+                                                if (prevAttachId === currentAttachId) {
+                                                    isFirstTimeForThisAttachment = false;
+                                                }
+                                                break;
+                                            }
+                                        }
+                                    }
+
                                     return (
-                                        <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMine
-                                                ? 'bg-orange-500 text-white rounded-tr-none'
-                                                : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
-                                                }`}>
-                                                {(msg.type === 'service' || msg.type === 'order') && msg.attachmentId ? (
-                                                    <div className="mb-1.5">
-                                                        <p className="text-xs opacity-80 mb-1.5 flex items-center gap-1">
-                                                            <Tag className="w-3 h-3" />
-                                                            {msg.type === 'order' ? 'Hỏi về đặt chỗ' : 'Hỏi về dịch vụ'}
-                                                        </p>
-                                                        <BookingContextCard
-                                                            attachmentId={msg.attachmentId}
-                                                            attachmentData={msg.attachmentData}
-                                                            type={msg.type}
-                                                        />
-                                                        {msg.text && <p className="mt-1.5">{msg.text}</p>}
+                                        <div key={msg.id} className="flex flex-col w-full gap-2">
+                                            <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMine
+                                                    ? 'bg-orange-500 text-white rounded-tr-none'
+                                                    : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
+                                                    }`}>
+                                                    {isAttachment && (
+                                                        <div className="mb-1 select-none">
+                                                            {isFirstTimeForThisAttachment ? (
+                                                                <BookingContextCard
+                                                                    attachmentId={msg.attachmentId || ''}
+                                                                    attachmentData={msg.attachmentData}
+                                                                    type={resolvedAttachmentType}
+                                                                    mini={true}
+                                                                />
+                                                            ) : (
+                                                                <div className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md inline-flex items-center gap-1 mb-1 border border-gray-200 select-none">
+                                                                    <Tag className="w-2.5 h-2.5" />
+                                                                    <span>Hỏi tiếp về {resolvedAttachmentType === 'order' ? 'đặt chỗ này' : 'dịch vụ này'}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div>{msg.text}</div>
+                                                    <div className={`text-[10px] mt-1 text-right flex items-center justify-end gap-1 ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
+                                                        {formatTime(msg.timestamp)}
                                                     </div>
-                                                ) : (
-                                                    msg.text
-                                                )}
-                                                <div className={`text-[10px] mt-1 text-right flex items-center justify-end gap-1 ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
-                                                    {formatTime(msg.timestamp)}
                                                 </div>
                                             </div>
                                         </div>

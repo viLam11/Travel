@@ -64,7 +64,7 @@ export default function ProviderReviews() {
         enabled: !!currentServiceId
     });
 
-    const serviceName = serviceDetail?.serviceName || (currentServiceId === 1 ? "Grand Hotel Saigon" : "Đang tải...");
+    const serviceName = serviceDetail?.serviceName || serviceDetail?.name || (currentServiceId === 1 ? "Grand Hotel Saigon" : "Đang tải...");
 
     const [mockRepliesState, setMockRepliesState] = useState<Record<number, any[]>>(() => {
         try {

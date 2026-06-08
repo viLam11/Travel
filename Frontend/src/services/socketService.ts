@@ -73,10 +73,26 @@ class SocketService {
                             finalType = backendMsg.type?.toString().toLowerCase() as any || 'text';
                         }
 
+                        const resolvedSenderId = backendMsg.sender?.userId?.toString() || backendMsg.senderId?.toString() || 'unknown';
+                        const resolvedReceiverId = backendMsg.receiver?.userId?.toString() || backendMsg.receiverId?.toString() || 'unknown';
+                        
+                        const currentUserStr = localStorage.getItem('currentUser');
+                        let currentUserId = '';
+                        if (currentUserStr) {
+                            try {
+                                const parsed = JSON.parse(currentUserStr);
+                                currentUserId = parsed?.user?.userID?.toString() || '';
+                            } catch (e) {
+                                console.error('[SocketService] Error parsing currentUser from localStorage:', e);
+                            }
+                        }
+                        
+                        const conversationId = resolvedSenderId === currentUserId ? resolvedReceiverId : resolvedSenderId;
+
                         const chatMsg: ChatMessage = {
                             id: backendMsg.id || ('msg_' + Date.now()),
-                            conversationId: backendMsg.senderId?.toString() || 'unknown',
-                            senderId: backendMsg.senderId?.toString() || 'unknown',
+                            conversationId: conversationId,
+                            senderId: resolvedSenderId,
                             text: backendMsg.content || backendMsg.text || '',
                             type: finalType as any,
                             timestamp: backendMsg.timestamp || backendMsg.createdAt || new Date().toISOString(),
