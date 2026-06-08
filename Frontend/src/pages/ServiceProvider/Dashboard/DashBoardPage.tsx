@@ -1,1022 +1,384 @@
-// src/pages/ServiceProvider/Dashboard/DashBoardPage.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '@/constants/routes';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/services/apiClient';
-import { serviceDetailApi } from '@/api/serviceDetailApi';
-import { discountApi } from '@/api/discountApi';
 import { serviceApi } from '@/api/serviceApi';
-import { ServicesTable } from '../Services/ServiceListPage';
-import ServiceDeleteModal from '../Services/components/ServiceDeleteModal';
 import type { Service } from '@/types/service.types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/admin/card';
-import { Button } from '@/components/ui/admin/button';
-import { Badge } from '@/components/ui/admin/badge';
-import { Input } from '@/components/ui/admin/input';
-import { Label } from '@/components/ui/admin/label';
+import { ROUTES } from '@/constants/routes';
+import toast from 'react-hot-toast';
 import {
-  Calendar, Banknote, Users, Eye, Edit,
-  ArrowUpDown, ChevronLeft, ChevronRight,
-  Briefcase, Loader2, Plus, X, Inbox,
-  TrendingUp, TrendingDown, Building2, Ticket, MapPin,
+  Building2, Ticket, Briefcase, Calendar, Banknote,
+  Plus, Star, MapPin,
 } from 'lucide-react';
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import type { ColumnDef, SortingState } from '@tanstack/react-table';
-import RevenueByServiceChart from '@/components/ui/admin/charts/RevenueByServiceChart';
-import ProviderDailyTrendsChart from '@/components/ui/admin/charts/ProviderDailyTrendsChart';
-import { bookingTrendsData } from '@/data/dashboardData';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface ServiceEntry {
-  id: string;
-  serviceName: string;
-  serviceType: string;
-  thumbnailUrl?: string;
-}
 
 interface OrderRow {
   id: string;
   guest: string;
   checkIn: string;
-  checkOut: string;
-  guests: number;
   amount: number;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  service: string;
+  status: string;
 }
-
-interface WalkInForm {
-  name: string;
-  phone: string;
-  itemId: string;
-  quantity: number;
-  checkIn: string;
-  checkOut: string;
-  paymentMethod: 'CASH' | 'MOMO' | 'VNPAY';
-  discountId: string;
-  note: string;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const EMPTY_WALK_IN: WalkInForm = {
-  name: '',
-  phone: '',
-  itemId: '',
-  quantity: 1,
-  checkIn: '',
-  checkOut: '',
-  paymentMethod: 'CASH',
-  discountId: '',
-  note: '',
-};
-
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  pending:   { label: 'Chờ xử lý',  className: 'bg-amber-500 text-white border-transparent' },
-  confirmed: { label: 'Đã xác nhận', className: 'bg-green-500 text-white border-transparent' },
-  completed: { label: 'Hoàn thành',  className: 'bg-blue-500  text-white border-transparent' },
-  cancelled: { label: 'Đã hủy',      className: 'bg-red-500   text-white border-transparent' },
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
+const fmtCurrency = (v: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 
-function mapOrderStatus(raw: string): OrderRow['status'] {
+const toStatus = (raw: string): string => {
   const s = (raw || '').toUpperCase();
   if (s === 'SUCCESS' || s === 'COMPLETED') return 'completed';
   if (s === 'ACCEPTED' || s === 'CONFIRMED') return 'confirmed';
   if (s === 'CANCELLED' || s === 'CANCELED' || s === 'FAILED') return 'cancelled';
   return 'pending';
-}
+};
 
-// ─── OrderDetailModal ─────────────────────────────────────────────────────────
-
-function OrderDetailModal({ order, onClose }: { order: OrderRow; onClose: () => void }) {
-  const s = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-card rounded-xl shadow-2xl max-w-lg w-full border border-border">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40 rounded-t-xl">
-          <div>
-            <h2 className="text-lg font-bold">Chi tiết đơn #{order.id}</h2>
-            <p className="text-sm text-muted-foreground">{order.service}</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="px-6 py-5 space-y-4">
-          <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Trạng thái</span>
-            <Badge className={`${s.className} text-xs`}>{s.label}</Badge>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Khách hàng</p>
-              <p className="font-medium mt-1">{order.guest}</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Số khách</p>
-              <p className="font-medium mt-1">{order.guests} người</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Ngày nhận</p>
-              <p className="font-medium mt-1">{new Date(order.checkIn).toLocaleDateString('vi-VN')}</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-muted-foreground">Ngày trả</p>
-              <p className="font-medium mt-1">{new Date(order.checkOut).toLocaleDateString('vi-VN')}</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg col-span-2">
-              <p className="text-muted-foreground">Tổng tiền</p>
-              <p className="font-semibold text-primary mt-1">{formatCurrency(order.amount)}</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/40 rounded-b-xl">
-          <Button variant="outline" onClick={onClose}>Đóng</Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── OrderStatusModal ─────────────────────────────────────────────────────────
-
-function OrderStatusModal({
-  order, onClose, onConfirm, onReject,
-}: { order: OrderRow; onClose: () => void; onConfirm: () => void; onReject: () => void }) {
-  const s = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-card rounded-xl shadow-2xl max-w-md w-full border border-border">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/40 rounded-t-xl">
-          <h2 className="text-lg font-bold">Xử lý đơn #{order.id}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="px-6 py-5 space-y-3 text-sm">
-          <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-            <div className="flex justify-between"><span className="text-muted-foreground">Khách hàng</span><span className="font-medium">{order.guest}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Dịch vụ</span><span className="font-medium">{order.service}</span></div>
-            <div className="flex justify-between items-center"><span className="text-muted-foreground">Trạng thái</span><Badge className={`${s.className} text-xs`}>{s.label}</Badge></div>
-          </div>
-        </div>
-        <div className="flex gap-3 px-6 py-4 border-t border-border bg-muted/40 rounded-b-xl">
-          <Button variant="outline" onClick={onClose} className="flex-1">Hủy</Button>
-          <Button onClick={onReject} variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50">Từ chối</Button>
-          <Button onClick={onConfirm} className="flex-1 bg-green-600 hover:bg-green-700 text-white">Xác nhận</Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── OrdersTable ──────────────────────────────────────────────────────────────
-
-function OrdersTable({
-  data,
-  onViewDetail,
-  onUpdateStatus,
-}: {
-  data: OrderRow[];
-  onViewDetail: (o: OrderRow) => void;
-  onUpdateStatus: (o: OrderRow) => void;
-}) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-
-  const columns: ColumnDef<OrderRow>[] = useMemo(() => [
-    {
-      accessorKey: 'id',
-      header: ({ column }) => (
-        <button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="flex items-center gap-2 hover:text-foreground font-semibold">
-          Mã đơn <ArrowUpDown className="w-4 h-4" />
-        </button>
-      ),
-      cell: ({ row }) => <span className="font-medium">#{row.getValue('id')}</span>,
-    },
-    {
-      accessorKey: 'guest',
-      header: 'Khách hàng',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-sm font-medium text-accent-foreground">
-            {String(row.getValue('guest') || '?').charAt(0).toUpperCase()}
-          </div>
-          <span className="font-medium">{row.getValue('guest')}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'checkIn',
-      header: 'Ngày nhận',
-      cell: ({ row }) => <span>{new Date(row.getValue('checkIn') as string).toLocaleDateString('vi-VN')}</span>,
-    },
-    {
-      accessorKey: 'checkOut',
-      header: 'Ngày trả',
-      cell: ({ row }) => <span>{new Date(row.getValue('checkOut') as string).toLocaleDateString('vi-VN')}</span>,
-    },
-    {
-      accessorKey: 'amount',
-      header: 'Tổng tiền',
-      cell: ({ row }) => <span className="font-bold">{formatCurrency(row.getValue('amount') as number)}</span>,
-    },
-    {
-      accessorKey: 'status',
-      header: 'Trạng thái',
-      cell: ({ row }) => {
-        const conf = STATUS_CONFIG[row.getValue('status') as string] ?? STATUS_CONFIG.pending;
-        return <Badge className={`${conf.className} text-xs`}>{conf.label}</Badge>;
-      },
-    },
-    {
-      id: 'actions',
-      header: 'Thao tác',
-      cell: ({ row }) => (
-        <div className="flex gap-1">
-          <button className="p-2 hover:bg-muted rounded-lg" title="Xem chi tiết" onClick={() => onViewDetail(row.original)}>
-            <Eye className="w-4 h-4 text-muted-foreground" />
-          </button>
-          {row.original.status === 'pending' && (
-            <button className="p-2 hover:bg-muted rounded-lg" title="Xử lý" onClick={() => onUpdateStatus(row.original)}>
-              <Edit className="w-4 h-4 text-green-600" />
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ], [onViewDetail, onUpdateStatus]);
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: { sorting, globalFilter },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 8 } },
-  });
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <input
-          type="text"
-          placeholder="Tìm kiếm đơn đặt..."
-          value={globalFilter}
-          onChange={e => setGlobalFilter(e.target.value)}
-          className="px-4 py-2 border border-input bg-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-72 text-sm"
-        />
-        <span className="text-sm text-muted-foreground">
-          {table.getRowModel().rows.length} / {data.length} đơn
-        </span>
-      </div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              {table.getHeaderGroups().map(hg => (
-                <tr key={hg.id} className="border-b border-border">
-                  {hg.headers.map(h => (
-                    <th key={h.id} className="text-left px-4 py-3 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                      {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-border bg-card">
-              {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map(row => (
-                  <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className="px-4 py-3 text-sm">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={columns.length} className="text-center py-16 text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
-                      <Inbox className="w-8 h-8 opacity-30" />
-                      <p className="text-sm">Chưa có đơn đặt nào</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          Trang {table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
-        </span>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const STATUS_LABEL: Record<string, string> = {
+  pending:   'Chờ xử lý',
+  confirmed: 'Xác nhận',
+  completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
+};
+const STATUS_CLS: Record<string, string> = {
+  pending:   'bg-amber-100 text-amber-700',
+  confirmed: 'bg-green-100 text-green-700',
+  completed: 'bg-blue-100 text-blue-700',
+  cancelled: 'bg-red-100 text-red-700',
+};
+const SVC_STATUS_LABEL: Record<string, string> = {
+  active:   'Hoạt động',
+  inactive: 'Tạm dừng',
+  pending:  'Chờ duyệt',
+  rejected: 'Từ chối',
+};
+const SVC_STATUS_CLS: Record<string, string> = {
+  active:   'bg-green-100 text-green-700',
+  inactive: 'bg-gray-100 text-gray-600',
+  pending:  'bg-yellow-100 text-yellow-700',
+  rejected: 'bg-red-100 text-red-700',
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ProviderDashboard() {
   const navigate = useNavigate();
   const { currentUser, isLoading: isAuthLoading } = useAuthContext();
-  const toast = useToast();
-  const queryClient = useQueryClient();
 
-  // ── Derived provider services list ──────────────────────────────────────────
-  const providerServices = useMemo<ServiceEntry[]>(() => {
-    const raw = (currentUser?.user?.services as any[] | undefined) ?? [];
-    return raw
-      .filter((s: any) => s && s.id)
-      .map((s: any): ServiceEntry => ({
-        id: String(s.id),
-        serviceName: s.serviceName || s.name || `Dịch vụ #${s.id}`,
-        serviceType: String(s.serviceType || '').toUpperCase(),
-        thumbnailUrl: s.thumbnailUrl || undefined,
-      }));
-  }, [currentUser]);
+  const [services, setServices]               = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [orders, setOrders]                   = useState<OrderRow[]>([]);
+  const [loadingOrders, setLoadingOrders]     = useState(false);
+  const [activeId, setActiveId]               = useState('');
 
-  // ── Active service state ─────────────────────────────────────────────────────
-  const [activeServiceId, setActiveServiceId] = useState<string>('');
+  const redirectDone = useRef(false);
 
-  // Initialize to first service once providerServices is populated
+  // Redirect check — once after auth resolves
   useEffect(() => {
-    if (activeServiceId || providerServices.length === 0) return;
-    setActiveServiceId(providerServices[0].id);
-  }, [providerServices, activeServiceId]);
-
-  const activeService = useMemo<ServiceEntry | undefined>(
-    () => providerServices.find(s => s.id === activeServiceId) ?? providerServices[0],
-    [providerServices, activeServiceId]
-  );
-  const isHotel = activeService?.serviceType === 'HOTEL';
-  const providerType: 'hotel' | 'place' = isHotel ? 'hotel' : 'place';
-
-  // ── Auth redirect guard ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (isAuthLoading) return;
-    const role = (currentUser?.user?.role || '').toLowerCase();
+    if (isAuthLoading || redirectDone.current) return;
+    redirectDone.current = true;
+    const role = (currentUser?.user?.role ?? '').toLowerCase();
     const isProvider = role === 'provider' || role.startsWith('provider_');
     if (isProvider && !currentUser?.user?.hasService) {
       navigate(ROUTES.PROVIDER_MY_SERVICE, { replace: true });
     }
-  }, [currentUser, isAuthLoading, navigate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthLoading]);
 
-  // ── Modal state ──────────────────────────────────────────────────────────────
-  const [showBookingModal, setShowBookingModal] = useState(false);
-  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
-  const [detailOrder, setDetailOrder] = useState<OrderRow | null>(null);
-  const [statusOrder, setStatusOrder] = useState<OrderRow | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  // ── Walk-in form ─────────────────────────────────────────────────────────────
-  const [walkIn, setWalkIn] = useState<WalkInForm>(EMPTY_WALK_IN);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Reset walk-in form whenever the active service changes
+  // Fetch provider services once on mount
   useEffect(() => {
-    setWalkIn(EMPTY_WALK_IN);
-  }, [activeServiceId]);
-
-  const setWalkInField = useCallback(<K extends keyof WalkInForm>(key: K, value: WalkInForm[K]) => {
-    setWalkIn(prev => ({ ...prev, [key]: value }));
+    let cancelled = false;
+    setLoadingServices(true);
+    serviceApi
+      .getProviderServices()
+      .then(res => {
+        if (!cancelled) setServices(res.services ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Không thể tải danh sách dịch vụ');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingServices(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
-  // ── Queries ──────────────────────────────────────────────────────────────────
+  // Derived active service — computed inline, no state needed
+  const effectiveId = activeId || services[0]?.id || '';
+  const activeSvc   = services.find(s => s.id === effectiveId) ?? services[0];
+  const isHotel     = (activeSvc?.type ?? '') === 'hotel';
 
-  // Items (rooms or tickets) + discounts for the active service
-  const { data: itemsData } = useQuery({
-    queryKey: ['provider-items', activeServiceId, isHotel],
-    queryFn: async () => {
-      if (!activeServiceId) return { items: [] as any[], discounts: [] as any[] };
-      const [itemsRes, discountsRes] = await Promise.allSettled([
-        isHotel
-          ? apiClient.rooms.getByHotelId(activeServiceId)
-          : apiClient.tickets.getByServiceId(activeServiceId),
-        discountApi.getSatisfiedDiscounts(activeServiceId, 'ALL'),
-      ]);
-      const rawItems = itemsRes.status === 'fulfilled' ? itemsRes.value : [];
-      const rawDiscounts = discountsRes.status === 'fulfilled' ? discountsRes.value : [];
-      const items = Array.isArray(rawItems) ? rawItems : ((rawItems as any)?.content ?? []);
-      const discounts = Array.isArray(rawDiscounts) ? rawDiscounts : [];
-      return { items, discounts };
-    },
-    enabled: !!activeServiceId,
-    staleTime: 5 * 60 * 1000,
-  });
-  const availableItems: any[] = itemsData?.items ?? [];
-  const availableDiscounts: any[] = itemsData?.discounts ?? [];
+  // Fetch orders whenever the active service changes
+  useEffect(() => {
+    if (!effectiveId) return;
+    let cancelled = false;
+    setLoadingOrders(true);
+    setOrders([]);
 
-  // Service detail (rating, name, etc.)
-  const { data: serviceInfo } = useQuery({
-    queryKey: ['service-detail', activeServiceId],
-    queryFn: () => activeServiceId ? serviceDetailApi.getServiceDetail('', '', activeServiceId) : null,
-    enabled: !!activeServiceId,
-    staleTime: 30 * 60 * 1000,
-  });
+    const call = isHotel
+      ? apiClient.orders.getHotelOrders(effectiveId)
+      : apiClient.orders.getTicketVenueOrders(effectiveId);
 
-  // Orders for the active service
-  const { data: ordersData = [], isLoading: isLoadingOrders } = useQuery<OrderRow[]>({
-    queryKey: ['provider-orders', activeServiceId, isHotel],
-    queryFn: async (): Promise<OrderRow[]> => {
-      if (!activeServiceId) return [];
-      let res: any;
-      try {
-        res = isHotel
-          ? await apiClient.orders.getHotelOrders(activeServiceId)
-          : await apiClient.orders.getTicketVenueOrders(activeServiceId);
-      } catch {
-        return [];
-      }
-      const list: any[] = res?.content ?? (Array.isArray(res) ? res : []);
-      return list.map((o: any): OrderRow => ({
-        id: String(o.orderID ?? o.id ?? ''),
-        guest: o.user?.fullname ?? o.guestPhone ?? `Khách #${o.orderID ?? o.id}`,
-        guests: (o.orderedRooms?.length || 0) + (o.orderedTickets?.length || 0) || 1,
-        checkIn: o.orderedRooms?.[0]?.startDate ?? o.createdAt ?? new Date().toISOString(),
-        checkOut: o.orderedRooms?.[0]?.endDate ?? o.createdAt ?? new Date().toISOString(),
-        amount: Number(o.finalPrice ?? o.totalPrice ?? 0),
-        status: mapOrderStatus(o.status ?? ''),
-        service: o.orderedRooms?.[0]?.room?.hotel?.serviceName
-          ?? o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName
-          ?? activeService?.serviceName
-          ?? 'Dịch vụ của bạn',
-      }));
-    },
-    enabled: !!activeServiceId,
-    staleTime: 30 * 1000,
-  });
+    call
+      .then((res: any) => {
+        if (cancelled) return;
+        const list: any[] = res?.content ?? (Array.isArray(res) ? res : []);
+        setOrders(
+          list.map((o: any): OrderRow => ({
+            id:      String(o.orderID ?? o.id ?? ''),
+            guest:   o.user?.fullname ?? o.guestPhone ?? `Khách #${o.orderID ?? o.id}`,
+            checkIn: o.orderedRooms?.[0]?.startDate ?? o.createdAt ?? '',
+            amount:  Number(o.finalPrice ?? o.totalPrice ?? 0),
+            status:  toStatus(String(o.status ?? '')),
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setOrders([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingOrders(false);
+      });
 
-  // Provider services list (for the management table)
-  const { data: servicesTableData, isLoading: isLoadingServicesTable } = useQuery({
-    queryKey: ['provider-services'],
-    queryFn: () => serviceApi.getProviderServices(),
-  });
+    return () => { cancelled = true; };
+  // effectiveId and isHotel are primitives — safe as deps
+  }, [effectiveId, isHotel]);
 
-  // ── Mutations ────────────────────────────────────────────────────────────────
-
-  const confirmOrderMutation = useMutation({
-    mutationFn: (orderId: string) => apiClient.orders.updateStatus(orderId, '"ACCEPTED"'),
-    onSuccess: (_, orderId) => {
-      queryClient.setQueryData<OrderRow[]>(
-        ['provider-orders', activeServiceId, isHotel],
-        old => old?.map(o => o.id === orderId ? { ...o, status: 'confirmed' } : o) ?? []
-      );
-      toast.success('Đã xác nhận đơn hàng');
-      setStatusOrder(null);
-    },
-    onError: () => toast.error('Xác nhận thất bại'),
-  });
-
-  const rejectOrderMutation = useMutation({
-    mutationFn: (orderId: string) => apiClient.orders.updateStatus(orderId, '"CANCELLED"'),
-    onSuccess: (_, orderId) => {
-      queryClient.setQueryData<OrderRow[]>(
-        ['provider-orders', activeServiceId, isHotel],
-        old => old?.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o) ?? []
-      );
-      toast.success('Đã từ chối đơn hàng');
-      setStatusOrder(null);
-    },
-    onError: () => toast.error('Từ chối thất bại'),
-  });
-
-  // ── Computed stats ───────────────────────────────────────────────────────────
-
-  const totalRevenue = useMemo(() =>
-    ordersData.reduce((sum, o) => (o.status === 'completed' || o.status === 'confirmed') ? sum + o.amount : sum, 0),
-    [ordersData]
+  // Stats derived from orders
+  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  const revenue = orders.reduce(
+    (s, o) => (o.status === 'completed' || o.status === 'confirmed' ? s + o.amount : s),
+    0
   );
 
-  const trendsData = useMemo(() => {
-    const map: Record<string, number> = {};
-    ordersData.forEach(o => {
-      const d = new Date(o.checkIn);
-      const key = `${d.getDate()}/${d.getMonth() + 1}`;
-      map[key] = (map[key] || 0) + 1;
-    });
-    const entries = Object.entries(map).map(([date, bookings]) => ({ date, bookings }));
-    return entries.length > 0 ? entries : bookingTrendsData;
-  }, [ordersData]);
-
-  const revenueData = useMemo(() => [{
-    service: serviceInfo?.name ?? activeService?.serviceName ?? 'Dịch vụ của tôi',
-    revenue: totalRevenue,
-    bookings: ordersData.length,
-  }], [serviceInfo, activeService, totalRevenue, ordersData.length]);
-
-  const stats = useMemo(() => {
-    const rating = serviceInfo?.rating != null ? Number(serviceInfo.rating).toFixed(1) : null;
-    const reviewCount = serviceInfo?.reviews ?? null;
-
-    return [
-      {
-        title: isHotel ? 'Số phòng' : 'Số loại vé',
-        value: availableItems.length > 0 ? String(availableItems.length) : '—',
-        icon: isHotel ? Building2 : Ticket,
-        color: 'text-blue-600',
-        iconBg: 'bg-blue-50',
-        change: null,
-        trend: 'neutral' as const,
-      },
-      {
-        title: isHotel ? 'Lượt đặt phòng' : 'Vé đã bán',
-        value: String(ordersData.length),
-        icon: Calendar,
-        color: 'text-green-600',
-        iconBg: 'bg-green-50',
-        change: null,
-        trend: 'neutral' as const,
-      },
-      {
-        title: 'Tổng doanh thu',
-        value: formatCurrency(totalRevenue),
-        icon: Banknote,
-        color: 'text-amber-500',
-        iconBg: 'bg-amber-50',
-        change: null,
-        trend: 'neutral' as const,
-      },
-      {
-        title: 'Đánh giá',
-        value: rating ? `${rating}/5` : '—',
-        icon: Users,
-        color: 'text-purple-600',
-        iconBg: 'bg-purple-50',
-        change: reviewCount != null ? `${reviewCount} lượt` : null,
-        trend: 'neutral' as const,
-      },
-    ];
-  }, [isHotel, availableItems.length, ordersData.length, totalRevenue, serviceInfo]);
-
-  // ── Walk-in submit ───────────────────────────────────────────────────────────
-
-  const handleWalkInSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!walkIn.itemId) { toast.error('Vui lòng chọn loại dịch vụ!'); return; }
-
-    setIsSubmitting(true);
-    try {
-      const method = walkIn.paymentMethod === 'CASH' ? 'MOMO' : walkIn.paymentMethod;
-      const payload: any = {
-        guestPhone: walkIn.phone || '0000000000',
-        note: `[Quầy] ${walkIn.name}. ${walkIn.note}`.trim(),
-        paymentMethod: method,
-        discountIds: walkIn.discountId ? [walkIn.discountId] : [],
-        tickets: !isHotel ? [{ id: walkIn.itemId, quantity: walkIn.quantity }] : [],
-        rooms: isHotel ? [{
-          id: walkIn.itemId,
-          quantity: 1,
-          checkInDate: walkIn.checkIn ? new Date(walkIn.checkIn).toISOString() : new Date().toISOString(),
-          checkOutDate: walkIn.checkOut ? new Date(walkIn.checkOut).toISOString() : new Date().toISOString(),
-        }] : [],
-      };
-
-      const orderRes: any = await apiClient.orders.create(payload);
-      const orderId = orderRes?.orderID ?? orderRes?.id;
-      if (!orderId) throw new Error('Không nhận được orderID');
-
-      try { await apiClient.orders.updateStatus(orderId, 'ACCEPTED'); } catch { /* auto-approve best-effort */ }
-
-      if (walkIn.paymentMethod === 'VNPAY') {
-        const payRes: any = await apiClient.payments.vnpay.createPaymentV2(orderRes.finalPrice ?? orderRes.totalPrice, String(orderId));
-        const url = payRes?.paymentUrl ?? payRes?.payUrl;
-        if (typeof url === 'string' && url.startsWith('http')) { window.location.href = url; return; }
-      } else if (walkIn.paymentMethod === 'MOMO') {
-        const payRes: any = await apiClient.payments.momo.createOrder(orderRes.finalPrice ?? orderRes.totalPrice, String(orderId));
-        const url = payRes?.paymentUrl ?? payRes?.payUrl;
-        if (typeof url === 'string' && url.startsWith('http')) { window.location.href = url; return; }
-      }
-
-      toast.success(isHotel ? 'Tạo đặt phòng thành công!' : 'Bán vé thành công!');
-      setShowBookingModal(false);
-      queryClient.invalidateQueries({ queryKey: ['provider-orders', activeServiceId, isHotel] });
-    } catch (err) {
-      console.error(err);
-      toast.error('Có lỗi xảy ra, vui lòng thử lại.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [walkIn, isHotel, activeServiceId, queryClient, toast]);
-
-  // ── Render ───────────────────────────────────────────────────────────────────
-
-  const pageTitle = isHotel ? 'Tổng quan khách sạn' : 'Tổng quan dịch vụ tham quan';
-  const createBtnText = isHotel ? 'Đặt phòng tại quầy' : 'Bán vé tại quầy';
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8 pb-8">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-8">
 
-      {/* ── Header ── */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{pageTitle}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {isHotel ? 'Tổng quan khách sạn' : 'Tổng quan dịch vụ tham quan'}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {activeService?.serviceName ?? 'Đang tải...'}
+            {activeSvc?.serviceName ?? (loadingServices ? 'Đang tải...' : 'Chưa có dịch vụ')}
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="default"
-            onClick={() => setShowBookingModal(true)}
-            disabled={!activeServiceId}
-            className="text-sm px-4 h-9"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {createBtnText}
-          </Button>
-        </div>
+        <button
+          className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors shrink-0"
+          onClick={() => navigate('/provider/my-service')}
+        >
+          <Plus className="w-4 h-4" />
+          Thêm dịch vụ
+        </button>
       </div>
 
-      {/* ── Service Switcher ── */}
-      {providerServices.length > 1 && (
-        <div className="flex flex-wrap gap-2 p-1 bg-muted/40 rounded-2xl border border-border/50">
-          {providerServices.map(svc => {
-            const active = svc.id === activeServiceId;
-            const hotel = svc.serviceType === 'HOTEL';
+      {/* Service Switcher */}
+      {services.length > 1 && (
+        <div className="flex flex-wrap gap-2 p-1.5 bg-muted/40 rounded-2xl border border-border/50">
+          {services.map(svc => {
+            const isActive = svc.id === effectiveId;
+            const hotel    = svc.type === 'hotel';
             return (
               <button
                 key={svc.id}
-                onClick={() => setActiveServiceId(svc.id)}
+                onClick={() => setActiveId(svc.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                  active
+                  isActive
                     ? 'bg-background shadow-sm border border-border text-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
                 }`}
               >
-                {svc.thumbnailUrl ? (
-                  <img src={svc.thumbnailUrl} alt="" className="w-5 h-5 rounded object-cover shrink-0" />
-                ) : hotel ? (
-                  <Building2 className="w-4 h-4 shrink-0 text-blue-500" />
-                ) : (
-                  <Ticket className="w-4 h-4 shrink-0 text-green-500" />
-                )}
-                <span className="truncate max-w-[140px]">{svc.serviceName}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
-                  hotel ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                }`}>
-                  {hotel ? 'KS' : 'TQ'}
-                </span>
+                {hotel
+                  ? <Building2 className="w-4 h-4 shrink-0 text-blue-500" />
+                  : <Ticket    className="w-4 h-4 shrink-0 text-green-500" />}
+                <span className="truncate max-w-[130px]">{svc.serviceName}</span>
               </button>
             );
           })}
         </div>
       )}
 
-      {/* ── Stats Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {isLoadingOrders
-          ? [0, 1, 2, 3].map(i => (
-              <Card key={i} className="animate-pulse border border-border/40">
-                <CardContent className="p-5">
-                  <div className="h-3 bg-muted rounded w-20 mb-3" />
-                  <div className="h-8 bg-muted rounded w-24 mb-3" />
-                  <div className="h-5 bg-muted rounded w-16" />
-                </CardContent>
-              </Card>
-            ))
-          : stats.map((stat, i) => {
-              const Icon = stat.icon;
-              const valueLen = String(stat.value).length;
-              const fontSize = valueLen > 15 ? 'text-xl' : valueLen > 10 ? 'text-2xl' : 'text-3xl';
-              return (
-                <Card key={i} className="border border-border/40 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                  <CardContent className="p-5 flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">{stat.title}</p>
-                      <div className={`${fontSize} font-semibold leading-tight break-words`}>{stat.value}</div>
-                      {stat.change && (
-                        <div className="mt-3">
-                          <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium bg-muted text-muted-foreground">
-                            {stat.change}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className={`p-3 ${stat.iconBg} rounded-2xl flex-shrink-0`}>
-                      <Icon className={`w-6 h-6 ${stat.color}`} />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-        }
-      </div>
-
-      {/* ── Charts ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <RevenueByServiceChart data={revenueData} />
-        </div>
-        <div>
-          <ProviderDailyTrendsChart data={trendsData} providerType={providerType} />
-        </div>
-      </div>
-
-      {/* ── Recent Orders ── */}
-      <Card className="border border-border/40 shadow-sm">
-        <CardHeader className="border-b border-border bg-muted/30 pb-4">
-          <CardTitle className="text-lg font-semibold">
-            {isHotel ? 'Đặt phòng gần đây' : 'Đặt vé gần đây'}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isHotel ? 'Theo dõi đơn đặt phòng' : 'Theo dõi đơn đặt vé'}
-          </p>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {isLoadingOrders ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <OrdersTable
-              data={ordersData}
-              onViewDetail={setDetailOrder}
-              onUpdateStatus={setStatusOrder}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Services Management Table ── */}
-      <Card className="border border-border/40 shadow-sm overflow-hidden">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4 bg-muted/30 border-b border-border">
-          <div>
-            <CardTitle className="text-lg font-semibold">Dịch vụ của tôi</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Quản lý và cập nhật dịch vụ</p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-sm h-9"
-            onClick={() => navigate(`/provider/my-service?type=${providerType}`)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm dịch vụ
-          </Button>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {isLoadingServicesTable ? (
-            <div className="space-y-3">
-              {[0, 1, 2, 3].map(i => (
-                <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <ServicesTable
-              data={servicesTableData?.services ?? []}
-              onView={service => {
-                const name = (service.serviceName || '').toLowerCase().replace(/\s+/g, '-');
-                const slug = `${service.id}-${name}`;
-                navigate(`/destinations/${service.province?.fullName || 'unknown'}/${service.type}/${slug}`);
-              }}
-              onEdit={service => navigate(`/provider/my-service?serviceId=${service.id}`)}
-              onDelete={service => { setSelectedService(service); setShowDeleteModal(true); }}
-              onToggleStatus={async service => {
-                try {
-                  const next = service.status === 'active' ? 'inactive' : 'active';
-                  await serviceApi.toggleServiceStatus(service.id, next as any);
-                  queryClient.invalidateQueries({ queryKey: ['provider-services'] });
-                  toast.success('Cập nhật trạng thái thành công!');
-                } catch {
-                  toast.error('Cập nhật trạng thái thất bại');
-                }
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Delete Service Modal ── */}
-      {selectedService && (
-        <ServiceDeleteModal
-          service={selectedService}
-          open={showDeleteModal}
-          onClose={() => { setShowDeleteModal(false); setSelectedService(null); }}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['provider-services'] });
-            setShowDeleteModal(false);
-            setSelectedService(null);
-          }}
-        />
-      )}
-
-      {/* ── Order Detail Modal ── */}
-      {detailOrder && <OrderDetailModal order={detailOrder} onClose={() => setDetailOrder(null)} />}
-
-      {/* ── Order Status Modal ── */}
-      {statusOrder && (
-        <OrderStatusModal
-          order={statusOrder}
-          onClose={() => setStatusOrder(null)}
-          onConfirm={() => confirmOrderMutation.mutate(statusOrder.id)}
-          onReject={() => rejectOrderMutation.mutate(statusOrder.id)}
-        />
-      )}
-
-      {/* ── Walk-in Booking Modal ── */}
-      {showBookingModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
-          onClick={() => setShowBookingModal(false)}
-        >
-          <Card
-            className="w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col"
-            onClick={e => e.stopPropagation()}
-          >
-            <form onSubmit={handleWalkInSubmit} className="flex flex-col flex-1 min-h-0">
-              <CardHeader className="flex flex-row items-center justify-between bg-muted/40 border-b border-border pb-4 flex-shrink-0">
-                <CardTitle className="text-lg">
-                  {isHotel ? 'Đặt phòng tại quầy' : 'Bán vé tại quầy'}
-                </CardTitle>
-                <button
-                  type="button"
-                  onClick={() => setShowBookingModal(false)}
-                  className="p-2 hover:bg-muted rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </CardHeader>
-
-              <CardContent className="pt-5 space-y-4 overflow-y-auto flex-1">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Tên khách hàng *</Label>
-                    <Input
-                      required
-                      placeholder="Nguyễn Văn A"
-                      value={walkIn.name}
-                      onChange={e => setWalkInField('name', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Số điện thoại *</Label>
-                    <Input
-                      required
-                      placeholder="09xxxxxxxx"
-                      value={walkIn.phone}
-                      onChange={e => setWalkInField('phone', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2 space-y-1.5">
-                    <Label>{isHotel ? 'Loại phòng *' : 'Loại vé *'}</Label>
-                    <select
-                      required
-                      value={walkIn.itemId}
-                      onChange={e => setWalkInField('itemId', e.target.value)}
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">-- Chọn --</option>
-                      {availableItems.map((item: any) => {
-                        const id = item.id ?? item.roomID ?? '';
-                        const name = item.name ?? item.roomName ?? item.ticketType ?? `#${id}`;
-                        const price = item.price ?? item.pricePerNight ?? 0;
-                        return (
-                          <option key={id} value={id}>
-                            {name} — {formatCurrency(price)}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Số lượng</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      required
-                      value={walkIn.quantity}
-                      onChange={e => setWalkInField('quantity', Number(e.target.value))}
-                      disabled={isHotel}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>{isHotel ? 'Nhận phòng *' : 'Ngày tham quan *'}</Label>
-                    <Input
-                      type="date"
-                      required
-                      value={walkIn.checkIn}
-                      onChange={e => setWalkInField('checkIn', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>{isHotel ? 'Trả phòng *' : 'Khung giờ'}</Label>
-                    <Input
-                      type={isHotel ? 'date' : 'time'}
-                      required={isHotel}
-                      value={walkIn.checkOut}
-                      onChange={e => setWalkInField('checkOut', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Thanh toán</Label>
-                    <select
-                      value={walkIn.paymentMethod}
-                      onChange={e => setWalkInField('paymentMethod', e.target.value as WalkInForm['paymentMethod'])}
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="CASH">Tiền mặt</option>
-                      <option value="MOMO">MoMo</option>
-                      <option value="VNPAY">VNPay</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Mã giảm giá</Label>
-                    <select
-                      value={walkIn.discountId}
-                      onChange={e => setWalkInField('discountId', e.target.value)}
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">Không áp dụng</option>
-                      {availableDiscounts.map((d: any) => (
-                        <option key={d.id} value={d.id}>
-                          {d.code} —{' '}
-                          {d.discountType === 'Percentage'
-                            ? `${d.percentage}%`
-                            : formatCurrency(d.fixedPrice)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Ghi chú</Label>
-                  <Input
-                    placeholder="Yêu cầu đặc biệt..."
-                    value={walkIn.note}
-                    onChange={e => setWalkInField('note', e.target.value)}
-                  />
-                </div>
-              </CardContent>
-
-              <div className="flex gap-3 p-5 bg-muted/40 border-t border-border flex-shrink-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowBookingModal(false)}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang xử lý...</>
-                    : <><Plus className="w-4 h-4 mr-2" />{isHotel ? 'Lưu đặt phòng' : 'Lưu đơn vé'}</>
-                  }
-                </Button>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            title: 'Dịch vụ',
+            value: loadingServices ? '…' : String(services.length),
+            Icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50',
+          },
+          {
+            title: isHotel ? 'Lượt đặt phòng' : 'Lượt đặt vé',
+            value: loadingOrders ? '…' : String(orders.length),
+            Icon: Calendar, color: 'text-green-600', bg: 'bg-green-50',
+          },
+          {
+            title: 'Chờ xử lý',
+            value: loadingOrders ? '…' : String(pendingCount),
+            Icon: isHotel ? Building2 : Ticket, color: 'text-amber-500', bg: 'bg-amber-50',
+          },
+          {
+            title: 'Doanh thu',
+            value: loadingOrders ? '…' : fmtCurrency(revenue),
+            Icon: Banknote, color: 'text-purple-600', bg: 'bg-purple-50',
+          },
+        ].map(({ title, value, Icon, color, bg }, i) => (
+          <div key={i} className="border border-border/40 shadow-sm rounded-xl bg-card">
+            <div className="p-5 flex justify-between items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1 truncate">
+                  {title}
+                </p>
+                <p className="text-2xl font-semibold leading-tight break-words">{value}</p>
               </div>
-            </form>
-          </Card>
+              <div className={`p-2.5 ${bg} rounded-xl shrink-0`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent Orders */}
+      <div className="border border-border/40 shadow-sm rounded-xl bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 bg-muted/20 border-b border-border">
+          <h2 className="text-base font-semibold">
+            {isHotel ? 'Đặt phòng gần đây' : 'Đặt vé gần đây'}
+          </h2>
+          <span className="text-xs text-muted-foreground">{orders.length} đơn</span>
         </div>
-      )}
+
+        {loadingOrders ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">Đang tải đơn hàng...</div>
+        ) : orders.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">Chưa có đơn đặt nào</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 border-b border-border">
+                <tr>
+                  {['Mã đơn', 'Khách hàng', 'Ngày nhận', 'Tổng tiền', 'Trạng thái'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {orders.slice(0, 20).map(o => (
+                  <tr key={o.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3 font-medium">#{o.id}</td>
+                    <td className="px-4 py-3">{o.guest}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {o.checkIn ? new Date(o.checkIn).toLocaleDateString('vi-VN') : '—'}
+                    </td>
+                    <td className="px-4 py-3 font-semibold whitespace-nowrap">{fmtCurrency(o.amount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_CLS[o.status] ?? ''}`}>
+                        {STATUS_LABEL[o.status] ?? o.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* My Services */}
+      <div className="border border-border/40 shadow-sm rounded-xl bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 bg-muted/20 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold">Dịch vụ của tôi</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {loadingServices ? 'Đang tải...' : `${services.length} dịch vụ`}
+            </p>
+          </div>
+          <button
+            className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-muted transition-colors"
+            onClick={() => navigate('/provider/my-service')}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Thêm
+          </button>
+        </div>
+
+        {loadingServices ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">Đang tải dịch vụ...</div>
+        ) : services.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">Chưa có dịch vụ nào</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 border-b border-border">
+                <tr>
+                  {['Dịch vụ', 'Loại', 'Trạng thái', 'Lượt đặt', 'Đánh giá'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {services.map(svc => {
+                  const statusKey = (svc.status ?? 'inactive').toLowerCase();
+                  return (
+                    <tr key={svc.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {svc.thumbnailUrl ? (
+                            <img
+                              src={svc.thumbnailUrl}
+                              alt=""
+                              className="w-10 h-10 rounded-lg object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Briefcase className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium truncate max-w-[200px]">{svc.serviceName}</p>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{svc.province?.fullName || ''}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${svc.type === 'hotel' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                          {svc.type === 'hotel' ? 'Khách sạn' : 'Vé tham quan'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${SVC_STATUS_CLS[statusKey] ?? SVC_STATUS_CLS.inactive}`}>
+                          {SVC_STATUS_LABEL[statusKey] ?? 'Không xác định'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{svc.bookingCount ?? 0}</td>
+                      <td className="px-4 py-3">
+                        {svc.rating != null ? (
+                          <div className="flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                            <span>{svc.rating.toFixed(1)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

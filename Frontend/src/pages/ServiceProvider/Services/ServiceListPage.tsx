@@ -40,6 +40,120 @@ const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
+// Row model factories OUTSIDE component — calling these inside the component body
+// creates a new reference on every render, causing TanStack Table to dispatch internal
+// state updates which triggers an infinite re-render loop.
+const CORE_ROW_MODEL = getCoreRowModel();
+const SORTED_ROW_MODEL = getSortedRowModel();
+const FILTERED_ROW_MODEL = getFilteredRowModel();
+const PAGINATED_ROW_MODEL = getPaginationRowModel();
+
+// Static columns (no callback closures) defined at module level for stable references
+const staticServiceColumns: ColumnDef<Service>[] = [
+    {
+        accessorKey: "thumbnailUrl",
+        header: "Ảnh",
+        cell: ({ row }) => (
+            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                {row.getValue("thumbnailUrl") ? (
+                    <img
+                        src={row.getValue("thumbnailUrl")}
+                        alt={row.original.serviceName}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <Briefcase className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                )}
+            </div>
+        ),
+    },
+    {
+        accessorKey: "serviceName",
+        header: ({ column }) => (
+            <button
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="flex items-center gap-2 hover:text-foreground font-semibold cursor-pointer"
+            >
+                Tên dịch vụ
+                <ArrowUpDown className="w-4 h-4" />
+            </button>
+        ),
+        cell: ({ row }) => (
+            <div>
+                <p className="font-medium">{row.getValue("serviceName")}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                    <MapPin className="w-3 h-3" />
+                    <span>{row.original.province?.fullName || ''}</span>
+                </div>
+            </div>
+        ),
+    },
+    {
+        accessorKey: "type",
+        header: "Loại hình",
+        cell: ({ row }) => {
+            const type = row.getValue("type") as ServiceType;
+            return (
+                <Badge className={type === "hotel" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}>
+                    {type === "hotel" ? "Khách sạn" : "Vé tham quan"}
+                </Badge>
+            );
+        },
+    },
+    {
+        accessorKey: "averagePrice",
+        header: "Giá trung bình",
+        cell: ({ row }) => (
+            <span className="font-medium">{formatCurrency(row.getValue("averagePrice"))}</span>
+        ),
+    },
+    {
+        accessorKey: "rating",
+        header: "Đánh giá",
+        cell: ({ row }) => {
+            const rating = row.getValue("rating") as number | undefined;
+            const reviewCount = row.original.reviewCount;
+            return (
+                <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium">{rating?.toFixed(1) || 'N/A'}</span>
+                    <span className="text-xs text-muted-foreground">({reviewCount})</span>
+                </div>
+            );
+        },
+    },
+    {
+        accessorKey: "bookingCount",
+        header: "Lượt đặt",
+        cell: ({ row }) => (
+            <span className="font-medium">{row.getValue("bookingCount")}</span>
+        ),
+    },
+    {
+        accessorKey: "status",
+        header: "Trạng thái",
+        cell: ({ row }) => {
+            const rawStatus = (row.getValue("status") as string || '').toLowerCase();
+            const normalized = rawStatus === 'approved' ? 'active' : rawStatus;
+            const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+                active: { bg: "bg-green-100", text: "text-green-700", label: "Hoạt động" },
+                inactive: { bg: "bg-gray-100", text: "text-gray-600", label: "Tạm dừng" },
+                pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Chờ duyệt" },
+                rejected: { bg: "bg-red-100", text: "text-red-700", label: "Từ chối" },
+            };
+            const config = statusConfig[normalized] ?? statusConfig.inactive;
+
+            return (
+                <Badge className={`${config.bg} ${config.text} border-transparent hover:${config.bg}`}>
+                    {config.label}
+                </Badge>
+            );
+        },
+    },
+];
+
 // Services Table Component
 export function ServicesTable({
     data,
@@ -59,109 +173,9 @@ export function ServicesTable({
     const [typeFilter, setTypeFilter] = useState<ServiceType | 'all'>('all');
     const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'all'>('all');
 
+    // Actions column needs callback closures — combined with static columns here
     const columns: ColumnDef<Service>[] = [
-        {
-            accessorKey: "thumbnailUrl",
-            header: "Ảnh",
-            cell: ({ row }) => (
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                    {row.getValue("thumbnailUrl") ? (
-                        <img
-                            src={row.getValue("thumbnailUrl")}
-                            alt={row.original.serviceName}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <Briefcase className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                    )}
-                </div>
-            ),
-        },
-        {
-            accessorKey: "serviceName",
-            header: ({ column }) => (
-                <button
-                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="flex items-center gap-2 hover:text-foreground font-semibold cursor-pointer"
-                >
-                    Tên dịch vụ
-                    <ArrowUpDown className="w-4 h-4" />
-                </button>
-            ),
-            cell: ({ row }) => (
-                <div>
-                    <p className="font-medium">{row.getValue("serviceName")}</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{row.original.province?.fullName || ''}</span>
-                    </div>
-                </div>
-            ),
-        },
-        {
-            accessorKey: "type",
-            header: "Loại hình",
-            cell: ({ row }) => {
-                const type = row.getValue("type") as ServiceType;
-                return (
-                    <Badge className={type === "hotel" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}>
-                        {type === "hotel" ? "Khách sạn" : "Vé tham quan"}
-                    </Badge>
-                );
-            },
-        },
-        {
-            accessorKey: "averagePrice",
-            header: "Giá trung bình",
-            cell: ({ row }) => (
-                <span className="font-medium">{formatCurrency(row.getValue("averagePrice"))}</span>
-            ),
-        },
-        {
-            accessorKey: "rating",
-            header: "Đánh giá",
-            cell: ({ row }) => {
-                const rating = row.getValue("rating") as number | undefined;
-                const reviewCount = row.original.reviewCount;
-                return (
-                    <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{rating?.toFixed(1) || 'N/A'}</span>
-                        <span className="text-xs text-muted-foreground">({reviewCount})</span>
-                    </div>
-                );
-            },
-        },
-        {
-            accessorKey: "bookingCount",
-            header: "Lượt đặt",
-            cell: ({ row }) => (
-                <span className="font-medium">{row.getValue("bookingCount")}</span>
-            ),
-        },
-        {
-            accessorKey: "status",
-            header: "Trạng thái",
-            cell: ({ row }) => {
-                const rawStatus = (row.getValue("status") as string || '').toLowerCase();
-                const normalized = rawStatus === 'approved' ? 'active' : rawStatus;
-                const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-                    active: { bg: "bg-green-100", text: "text-green-700", label: "Hoạt động" },
-                    inactive: { bg: "bg-gray-100", text: "text-gray-600", label: "Tạm dừng" },
-                    pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Chờ duyệt" },
-                    rejected: { bg: "bg-red-100", text: "text-red-700", label: "Từ chối" },
-                };
-                const config = statusConfig[normalized] ?? statusConfig.inactive;
-
-                return (
-                    <Badge className={`${config.bg} ${config.text} border-transparent hover:${config.bg}`}>
-                        {config.label}
-                    </Badge>
-                );
-            },
-        },
+        ...staticServiceColumns,
         {
             id: "actions",
             header: "Thao tác",
@@ -219,10 +233,10 @@ export function ServicesTable({
         },
         onSortingChange: setSorting,
         onGlobalFilterChange: setGlobalFilter,
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
+        getCoreRowModel: CORE_ROW_MODEL,
+        getSortedRowModel: SORTED_ROW_MODEL,
+        getFilteredRowModel: FILTERED_ROW_MODEL,
+        getPaginationRowModel: PAGINATED_ROW_MODEL,
         initialState: {
             pagination: {
                 pageSize: 10,
