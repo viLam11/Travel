@@ -31,6 +31,10 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
     const { currentUser, completeServiceSetup } = useAuthContext();
     const userServiceType = currentUser?.user?.providerType || 'hotel';
 
+    const [activeServiceType, setActiveServiceType] = useState<'hotel' | 'place'>(
+        userServiceType === 'both' ? 'hotel' : userServiceType
+    );
+
     const thumbnailInputRef = useRef<HTMLInputElement>(null);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +56,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
     const [photoFiles, setPhotoFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const tagList = userServiceType === 'hotel' 
+    const tagList = activeServiceType === 'hotel' 
         ? ['WiFi', 'Hồ bơi', 'Phòng gym', 'Spa', 'Nhà hàng', 'Quầy bar', 'Bãi đỗ xe', 'Dịch vụ phòng', 'Giặt ủi', 'Đưa đón sân bay']
         : ['Phương tiện di chuyển', 'Bữa ăn', 'Hướng dẫn viên', 'Phí vào cửa', 'Bảo hiểm', 'Trang thiết bị', 'Quà lưu niệm', 'Hoạt động dã ngoại'];
 
@@ -115,7 +119,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                 contactNumber: formData.contactNumber,
                 averagePrice: parseInt(formData.averagePrice) || 0,
                 tags: formData.tags.join(','),
-                serviceType: userServiceType === 'hotel' ? 'HOTEL' : 'TICKET_VENUE',
+                serviceType: activeServiceType === 'hotel' ? 'HOTEL' : 'TICKET_VENUE',
                 start_time: formData.startTime ? formData.startTime + ':00' : '08:00:00',
                 end_time: formData.endTime ? formData.endTime + ':00' : '22:00:00',
             };
@@ -168,7 +172,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                     <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
                     <div className="relative flex items-center gap-5">
                         <div className="shrink-0 flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20">
-                            {userServiceType === 'hotel'
+                            {activeServiceType === 'hotel'
                                 ? <Hotel className="w-7 h-7 text-primary" />
                                 : <Map className="w-7 h-7 text-primary" />
                             }
@@ -182,6 +186,41 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                         </div>
                     </div>
                 </div>
+
+                {userServiceType === 'both' && (
+                    <div className="bg-background rounded-2xl border border-border p-3 flex gap-2 shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveServiceType('hotel');
+                                setFormData(prev => ({ ...prev, tags: [] }));
+                            }}
+                            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                activeServiceType === 'hotel'
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'hover:bg-muted text-muted-foreground'
+                            }`}
+                        >
+                            <Hotel className="w-4 h-4" />
+                            Thiết lập Khách sạn trước
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveServiceType('place');
+                                setFormData(prev => ({ ...prev, tags: [] }));
+                            }}
+                            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                activeServiceType === 'place'
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'hover:bg-muted text-muted-foreground'
+                            }`}
+                        >
+                            <Map className="w-4 h-4" />
+                            Thiết lập Tour/Trải nghiệm trước
+                        </button>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -205,7 +244,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                         id="name"
                                         value={formData.name}
                                         onChange={(e) => handleInputChange('name', e.target.value)}
-                                        placeholder={userServiceType === 'hotel' ? 'Ví dụ: Khách sạn Grand Saigon' : 'Ví dụ: Khu du lịch Suối Tiên'}
+                                        placeholder={activeServiceType === 'hotel' ? 'Ví dụ: Khách sạn Grand Saigon' : 'Ví dụ: Khu du lịch Suối Tiên'}
                                         className="mt-1.5"
                                         required
                                     />
@@ -291,13 +330,13 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            {userServiceType === 'hotel' ? 'Giờ Nhận phòng *' : 'Giờ Mở cửa *'}
+                                            {activeServiceType === 'hotel' ? 'Giờ Nhận phòng *' : 'Giờ Mở cửa *'}
                                         </Label>
                                         <Input type="time" value={formData.startTime} onChange={(e) => handleInputChange('startTime', e.target.value)} className="mt-1.5" required />
                                     </div>
                                     <div>
                                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            {userServiceType === 'hotel' ? 'Giờ Trả phòng *' : 'Giờ Đóng cửa *'}
+                                            {activeServiceType === 'hotel' ? 'Giờ Trả phòng *' : 'Giờ Đóng cửa *'}
                                         </Label>
                                         <Input type="time" value={formData.endTime} onChange={(e) => handleInputChange('endTime', e.target.value)} className="mt-1.5" required />
                                     </div>
@@ -305,7 +344,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
 
                                 <div>
                                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                        {userServiceType === 'hotel' ? 'Tiện ích nổi bật' : 'Hoạt động & Dịch vụ đi kèm'}
+                                        {activeServiceType === 'hotel' ? 'Tiện ích nổi bật' : 'Hoạt động & Dịch vụ đi kèm'}
                                     </Label>
                                     {renderTags(tagList)}
                                 </div>

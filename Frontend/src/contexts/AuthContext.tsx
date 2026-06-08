@@ -216,9 +216,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 avatarUrl: userResponse.avatarUrl,
                 rawRoles: rawRoles,
                 // Derive providerType from specific provider roles
-                providerType: (rawRoles.includes('PROVIDER_HOTEL') && rawRoles.includes('PROVIDER_VENUE')) ? 'both' :
-                              rawRoles.includes('PROVIDER_HOTEL') ? 'hotel' :
-                              rawRoles.includes('PROVIDER_VENUE') ? 'place' : undefined,
+                providerType: ((rawRoles.includes('PROVIDER_HOTEL') || rawRoles.includes('ROLE_PROVIDER_HOTEL')) && (rawRoles.includes('PROVIDER_VENUE') || rawRoles.includes('PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_VENUE'))) ? 'both' :
+                              (rawRoles.includes('PROVIDER_HOTEL') || rawRoles.includes('ROLE_PROVIDER_HOTEL')) ? 'hotel' :
+                              (rawRoles.includes('PROVIDER_VENUE') || rawRoles.includes('PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_VENUE')) ? 'place' : undefined,
                 serviceId: fetchedServiceId,
                 services: providerServices,
                 hasService: providerServices.length > 0 || !!fetchedServiceId,
@@ -380,9 +380,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 address: rawUser.address,
                 avatarUrl: rawUser.avatarUrl,
                 rawRoles: rawRoles,
-                providerType: (rawRoles.includes('PROVIDER_HOTEL') && rawRoles.includes('PROVIDER_VENUE')) ? 'both' :
-                              rawRoles.includes('PROVIDER_HOTEL') ? 'hotel' :
-                              rawRoles.includes('PROVIDER_VENUE') ? 'place' : undefined,
+                providerType: ((rawRoles.includes('PROVIDER_HOTEL') || rawRoles.includes('ROLE_PROVIDER_HOTEL')) && (rawRoles.includes('PROVIDER_VENUE') || rawRoles.includes('PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_VENUE'))) ? 'both' :
+                              (rawRoles.includes('PROVIDER_HOTEL') || rawRoles.includes('ROLE_PROVIDER_HOTEL')) ? 'hotel' :
+                              (rawRoles.includes('PROVIDER_VENUE') || rawRoles.includes('PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_TICKET') || rawRoles.includes('ROLE_PROVIDER_VENUE')) ? 'place' : undefined,
                 serviceId: fetchedServiceId,
                 services: providerServices,
                 hasService: providerServices.length > 0 || !!fetchedServiceId,

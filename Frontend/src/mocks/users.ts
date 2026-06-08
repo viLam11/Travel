@@ -4,7 +4,7 @@ export interface MockUser {
     name: string;
     email: string;
     role: 'admin' | 'provider' | 'user';
-    providerType?: 'hotel' | 'tour'; // Only for providers
+    providerType?: 'hotel' | 'tour' | 'both'; // Only for providers
     status: 'active' | 'blocked' | 'pending';
     joinDate: string;
     lastLogin: string;

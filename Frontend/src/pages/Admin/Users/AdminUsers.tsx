@@ -98,7 +98,15 @@ const AdminUsers = () => {
                 joinDate: u.createdAt || new Date().toISOString(),
                 lastLogin: u.lastLoginAt || new Date().toISOString(),
                 phone: u.phone,
-                providerType: (u.role === 'PROVIDER_HOTEL' ? 'hotel' : u.role === 'PROVIDER_VENUE' ? 'tour' : undefined) as "hotel" | "tour" | undefined
+                providerType: (() => {
+                    const roles: string[] = Array.isArray(u.roles) ? u.roles.map((r: any) => typeof r === 'string' ? r : r.authority || r.name || '').filter(Boolean) : [u.role || ''];
+                    const hasHotel = roles.some(r => r.includes('PROVIDER_HOTEL'));
+                    const hasTicket = roles.some(r => r.includes('PROVIDER_TICKET') || r.includes('PROVIDER_VENUE'));
+                    if (hasHotel && hasTicket) return 'both';
+                    if (hasHotel) return 'hotel';
+                    if (hasTicket) return 'tour';
+                    return undefined;
+                })() as "hotel" | "tour" | "both" | undefined
             }));
         },
         staleTime: 0, // Luôn hiển thị cache ngay lập tức, sau đó chạy ngầm API lấy dữ liệu mới nhất
@@ -137,10 +145,19 @@ const AdminUsers = () => {
                 </Badge>
             );
         } else if (r.includes('provider')) {
-            const isVenue = r.includes('venue') || type === 'tour' || type === 'venue';
+            const isVenue = type === 'tour' || type === 'venue';
+            const isBoth = type === 'both';
             return (
                 <Badge className="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700 border-none">
-                    {isVenue ? <Map className="w-3 h-3 mr-1" /> : <Hotel className="w-3 h-3 mr-1" />} Đối tác
+                    {isBoth ? (
+                        <span className="flex items-center gap-1">
+                            <Hotel className="w-3 h-3" />+<Map className="w-3 h-3" /> Đối tác (Đa Dịch vụ)
+                        </span>
+                    ) : (
+                        <span className="flex items-center gap-1">
+                            {isVenue ? <Map className="w-3 h-3" /> : <Hotel className="w-3 h-3" />} Đối tác
+                        </span>
+                    )}
                 </Badge>
             );
         } else {
@@ -196,7 +213,8 @@ const AdminUsers = () => {
             } else if (dialogType === 'promote') {
                 let roleEnum = 'USER';
                 if (selectedNewRole === 'provider_hotel') roleEnum = 'PROVIDER_HOTEL';
-                else if (selectedNewRole === 'provider_tour') roleEnum = 'PROVIDER_VENUE';
+                else if (selectedNewRole === 'provider_tour') roleEnum = 'PROVIDER_TICKET';
+                else if (selectedNewRole === 'provider_both') roleEnum = 'PROVIDER_BOTH';
                 else if (selectedNewRole === 'admin') roleEnum = 'ADMIN';
                 
                 await userApi.updateUserRole(actionUser.id, roleEnum);
@@ -475,6 +493,7 @@ const AdminUsers = () => {
                                     <SelectItem value="user" className="rounded-xl font-bold py-3 cursor-pointer">Khách hàng Travello</SelectItem>
                                     <SelectItem value="provider_hotel" className="rounded-xl font-bold py-3 cursor-pointer">Chủ khách sạn (Đối tác)</SelectItem>
                                     <SelectItem value="provider_tour" className="rounded-xl font-bold py-3 cursor-pointer">Chủ tour du lịch (Đối tác)</SelectItem>
+                                    <SelectItem value="provider_both" className="rounded-xl font-bold py-3 cursor-pointer">Kinh doanh cả hai dịch vụ</SelectItem>
                                     <SelectItem value="admin" className="rounded-xl font-black py-3 cursor-pointer text-purple-600 focus:bg-purple-50">Quản trị viên hệ thống</SelectItem>
                                 </SelectContent>
                             </Select>

@@ -1,6 +1,6 @@
 // src/types/user.types.ts
 
-export type UserRole = 'USER' | 'ADMIN' | 'PROVIDER_HOTEL' | 'PROVIDER_VENUE';
+export type UserRole = 'USER' | 'ADMIN' | 'PROVIDER_HOTEL' | 'PROVIDER_VENUE' | 'PROVIDER_TICKET';
 export type AuthProvider = 'LOCAL' | 'GOOGLE' | 'FACEBOOK' | 'GITHUB';
 
 export interface User {

@@ -7,10 +7,12 @@ import {
     Waves, Landmark, UtensilsCrossed, Mountain, ShoppingBag, Leaf, BedDouble, Camera,
     CalendarDays, Banknote, CheckCircle2, PlaneTakeoff, Compass, Receipt,
     BookOpen, BarChart2, Edit2, Share2, Cloud, CloudUpload, XCircle, Settings, ExternalLink, Search, Copy, Trash2,
-    Globe, FolderOpen, TrendingUp, Wallet, Users, LayoutGrid
+    Globe, FolderOpen, TrendingUp, Wallet, Users, LayoutGrid, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import Avatar from '@/components/common/avatar/Avatar';
 import { aiPlannerApi, USE_MOCK_AI_PLANNER } from '@/api/aiPlannerApi';
 import apiClient from '@/services/apiClient';
 import { MOCK_LIBRARY_ACTIVITIES } from '@/mocks/aiPlanner';
@@ -96,6 +98,32 @@ const prefToActivity = (pref: PreferenceService): Activity => ({
     thumbnailUrl: pref.thumbnailUrl,
     serviceType: pref.serviceType,
 });
+
+const DESTINATION_THUMBNAILS: Record<string, string> = {
+    'đà nẵng': 'https://images.unsplash.com/photo-1559592442-7e182c940340?q=80&w=800',
+    'hà nội': 'https://images.unsplash.com/photo-1555921015-5532091f6026?q=80&w=800',
+    'hồ chí minh': 'https://images.unsplash.com/photo-1529158017274-924a61fe4178?q=80&w=800',
+    'sài gòn': 'https://images.unsplash.com/photo-1529158017274-924a61fe4178?q=80&w=800',
+    'đà lạt': 'https://images.unsplash.com/photo-1599354145952-45e3f4e1f760?q=80&w=800',
+    'nha trang': 'https://images.unsplash.com/photo-1506461883276-594a12b11cf3?q=80&w=800',
+    'phú quốc': 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?q=80&w=800',
+    'hội an': 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=800',
+    'hạ long': 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=800',
+    'phong nha': 'https://images.unsplash.com/photo-1505353547171-d60f54518774?q=80&w=800',
+    'huế': 'https://images.unsplash.com/photo-1557750255-c76072a7aad1?q=80&w=800',
+    'vũng tàu': 'https://images.unsplash.com/photo-1519046904884-53103b34b206?q=80&w=800',
+};
+
+const getThumbnail = (place: string) => {
+    const key = (place || '').toLowerCase().trim();
+    if (key.length < 2 || /^\d+$/.test(key)) {
+        return 'https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=800';
+    }
+    for (const [city, url] of Object.entries(DESTINATION_THUMBNAILS)) {
+        if (key.includes(city)) return url;
+    }
+    return `https://loremflickr.com/600/400/landscape,travel,${encodeURIComponent(key)}/all`;
+};
 
 interface DragPayload {
     activityId: string;
@@ -526,6 +554,9 @@ const SAMPLE_PREVIEW = [
 
 
 function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: string, days: number, info: string) => Promise<void>; onManualCreate: (place: string, days: number) => void; }) {
+    const { isAuthenticated } = useAuth();
+    const [cloningId, setCloningId] = useState<string | null>(null);
+    const publicPlansRef = useRef<HTMLDivElement>(null);
     const [place, setPlace] = useState('');
     const [days, setDays] = useState(3);
     const [interests, setInterests] = useState<string[]>([]);
@@ -577,6 +608,29 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
 
     const toggleInterest = (tag: string) =>
         setInterests(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
+    const handleClone = async (planId: string, title: string) => {
+        if (!isAuthenticated) {
+            toast.error('Vui lòng đăng nhập để clone kế hoạch này về tài khoản của bạn.');
+            navigate('/login');
+            return;
+        }
+        setCloningId(planId);
+        try {
+            const cloned = await aiPlannerApi.clonePlan(planId);
+            toast.success(`Đã clone "${title}" về kế hoạch của bạn!`);
+            navigate(`/ai-planner/${cloned.id}`);
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || err?.message || '';
+            if (msg.toLowerCase().includes('own')) {
+                toast.error('Bạn không thể clone kế hoạch của chính mình.');
+            } else {
+                toast.error('Clone thất bại, vui lòng thử lại.');
+            }
+        } finally {
+            setCloningId(null);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!place.trim()) return;
@@ -745,7 +799,7 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
                                         <FolderOpen className="w-3.5 h-3.5" /> Kế hoạch của tôi
                                     </button>
                                     <button
-                                        onClick={() => navigate('/public-plans')}
+                                        onClick={() => publicPlansRef.current?.scrollIntoView({ behavior: 'smooth' })}
                                         className="py-2 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-500 hover:text-blue-600 font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
                                     >
                                         <Globe className="w-3.5 h-3.5" /> Khám phá công khai
@@ -801,7 +855,7 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
             </div>
 
             {/* ── PUBLIC PLANS DISCOVERY ── */}
-            <div className="max-w-6xl mx-auto px-4 pb-20">
+            <div ref={publicPlansRef} className="max-w-6xl mx-auto px-4 pb-20">
                 <div className="flex items-center gap-4 mb-8">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-orange-200 to-transparent" />
                     <h2 className="text-xs font-semibold text-orange-400 uppercase tracking-widest px-2 flex items-center gap-2">
@@ -862,35 +916,93 @@ function InputScreen({ onGenerate, onManualCreate }: { onGenerate: (place: strin
                         ))}
                     </div>
                 ) : filteredPlans.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredPlans.map((plan, i) => {
                             const actCount = plan.itinerary.reduce(
                                 (sum, d) => sum + d.morning_activities.length + d.afternoon_activities.length + d.evening_activities.length, 0
                             );
                             const authorName = plan.members?.[0]?.fullname || 'Cộng đồng';
+                            const thumbnail = getThumbnail(plan.destination);
+                            const isCloning = cloningId === plan.id;
+                            
                             return (
-                                <div key={plan.id} onClick={() => navigate(`/ai-planner/${plan.id}`)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group cursor-pointer hover:-translate-y-0.5 duration-200">
-                                    <div className={`h-28 relative overflow-hidden ${['bg-gradient-to-br from-orange-400 to-amber-300', 'bg-gradient-to-br from-sky-400 to-blue-500', 'bg-gradient-to-br from-green-400 to-emerald-500', 'bg-gradient-to-br from-purple-400 to-indigo-500', 'bg-gradient-to-br from-rose-400 to-pink-500', 'bg-gradient-to-br from-amber-400 to-yellow-500'][i % 6]}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                                        <div className="absolute top-2.5 right-2.5 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                                            {plan.days} ngày
+                                <motion.div
+                                    key={plan.id}
+                                    layout
+                                    className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-orange-200 transition-all duration-300 overflow-hidden flex flex-col"
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="relative h-44 bg-gray-200 overflow-hidden flex-shrink-0">
+                                        <img
+                                            src={thumbnail}
+                                            alt={plan.destination}
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                            onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800'; }}
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-black/10" />
+
+                                        {/* Destination badge */}
+                                        <div className="absolute top-4 left-4 z-10">
+                                            <span className="bg-white/95 text-orange-600 text-[10px] font-bold uppercase px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1.5 shadow-sm">
+                                                <MapPin className="w-3 h-3" />
+                                                {plan.destination}
+                                            </span>
                                         </div>
-                                        <div className="absolute bottom-2.5 left-3 text-white">
-                                            <p className="font-bold text-sm leading-tight">{plan.title}</p>
-                                            <p className="text-[11px] opacity-85 flex items-center gap-1 mt-0.5"><MapPin className="w-2.5 h-2.5" />{plan.destination}</p>
+
+                                        {/* Days badge */}
+                                        <div className="absolute top-4 right-4 z-10">
+                                            <span className="bg-black/40 backdrop-blur-sm text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
+                                                {plan.days} ngày
+                                            </span>
+                                        </div>
+
+                                        {/* Title */}
+                                        <div className="absolute bottom-4 left-4 right-4 z-10">
+                                            <h3 className="text-base font-bold text-white leading-tight drop-shadow-md line-clamp-2 group-hover:text-amber-300 transition-colors">
+                                                {plan.title || `Kế hoạch đi ${plan.destination}`}
+                                            </h3>
                                         </div>
                                     </div>
-                                    <div className="p-4">
-                                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">"{plan.overview || 'Lịch trình cộng đồng'}"</p>
-                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                                            <span className="text-xs text-gray-500">Bởi: <span className="font-medium text-gray-700">{authorName}</span></span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs bg-orange-50 text-orange-600 font-semibold px-2 py-0.5 rounded-full">{actCount} HĐ</span>
-                                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-orange-500 transition-colors" />
-                                            </div>
+
+                                    {/* Body */}
+                                    <div className="p-4 flex-1 flex flex-col gap-3">
+                                        <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed flex-1">
+                                            {plan.overview || 'Khám phá những điểm đến thú vị và trải nghiệm văn hóa đặc sắc.'}
+                                        </p>
+
+                                        {/* Author / Info row */}
+                                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                            <span className="text-[11px] text-gray-500 flex items-center gap-1.5">
+                                                Bởi: <span className="font-semibold text-gray-700">{authorName}</span>
+                                            </span>
+                                            <span className="text-[10px] bg-orange-50 text-orange-600 font-semibold px-2 py-0.5 rounded-full">
+                                                {actCount} HĐ
+                                            </span>
+                                        </div>
+
+                                        {/* Action buttons */}
+                                        <div className="flex gap-2 pt-2 border-t border-gray-50">
+                                            <button
+                                                onClick={() => navigate(`/ai-planner/${plan.id}`)}
+                                                className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 transition-all cursor-pointer"
+                                            >
+                                                <Eye className="w-3.5 h-3.5" />
+                                                Xem chi tiết
+                                            </button>
+                                            <button
+                                                onClick={() => handleClone(plan.id, plan.title || plan.destination)}
+                                                disabled={isCloning}
+                                                className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                {isCloning
+                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    : <Copy className="w-3.5 h-3.5" />
+                                                }
+                                                {isCloning ? 'Đang clone...' : 'Clone về'}
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
                     </div>

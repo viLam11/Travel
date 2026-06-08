@@ -108,7 +108,7 @@ export class ApiClient {
         if (providerType === 'both') {
           transformedData.role = 'PROVIDER_BOTH';
         } else {
-          transformedData.role = providerType === 'hotel' ? 'PROVIDER_HOTEL' : 'PROVIDER_VENUE';
+          transformedData.role = providerType === 'hotel' ? 'PROVIDER_HOTEL' : 'PROVIDER_TICKET';
         }
       }
       return this.post("/auth/register/local", transformedData);

@@ -183,6 +183,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
     const [breakdown, setBreakdown] = useState<Partial<Record<ReactionType, number>>>({});
 
     const [isReacting, setIsReacting] = useState(false);
+    const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
     // Sync state with post data changes
     useEffect(() => {
@@ -241,7 +242,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
         `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=fb923c&color=fff`;
     const views = (post as any).viewCount ?? 0;
     const readTime = (post as any).readTimeMinutes ?? 5;
-    const summary = (post as any).summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...' || '';
+    const summary = (post as any).summary || post.content || '';
     const tags = post.tags ? post.tags.split(',').filter(t => t.trim()) : [];
 
     // Linked services from mock data
@@ -401,7 +402,7 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                 </div>
 
                 {/* ── Post Body ── */}
-                <div className="px-5 pb-3 cursor-pointer" onClick={() => navigate(`/blog/${post.id}`)}>
+                <div className="px-5 pb-3">
                     {tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-2">
                             {tags.slice(0, 4).map(t => (
@@ -411,12 +412,51 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                             ))}
                         </div>
                     )}
-                    <h2 className="text-[17px] font-extrabold text-gray-900 leading-snug mb-2 hover:text-orange-500 transition-colors line-clamp-2">
+                    <h2 className="text-[17px] font-extrabold text-gray-900 leading-snug mb-2 hover:text-orange-500 transition-colors line-clamp-2 cursor-pointer"
+                        onClick={() => navigate(`/blog/${post.id}`)}>
                         {post.title}
                     </h2>
-                    {summary && (
-                        <p className="text-sm text-gray-500 leading-relaxed line-clamp-3 mb-3">{summary}</p>
-                    )}
+                    {summary && (() => {
+                        const plainSummary = summary.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+                        const limit = 150;
+                        const isLong = plainSummary.length > limit;
+                        
+                        return (
+                            <div className="text-sm text-gray-600 leading-relaxed">
+                                {isLong && !isSummaryExpanded ? (
+                                    <>
+                                        <span>{plainSummary.slice(0, limit)}... </span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsSummaryExpanded(true);
+                                            }}
+                                            className="text-orange-500 hover:text-orange-600 font-bold hover:underline ml-1 cursor-pointer"
+                                        >
+                                            Xem thêm
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>{plainSummary}</span>
+                                        {isLong && isSummaryExpanded && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsSummaryExpanded(false);
+                                                }}
+                                                className="text-orange-400 hover:text-orange-500 font-bold hover:underline ml-1.5 cursor-pointer text-xs"
+                                            >
+                                                Rút gọn
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* ── Linked Services ── */}
