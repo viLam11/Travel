@@ -8,6 +8,30 @@ const LOCAL_MOCK_OVERRIDE: boolean | null = false;
 const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Normalize BE status (APPROVED/PENDING/REJECTED) to FE status (active/pending/rejected/inactive)
+const normalizeServiceStatus = (s: string): ServiceStatus => {
+    const lower = (s || '').toLowerCase();
+    if (lower === 'approved') return 'active';
+    if (lower === 'pending') return 'pending';
+    if (lower === 'rejected') return 'rejected';
+    if (lower === 'active') return 'active';
+    if (lower === 'inactive') return 'inactive';
+    return 'inactive';
+};
+
+// Normalize BE serviceType (HOTEL/TICKET_VENUE) to FE type (hotel/place)
+const normalizeServiceType = (s: any): ServiceType => {
+    const t = (s?.serviceType || s?.type || '').toLowerCase();
+    if (t === 'hotel') return 'hotel';
+    return 'place';
+};
+
+const mapServiceFromBE = (s: any): Service => ({
+    ...s,
+    status: normalizeServiceStatus(s.status),
+    type: normalizeServiceType(s),
+});
+
 // Mock Data (kept for fallback)
 const mockServices: Service[] = [
     {
@@ -67,8 +91,8 @@ const mockStats: ServiceStats = {
 export const serviceApi = {
     /**
      * Lấy danh sách dịch vụ của provider đang đăng nhập
-     * Backend: GET /services/data?page=&size= (trả về tất cả services có phân trang)
-     * NOTE: BE cần thêm GET /services/my (chỉ lấy services của provider đang đăng nhập)
+     * Backend: GET /services/my?status=APPROVED&page=&size=
+     * Không truyền status → trả tất cả (PENDING + APPROVED + REJECTED)
      */
     getProviderServices: async (params?: {
         type?: ServiceType;
@@ -101,14 +125,15 @@ export const serviceApi = {
         }
 
         try {
-            // Backend: GET /services/data?page=&size= — trả về Page<TService>
-            const response = await apiClient.get<any>('/services/data', {
-                params: {
-                    page: params?.page || 0,
-                    size: params?.limit || 10
-                }
-            });
-            const content = response.content || (Array.isArray(response) ? response : []);
+            const queryParams: Record<string, any> = {
+                page: params?.page ?? 0,
+                size: params?.limit ?? 10,
+            };
+            if (params?.status) queryParams.status = params.status.toUpperCase();
+
+            const response = await apiClient.get<any>('/services/my', { params: queryParams });
+            const raw = response.content || (Array.isArray(response) ? response : []);
+            const content = raw.map(mapServiceFromBE);
             return {
                 services: content,
                 total: response.totalElements || (Array.isArray(response) ? response.length : 0),

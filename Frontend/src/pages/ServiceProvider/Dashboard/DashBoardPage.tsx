@@ -33,6 +33,8 @@ import {
   TrendingUp,
   TrendingDown,
   MapPin,
+  Building2,
+  Ticket,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -78,8 +80,8 @@ function BookingDetailPanel({ booking, onClose }: { booking: Booking; onClose: (
   const s = STATUS_CONF[booking.status];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <div className="bg-card rounded-xl shadow-2xl max-w-lg w-full border border-border">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/20 rounded-t-xl">
+      <div className="bg-card rounded-xl shadow-2xl max-w-lg w-full border border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/60 rounded-t-xl">
           <div>
             <h2 className="text-lg font-bold">Chi tiết đơn #{booking.id}</h2>
             <p className="text-sm text-muted-foreground">{booking.service}</p>
@@ -99,8 +101,8 @@ function BookingDetailPanel({ booking, onClose }: { booking: Booking; onClose: (
             <div className="p-3 bg-muted/50 rounded-lg col-span-2"><p className="text-muted-foreground">Tổng tiền</p><p className="font-semibold text-primary mt-1">{formatCurrency(booking.amount)}</p></div>
           </div>
         </div>
-        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/40 rounded-b-xl">
-          <Button variant="outline" onClick={onClose}>Dóng</Button>
+        <div className="flex justify-end px-6 py-4 border-t border-gray-200 bg-gray-50/60 rounded-b-xl">
+          <Button variant="outline" onClick={onClose} className="border-gray-200 text-gray-600 hover:bg-gray-50">Đóng</Button>
         </div>
       </div>
     </div>
@@ -113,8 +115,8 @@ function BookingStatusPanel({
   const s = STATUS_CONF[booking.status];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <div className="bg-card rounded-xl shadow-2xl max-w-md w-full border border-border">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/20 rounded-t-xl">
+      <div className="bg-card rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/60 rounded-t-xl">
           <h2 className="text-lg font-bold">Xử lý đơn #{booking.id}</h2>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
         </div>
@@ -125,10 +127,10 @@ function BookingStatusPanel({
             <div className="flex justify-between items-center"><span className="text-muted-foreground">Trạng thái</span><Badge className={`${s.className} text-xs`}>{s.label}</Badge></div>
           </div>
         </div>
-        <div className="flex gap-3 px-6 py-4 border-t border-border bg-muted/40 rounded-b-xl">
-          <Button variant="outline" onClick={onClose} className="flex-1">Hủy</Button>
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50/60 rounded-b-xl">
+          <Button variant="outline" onClick={onClose} className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50">Hủy</Button>
           <Button onClick={onReject} variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50">Từ chối</Button>
-          <Button onClick={onConfirm} className="flex-1 bg-green-600 hover:bg-green-700 text-white">Xác nhận</Button>
+          <Button onClick={onConfirm} className="flex-1 bg-green-600 hover:bg-green-700 text-white border-transparent">Xác nhận</Button>
         </div>
       </div>
     </div>
@@ -283,9 +285,9 @@ function BookingsTable({
       </div>
 
       {/* Table/Card View */}
-      <div className="rounded-xl border border-border overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         {/* Mobile View (Cards) */}
-        <div className="block sm:hidden divide-y divide-border bg-card">
+        <div className="block sm:hidden divide-y divide-gray-100 bg-card">
           {table.getRowModel().rows.length > 0 ? (
             table.getRowModel().rows.map((row) => {
               const b = row.original;
@@ -354,18 +356,18 @@ function BookingsTable({
         {/* Desktop View (Table) */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-muted/30">
+            <thead className="bg-gray-50">
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-border">
+                <tr key={headerGroup.id} className="border-b border-gray-200">
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="whitespace-nowrap text-left px-6 py-3.5 text-sm font-medium text-muted-foreground">
+                    <th key={header.id} className="whitespace-nowrap text-left px-6 py-3.5 text-sm font-medium text-gray-600">
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-border bg-card">
+            <tbody className="divide-y divide-gray-100 bg-card">
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row) => (
                   <tr
@@ -462,74 +464,92 @@ export default function TravelServicesDashboard() {
 
 
 
+  // All services this provider owns (from login/checkAuth response)
+  const providerServices: Array<{ id: string; serviceName: string; serviceType: string; thumbnailUrl?: string; status?: string }> =
+    (currentUser?.user?.services as any[] | undefined) ?? [];
+
+  // Active service — default to first in list, switchable via dropdown
+  const [activeServiceId, setActiveServiceId] = useState<string>(() => {
+    const svcs = (currentUser?.user?.services as any[] | undefined) ?? [];
+    return svcs[0]?.id ?? currentUser?.user?.serviceId?.toString() ?? '';
+  });
+
+  // Keep activeServiceId in sync if user data loads asynchronously
+  useEffect(() => {
+    if (!activeServiceId) {
+      const svcs = (currentUser?.user?.services as any[] | undefined) ?? [];
+      const id = svcs[0]?.id ?? currentUser?.user?.serviceId?.toString() ?? '';
+      if (id) setActiveServiceId(id);
+    }
+  }, [currentUser, activeServiceId]);
+
+  // Derive providerType from the active service's serviceType field
+  const activeServiceObj = providerServices.find(s => s.id === activeServiceId) ?? providerServices[0];
+  let providerType: 'hotel' | 'place' | 'both' = 'place';
+  if (activeServiceObj?.serviceType === 'HOTEL') {
+    providerType = 'hotel';
+  } else if (activeServiceObj?.serviceType) {
+    providerType = 'place';
+  } else {
+    // Fallback to role-based derivation
+    const userRole = currentUser?.user?.role?.toLowerCase() || '';
+    if (currentUser?.user?.rawRoles?.includes('PROVIDER_HOTEL') && currentUser?.user?.rawRoles?.includes('PROVIDER_VENUE')) {
+      providerType = 'both';
+    } else if (userRole.includes('hotel') || currentUser?.user?.rawRoles?.includes('PROVIDER_HOTEL')) {
+      providerType = 'hotel';
+    }
+  }
+
   // Check if provider has completed service setup
   useEffect(() => {
     const userRole = currentUser?.user?.role?.toLowerCase() || '';
     const isProvider = userRole === 'provider' || userRole.startsWith('provider_');
-    
     if (isProvider && !currentUser?.user?.hasService) {
-      // Redirect to service setup if not completed
       navigate(ROUTES.PROVIDER_MY_SERVICE, { replace: true });
     }
   }, [currentUser, navigate]);
 
-  // Derive provider type based on specific role or providerType field
-  const userRole = currentUser?.user?.role?.toLowerCase() || '';
-  let providerType: 'hotel' | 'place' | 'both' = 'place';
-  
-  if (userRole === 'provider_venue' || currentUser?.user?.providerType === 'place' || userRole.includes('venue') || currentUser?.user?.rawRoles?.includes('PROVIDER_VENUE')) {
-    providerType = 'place';
-  } else if (userRole === 'provider_hotel' || currentUser?.user?.providerType === 'hotel' || userRole.includes('hotel') || currentUser?.user?.rawRoles?.includes('PROVIDER_HOTEL')) {
-    providerType = 'hotel';
-  }
-  // If user has both roles (multi-role)
-  const isMultiRoleProvider = currentUser?.user?.rawRoles?.includes('PROVIDER_HOTEL') && currentUser?.user?.rawRoles?.includes('PROVIDER_VENUE');
-  if (isMultiRoleProvider) providerType = 'both';
-
   const { data: { availableItems, availableDiscounts } = { availableItems: [], availableDiscounts: [] } } = useQuery({
-    queryKey: ['walkInItems', providerType, currentUser?.user?.serviceId],
+    queryKey: ['walkInItems', providerType, activeServiceId],
     queryFn: async () => {
-      const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return { availableItems: [], availableDiscounts: [] };
+      if (!activeServiceId) return { availableItems: [], availableDiscounts: [] };
       let items = [];
       if (providerType === 'hotel') {
-        const rooms: any = await apiClient.rooms.getByHotelId(serviceId);
+        const rooms: any = await apiClient.rooms.getByHotelId(activeServiceId);
         items = Array.isArray(rooms) ? rooms : (rooms?.roomList || rooms?.content || []);
       } else {
-        const tickets: any = await apiClient.tickets.getByServiceId(serviceId);
+        const tickets: any = await apiClient.tickets.getByServiceId(activeServiceId);
         items = Array.isArray(tickets) ? tickets : tickets?.content || [];
       }
-      const discounts = await discountApi.getSatisfiedDiscounts(serviceId.toString(), "ALL");
+      const discounts = await discountApi.getSatisfiedDiscounts(activeServiceId, "ALL");
       return {
         availableItems: items,
         availableDiscounts: Array.isArray(discounts) ? discounts : []
       };
     },
-    enabled: !!currentUser?.user?.serviceId,
+    enabled: !!activeServiceId,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: serviceInfo } = useQuery({
-    queryKey: ['serviceInfo', currentUser?.user?.serviceId],
+    queryKey: ['serviceInfo', activeServiceId],
     queryFn: async () => {
-      const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return null;
-      return await serviceDetailApi.getServiceDetail('', '', serviceId.toString());
+      if (!activeServiceId) return null;
+      return await serviceDetailApi.getServiceDetail('', '', activeServiceId);
     },
-    enabled: !!currentUser?.user?.serviceId,
+    enabled: !!activeServiceId,
     staleTime: 60 * 60 * 1000,
   });
 
   const { data: localBookings = [], isLoading: isLoadingBookings } = useQuery({
-    queryKey: ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
+    queryKey: ['providerBookings', providerType, activeServiceId, USE_MOCK],
     queryFn: async () => {
-      const serviceId = currentUser?.user?.serviceId;
-      if (!serviceId) return [];
+      if (!activeServiceId) return [];
       if (USE_MOCK) return bookingsData;
 
-      let response: any = providerType === 'hotel' 
-        ? await apiClient.orders.getHotelOrders(serviceId)
-        : await apiClient.orders.getTicketVenueOrders(serviceId);
+      let response: any = providerType === 'hotel'
+        ? await apiClient.orders.getHotelOrders(activeServiceId)
+        : await apiClient.orders.getTicketVenueOrders(activeServiceId);
       
       const fetchedOrders = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
       return fetchedOrders.map((o: any) => ({
@@ -547,7 +567,7 @@ export default function TravelServicesDashboard() {
                 (o.status === 'CANCELLED' || o.status === 'CANCELED' || o.status === 'FAILED') ? 'cancelled' : 'pending'
       }));
     },
-    enabled: !!currentUser?.user?.serviceId,
+    enabled: !!activeServiceId,
     staleTime: 0, // No stale time to always fetch fresh bookings while keeping cache for instant UI
   });
 
@@ -859,15 +879,50 @@ export default function TravelServicesDashboard() {
           <p className="text-sm text-muted-foreground mt-1">{headerText.subtitle}</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="text-sm px-4 h-9" onClick={handleExportReports} disabled={isExporting}>
+          <Button variant="outline" className="text-sm px-4 h-9 border-gray-200 text-gray-600 hover:bg-gray-50" onClick={handleExportReports} disabled={isExporting}>
             {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calendar className="w-4 h-4 mr-2" />}
             {isExporting ? 'Đang xử lý...' : 'Xuất báo cáo'}
           </Button>
-          <Button variant="default" onClick={() => setShowBookingModal(true)} className="bg-primary hover:bg-primary/90 text-sm px-4 h-9">
+          <Button variant="default" onClick={() => setShowBookingModal(true)} className="bg-primary hover:bg-primary/90 text-white text-sm px-4 h-9">
             {headerText.buttonText}
           </Button>
         </div>
       </div>
+
+      {/* Service Switcher — chỉ hiện khi provider có nhiều dịch vụ */}
+      {providerServices.length > 1 && (
+        <div className="flex flex-wrap gap-2 p-1 bg-muted/40 rounded-2xl border border-border/50">
+          {providerServices.map((svc) => {
+            const isActive = svc.id === activeServiceId;
+            const isHotel = svc.serviceType === 'HOTEL';
+            return (
+              <button
+                key={svc.id}
+                onClick={() => setActiveServiceId(svc.id)}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-background shadow-sm border border-border text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                }`}
+              >
+                {svc.thumbnailUrl ? (
+                  <img src={svc.thumbnailUrl} alt="" className="w-5 h-5 rounded object-cover shrink-0" />
+                ) : isHotel ? (
+                  <Building2 className="w-4 h-4 shrink-0 text-blue-500" />
+                ) : (
+                  <Ticket className="w-4 h-4 shrink-0 text-green-500" />
+                )}
+                <span className="truncate max-w-[140px]">{svc.serviceName}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
+                  isHotel ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {isHotel ? 'Khách sạn' : 'Tham quan'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -945,8 +1000,8 @@ export default function TravelServicesDashboard() {
       </div>
 
       {/* Services Table Card */}
-      <Card className="shadow-sm overflow-hidden">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4">
+      <Card className="shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-gray-200 overflow-hidden">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4 bg-gray-50/60 border-b border-gray-200">
           <div>
             <CardTitle className="text-xl font-semibold">Dịch vụ của tôi</CardTitle>
             <p className="text-base text-muted-foreground mt-1">Quản lý khách sạn và vé tham quan của bạn</p>
@@ -954,7 +1009,7 @@ export default function TravelServicesDashboard() {
           <Button
             variant="outline"
             size="sm"
-            className="text-base h-10 px-4"
+            className="text-base h-10 px-4 border-gray-200 text-gray-700 hover:bg-gray-50"
             onClick={() => {
               if (providerType === 'both') {
                 setShowAddServiceModal(true);
@@ -1026,7 +1081,7 @@ export default function TravelServicesDashboard() {
       {showAddServiceModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAddServiceModal(false)}>
           <Card className="w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <CardHeader className="flex flex-row items-center justify-between bg-muted/30 pb-4">
+            <CardHeader className="flex flex-row items-center justify-between bg-gray-50/60 border-b border-gray-200 pb-4">
               <CardTitle className="text-xl">Chọn loại dịch vụ muốn tạo</CardTitle>
               <button type="button" onClick={() => setShowAddServiceModal(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2">
                 <X className="w-5 h-5 text-gray-600" />
@@ -1070,7 +1125,7 @@ export default function TravelServicesDashboard() {
             try {
               await apiClient.orders.updateStatus(statusBooking.id, '"ACCEPTED"');
               queryClient.setQueryData(
-                ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
+                ['providerBookings', providerType, activeServiceId, USE_MOCK],
                 (old: Booking[] | undefined) => old ? old.map((b: Booking) => b.id === statusBooking.id ? { ...b, status: 'confirmed' } : b) : []
               );
               toastObj.success("Đã xác nhận đơn hàng " + statusBooking.id);
@@ -1085,7 +1140,7 @@ export default function TravelServicesDashboard() {
              try {
               await apiClient.orders.updateStatus(statusBooking.id, '"CANCELLED"');
               queryClient.setQueryData(
-                ['providerBookings', providerType, currentUser?.user?.serviceId, USE_MOCK],
+                ['providerBookings', providerType, activeServiceId, USE_MOCK],
                 (old: Booking[] | undefined) => old ? old.map((b: Booking) => b.id === statusBooking.id ? { ...b, status: 'cancelled' } : b) : []
               );
               toastObj.success("Đã từ chối đơn hàng " + statusBooking.id);
@@ -1105,7 +1160,7 @@ export default function TravelServicesDashboard() {
           <Card className="w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <form onSubmit={handleCreateBookingSubmit} className="flex flex-col flex-1 min-h-0">
               {/* Sticky header */}
-              <CardHeader className="flex flex-row items-center justify-between flex-shrink-0 bg-muted/30 pb-4">
+              <CardHeader className="flex flex-row items-center justify-between flex-shrink-0 bg-gray-50/60 border-b border-gray-200 pb-4">
                 <CardTitle className="text-xl">
                   {providerType === 'place' ? 'Bán vé tại quầy (Offline)' : 'Tạo đặt phòng mới (Offline)'}
                 </CardTitle>
@@ -1200,11 +1255,11 @@ export default function TravelServicesDashboard() {
                 </div>
               </CardContent>
               {/* Fixed footer */}
-              <div className="flex gap-3 p-6 pt-4 bg-muted/30 flex-shrink-0">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowBookingModal(false)}>
+              <div className="flex gap-3 p-6 pt-4 bg-gray-50/60 border-t border-gray-200 flex-shrink-0">
+                <Button type="button" variant="outline" className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50" onClick={() => setShowBookingModal(false)}>
                   Hủy bỏ
                 </Button>
-                <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 text-white" disabled={isSubmittingWalkIn}>
+                <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 text-white border-transparent" disabled={isSubmittingWalkIn}>
                   {isSubmittingWalkIn ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                   {isSubmittingWalkIn ? 'Đang xử lý...' : (providerType === 'place' ? 'Lưu đơn vé' : 'Lưu đặt phòng')}
                 </Button>

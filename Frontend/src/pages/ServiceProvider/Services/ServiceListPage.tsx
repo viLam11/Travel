@@ -145,17 +145,18 @@ export function ServicesTable({
             accessorKey: "status",
             header: "Trạng thái",
             cell: ({ row }) => {
-                const status = row.getValue("status") as ServiceStatus;
-                const statusConfig = {
+                const rawStatus = (row.getValue("status") as string || '').toLowerCase();
+                const normalized = rawStatus === 'approved' ? 'active' : rawStatus;
+                const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
                     active: { bg: "bg-green-100", text: "text-green-700", label: "Hoạt động" },
-                    inactive: { bg: "bg-muted", text: "text-muted-foreground", label: "Tạm dừng" },
+                    inactive: { bg: "bg-gray-100", text: "text-gray-600", label: "Tạm dừng" },
                     pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Chờ duyệt" },
                     rejected: { bg: "bg-red-100", text: "text-red-700", label: "Từ chối" },
                 };
-                const config = statusConfig[status];
+                const config = statusConfig[normalized] ?? statusConfig.inactive;
 
                 return (
-                    <Badge className={`${config.bg} ${config.text} hover:${config.bg}`}>
+                    <Badge className={`${config.bg} ${config.text} border-transparent hover:${config.bg}`}>
                         {config.label}
                     </Badge>
                 );
@@ -182,10 +183,10 @@ export function ServicesTable({
                     </button>
                     <button
                         className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                        title={row.original.status === 'active' ? 'Tạm dừng' : 'Kích hoạt'}
+                        title={row.original.status === 'active' || (row.original.status as string) === 'APPROVED' ? 'Tạm dừng' : 'Kích hoạt'}
                         onClick={() => onToggleStatus(row.original)}
                     >
-                        {row.original.status === 'active' ? (
+                        {row.original.status === 'active' || (row.original.status as string) === 'APPROVED' ? (
                             <ToggleRight className="w-4 h-4 text-green-600" />
                         ) : (
                             <ToggleLeft className="w-4 h-4 text-muted-foreground" />
@@ -241,13 +242,13 @@ export function ServicesTable({
                             placeholder="Tìm kiếm dịch vụ..."
                             value={globalFilter ?? ""}
                             onChange={(e) => setGlobalFilter(e.target.value)}
-                            className="pl-10 px-4 py-2 border border-input bg-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent w-full"
+                            className="pl-10 px-4 py-2 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent w-full"
                         />
                     </div>
                     <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value as ServiceType | 'all')}
-                        className="px-4 py-2 border border-input bg-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="px-4 py-2 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring text-sm"
                     >
                         <option value="all">Tất cả loại hình</option>
                         <option value="hotel">Khách sạn</option>
@@ -256,7 +257,7 @@ export function ServicesTable({
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as ServiceStatus | 'all')}
-                        className="px-4 py-2 border border-input bg-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="px-4 py-2 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring text-sm"
                     >
                         <option value="all">Tất cả trạng thái</option>
                         <option value="active">Hoạt động</option>
@@ -271,14 +272,14 @@ export function ServicesTable({
             </div>
 
             {/* Table */}
-            <div className="rounded-xl border border-border overflow-hidden">
+            <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px]">
-                        <thead className="bg-muted/30">
+                        <thead className="bg-gray-50">
                             {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id} className="border-b border-border">
+                                <tr key={headerGroup.id} className="border-b border-gray-200">
                                     {headerGroup.headers.map((header) => (
-                                        <th key={header.id} className="text-left p-4">
+                                        <th key={header.id} className="text-left p-4 text-sm font-medium text-gray-600">
                                             {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                                         </th>
                                     ))}
@@ -290,7 +291,7 @@ export function ServicesTable({
                                 table.getRowModel().rows.map((row) => (
                                     <tr
                                         key={row.id}
-                                        className="border-b border-border hover:bg-muted/50 transition-colors"
+                                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <td key={cell.id} className="p-4 text-sm">
@@ -322,6 +323,7 @@ export function ServicesTable({
                         size="sm"
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
+                        className="border-gray-200 text-gray-600 hover:bg-gray-50"
                     >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Trước
@@ -331,6 +333,7 @@ export function ServicesTable({
                         size="sm"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
+                        className="border-gray-200 text-gray-600 hover:bg-gray-50"
                     >
                         Tiếp
                         <ChevronRight className="h-4 w-4 ml-1" />
@@ -413,7 +416,7 @@ export default function ServiceListPage() {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" className="text-sm h-9">
+                    <Button variant="outline" className="text-sm h-9 border-gray-200 text-gray-600 hover:bg-gray-50">
                         <Download className="w-4 h-4 mr-2" />
                         Xuất Excel
                     </Button>
@@ -421,8 +424,8 @@ export default function ServiceListPage() {
             </div>
 
             {/* Services Table */}
-            <Card className="shadow-sm overflow-hidden">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4 bg-muted/20 border-b">
+            <Card className="shadow-[0_2px_12px_rgb(0,0,0,0.06)] border border-gray-200 overflow-hidden">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 gap-4 bg-gray-50/60 border-b border-gray-200">
                     <div>
                         <CardTitle className="text-base font-semibold">Danh sách dịch vụ</CardTitle>
                         <p className="text-sm text-muted-foreground mt-1">
