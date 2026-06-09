@@ -1041,6 +1041,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const [provinceOpen, setProvinceOpen] = useState(false);
     const [provinceSearch, setProvinceSearch] = useState('');
     const provinceRef = useRef<HTMLDivElement>(null);
+    const libSearchProvRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         apiClient.provinces.getAll()
@@ -1052,6 +1053,9 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         const handler = (e: MouseEvent) => {
             if (provinceRef.current && !provinceRef.current.contains(e.target as Node)) {
                 setProvinceOpen(false);
+            }
+            if (libSearchProvRef.current && !libSearchProvRef.current.contains(e.target as Node)) {
+                setLibSearchProvOpen(false);
             }
         };
         document.addEventListener('mousedown', handler);
@@ -1169,7 +1173,6 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
     const [selectedActivityPos, setSelectedActivityPos] = useState<{ dayIdx: number; slot: TimeSlot; actIdx: number } | null>(null);
     // Lifted edit state to avoid remount when ActivityDetailContent is re-created each render
     const [detailEdit, setDetailEdit] = useState({ name: '', description: '', duration: '1 giờ', cost: 0, location: '' });
-    const [detailSaved, setDetailSaved] = useState(false);
     const [viewMode, setViewMode] = useState<'day' | 'overview'>('day');
     const [mobileTab, setMobileTab] = useState<'library' | 'timeline' | 'summary' | 'members'>('timeline');
     const [rightTab, setRightTab] = useState<'summary' | 'members' | 'detail'>('summary');
@@ -1254,7 +1257,6 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 cost: selectedActivity.cost_amount ?? parseCostAmount(selectedActivity.estimated_cost),
                 location: selectedActivity.location || '',
             });
-            setDetailSaved(false);
         }
     }, [selectedActivity?.id]);
 
@@ -1266,9 +1268,23 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
         const ctrl = new AbortController();
         const timer = setTimeout(async () => {
             try {
-                const res = libSearchText
-                    ? await apiClient.services.search({ keyword: libSearchText, provinceCode: libSearchProvCode || undefined, page: 0, size: 40, signal: ctrl.signal })
-                    : await apiClient.services.filterByLocation({ provinceCode: libSearchProvCode, page: 0, size: 40, signal: ctrl.signal });
+                let res: any;
+                if (libSearchText && libSearchProvCode) {
+                    // Both keyword + province: search by keyword first, then filter results by province client-side
+                    // (backend /services/search may not support provinceCode — use /services/filter as fallback)
+                    try {
+                        res = await apiClient.services.search({ keyword: libSearchText, provinceCode: libSearchProvCode, page: 0, size: 40, signal: ctrl.signal });
+                        if (!res?.services?.length) {
+                            res = await apiClient.services.filterByLocation({ provinceCode: libSearchProvCode, page: 0, size: 40, signal: ctrl.signal });
+                        }
+                    } catch {
+                        res = await apiClient.services.filterByLocation({ provinceCode: libSearchProvCode, page: 0, size: 40, signal: ctrl.signal });
+                    }
+                } else if (libSearchText) {
+                    res = await apiClient.services.search({ keyword: libSearchText, page: 0, size: 40, signal: ctrl.signal });
+                } else {
+                    res = await apiClient.services.filterByLocation({ provinceCode: libSearchProvCode, page: 0, size: 40, signal: ctrl.signal });
+                }
                 const services: Activity[] = (res?.services ?? []).map((s: any) => ({
                     id: s.id?.toString() || uid(),
                     name: s.serviceName || '',
@@ -1627,7 +1643,13 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                     onChange={e => { setProvinceSearch(e.target.value); setProvinceOpen(true); }}
                                     onFocus={() => { setProvinceSearch(''); setProvinceOpen(true); }}
                                     placeholder="Chọn tỉnh/thành..."
-                                    className="w-full pl-8 pr-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white" />
+                                    className={`w-full pl-8 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white ${localPlace && !provinceOpen ? 'pr-7' : 'pr-3'}`} />
+                                {localPlace && !provinceOpen && (
+                                    <button onClick={() => { setLocalPlace(''); setProvinceSearch(''); }}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
                                 {provinceOpen && filteredProvinces.length > 0 && (
                                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[70] max-h-40 overflow-y-auto">
                                         {filteredProvinces.map(prov => (
@@ -1645,7 +1667,13 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                 <input value={suggestSearch} onChange={e => setSuggestSearch(e.target.value)}
                                     placeholder="Lọc trong danh sách..."
-                                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50" />
+                                    className={`w-full pl-8 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50 ${suggestSearch ? 'pr-7' : 'pr-3'}`} />
+                                {suggestSearch && (
+                                    <button onClick={() => setSuggestSearch('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </>
@@ -1662,7 +1690,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                     className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-orange-400 bg-gray-50" />
                             </div>
                         </div>
-                        <div className="px-3 pb-1.5 shrink-0 relative">
+                        <div className="px-3 pb-1.5 shrink-0 relative" ref={libSearchProvRef}>
                             <div className="relative">
                                 <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 z-10" />
                                 <input type="text"
@@ -1952,22 +1980,17 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
             </div>
         );
 
-        const origCost = act.cost_amount ?? parseCostAmount(act.estimated_cost);
-        const hasChanges = detailEdit.name !== act.name || detailEdit.description !== (act.description || '') ||
-            detailEdit.duration !== act.duration || detailEdit.cost !== origCost || detailEdit.location !== (act.location || '');
-
-        const handleSave = () => {
-            if (!detailEdit.name.trim()) return;
-            const formattedCost = detailEdit.cost > 0 ? formatVND(detailEdit.cost) : 'Miễn phí';
+        const autoSave = (overrides?: Partial<typeof detailEdit>) => {
+            const merged = { ...detailEdit, ...overrides };
+            if (!merged.name.trim()) return;
+            const formattedCost = merged.cost > 0 ? formatVND(merged.cost) : 'Miễn phí';
             const updated: Partial<Activity> = {
-                name: detailEdit.name.trim(), description: detailEdit.description,
-                duration: detailEdit.duration, cost_amount: detailEdit.cost,
-                estimated_cost: formattedCost, location: detailEdit.location,
+                name: merged.name.trim(), description: merged.description,
+                duration: merged.duration, cost_amount: merged.cost,
+                estimated_cost: formattedCost, location: merged.location,
             };
             handleUpdateActivity(pos.dayIdx, pos.slot, pos.actIdx, updated);
             setSelectedActivity(prev => prev ? { ...prev, ...updated } : prev);
-            setDetailSaved(true);
-            setTimeout(() => setDetailSaved(false), 2000);
         };
 
         return (
@@ -1988,6 +2011,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         <input
                             value={detailEdit.name}
                             onChange={e => setDetailEdit(p => ({ ...p, name: e.target.value }))}
+                            onBlur={() => autoSave()}
                             className="mt-1 w-full text-sm font-bold px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                             placeholder="Tên hoạt động..."
                         />
@@ -2000,6 +2024,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                             <input
                                 value={detailEdit.duration}
                                 onChange={e => setDetailEdit(p => ({ ...p, duration: e.target.value }))}
+                                onBlur={() => autoSave()}
                                 className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                                 placeholder="VD: 2 giờ"
                             />
@@ -2012,6 +2037,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                                 type="number"
                                 value={detailEdit.cost || ''}
                                 onChange={e => setDetailEdit(p => ({ ...p, cost: parseInt(e.target.value) || 0 }))}
+                                onBlur={() => autoSave()}
                                 min={0} step={10000}
                                 className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                                 placeholder="0"
@@ -2020,7 +2046,10 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     </div>
                     <div className="flex gap-1 flex-wrap">
                         {[0, 50000, 100000, 200000, 500000, 1000000].map(p => (
-                            <button key={p} type="button" onClick={() => setDetailEdit(prev => ({ ...prev, cost: p }))}
+                            <button key={p} type="button" onClick={() => {
+                                setDetailEdit(prev => ({ ...prev, cost: p }));
+                                autoSave({ cost: p });
+                            }}
                                 className={`px-2 py-0.5 text-[10px] rounded-full border transition-all cursor-pointer ${detailEdit.cost === p ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-500'}`}>
                                 {p === 0 ? 'Miễn phí' : p >= 1000000 ? `${p / 1000000}tr` : `${p / 1000}k`}
                             </button>
@@ -2034,6 +2063,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         <input
                             value={detailEdit.location}
                             onChange={e => setDetailEdit(p => ({ ...p, location: e.target.value }))}
+                            onBlur={() => autoSave()}
                             className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                             placeholder="Địa chỉ cụ thể..."
                         />
@@ -2043,6 +2073,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         <textarea
                             value={detailEdit.description}
                             onChange={e => setDetailEdit(p => ({ ...p, description: e.target.value }))}
+                            onBlur={() => autoSave()}
                             rows={3}
                             className="mt-1 w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none italic bg-white"
                             placeholder="Ghi chú thêm..."
@@ -2055,16 +2086,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                         </button>
                     )}
                 </div>
-                <div className="px-3 py-3 border-t border-gray-100 shrink-0 space-y-1.5">
-                    <button onClick={handleSave} disabled={!hasChanges || !detailEdit.name.trim()}
-                        className={`w-full py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-                            detailSaved ? 'bg-green-500 text-white' :
-                            hasChanges && detailEdit.name.trim() ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-200' :
-                            'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`}>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        {detailSaved ? 'Đã lưu!' : 'Lưu thay đổi'}
-                    </button>
+                <div className="px-3 py-3 border-t border-gray-100 shrink-0">
                     <button onClick={() => { setSelectedActivity(null); setSelectedActivityPos(null); setRightTab('summary'); }}
                         className="w-full py-1.5 text-xs text-gray-400 hover:text-orange-500 flex items-center justify-center gap-1 transition-colors">
                         <ChevronLeft className="w-3.5 h-3.5" /> Quay lại
@@ -2351,7 +2373,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 {viewMode === 'overview' && (
                     <div className="hidden lg:flex flex-1 overflow-x-auto overflow-y-auto">
                         <div className="flex gap-4 px-4 py-4 items-start" style={{ minWidth: 'max-content' }}>
-                            <DayColumns overview />
+                            {DayColumns({ overview: true })}
                         </div>
                     </div>
                 )}
@@ -2360,7 +2382,7 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                 <div className="lg:hidden flex-1 overflow-y-auto">
                     {mobileTab === 'timeline' && (
                         <div className="p-4 space-y-6 pb-20">
-                            <DayColumns mobile />
+                            {DayColumns({ mobile: true })}
                         </div>
                     )}
                     {mobileTab === 'library' && (
@@ -2374,12 +2396,12 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     )}
                     {mobileTab === 'summary' && (
                         <div className="flex flex-col h-full pb-16">
-                            <SummaryContent />
+                            {SummaryContent()}
                         </div>
                     )}
                     {mobileTab === 'members' && (
                         <div className="flex flex-col h-full pb-16">
-                            <MembersContent />
+                            {MembersContent()}
                         </div>
                     )}
                 </div>
@@ -2424,9 +2446,9 @@ function PlanEditor({ planData, onReset }: { planData: PlanData; onReset: () => 
                     )}
                 </div>
                 {showSummary ? (
-                    rightTab === 'summary' ? <SummaryContent /> :
-                    rightTab === 'members' ? <MembersContent /> :
-                    <ActivityDetailContent />
+                    rightTab === 'summary' ? SummaryContent() :
+                    rightTab === 'members' ? MembersContent() :
+                    ActivityDetailContent()
                 ) : (
                     <div className="flex-1 flex items-center justify-center">
                         <span className="text-xs text-gray-400 font-medium select-none" style={{ writingMode: 'vertical-rl' }}>Chi phí</span>

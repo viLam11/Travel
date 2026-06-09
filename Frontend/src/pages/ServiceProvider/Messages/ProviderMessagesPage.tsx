@@ -22,8 +22,6 @@ const ProviderMessagesPage: React.FC = () => {
 
     // Flag to track if we've handled the redirect state
     const handledRedirect = useRef(false);
-    // Ref lưu tin nhắn optimistic của Provider chờ server echo lại
-    const pendingOptimisticRef = useRef<Array<{ id: string; text: string; senderId: string }>>([]);
 
     // Update ref whenever state changes
     useEffect(() => {
@@ -105,24 +103,20 @@ const ProviderMessagesPage: React.FC = () => {
 
         const destroyListener = socketService.onMessage((msg) => {
             const currentActive = activeConversationRef.current;
-            
+
             setMessages(prev => {
-                if (currentActive?.id === msg.conversationId) {
-                    // Tìm optimistic message của Provider khớp (theo text.trim() + senderId)
-                    const pendingIdx = pendingOptimisticRef.current.findIndex(
-                        p => p.text.trim() === msg.text.trim() && p.senderId === msg.senderId
-                    );
-                    let baseList = prev;
-                    if (pendingIdx !== -1) {
-                        const pendingEntry = pendingOptimisticRef.current[pendingIdx];
-                        pendingOptimisticRef.current.splice(pendingIdx, 1);
-                        baseList = prev.filter(p => p.id !== pendingEntry.id);
-                    }
-                    if (baseList.some(p => p.id === msg.id)) return prev;
-                    setTimeout(() => scrollToBottom(), 100);
-                    return [...baseList, msg];
-                }
-                return prev;
+                if (currentActive?.id !== msg.conversationId) return prev;
+                // Dedup by real server ID
+                if (msg.id && !msg.id.startsWith('msg_') && prev.some(p => p.id === msg.id)) return prev;
+                // Dedup by content + sender + time proximity (handles echo-after-optimistic race)
+                const isDuplicate = prev.some(p =>
+                    p.text.trim() === msg.text.trim() &&
+                    p.senderId?.toString() === msg.senderId?.toString() &&
+                    Math.abs(new Date(p.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 3000
+                );
+                if (isDuplicate) return prev;
+                setTimeout(() => scrollToBottom(), 100);
+                return [...prev, msg];
             });
 
             setConversations(prev => {
@@ -176,7 +170,6 @@ const ProviderMessagesPage: React.FC = () => {
         setActiveConversation(conversation);
         if (window.innerWidth < 768) setShowSidebar(false);
         setLoadingMessages(true);
-        pendingOptimisticRef.current = []; // Reset pending khi đổi conversation
 
         if (conversation.unreadCount > 0) {
             await chatApi.markAsRead(conversation.id);
@@ -227,28 +220,23 @@ const ProviderMessagesPage: React.FC = () => {
 
         const sentMsg = socketService.sendMessage(
             receiverId,
-            currentUser.user.userID.toString() || 'provider_101',
-            trimmedText, // Gửi text đã trim
-            (receiver?.role === 'admin' ? 'admin' : 'user') as 'user' | 'provider'
+            currentUser.user.userID.toString(),
+            trimmedText,
+            'user'
         );
 
         if (sentMsg) {
-            pendingOptimisticRef.current.push({
-                id: sentMsg.id,
-                text: sentMsg.text,
-                senderId: sentMsg.senderId
-            });
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
-
             setConversations(prev => prev.map(conv => {
                 if (conv.id === activeConversation.id) {
                     return { ...conv, lastMessage: sentMsg, updatedAt: sentMsg.timestamp };
                 }
                 return conv;
             }));
-
             scrollToBottom();
+        } else {
+            toast.error('Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối.');
         }
     };
 

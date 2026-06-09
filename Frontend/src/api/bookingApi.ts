@@ -166,6 +166,21 @@ export const bookingApi = {
         }
     },
 
+    /**
+     * Lấy danh sách dịch vụ mà user đã đặt (để đính kèm vào bài blog)
+     * Backend: GET /orders/my-booked-services?page=0&size=10
+     */
+    getMyBookedServices: async (params?: { page?: number; size?: number }): Promise<any[]> => {
+        try {
+            const res = await apiClient.get<any>('/orders/my-booked-services', {
+                params: { page: params?.page ?? 0, size: params?.size ?? 20 },
+            });
+            return res.content || (Array.isArray(res) ? res : res.data || []);
+        } catch {
+            return [];
+        }
+    },
+
     getBookingStats: async (): Promise<typeof mockStats> => {
         if (USE_MOCK) {
             await new Promise(resolve => setTimeout(resolve, 300));

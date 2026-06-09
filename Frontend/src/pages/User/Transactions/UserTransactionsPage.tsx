@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  Receipt, Clock, CheckCircle, XCircle, 
-  Calendar, Search, Loader2, ChevronRight, 
+import {
+  Receipt, Clock, CheckCircle, XCircle,
+  Calendar, Search, Loader2, ChevronRight,
   Phone, Download, CreditCard,
   ArrowDownLeft,
   Filter,
@@ -12,7 +12,7 @@ import {
   Tag
 } from 'lucide-react';
 import apiClient from "@/services/apiClient";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // --- Interfaces matching original BE behavior ---
@@ -44,6 +44,7 @@ const UserTransactionsPage: React.FC = () => {
   const [isPaying, setIsPaying] = useState(false);
   const itemsPerPage = 6;
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: dataList = [], isLoading: loading, refetch } = useQuery({
     queryKey: ['userTransactions'],
@@ -59,8 +60,23 @@ const UserTransactionsPage: React.FC = () => {
       }
       return list.filter(item => item && (item.order || item.orderID));
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+    staleTime: 5 * 60 * 1000,
   });
+
+  // Option A: handle redirect from backend after VNPay result
+  useEffect(() => {
+    const payment = searchParams.get('payment');
+    if (!payment) return;
+    if (payment === 'success') {
+      toast.success('Thanh toán thành công! Đơn hàng của bạn đã được xác nhận.');
+      refetch();
+    } else if (payment === 'failed') {
+      toast.error('Thanh toán thất bại. Vui lòng thử lại hoặc liên hệ hỗ trợ.');
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('payment');
+    setSearchParams(next, { replace: true });
+  }, []);
 
   const filteredTransactions = useMemo(() => {
     return dataList.filter(item => {

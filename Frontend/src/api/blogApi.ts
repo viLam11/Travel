@@ -15,6 +15,22 @@ const LOCAL_MOCK_OVERRIDE: boolean | null = false; // Đã bật lại Mock đ�
 const USE_MOCK_DATA = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Normalize raw API response to BlogPost shape (handles field name differences)
+const normalizeBlogPost = (raw: any): BlogPost => {
+  if (!raw) return raw;
+  return {
+    ...raw,
+    authorId: raw.authorId ?? raw.authorID ?? '',
+    authorAvatarUrl: raw.authorAvatarUrl ?? raw.avatarUrl ?? undefined,
+    reactionCount: raw.reactionCount ?? raw.likeCount ?? 0,
+    commentCount: raw.commentCount ?? 0,
+    mediaUrls: raw.mediaUrls ?? [],
+    status: raw.status ?? 'PUBLISHED',
+    content: raw.content ?? '',
+    title: raw.title ?? '',
+  };
+};
+
 // Helper function for mocking pagination
 const mockResponse = (data: any[], page: number, size: number) => {
   const totalElements = data.length;
@@ -53,7 +69,7 @@ export const blogApi = {
       
       const content = response.content || (Array.isArray(response) ? response : []);
       return {
-        posts: content,
+        posts: content.map(normalizeBlogPost),
         total: response.totalElements || content.length,
         page: response.pageNo ?? 0,
         totalPages: response.totalPages || 1,
@@ -87,7 +103,7 @@ export const blogApi = {
       
       const content = response.content || (Array.isArray(response) ? response : []);
       return {
-        posts: content,
+        posts: content.map(normalizeBlogPost),
         total: response.totalElements || content.length,
         page: response.pageNo ?? 0,
         totalPages: response.totalPages || 1,
@@ -114,7 +130,8 @@ export const blogApi = {
     }
 
     try {
-      return await apiClient.get(`/blog/${blogId}`);
+      const raw = await apiClient.get(`/blog/${blogId}`);
+      return normalizeBlogPost(raw);
     } catch (error) {
       console.error(`Error fetching blog detail (${blogId}):`, error);
       throw error;
@@ -166,7 +183,7 @@ export const blogApi = {
       
       const content = response.content || (Array.isArray(response) ? response : []);
       return {
-        posts: content,
+        posts: content.map(normalizeBlogPost),
         total: response.totalElements || content.length,
         page: response.pageNo ?? 0,
         totalPages: response.totalPages || 1,
@@ -454,7 +471,7 @@ export const blogApi = {
       
       const content = response.content || (Array.isArray(response) ? response : []);
       return {
-        posts: content,
+        posts: content.map(normalizeBlogPost),
         total: response.totalElements || content.length,
         page: response.pageNo ?? 0,
         totalPages: response.totalPages || 1,
@@ -484,10 +501,10 @@ export const blogApi = {
       const response: any = await apiClient.get(`/blog/related/${serviceId}`, {
         params: { page, size }
       });
-      
+
       const content = response.content || (Array.isArray(response) ? response : []);
       return {
-        posts: content,
+        posts: content.map(normalizeBlogPost),
         total: response.totalElements || content.length,
         page: response.pageNo ?? 0,
         totalPages: response.totalPages || 1,

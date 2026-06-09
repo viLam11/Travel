@@ -250,6 +250,22 @@ export const serviceApi = {
     },
 
     /**
+     * Lấy danh sách dịch vụ đã được duyệt (APPROVED) của user hiện tại
+     * Backend: GET /services/my?status=APPROVED
+     */
+    getMyApprovedServices: async (params?: { page?: number; size?: number }): Promise<any[]> => {
+        try {
+            const response = await apiClient.get<any>('/services/my', {
+                params: { status: 'APPROVED', page: params?.page ?? 0, size: params?.size ?? 20 },
+            });
+            const raw = response.content || (Array.isArray(response) ? response : []);
+            return raw;
+        } catch {
+            return [];
+        }
+    },
+
+    /**
      * Tìm kiếm dịch vụ (public)
      */
     searchServices: async (params: any): Promise<any> => {

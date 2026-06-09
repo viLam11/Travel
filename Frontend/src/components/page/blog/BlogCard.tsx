@@ -4,6 +4,7 @@ import {
     MoreHorizontal, Bookmark, ExternalLink, Send, Hotel, Heart,
     MessageCircle, Eye, Clock, MapPin, Share2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
+import { renderPreview } from '@/utils/blog.util';
 import Lottie from 'lottie-react';
 import { useNavigate } from 'react-router-dom';
 import type { BlogPost, BlogComment, ReactionType } from '@/types/blog.types';
@@ -507,42 +508,34 @@ const BlogCard: React.FC<BlogCardProps> = ({ post, variant = 'default' }) => {
                         {post.title}
                     </h2>
                     {summary && (() => {
-                        const plainSummary = summary.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-                        const limit = 150;
-                        const isLong = plainSummary.length > limit;
-                        
+                        const html = renderPreview(summary);
+                        const isLong = summary.length > 200;
+
                         return (
-                            <div className="text-sm text-gray-600 leading-relaxed">
-                                {isLong && !isSummaryExpanded ? (
-                                    <>
-                                        <span>{plainSummary.slice(0, limit)}... </span>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setIsSummaryExpanded(true);
-                                            }}
-                                            className="text-orange-500 hover:text-orange-600 font-bold hover:underline ml-1 cursor-pointer"
-                                        >
-                                            Xem thêm
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>{plainSummary}</span>
-                                        {isLong && isSummaryExpanded && (
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setIsSummaryExpanded(false);
-                                                }}
-                                                className="text-orange-400 hover:text-orange-500 font-bold hover:underline ml-1.5 cursor-pointer text-xs"
-                                            >
-                                                Rút gọn
-                                            </button>
-                                        )}
-                                    </>
+                            <div className="relative">
+                                <div
+                                    className={[
+                                        '[&_h2]:text-[15px] [&_h2]:font-bold [&_h2]:text-gray-800 [&_h2]:mt-2 [&_h2]:mb-1',
+                                        '[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-gray-700 [&_h3]:mt-1.5 [&_h3]:mb-0.5',
+                                        '[&_p]:text-sm [&_p]:text-gray-600 [&_p]:leading-relaxed [&_p]:mb-1.5',
+                                        '[&_ul]:text-sm [&_ul]:text-gray-600 [&_ul]:my-1.5 [&_ul]:pl-4 [&_ul]:space-y-0.5',
+                                        '[&_li]:leading-relaxed',
+                                        '[&_blockquote]:text-sm [&_blockquote]:my-1.5 [&_blockquote]:py-1',
+                                        !isSummaryExpanded && isLong ? 'max-h-[5.5rem] overflow-hidden' : '',
+                                    ].join(' ')}
+                                    dangerouslySetInnerHTML={{ __html: html }}
+                                />
+                                {isLong && !isSummaryExpanded && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+                                )}
+                                {isLong && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setIsSummaryExpanded(v => !v); }}
+                                        className="text-orange-500 hover:text-orange-600 font-bold text-xs hover:underline mt-1 cursor-pointer"
+                                    >
+                                        {isSummaryExpanded ? 'Rút gọn' : 'Xem thêm'}
+                                    </button>
                                 )}
                             </div>
                         );

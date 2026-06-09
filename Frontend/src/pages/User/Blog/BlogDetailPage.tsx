@@ -26,7 +26,7 @@ import { blogApi } from '@/api/blogApi';
 import { useAuth } from '@/hooks/useAuth';
 import type { ReactionType } from '@/types/blog.types';
 import toast from 'react-hot-toast';
-import { renderPreview } from '@/utils/blog.util';
+import { renderPreview, stripMarkdown } from '@/utils/blog.util';
 
 const BlogDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -232,7 +232,7 @@ const BlogDetailPage: React.FC = () => {
   const viewsCount = (post as any).viewCount ?? 0;
   const readTime = (post as any).readTimeMinutes ?? 5;
   const summary =
-    (post as any).summary || post.content?.replace(/<[^>]*>/g, '').slice(0, 200) + '...';
+    (post as any).summary || (post.content ? stripMarkdown(post.content).slice(0, 200) + '...' : '');
   const tags = post.tags ? post.tags.split(',').filter(t => t.trim()) : [];
   const linkedServices = post.taggedServiceIds || [];
 

@@ -5,9 +5,7 @@ import {
   Image as ImageIcon,
   MapPin,
   Hotel,
-  Tag,
   X,
-  Plus,
   Eye,
   Send,
   Search,
@@ -21,7 +19,10 @@ import {
   Pencil,
   AlertCircle,
 } from 'lucide-react';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { blogApi } from '@/api/blogApi';
+import { bookingApi } from '@/api/bookingApi';
 import { serviceApi } from '@/api/serviceApi';
 import type { BlogRequest, BlogStatus } from '@/types/blog.types';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,82 +53,96 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({ icon, label, onClick, active })
   </button>
 );
 
-// ── Textarea with auto-resize ──────────────────────────────────────────────────
-interface SmartTextareaProps {
+// ── WYSIWYG Editor (Quill) ─────────────────────────────────────────────────────
+const QUILL_MODULES = { toolbar: false };
+const QUILL_FORMATS = ['bold', 'italic', 'underline', 'header', 'list', 'blockquote', 'indent'];
+
+interface MarkdownEditorProps {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  minRows?: number;
 }
-const SmartTextarea: React.FC<SmartTextareaProps> = ({
-  value, onChange, placeholder, minRows = 14,
-}) => {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.max(el.scrollHeight, minRows * 24)}px`;
-  }, [value, minRows]);
 
-  const insertAtCursor = useCallback((before: string, after = '', defaultText = '') => {
-    const el = ref.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const selected = value.slice(start, end) || defaultText;
-    const newVal = value.slice(0, start) + before + selected + after + value.slice(end);
-    onChange(newVal);
-    setTimeout(() => {
-      el.focus();
-      const newCursor = start + before.length + selected.length;
-      el.setSelectionRange(newCursor, newCursor);
-    }, 0);
-  }, [value, onChange]);
+const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, placeholder }) => {
+  const quillRef = useRef<any>(null);
 
-  const insertLinePrefix = useCallback((prefix: string, defaultText = '') => {
-    const el = ref.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-    const lineEnd = value.indexOf('\n', start);
-    const end = lineEnd === -1 ? value.length : lineEnd;
-    const line = value.slice(lineStart, end) || defaultText;
-    // Toggle: if line already starts with prefix, remove it
-    const newLine = line.startsWith(prefix) ? line.slice(prefix.length) : prefix + line;
-    const newVal = value.slice(0, lineStart) + newLine + value.slice(end);
-    onChange(newVal);
-    setTimeout(() => el.focus(), 0);
-  }, [value, onChange]);
+  const fmt = useCallback((type: string, val?: any) => {
+    const q = quillRef.current?.getEditor?.();
+    if (!q) return;
+    q.focus();
+    const current = q.getFormat();
+    q.format(type, val !== undefined ? val : !current[type]);
+  }, []);
 
   return (
-    <div className="flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-3 py-2 bg-gray-50 border-b border-gray-200 rounded-t-xl flex-wrap">
-        <ToolbarBtn icon={<Bold className="w-4 h-4" />} label="In đậm" onClick={() => insertAtCursor('**', '**', 'chữ đậm')} />
-        <ToolbarBtn icon={<Italic className="w-4 h-4" />} label="In nghiêng" onClick={() => insertAtCursor('*', '*', 'chữ nghiêng')} />
+    <div className="flex flex-col blog-quill-editor">
+      {/* Custom toolbar */}
+      <div className="flex items-center gap-0.5 px-3 py-2 bg-gray-50 border-b border-gray-200 flex-wrap">
+        <ToolbarBtn icon={<Bold className="w-4 h-4" />} label="In đậm" onClick={() => fmt('bold')} />
+        <ToolbarBtn icon={<Italic className="w-4 h-4" />} label="In nghiêng" onClick={() => fmt('italic')} />
         <div className="w-px h-5 bg-gray-200 mx-1" />
-        <ToolbarBtn icon={<Heading2 className="w-4 h-4" />} label="Tiêu đề H2" onClick={() => insertLinePrefix('## ', 'Tiêu đề phần')} />
-        <ToolbarBtn icon={<Type className="w-4 h-4" />} label="Tiêu đề H3" onClick={() => insertLinePrefix('### ', 'Tiêu đề nhỏ')} />
+        <ToolbarBtn icon={<Heading2 className="w-4 h-4" />} label="Tiêu đề H2" onClick={() => fmt('header', 2)} />
+        <ToolbarBtn icon={<Type className="w-4 h-4" />} label="Tiêu đề H3" onClick={() => fmt('header', 3)} />
         <div className="w-px h-5 bg-gray-200 mx-1" />
-        <ToolbarBtn icon={<List className="w-4 h-4" />} label="Danh sách" onClick={() => insertLinePrefix('- ', 'Mục danh sách')} />
-        <ToolbarBtn icon={<Quote className="w-4 h-4" />} label="Trích dẫn" onClick={() => insertLinePrefix('> ', 'Nội dung trích dẫn')} />
+        <ToolbarBtn icon={<List className="w-4 h-4" />} label="Danh sách" onClick={() => fmt('list', 'bullet')} />
+        <ToolbarBtn icon={<Quote className="w-4 h-4" />} label="Trích dẫn" onClick={() => fmt('blockquote', true)} />
       </div>
 
-      {/* Textarea */}
-      <textarea
-        ref={ref}
+      <ReactQuill
+        ref={quillRef}
+        theme="snow"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-4 py-3 border-0 rounded-b-xl text-sm text-gray-700 outline-none resize-none placeholder-gray-300 leading-relaxed bg-white focus:ring-0 min-h-[320px]"
-        style={{ overflow: 'hidden' }}
+        onChange={onChange}
+        modules={QUILL_MODULES}
+        formats={QUILL_FORMATS}
+        placeholder={placeholder || 'Chia sẻ câu chuyện du lịch của bạn ở đây...'}
       />
+
+      <style>{`
+        .blog-quill-editor .ql-container.ql-snow { border: none; font-family: inherit; }
+        .blog-quill-editor .ql-editor { min-height: 320px; font-size: 0.875rem; color: #374151; line-height: 1.75; padding: 0.875rem 1rem; }
+        .blog-quill-editor .ql-editor.ql-blank::before { color: #d1d5db; font-style: italic; left: 1rem; }
+        .blog-quill-editor .ql-editor h2 { font-size: 1.35rem; font-weight: 700; color: #111827; margin: 1.25rem 0 0.5rem; }
+        .blog-quill-editor .ql-editor h3 { font-size: 1.1rem; font-weight: 600; color: #1f2937; margin: 1rem 0 0.375rem; }
+        .blog-quill-editor .ql-editor p { margin-bottom: 0.5rem; }
+        .blog-quill-editor .ql-editor ul, .blog-quill-editor .ql-editor ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        .blog-quill-editor .ql-editor li { margin-bottom: 0.2rem; }
+        .blog-quill-editor .ql-editor blockquote { border-left: 4px solid #f97316; padding: 0.5rem 1rem; color: #6b7280; font-style: italic; margin: 0.75rem 0; background: #fff7ed; border-radius: 0 8px 8px 0; }
+        .blog-quill-editor .ql-editor strong { font-weight: 700; color: #111827; }
+      `}</style>
     </div>
   );
 };
 
 
+
+// ── Reusable service row ───────────────────────────────────────────────────────
+const ServiceRow: React.FC<{ service: any; selected: boolean; onToggle: () => void }> = ({
+  service, selected, onToggle,
+}) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left ${selected ? 'bg-orange-50' : ''}`}
+  >
+    <img
+      src={service.thumbnailUrl || 'https://via.placeholder.com/80'}
+      alt={service.serviceName}
+      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+    />
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-gray-800 truncate">{service.serviceName}</p>
+      <p className="text-xs text-gray-400 truncate">
+        {service.province?.fullName || service.location || 'Việt Nam'}
+      </p>
+    </div>
+    <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+      selected ? 'bg-orange-500 border-orange-500' : 'border-gray-300'
+    }`}>
+      {selected && <X className="text-white w-3 h-3" />}
+    </span>
+  </button>
+);
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const BlogCreatePage: React.FC = () => {
@@ -146,6 +161,9 @@ const BlogCreatePage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [myServices, setMyServices] = useState<any[]>([]);
+  const [isLoadingMyServices, setIsLoadingMyServices] = useState(false);
+  const [serviceTab, setServiceTab] = useState<'mine' | 'search'>('mine');
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -166,6 +184,15 @@ const BlogCreatePage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [serviceSearch]);
 
+  useEffect(() => {
+    if (!showServiceSearch || myServices.length > 0) return;
+    setIsLoadingMyServices(true);
+    bookingApi.getMyBookedServices()
+      .then(res => setMyServices(res))
+      .catch(() => {})
+      .finally(() => setIsLoadingMyServices(false));
+  }, [showServiceSearch]);
+
 
 
   const toggleService = (service: any) => {
@@ -179,7 +206,8 @@ const BlogCreatePage: React.FC = () => {
   const handlePublish = async () => {
     if (!isAuthenticated) { toast.error('Vui lòng đăng nhập để viết bài'); return; }
     if (!title.trim()) { toast.error('Vui lòng nhập tiêu đề'); return; }
-    if (!content.trim()) { toast.error('Vui lòng nhập nội dung bài viết'); return; }
+    const emptyQuill = !plainContent || content === '<p><br></p>';
+    if (emptyQuill) { toast.error('Vui lòng nhập nội dung bài viết'); return; }
 
     setIsSubmitting(true);
     try {
@@ -200,7 +228,8 @@ const BlogCreatePage: React.FC = () => {
     }
   };
 
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+  const plainContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const wordCount = plainContent ? plainContent.split(/\s+/).filter(Boolean).length : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
   const coverSrc = previewUrls.length > 0 ? previewUrls[0] : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80';
 
@@ -285,8 +314,8 @@ const BlogCreatePage: React.FC = () => {
             {/* Summary box */}
             <div className="mx-6 sm:mx-10 mt-8 mb-6 p-5 bg-gradient-to-r from-orange-50 to-amber-50 border-l-4 border-orange-400 rounded-r-2xl">
               <p className="text-gray-600 italic text-sm leading-relaxed">
-                {content
-                  ? content.replace(/[#*>`-]/g, '').slice(0, 200) + (content.length > 200 ? '...' : '')
+                {plainContent
+                  ? plainContent.slice(0, 200) + (plainContent.length > 200 ? '...' : '')
                   : 'Tóm tắt bài viết sẽ hiển thị ở đây...'}
               </p>
             </div>
@@ -431,24 +460,13 @@ const BlogCreatePage: React.FC = () => {
                 </label>
               </div>
               <div className="border border-gray-200 rounded-xl overflow-hidden mx-4 mb-4">
-                <SmartTextarea
+                <MarkdownEditor
                   value={content}
                   onChange={setContent}
-                  placeholder={`Chia sẻ câu chuyện du lịch của bạn ở đây...
-
-## Bắt đầu hành trình
-Mô tả điểm đến và lý do bạn chọn nơi này...
-
-## Những điều không thể bỏ lỡ
-- Điểm tham quan đầu tiên...
-- Ẩm thực đặc trưng...
-
-> Mẹo: Dùng toolbar phía trên để định dạng văn bản`}
-                  minRows={14}
+                  placeholder="Chia sẻ câu chuyện du lịch của bạn ở đây..."
                 />
               </div>
-              <div className="px-4 pb-3 flex items-center justify-between text-xs text-gray-400">
-                <span>Hỗ trợ Markdown // **đậm** *nghiêng* ## Tiêu đề - Danh sách {'>'} Trích dẫn</span>
+              <div className="px-4 pb-3 flex items-center justify-end text-xs text-gray-400">
                 <span>{wordCount} từ</span>
               </div>
             </div>
@@ -497,60 +515,93 @@ Mô tả điểm đến và lý do bạn chọn nơi này...
 
               {showServiceSearch && (
                 <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-gray-50/50">
-                    <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <input
-                      type="text"
-                      value={serviceSearch}
-                      onChange={(e) => setServiceSearch(e.target.value)}
-                      placeholder="Tìm địa điểm hoặc khách sạn..."
-                      className="flex-1 bg-transparent text-sm outline-none"
-                    />
-                    {isSearching && <Loader2 className="w-4 h-4 animate-spin text-orange-400 flex-shrink-0" />}
+                  {/* Tabs */}
+                  <div className="flex border-b border-gray-100 bg-gray-50/50">
+                    <button
+                      type="button"
+                      onClick={() => setServiceTab('mine')}
+                      className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
+                        serviceTab === 'mine'
+                          ? 'text-orange-500 border-b-2 border-orange-500 bg-white'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      <Hotel className="w-3.5 h-3.5 inline mr-1" />
+                      Dịch vụ của tôi
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setServiceTab('search')}
+                      className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
+                        serviceTab === 'search'
+                          ? 'text-orange-500 border-b-2 border-orange-500 bg-white'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      <Search className="w-3.5 h-3.5 inline mr-1" />
+                      Tìm kiếm
+                    </button>
                   </div>
-                  <div className="max-h-56 overflow-y-auto">
-                    {serviceSearch.length >= 2 && !isSearching && searchResults.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-gray-400">Không tìm thấy kết quả</div>
-                    ) : (
-                      searchResults.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => toggleService(s)}
-                          className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left ${
-                            linkedServices.some((l) => l.id === s.id) ? 'bg-orange-50' : ''
-                          }`}
-                        >
-                          <img
-                            src={s.thumbnailUrl || 'https://via.placeholder.com/80'}
-                            alt={s.serviceName}
-                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+
+                  {/* Tab: Dịch vụ của tôi */}
+                  {serviceTab === 'mine' && (
+                    <div className="max-h-56 overflow-y-auto">
+                      {isLoadingMyServices ? (
+                        <div className="flex justify-center items-center py-8">
+                          <Loader2 className="w-5 h-5 animate-spin text-orange-400" />
+                        </div>
+                      ) : myServices.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-gray-400">
+                          Bạn chưa có dịch vụ nào được duyệt
+                        </div>
+                      ) : (
+                        myServices.map((s) => (
+                          <ServiceRow
+                            key={s.id}
+                            service={s}
+                            selected={linkedServices.some((l) => l.id === s.id)}
+                            onToggle={() => toggleService(s)}
                           />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{s.serviceName}</p>
-                            <p className="text-xs text-gray-400 truncate">
-                              {s.province?.fullName || 'Việt Nam'}
-                            </p>
-                          </div>
-                          <span
-                            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                              linkedServices.some((l) => l.id === s.id)
-                                ? 'bg-orange-500 border-orange-500'
-                                : 'border-gray-300'
-                            }`}
-                          >
-                            {linkedServices.some((l) => l.id === s.id) && (
-                              <X className="text-white w-3 h-3" />
-                            )}
-                          </span>
-                        </button>
-                      ))
-                    )}
-                    {serviceSearch.length < 2 && searchResults.length === 0 && (
-                      <div className="p-4 text-center text-sm text-gray-400">
-                        Nhập ít nhất 2 ký tự để tìm kiếm
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab: Tìm kiếm */}
+                  {serviceTab === 'search' && (
+                    <>
+                      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-gray-50/50">
+                        <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={serviceSearch}
+                          onChange={(e) => setServiceSearch(e.target.value)}
+                          placeholder="Tìm địa điểm hoặc khách sạn..."
+                          className="flex-1 bg-transparent text-sm outline-none"
+                        />
+                        {isSearching && <Loader2 className="w-4 h-4 animate-spin text-orange-400 flex-shrink-0" />}
                       </div>
-                    )}
-                  </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {serviceSearch.length >= 2 && !isSearching && searchResults.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-gray-400">Không tìm thấy kết quả</div>
+                        ) : (
+                          searchResults.map((s) => (
+                            <ServiceRow
+                              key={s.id}
+                              service={s}
+                              selected={linkedServices.some((l) => l.id === s.id)}
+                              onToggle={() => toggleService(s)}
+                            />
+                          ))
+                        )}
+                        {serviceSearch.length < 2 && searchResults.length === 0 && (
+                          <div className="p-4 text-center text-sm text-gray-400">
+                            Nhập ít nhất 2 ký tự để tìm kiếm
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

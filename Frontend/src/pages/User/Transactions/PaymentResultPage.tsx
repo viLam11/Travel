@@ -25,8 +25,12 @@ const PaymentResultPage: React.FC = () => {
   const [status, setStatus] = useState<'success' | 'failed' | 'pending' | 'error'>('pending');
   const [orderData, setOrderData] = useState<any>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [countdown, setCountdown] = useState(3);
 
-  // Extract common parameters
+  // Option A: backend redirect params (?payment=success&orderId=xxx)
+  const backendPaymentStatus = searchParams.get('payment');
+
+  // Extract common parameters (MoMo / ZaloPay direct callbacks)
   const vnpResponseCode = searchParams.get('vnp_ResponseCode');
   const momoResultCode = searchParams.get('resultCode');
   const zpStatus = searchParams.get('status');
@@ -45,50 +49,48 @@ const PaymentResultPage: React.FC = () => {
   }, [searchParams]);
 
   const paymentMethod = useMemo(() => {
+    if (backendPaymentStatus) return 'VNPAY';
     if (vnpResponseCode !== null) return 'VNPAY';
     if (momoResultCode !== null) return 'MOMO';
     if (zpStatus !== null) return 'ZALOPAY';
     return 'UNKNOWN';
-  }, [vnpResponseCode, momoResultCode, zpStatus]);
+  }, [backendPaymentStatus, vnpResponseCode, momoResultCode, zpStatus]);
 
   useEffect(() => {
     const verifyPayment = async () => {
+      // Option A: backend already verified VNPay — trust the redirect params
+      if (backendPaymentStatus) {
+        setStatus(backendPaymentStatus === 'success' ? 'success' : 'failed');
+        if (backendPaymentStatus === 'success' && orderId) {
+          try {
+            const order = await apiClient.orders.getById(orderId);
+            setOrderData(order);
+          } catch (_) { /* non-critical */ }
+        }
+        setLoading(false);
+        return;
+      }
+
       if (!orderId) {
         setStatus('error');
         setLoading(false);
         return;
       }
 
-      // Initialize retry count from sessionStorage
       const storedRetry = sessionStorage.getItem(`retry_count_${orderId}`);
       if (storedRetry) setRetryCount(parseInt(storedRetry));
 
       try {
         setLoading(true);
 
-        // 1. Determine initial status from URL params
         let isSuccess = false;
-        if (vnpResponseCode === '00') isSuccess = true;
-        else if (momoResultCode === '0') isSuccess = true;
+        if (momoResultCode === '0') isSuccess = true;
         else if (zpStatus === '1') isSuccess = true;
+        else if (vnpResponseCode === '00') isSuccess = true;
 
-        // 2. Double check with backend for security
-        // Note: For VNPay, we use the getResult API
-        if (paymentMethod === 'VNPAY') {
-          try {
-            const params = Object.fromEntries(searchParams.entries());
-            await apiClient.payments.vnpay.getResult(params);
-          } catch (e) {
-            console.warn('Backend verification failed, relying on URL params', e);
-          }
-        }
-
-        // 3. Fetch order details to show more info
         try {
           const order = await apiClient.orders.getById(orderId);
           setOrderData(order);
-
-          // Sync status with backend if possible
           if (order.status === 'SUCCESS' || order.status === 'ACCEPTED') {
             setStatus('success');
           } else if (order.status === 'FAILED' || order.status === 'CANCELLED') {
@@ -100,7 +102,6 @@ const PaymentResultPage: React.FC = () => {
           console.warn('Could not fetch order details', e);
           setStatus(isSuccess ? 'success' : 'failed');
         }
-
       } catch (error) {
         console.error('Payment verification error:', error);
         setStatus('error');
@@ -110,7 +111,18 @@ const PaymentResultPage: React.FC = () => {
     };
 
     verifyPayment();
-  }, [orderId, vnpResponseCode, momoResultCode, zpStatus, paymentMethod, searchParams]);
+  }, [backendPaymentStatus, orderId, vnpResponseCode, momoResultCode, zpStatus, searchParams]);
+
+  // Auto-redirect to transactions list after success
+  useEffect(() => {
+    if (status !== 'success') return;
+    if (countdown <= 0) {
+      navigate('/user/transactions');
+      return;
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [status, countdown, navigate]);
 
   const handleRetry = async () => {
     if (retryCount >= 3) {
@@ -254,10 +266,12 @@ const PaymentResultPage: React.FC = () => {
           <div className="space-y-3">
             {status === 'success' ? (
               <button
-                onClick={() => navigate('/user/bookings')}
+                onClick={() => navigate('/user/transactions')}
                 className="w-full py-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-xl shadow-emerald-100 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center"
               >
-                XEM ĐƠN HÀNG CỦA TÔI <ArrowRight className="w-5 h-5 ml-2" />
+                XEM GIAO DỊCH CỦA TÔI
+                <span className="ml-2 bg-emerald-700 text-xs px-2 py-0.5 rounded-full">{countdown}s</span>
+                <ArrowRight className="w-5 h-5 ml-2" />
               </button>
             ) : status === 'failed' ? (
               <button

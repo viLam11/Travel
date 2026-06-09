@@ -22,8 +22,14 @@ export const useProviderChat = (providerId: string, userToken: string) => {
         });
 
         const unsubMessage = socketService.onMessage((msg: ChatMessage) => {
-            // For system chat, we might want to filter or just append
-            setMessages(prev => [...prev, msg]);
+            setMessages(prev => {
+                // Deduplicate by ID (real ID) or by content+sender for messages without a server ID
+                const isDuplicate =
+                    (msg.id && !msg.id.startsWith('msg_') && prev.some(p => p.id === msg.id)) ||
+                    prev.some(p => !p.id.startsWith('msg_') && p.text.trim() === msg.text.trim() && p.senderId === msg.senderId && Math.abs(new Date(p.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 3000);
+                if (isDuplicate) return prev;
+                return [...prev, msg];
+            });
         });
 
         const unsubNotification = socketService.onNotification((noti: any) => {
@@ -40,18 +46,13 @@ export const useProviderChat = (providerId: string, userToken: string) => {
 
     const sendMessage = useCallback((text: string, topic: string, attachmentId?: string) => {
         if (connectionStatus !== 'CONNECTED') return false;
-        
         try {
-            // System/Admin chat might have a specific receiver ID. Let's use 'admin' or something based on typical implementation.
-            // But since the current socketService expects receiverId, we'll pass 'system'
-            const newMsg = socketService.sendMessage('system', providerId, `[${topic.toUpperCase()}] ${text}`, 'provider', 'text', attachmentId);
-            if (newMsg) {
-                setMessages(prev => [...prev, newMsg]);
-                return true;
-            }
-            return false;
+            const result = socketService.sendMessage('system', providerId, `[${topic.toUpperCase()}] ${text}`, 'provider', 'text', attachmentId);
+            // Do NOT add optimistically — the server echoes the message back via onMessage,
+            // which is the single source of truth. Adding here + echo = duplicate.
+            return !!result;
         } catch (e) {
-            console.error("Failed to send message", e);
+            console.error('Failed to send message', e);
             return false;
         }
     }, [connectionStatus, providerId]);
