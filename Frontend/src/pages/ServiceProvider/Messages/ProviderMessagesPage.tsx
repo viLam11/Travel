@@ -32,6 +32,13 @@ const ProviderMessagesPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
 
+    // Auto-scroll whenever messages list grows
+    useEffect(() => {
+        if (messages.length > 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages.length]);
+
     const handleContactAdmin = async () => {
         try {
             // 1. Lấy danh sách users từ BE
@@ -115,7 +122,6 @@ const ProviderMessagesPage: React.FC = () => {
                     Math.abs(new Date(p.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 3000
                 );
                 if (isDuplicate) return prev;
-                setTimeout(() => scrollToBottom(), 100);
                 return [...prev, msg];
             });
 
@@ -234,7 +240,6 @@ const ProviderMessagesPage: React.FC = () => {
                 }
                 return conv;
             }));
-            scrollToBottom();
         } else {
             toast.error('Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối.');
         }
@@ -455,14 +460,6 @@ const ProviderMessagesPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Service Context Banner */}
-                        {activeConversation.serviceName && (
-                            <div className="bg-indigo-50/80 dark:bg-indigo-900/20 p-3 flex items-center justify-center text-[13px] border-b border-indigo-100 dark:border-indigo-900/50">
-                                <span className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                    Khách đang quan tâm đến: <span className="font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-gray-800 px-2 py-0.5 rounded-md shadow-sm">{activeConversation.serviceName}</span>
-                                </span>
-                            </div>
-                        )}
 
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">

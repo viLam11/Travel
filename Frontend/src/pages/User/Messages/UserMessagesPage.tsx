@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Send, User, ChevronLeft, MessageCircle, Tag, X, FileText } from 'lucide-react';
+import { Search, Send, User, ChevronLeft, MessageCircle, Tag, X, FileText, Paperclip, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { socketService } from '@/services/socketService';
@@ -32,7 +32,68 @@ const UserMessagesPage: React.FC = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeBookingType, setActiveBookingType] = useState<'hotel' | 'ticket' | null>(null);
 
+    // Order attachment picker
+    const [showOrderPicker, setShowOrderPicker] = useState(false);
+    const [myOrders, setMyOrders] = useState<any[]>([]);
+    const [loadingOrders, setLoadingOrders] = useState(false);
+    const orderPickerRef = useRef<HTMLDivElement>(null);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll whenever messages list grows
+    useEffect(() => {
+        if (messages.length > 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages.length]);
+
+    // Close order picker on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (orderPickerRef.current && !orderPickerRef.current.contains(e.target as Node)) {
+                setShowOrderPicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const openOrderPicker = async () => {
+        setShowOrderPicker(v => !v);
+        if (myOrders.length > 0) return;
+        setLoadingOrders(true);
+        try {
+            const data: any = await apiClient.orders.getMyOrders(0, 20);
+            const list: any[] = Array.isArray(data) ? data : (data?.content ?? data?.orders ?? []);
+            const mapped = list.map((item: any) => {
+                // Real API response has flat ticket fields, not nested objects
+                const firstTicket = item.orderedTickets?.[0];
+                const firstRoom = item.orderedRooms?.[0];
+                const name = firstTicket?.ticketVenueName || firstTicket?.ticketName
+                    || firstRoom?.hotelName || firstRoom?.roomName || 'Đơn dịch vụ';
+                const image = firstTicket?.ticketVenueThumbnail || firstRoom?.hotelThumbnail || firstRoom?.thumbnail || '';
+                return {
+                    orderId: String(item.orderID || item.id || ''),
+                    name,
+                    image,
+                    status: item.status || 'PENDING',
+                    totalPrice: item.finalPrice || item.totalPrice || 0,
+                };
+            }).filter(o => o.orderId);
+            setMyOrders(mapped);
+        } catch {
+            setMyOrders([]);
+        } finally {
+            setLoadingOrders(false);
+        }
+    };
+
+    const selectOrderAttachment = (order: any) => {
+        setPendingAttachment({ id: order.orderId, type: 'order' });
+        setShowSuggestions(true);
+        setActiveBookingType(null);
+        setShowOrderPicker(false);
+    };
 
     // ── 1. Load conversations ──────────────────────────────────────────────────
     useEffect(() => {
@@ -52,45 +113,64 @@ const UserMessagesPage: React.FC = () => {
 
         const handleIncoming = async () => {
             let targetProviderId = '';
-            let targetServiceId = incomingServiceId || '';
-            let isBooking = false;
+            let targetProviderName = 'Nhà cung cấp';
+            let targetProviderAvatar = '';
+            let attachId: string | null = null;
+            let attachType: 'order' | 'service' = 'order';
 
             if (incomingBookingId) {
+                // Pre-attach immediately — no need to wait for provider lookup
+                attachId = incomingBookingId;
+                attachType = 'order';
+                setActiveBookingType('ticket');
+
                 try {
                     const order = await apiClient.orders.getById(incomingBookingId);
                     const firstTicket = order?.orderedTickets?.[0];
                     const firstRoom = order?.orderedRooms?.[0];
                     const service = firstTicket?.ticket?.ticketVenue || firstRoom?.room?.hotel;
-                    targetProviderId = service?.provider?.userID?.toString() || service?.provider?.id?.toString() || '';
-                    targetServiceId = service?.id?.toString() || targetServiceId;
-                    isBooking = true;
+                    const provider = service?.provider;
+                    targetProviderId = provider?.userID?.toString() || provider?.id?.toString() || '';
+                    targetProviderName = provider?.fullname || provider?.fullName || provider?.username || 'Nhà cung cấp';
+                    targetProviderAvatar = provider?.avatarUrl || '';
                     setActiveBookingType(!!firstRoom || service?.serviceType === 'HOTEL' ? 'hotel' : 'ticket');
-                    setShowSuggestions(true);
                 } catch (err) {
-                    console.error('Failed to fetch order for chat:', err);
+                    console.error('Failed to fetch order detail for chat:', err);
                 }
-            }
-
-            if (incomingServiceId && !targetProviderId) {
+            } else if (incomingServiceId) {
+                attachId = incomingServiceId;
+                attachType = 'service';
                 const existing = conversations.find(c => c.serviceId === incomingServiceId);
                 if (existing) targetProviderId = existing.id;
             }
 
-            if (targetProviderId || targetServiceId) {
-                const targetConv = conversations.find(c => c.id === targetProviderId || (targetServiceId && c.serviceId === targetServiceId)) || conversations[0];
-                if (targetConv) {
-                    await handleSelectConversation(targetConv);
-                    const attachId = isBooking ? incomingBookingId : targetServiceId;
-                    if (attachId) {
-                        setPendingAttachment({ id: attachId, type: isBooking ? 'order' : 'service' });
-                        setShowSuggestions(true);
-                        const p = new URLSearchParams(window.location.search);
-                        p.delete('bookingId');
-                        p.delete('serviceId');
-                        setSearchParams(p, { replace: true });
-                    }
+            // Navigate to provider conversation if we have their ID
+            if (targetProviderId) {
+                let targetConv = conversations.find(c => c.id === targetProviderId);
+                if (!targetConv) {
+                    targetConv = {
+                        id: targetProviderId,
+                        participants: [{ id: targetProviderId, name: targetProviderName, role: 'provider', avatar: targetProviderAvatar }],
+                        lastMessage: undefined,
+                        unreadCount: 0,
+                        updatedAt: new Date().toISOString(),
+                        serviceName: 'Hỗ trợ khách hàng'
+                    };
+                    setConversations(prev => [targetConv!, ...prev]);
                 }
+                await handleSelectConversation(targetConv);
             }
+
+            // Always set the attachment AFTER handleSelectConversation (which clears it)
+            if (attachId) {
+                setPendingAttachment({ id: attachId, type: attachType });
+                setShowSuggestions(true);
+            }
+
+            const p = new URLSearchParams(window.location.search);
+            p.delete('bookingId');
+            p.delete('serviceId');
+            setSearchParams(p, { replace: true });
         };
 
         handleIncoming();
@@ -115,7 +195,6 @@ const UserMessagesPage: React.FC = () => {
                     Math.abs(new Date(p.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 3000
                 );
                 if (isDuplicate) return prev;
-                setTimeout(() => scrollToBottom(), 100);
                 return [...prev, msg];
             });
 
@@ -207,7 +286,6 @@ const UserMessagesPage: React.FC = () => {
             setConversations(prev => prev.map(conv =>
                 conv.id === activeConversation.id ? { ...conv, lastMessage: sentMsg, updatedAt: sentMsg.timestamp } : conv
             ));
-            setTimeout(() => scrollToBottom(), 100);
         }
     };
 
@@ -369,14 +447,6 @@ const UserMessagesPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Service Context Banner */}
-                            {activeConversation.serviceName && activeConversation.serviceName !== 'Hỗ trợ khách hàng' && (
-                                <div className="bg-orange-50 p-3 flex items-center justify-center text-[13px] border-b border-orange-100">
-                                    <span className="text-gray-600 flex items-center gap-2">
-                                        Đang tư vấn về: <span className="font-bold text-orange-700 bg-white px-2 py-0.5 rounded-md shadow-sm">{activeConversation.serviceName}</span>
-                                    </span>
-                                </div>
-                            )}
 
                             {/* Messages Area */}
                             <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
@@ -426,44 +496,61 @@ const UserMessagesPage: React.FC = () => {
                                                             <User className="w-4 h-4 text-gray-400 m-auto mt-1" />
                                                         </div>
                                                     )}
-                                                    <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 text-[14.5px] shadow-sm ${isMine
-                                                        ? 'bg-orange-500 text-white rounded-br-sm'
-                                                        : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm'}`}>
-                                                        {isAttachment ? (
-                                                            <div className="mb-1.5">
-                                                                {isFirstTimeForThisAttachment ? (
-                                                                    <>
-                                                                        <p className={`text-xs mb-1.5 flex items-center gap-1 font-semibold ${isMine ? 'text-orange-100' : 'text-orange-500'}`}>
-                                                                            <Tag className="w-3 h-3" />
-                                                                            {resolvedAttachmentType === 'order' ? 'Hỏi về đặt chỗ' : 'Hỏi về dịch vụ'}
-                                                                        </p>
-                                                                        <BookingContextCard
-                                                                            attachmentId={msg.attachmentId || ''}
-                                                                            attachmentData={msg.attachmentData}
-                                                                            type={resolvedAttachmentType}
-                                                                            mini={true}
-                                                                        />
-                                                                    </>
-                                                                ) : (
+
+                                                    {/* Attachment card — rendered outside the colored bubble for clean white-card look */}
+                                                    {isAttachment && isFirstTimeForThisAttachment ? (
+                                                        <div className={`max-w-[85%] md:max-w-sm flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                                                            <p className="text-xs mb-1.5 flex items-center gap-1 font-semibold text-gray-500">
+                                                                <Tag className="w-3 h-3 text-orange-400" />
+                                                                {resolvedAttachmentType === 'order' ? 'Hỏi về đặt chỗ' : 'Hỏi về dịch vụ'}
+                                                            </p>
+                                                            <BookingContextCard
+                                                                attachmentId={msg.attachmentId || ''}
+                                                                attachmentData={msg.attachmentData}
+                                                                type={resolvedAttachmentType}
+                                                            />
+                                                            {msg.text && (
+                                                                <div className={`mt-1.5 rounded-2xl px-4 py-2.5 text-[14.5px] shadow-sm ${isMine
+                                                                    ? 'bg-orange-500 text-white rounded-br-sm'
+                                                                    : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm'}`}>
+                                                                    <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                                                </div>
+                                                            )}
+                                                            <div className={`text-[10px] mt-1 flex items-center gap-1 font-medium text-gray-400 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                                                                {formatTime(msg.timestamp)}
+                                                                {isMine && (
+                                                                    <svg className="w-3.5 h-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        /* Plain text or repeat-attachment pill */
+                                                        <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 text-[14.5px] shadow-sm ${isMine
+                                                            ? 'bg-orange-500 text-white rounded-br-sm'
+                                                            : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm'}`}>
+                                                            {isAttachment && !isFirstTimeForThisAttachment ? (
+                                                                <div className="mb-1.5">
                                                                     <div className={`text-[11px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1 mb-1.5 ${isMine ? 'bg-orange-400/30 text-orange-100' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
                                                                         <Tag className="w-2.5 h-2.5" />
                                                                         <span>Hỏi tiếp về {resolvedAttachmentType === 'order' ? 'đặt chỗ này' : 'dịch vụ này'}</span>
                                                                     </div>
-                                                                )}
-                                                                {msg.text && <p className="mt-1.5 leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="leading-relaxed whitespace-pre-wrap">{msg.text}</div>
-                                                        )}
-                                                        <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 font-medium ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
-                                                            {formatTime(msg.timestamp)}
-                                                            {isMine && (
-                                                                <svg className="w-3.5 h-3.5 text-orange-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                                </svg>
+                                                                    {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="leading-relaxed whitespace-pre-wrap">{msg.text}</div>
                                                             )}
+                                                            <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 font-medium ${isMine ? 'text-orange-100' : 'text-gray-400'}`}>
+                                                                {formatTime(msg.timestamp)}
+                                                                {isMine && (
+                                                                    <svg className="w-3.5 h-3.5 text-orange-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -518,7 +605,65 @@ const UserMessagesPage: React.FC = () => {
                                     </div>
                                 )}
 
-                                <form onSubmit={handleSendMessage} className="flex items-end gap-3">
+                                <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                                    {/* Order attachment picker button */}
+                                    <div className="relative flex-shrink-0" ref={orderPickerRef}>
+                                        <button
+                                            type="button"
+                                            onClick={openOrderPicker}
+                                            title="Đính kèm đơn đặt chỗ"
+                                            className={`p-3 rounded-full transition-all ${showOrderPicker ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500 hover:bg-orange-50 hover:text-orange-500'}`}
+                                        >
+                                            <Paperclip className="w-5 h-5" />
+                                        </button>
+
+                                        {/* Picker dropdown */}
+                                        {showOrderPicker && (
+                                            <div className="absolute bottom-full mb-2 left-0 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-30 animate-in slide-in-from-bottom-2 origin-bottom-left">
+                                                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                                    <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                                        <FileText className="w-4 h-4 text-orange-500" />
+                                                        Đơn đặt chỗ của tôi
+                                                    </span>
+                                                    <button type="button" onClick={() => setShowOrderPicker(false)} className="text-gray-400 hover:text-gray-600">
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <div className="max-h-56 overflow-y-auto">
+                                                    {loadingOrders ? (
+                                                        <div className="flex justify-center p-6">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500" />
+                                                        </div>
+                                                    ) : myOrders.length === 0 ? (
+                                                        <p className="text-sm text-gray-400 text-center py-6">Chưa có đơn đặt chỗ nào</p>
+                                                    ) : (
+                                                        myOrders.map(order => (
+                                                            <button
+                                                                key={order.orderId}
+                                                                type="button"
+                                                                onClick={() => selectOrderAttachment(order)}
+                                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-orange-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                                                            >
+                                                                {order.image ? (
+                                                                    <img src={order.image} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-100" />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+                                                                        <FileText className="w-5 h-5 text-orange-400" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-sm font-semibold text-gray-800 truncate">{order.name}</p>
+                                                                    <p className="text-xs text-gray-400">#{order.orderId.substring(0, 8).toUpperCase()}</p>
+                                                                </div>
+                                                                <ChevronDown className="w-4 h-4 text-gray-300 flex-shrink-0 -rotate-90" />
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="flex-1 relative bg-gray-100 rounded-[24px] border border-transparent focus-within:border-orange-300 focus-within:ring-4 focus-within:ring-orange-500/10 focus-within:bg-white transition-all flex items-end">
                                         <textarea
                                             value={newMessage}
@@ -527,7 +672,7 @@ const UserMessagesPage: React.FC = () => {
                                                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e as any); }
                                             }}
                                             placeholder="Nhập tin nhắn của bạn... (Enter để gửi)"
-                                            className="w-full bg-transparent border-0 pl-5 pr-14 py-3.5 text-[14.5px] text-gray-900 placeholder-gray-500 focus:ring-0 resize-none max-h-32 min-h-[52px]"
+                                            className="w-full bg-transparent border-0 outline-none pl-5 pr-14 py-3.5 text-[14.5px] text-gray-900 placeholder-gray-500 focus:ring-0 resize-none max-h-32 min-h-[52px]"
                                             rows={1}
                                         />
                                         <button type="submit" disabled={!newMessage.trim()}
