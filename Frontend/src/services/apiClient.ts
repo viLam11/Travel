@@ -178,14 +178,24 @@ export class ApiClient {
       thumbnail: File,
       photos: File[]
     ): ApiResponse<any> => {
-      const formData = new FormData();
-      formData.append("thumbnail", thumbnail);
-      photos.forEach((photo) => formData.append("photo", photo));
+        const formData = new FormData();
+        formData.append("thumbnail", thumbnail);
+        photos.forEach((photo) => formData.append("photo", photo));
 
-      return this.post("/services/newService", formData, {
-        params,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+        // Append all params into the multipart body so backend can read them from @ModelAttribute
+        Object.keys(params).forEach((k) => {
+          const v = (params as any)[k];
+          if (v !== undefined && v !== null) formData.append(k, String(v));
+        });
+
+        // Default to creating as a pending/draft resource so it's not public immediately
+        if (!formData.has('publish') && !formData.has('status')) {
+          formData.append('publish', 'false');
+        }
+
+        return this.post("/services/newService", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
     },
 
     getById: (serviceID: number | string): ApiResponse<any> => {
@@ -625,10 +635,17 @@ export class ApiClient {
     search: (keyword: string): ApiResponse<any> => {
       return this.get("/users/search", { params: { keyword } });
     },
-    handleServiceStatus: (serviceId: string | number, status: 'PENDING' | 'APPROVED' | 'REJECTED'): ApiResponse<any> => {
-      return this.post(`/users/${serviceId}/handleServiceStatus`, status, {
-        headers: { "Content-Type": "application/json" }
-      });
+    /**
+     * Handle service approval/rejection.
+     * Accepts either a status string ('APPROVED' | 'REJECTED' | 'PENDING')
+     * or an object { status: string, reason?: string } for rejection details.
+     */
+    handleServiceStatus: (serviceId: string | number, payload: any, options: { params?: any; headers?: any } = {}): ApiResponse<any> => {
+      const body = (typeof payload === 'string') ? JSON.stringify(payload) : payload;
+      const mergedHeaders = { "Content-Type": "application/json", ...(options.headers || {}) };
+      const config: any = { headers: mergedHeaders };
+      if (options.params) config.params = options.params;
+      return this.post(`/users/${serviceId}/handleServiceStatus`, body, config);
     },
 
     toggleUserStatus: (userID: string | number): ApiResponse<any> => {

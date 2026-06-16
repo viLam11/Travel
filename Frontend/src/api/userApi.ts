@@ -6,7 +6,26 @@ const USE_MOCK = false; // Set to false to use real backend API
 export const userApi = {
     getAllUsers: async (): Promise<any[]> => {
         try {
-            return await apiClient.users.getAll();
+            if (USE_MOCK) {
+                console.log('[userApi.getAllUsers] Using MOCK_USERS_DATA');
+                return MOCK_USERS_DATA;
+            }
+            const res: any = await apiClient.users.getAll();
+            // Normalize common wrapper shapes
+            let users: any = res;
+            if (res == null) users = [];
+            else if (Array.isArray(res)) users = res;
+            else if (Array.isArray(res.content)) users = res.content;
+            else if (Array.isArray(res.data)) users = res.data;
+            else if (Array.isArray(res.result)) users = res.result;
+            else if (Array.isArray(res.users)) users = res.users;
+
+            if (!Array.isArray(users)) {
+                console.log('[userApi.getAllUsers] Unexpected /users/all shape, returning empty array. Raw response:', res);
+                return [];
+            }
+            console.log('[userApi.getAllUsers] normalized users count=', users.length);
+            return users;
         } catch (error) {
             console.error('Failed to get users', error);
             throw error;

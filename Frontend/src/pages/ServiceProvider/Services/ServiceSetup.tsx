@@ -1,10 +1,10 @@
 // src/pages/ServiceProvider/Services/ServiceSetup.tsx
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/admin/button';
 import { Input } from '@/components/ui/admin/input';
 import { Label } from '@/components/ui/admin/label';
-import { Textarea } from '@/components/ui/admin/textarea';
 import {
     Select,
     SelectContent,
@@ -28,15 +28,19 @@ import { PROVINCES } from '@/constants/provinces';
 
 const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
     const navigate = useNavigate();
-    const { currentUser, completeServiceSetup } = useAuthContext();
+    const { currentUser, completeServiceSetup, revertServiceSetup } = useAuthContext();
     const userServiceType = currentUser?.user?.providerType || 'hotel';
 
-    const [activeServiceType, setActiveServiceType] = useState<'hotel' | 'place'>(
-        userServiceType === 'both' ? 'hotel' : userServiceType
-    );
+    const [activeServiceType, setActiveServiceType] = useState<'hotel' | 'place'>(() => {
+        if (userServiceType === 'both') return 'hotel';
+        return userServiceType === 'hotel' ? 'hotel' : 'place';
+    });
 
     const thumbnailInputRef = useRef<HTMLInputElement>(null);
     const photoInputRef = useRef<HTMLInputElement>(null);
+
+    const [thumbnailDrag, setThumbnailDrag] = useState(false);
+    const [photoDrag, setPhotoDrag] = useState(false);
 
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
@@ -55,6 +59,32 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
     const [photoFiles, setPhotoFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submittedService, setSubmittedService] = useState<{ id?: number | string; status?: string } | null>(null);
+    const [isPolling, setIsPolling] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    // Read-only when provider already has a submitted or pending service
+    const isReadOnly = !!currentUser?.user?.hasService || !!currentUser?.user?.hasPendingService;
+
+    // Reconstruct submittedService from localStorage on mount (only if provider has pending service)
+    useEffect(() => {
+        const storedServiceId = localStorage.getItem('travollo_service_id');
+        // Only restore if provider actually has a pending/submitted service
+        if (storedServiceId && isReadOnly && !submittedService?.id) {
+            // Fetch current status from API
+            const fetchStatus = async () => {
+                try {
+                    const api = new ApiClient();
+                    const resp: any = await api.services.getById(storedServiceId);
+                    const status = resp?.status || resp?.data?.status || resp?.serviceStatus || 'PENDING';
+                    setSubmittedService({ id: storedServiceId, status });
+                } catch (err) {
+                    console.error('Failed to restore service status:', err);
+                    setSubmittedService({ id: storedServiceId, status: 'PENDING' });
+                }
+            };
+            fetchStatus();
+        }
+    }, [isReadOnly]);
 
     const tagList = activeServiceType === 'hotel' 
         ? ['WiFi', 'Hồ bơi', 'Phòng gym', 'Spa', 'Nhà hàng', 'Quầy bar', 'Bãi đỗ xe', 'Dịch vụ phòng', 'Giặt ủi', 'Đưa đón sân bay']
@@ -81,6 +111,13 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
         }
     };
 
+    const handleThumbnailDrop = (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        setThumbnailFile(file);
+        setThumbnailPreview(URL.createObjectURL(file));
+    };
+
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const filesArray = Array.from(e.target.files);
@@ -89,6 +126,14 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
             const fakeUrls = filesArray.map(f => URL.createObjectURL(f));
             setFormData(prev => ({ ...prev, images: [...prev.images, ...fakeUrls] }));
         }
+    };
+
+    const handlePhotoDrop = (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const filesArray = Array.from(files);
+        setPhotoFiles(prev => [...prev, ...filesArray]);
+        const fakeUrls = filesArray.map(f => URL.createObjectURL(f));
+        setFormData(prev => ({ ...prev, images: [...prev.images, ...fakeUrls] }));
     };
 
     const handleRemoveImage = (index: number) => {
@@ -103,7 +148,7 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
         e.preventDefault();
 
         if (!thumbnailFile) {
-            alert('Vui lòng tải lên ảnh Thumbnail!');
+            toast.error('Vui lòng tải lên ảnh Thumbnail!');
             return;
         }
 
@@ -117,33 +162,82 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                 provinceCode: formData.provinceCode,
                 address: formData.address,
                 contactNumber: formData.contactNumber,
-                averagePrice: parseInt(formData.averagePrice) || 0,
+                averagePrice: Number.parseInt(formData.averagePrice) || 0,
                 tags: formData.tags.join(','),
                 serviceType: activeServiceType === 'hotel' ? 'HOTEL' : 'TICKET_VENUE',
                 start_time: formData.startTime ? formData.startTime + ':00' : '08:00:00',
                 end_time: formData.endTime ? formData.endTime + ':00' : '22:00:00',
             };
 
-            await apiClient.services.create(apiParams, thumbnailFile, photoFiles);
+            const created: any = await apiClient.services.create(apiParams, thumbnailFile, photoFiles);
 
+            // Mark locally that provider has submitted a service — lock the form
             if (completeServiceSetup) {
                 completeServiceSetup();
-            } else {
-                alert(`Dịch vụ "${formData.name}" đã được tạo thành công! Chờ Admin phê duyệt.`);
-                navigate(ROUTES.PROVIDER_DASHBOARD);
             }
+
+            // Keep user on page and show under-review status. Save created id for polling.
+            const createdId = created?.id || created?.serviceId || created?.data?.id;
+            const createdStatus = created?.status || created?.data?.status || 'PENDING';
+            if (createdId) {
+                // Save serviceId to localStorage for ProviderMyService to access
+                localStorage.setItem('travollo_service_id', createdId.toString());
+                
+                setSubmittedService({ id: createdId, status: createdStatus });
+                setIsPolling(true);
+            }
+
+            toast.success(`Yêu cầu dịch vụ "${formData.name}" đã được gửi. Đang chờ phê duyệt.`);
+            // keep user on this page in read-only mode so they can see the review status
         } catch (error) {
             console.error('Error creating service:', error);
-            alert('Đã có lỗi xảy ra khi tạo dịch vụ!');
+            toast.error('Đã có lỗi xảy ra khi tạo dịch vụ!');
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    // Poll service status when a service is submitted
+    useEffect(() => {
+        if (!submittedService?.id || !isPolling) return;
+
+        const api = new ApiClient();
+        let mounted = true;
+        const interval = setInterval(async () => {
+            try {
+                const resp: any = await api.services.getById(submittedService.id as any);
+                const status = resp?.status || resp?.data?.status || resp?.serviceStatus || null;
+                if (!status) return;
+                if (!mounted) return;
+                if (status !== submittedService.status) {
+                    setSubmittedService(prev => prev ? { ...prev, status } : { id: submittedService.id, status });
+                    if (status === 'REJECTED' || status === 'DECLINED') {
+                        toast.error('Dịch vụ của bạn đã bị từ chối. Bạn có thể chỉnh sửa và gửi lại.');
+                        // Allow editing again
+                        if (revertServiceSetup) revertServiceSetup();
+                        setIsPolling(false);
+                    }
+                }
+            } catch (err) {
+                console.error('Polling service status failed:', err);
+            }
+        }, 15000);
+
+        return () => { mounted = false; clearInterval(interval); };
+    }, [submittedService?.id, isPolling]);
+
     const renderTags = (items: string[]) => (
         <div className="flex flex-wrap gap-2 mt-2 auto-rows-max">
             {items.map((item) => {
                 const selected = formData.tags.includes(item);
+                if (isReadOnly) {
+                    return (
+                        <div key={item} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground'}`}>
+                            {selected && <CheckCircle className="w-3 h-3" />}
+                            {item}
+                        </div>
+                    );
+                }
                 return (
                     <button
                         key={item}
@@ -184,38 +278,93 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                 <span className="font-medium text-foreground/80">Sau khi gửi, đội ngũ quản trị sẽ xem xét và phê duyệt.</span>
                             </p>
                         </div>
+                        {isReadOnly && (
+                            <div className="ml-auto text-sm text-foreground/90 bg-amber-50 border border-amber-100 px-4 py-2 rounded">
+                                <strong>Trạng thái:</strong> Dịch vụ của bạn đang được phê duyệt — bạn không thể chỉnh sửa thông tin cho đến khi được duyệt.
+                            </div>
+                        )}
+                        {/* Hiển thị trạng thái gửi (nếu đã gửi) và nút refresh để kiểm tra ngay */}
+                        {submittedService && (
+                            <div className="ml-4 mt-3 w-full lg:w-auto flex items-center gap-3">
+                                {/* <div className="text-sm px-3 py-2 rounded-lg bg-muted/20 border border-border">ID: {submittedService.id}</div> */}
+                                <div className="text-sm px-3 py-2 rounded-lg bg-muted/20 border border-border">Trạng thái: <strong className="ml-1">{submittedService.status}</strong></div>
+                                <Button size="sm" onClick={() => {
+                                    // TODO: Uncomment khi BE fix API
+                                    // setIsRefreshing(true);
+                                    // try {
+                                    //     const api = new ApiClient();
+                                    //     const resp: any = await api.services.getById(submittedService.id as any);
+                                    //     const status = resp?.status || resp?.data?.status || resp?.serviceStatus || null;
+                                    //     if (status) {
+                                    //         setSubmittedService(prev => prev ? { ...prev, status } : { id: submittedService.id, status });
+                                    //         if (status === 'APPROVED' || status === 'ACTIVE' || status === 'PUBLISHED') {
+                                    //             toast.success('Dịch vụ của bạn đã được phê duyệt và xuất bản.');
+                                    //             setIsPolling(false);
+                                    //             setTimeout(() => {
+                                    //                 navigate(`${ROUTES.PROVIDER_MY_SERVICE}?serviceId=${submittedService.id}`);
+                                    //             }, 1500);
+                                    //         } else if (status === 'REJECTED' || status === 'DECLINED') {
+                                    //             toast.error('Dịch vụ của bạn đã bị từ chối. Bạn có thể chỉnh sửa và gửi lại.');
+                                    //             if (revertServiceSetup) revertServiceSetup();
+                                    //             setIsPolling(false);
+                                    //         }
+                                    //     } else {
+                                    //         toast.error('Không lấy được trạng thái.');
+                                    //     }
+                                    // } catch (err) {
+                                    //     console.error('Manual refresh failed:', err);
+                                    //     toast.error('Lỗi khi kiểm tra trạng thái.');
+                                    // } finally {
+                                    //     setIsRefreshing(false);
+                                    // }
+                                    
+                                    // Temporarily: Just reload the page
+                                    window.location.reload();
+                                }}>
+                                    Kiểm tra trạng thái
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {userServiceType === 'both' && (
                     <div className="bg-background rounded-2xl border border-border p-3 flex gap-2 shadow-sm">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setActiveServiceType('hotel');
-                                setFormData(prev => ({ ...prev, tags: [] }));
-                            }}
-                            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                                activeServiceType === 'hotel'
-                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                    : 'hover:bg-muted text-muted-foreground'
-                            }`}
-                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (isReadOnly) return;
+                                    setActiveServiceType('hotel');
+                                    setFormData(prev => ({ ...prev, tags: [] }));
+                                }}
+                                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                                    isReadOnly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                                } ${
+                                    activeServiceType === 'hotel'
+                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        : 'hover:bg-muted text-muted-foreground'
+                                }`}
+                                disabled={isReadOnly}
+                            >
                             <Hotel className="w-4 h-4" />
                             Thiết lập Khách sạn trước
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setActiveServiceType('place');
-                                setFormData(prev => ({ ...prev, tags: [] }));
-                            }}
-                            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                                activeServiceType === 'place'
-                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                    : 'hover:bg-muted text-muted-foreground'
-                            }`}
-                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (isReadOnly) return;
+                                    setActiveServiceType('place');
+                                    setFormData(prev => ({ ...prev, tags: [] }));
+                                }}
+                                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                                    isReadOnly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                                } ${
+                                    activeServiceType === 'place'
+                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        : 'hover:bg-muted text-muted-foreground'
+                                }`}
+                                disabled={isReadOnly}
+                            >
                             <Map className="w-4 h-4" />
                             Thiết lập Tour/Trải nghiệm trước
                         </button>
@@ -243,17 +392,18 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                     <Input
                                         id="name"
                                         value={formData.name}
-                                        onChange={(e) => handleInputChange('name', e.target.value)}
+                                        onChange={(e) => { if (!isReadOnly) handleInputChange('name', e.target.value) }}
                                         placeholder={activeServiceType === 'hotel' ? 'Ví dụ: Khách sạn Grand Saigon' : 'Ví dụ: Khu du lịch Suối Tiên'}
                                         className="mt-1.5"
                                         required
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tỉnh / Thành phố *</Label>
-                                        <Select value={formData.provinceCode} onValueChange={(v) => handleInputChange('provinceCode', v)}>
+                                        <Select value={formData.provinceCode} onValueChange={(v) => { if (!isReadOnly) handleInputChange('provinceCode', v) }} disabled={isReadOnly}>
                                             <SelectTrigger className="mt-1.5"><SelectValue placeholder="Chọn Tỉnh" /></SelectTrigger>
                                             <SelectContent>
                                                 {PROVINCES.map(p => (
@@ -267,10 +417,11 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                         <Input
                                             id="address"
                                             value={formData.address}
-                                            onChange={(e) => handleInputChange('address', e.target.value)}
+                                            onChange={(e) => { if (!isReadOnly) handleInputChange('address', e.target.value) }}
                                             placeholder="Số 123 Đường ABC..."
                                             className="mt-1.5"
                                             required
+                                            disabled={isReadOnly}
                                         />
                                     </div>
                                 </div>
@@ -281,10 +432,11 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                         <Input
                                             id="contactNumber"
                                             value={formData.contactNumber}
-                                            onChange={(e) => handleInputChange('contactNumber', e.target.value)}
+                                            onChange={(e) => { if (!isReadOnly) handleInputChange('contactNumber', e.target.value) }}
                                             placeholder="Ví dụ: 0901234567"
                                             className="mt-1.5"
                                             required
+                                            disabled={isReadOnly}
                                         />
                                     </div>
                                     <div>
@@ -293,10 +445,11 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                             id="averagePrice"
                                             type="number"
                                             value={formData.averagePrice}
-                                            onChange={(e) => handleInputChange('averagePrice', e.target.value)}
+                                            onChange={(e) => { if (!isReadOnly) handleInputChange('averagePrice', e.target.value) }}
                                             placeholder="Ví dụ: 1000000"
                                             className="mt-1.5"
                                             required
+                                            disabled={isReadOnly}
                                         />
                                     </div>
                                 </div>
@@ -307,9 +460,10 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                         <ReactQuill 
                                             theme="snow"
                                             value={formData.description}
-                                            onChange={(content) => handleInputChange('description', content)}
+                                            onChange={(content) => { if (!isReadOnly) handleInputChange('description', content) }}
                                             className="h-[150px] mb-12"
                                             placeholder="Mô tả dịch vụ, điểm nổi bật và điều gì khiến nó đặc biệt..."
+                                            readOnly={isReadOnly}
                                         />
                                     </div>
                                 </div>
@@ -332,13 +486,13 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                             {activeServiceType === 'hotel' ? 'Giờ Nhận phòng *' : 'Giờ Mở cửa *'}
                                         </Label>
-                                        <Input type="time" value={formData.startTime} onChange={(e) => handleInputChange('startTime', e.target.value)} className="mt-1.5" required />
+                                        <Input type="time" value={formData.startTime} onChange={(e) => { if (!isReadOnly) handleInputChange('startTime', e.target.value) }} className="mt-1.5" required disabled={isReadOnly} />
                                     </div>
                                     <div>
                                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                             {activeServiceType === 'hotel' ? 'Giờ Trả phòng *' : 'Giờ Đóng cửa *'}
                                         </Label>
-                                        <Input type="time" value={formData.endTime} onChange={(e) => handleInputChange('endTime', e.target.value)} className="mt-1.5" required />
+                                        <Input type="time" value={formData.endTime} onChange={(e) => { if (!isReadOnly) handleInputChange('endTime', e.target.value) }} className="mt-1.5" required disabled={isReadOnly} />
                                     </div>
                                 </div>
 
@@ -358,51 +512,67 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                                 {/* Thumbnail Upload */}
                                 <div>
                                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ảnh Thumbnail (Bắt buộc) *</Label>
-                                    <input ref={thumbnailInputRef} type="file" accept="image/*" onChange={handleThumbnailChange} className="hidden" />
-                                    <button
-                                        type="button"
-                                        onClick={() => thumbnailInputRef.current?.click()}
-                                        className="mt-1.5 w-full flex items-center gap-3 px-4 py-2.5 border border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                                    <input ref={thumbnailInputRef} type="file" accept="image/*" onChange={handleThumbnailChange} className="hidden" disabled={isReadOnly} />
+                                    <div
+                                        onDragOver={(e) => { e.preventDefault(); if (!isReadOnly) setThumbnailDrag(true); }}
+                                        onDragLeave={() => { if (!isReadOnly) setThumbnailDrag(false); }}
+                                        onDrop={(e) => { e.preventDefault(); if (isReadOnly) return; setThumbnailDrag(false); handleThumbnailDrop(e.dataTransfer.files); }}
                                     >
-                                        <UploadCloud className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
-                                        <span className="text-sm text-muted-foreground group-hover:text-foreground truncate flex-1 text-left">
-                                            {thumbnailFile ? thumbnailFile.name : 'Click để chọn ảnh bìa (thumbnail)'}
-                                        </span>
-                                        {thumbnailPreview && (
-                                            <img src={thumbnailPreview} alt="thumb" className="h-8 w-12 object-cover rounded" />
-                                        )}
-                                    </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { if (!isReadOnly) thumbnailInputRef.current?.click() }}
+                                            className={`mt-1.5 w-full flex items-center gap-3 px-4 py-2.5 border border-dashed rounded-lg transition-all group ${isReadOnly ? 'opacity-60 cursor-not-allowed border-border' : (thumbnailDrag ? 'border-primary/70 bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-primary/5')}`}
+                                            disabled={isReadOnly}
+                                        >
+                                            <UploadCloud className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                                            <span className="text-sm text-muted-foreground group-hover:text-foreground truncate flex-1 text-left">
+                                                {thumbnailFile ? thumbnailFile.name : (thumbnailDrag ? 'Thả ảnh vào đây để tải lên' : 'Click hoặc kéo ảnh vào đây để chọn ảnh bìa (thumbnail)')}
+                                            </span>
+                                            {thumbnailPreview && (
+                                                <img src={thumbnailPreview} alt="thumb" className="h-8 w-12 object-cover rounded" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Gallery Upload */}
                                 <div>
                                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bộ ảnh minh họa</Label>
-                                    <input ref={photoInputRef} type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
-                                    <button
-                                        type="button"
-                                        onClick={() => photoInputRef.current?.click()}
-                                        className="mt-1.5 w-full flex items-center gap-3 px-4 py-2.5 border border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                                    <input ref={photoInputRef} type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" disabled={isReadOnly} />
+                                    <div
+                                        onDragOver={(e) => { e.preventDefault(); if (!isReadOnly) setPhotoDrag(true); }}
+                                        onDragLeave={() => { if (!isReadOnly) setPhotoDrag(false); }}
+                                        onDrop={(e) => { e.preventDefault(); if (isReadOnly) return; setPhotoDrag(false); handlePhotoDrop(e.dataTransfer.files); }}
                                     >
-                                        <ImagePlus className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
-                                        <span className="text-sm text-muted-foreground group-hover:text-foreground truncate flex-1 text-left">
-                                            {photoFiles.length > 0 ? `Đã chọn ${photoFiles.length} tệp` : 'Click để tải lên bộ ảnh giới thiệu chi tiết'}
-                                        </span>
-                                    </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { if (!isReadOnly) photoInputRef.current?.click() }}
+                                            className={`mt-1.5 w-full flex items-center gap-3 px-4 py-2.5 border border-dashed rounded-lg transition-all group ${isReadOnly ? 'opacity-60 cursor-not-allowed border-border' : (photoDrag ? 'border-primary/70 bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-primary/5')}`}
+                                            disabled={isReadOnly}
+                                        >
+                                            <ImagePlus className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                                            <span className="text-sm text-muted-foreground group-hover:text-foreground truncate flex-1 text-left">
+                                                {photoFiles.length > 0 ? `Đã chọn ${photoFiles.length} tệp` : (photoDrag ? 'Thả ảnh vào đây để tải lên' : 'Click hoặc kéo ảnh để tải lên bộ ảnh giới thiệu chi tiết')}
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Gallery Preview */}
                                 {formData.images.length > 0 && (
                                     <div className="grid grid-cols-4 gap-2 mt-2">
                                         {formData.images.map((image: string, index: number) => (
-                                            <div key={index} className="relative group aspect-square">
+                                            <div key={`${image}-${index}`} className="relative group aspect-square">
                                                 <img src={image} alt={`Upload ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveImage(index)}
-                                                    className="absolute top-1 right-1 p-0.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-5 h-5"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
+                                                {!isReadOnly && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveImage(index)}
+                                                        className="absolute top-1 right-1 p-0.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center w-5 h-5"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -433,8 +603,8 @@ const ServiceSetup = ({ initialData, onCancel }: ServiceSetupProps) => {
                             >
                                 Hủy
                             </Button>
-                            <Button type="submit" className="px-8" disabled={isSubmitting}>
-                                {isSubmitting ? 'Đang gửi...' : 'Gửi để duyệt'}
+                            <Button type="submit" className="px-8" disabled={isSubmitting || isReadOnly}>
+                                {isSubmitting ? 'Đang gửi...' : isReadOnly ? 'Đang chờ duyệt' : 'Gửi để duyệt'}
                             </Button>
                         </div>
                     </div>

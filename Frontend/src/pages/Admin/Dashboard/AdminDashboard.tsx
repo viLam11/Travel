@@ -221,7 +221,8 @@ export default function AdminDashboard() {
         if (!selectedService) return;
         setIsActionLoading(selectedService.id.toString());
         try {
-            await apiClient.users.handleServiceStatus(selectedService.id, 'REJECTED');
+            // Backend expects a raw status string in the body; pass rejectReason as query param
+            await apiClient.users.handleServiceStatus(selectedService.id, "REJECTED", { params: { rejectReason }, headers: { 'X-Reject-Reason': rejectReason } });
             setServices(prev => prev.map(s => s.id === selectedService.id ? { ...s, status: 'rejected' } : s));
             success(`Đã từ chối dịch vụ "${selectedService.name}"`);
             setIsRejectOpen(false);

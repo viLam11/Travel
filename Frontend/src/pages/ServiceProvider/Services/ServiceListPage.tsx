@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { buildServiceDetailUrl } from '@/utils/serviceUrl';
@@ -79,15 +79,20 @@ const staticServiceColumns: ColumnDef<Service>[] = [
                 <ArrowUpDown className="w-4 h-4" />
             </button>
         ),
-        cell: ({ row }) => (
-            <div>
-                <p className="font-medium">{row.getValue("serviceName")}</p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>{row.original.province?.fullName || ''}</span>
+        cell: ({ row }) => {
+            const locationText = row.original.address || row.original.location || row.original.province?.fullName || '';
+            return (
+                <div>
+                    <p className="font-medium">{row.getValue("serviceName")}</p>
+                    {locationText ? (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <MapPin className="w-3 h-3" />
+                            <span>{locationText}</span>
+                        </div>
+                    ) : null}
                 </div>
-            </div>
-        ),
+            );
+        },
     },
     {
         accessorKey: "type",
@@ -153,6 +158,13 @@ const staticServiceColumns: ColumnDef<Service>[] = [
     },
 ];
 
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/admin/tooltip';
+
 // Services Table Component
 export const ServicesTable = memo(function ServicesTable({
     data,
@@ -160,17 +172,24 @@ export const ServicesTable = memo(function ServicesTable({
     onEdit,
     onDelete,
     onToggleStatus,
+    initialGlobalFilter = "",
 }: {
     data: Service[];
     onView: (service: Service) => void;
     onEdit: (service: Service) => void;
     onDelete: (service: Service) => void;
     onToggleStatus: (service: Service) => void;
+    initialGlobalFilter?: string;
 }) {
     const [sorting, setSorting] = useState<SortingState>([]);
-    const [globalFilter, setGlobalFilter] = useState("");
+    const [globalFilter, setGlobalFilter] = useState(initialGlobalFilter);
     const [typeFilter, setTypeFilter] = useState<ServiceType | 'all'>('all');
     const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'all'>('all');
+
+    // Sync state when prop changes
+    useEffect(() => {
+        setGlobalFilter(initialGlobalFilter);
+    }, [initialGlobalFilter]);
 
     // Actions column needs callback closures — combined with static columns here
     const columns: ColumnDef<Service>[] = useMemo(() => [
@@ -179,40 +198,63 @@ export const ServicesTable = memo(function ServicesTable({
             id: "actions",
             header: "Thao tác",
             cell: ({ row }) => (
-                <div className="flex gap-1">
-                    <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                        title="Xem chi tiết"
-                        onClick={() => onView(row.original)}
-                    >
-                        <Eye className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                        title="Sửa dịch vụ"
-                        onClick={() => onEdit(row.original)}
-                    >
-                        <Edit className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                        title={row.original.status === 'active' || (row.original.status as string) === 'APPROVED' ? 'Tạm dừng' : 'Kích hoạt'}
-                        onClick={() => onToggleStatus(row.original)}
-                    >
-                        {row.original.status === 'active' || (row.original.status as string) === 'APPROVED' ? (
-                            <ToggleRight className="w-4 h-4 text-green-600" />
-                        ) : (
-                            <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                        )}
-                    </button>
-                    <button
-                        className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                        title="Xóa dịch vụ"
-                        onClick={() => onDelete(row.original)}
-                    >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
-                </div>
+                <TooltipProvider>
+                    <div className="flex gap-1">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                    onClick={() => onView(row.original)}
+                                >
+                                    <Eye className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Xem chi tiết dịch vụ trên trang khách hàng</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                    onClick={() => onEdit(row.original)}
+                                >
+                                    <Edit className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Chỉnh sửa thông tin dịch vụ</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                    onClick={() => onToggleStatus(row.original)}
+                                >
+                                    {row.original.status === 'active' || (row.original.status as string) === 'APPROVED' ? (
+                                        <ToggleRight className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                        <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                                    )}
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {row.original.status === 'active' || (row.original.status as string) === 'APPROVED' ? 'Tạm dừng hoạt động' : 'Kích hoạt hoạt động'}
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                    onClick={() => onDelete(row.original)}
+                                >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Xóa dịch vụ</TooltipContent>
+                        </Tooltip>
+                    </div>
+                </TooltipProvider>
             ),
         },
     ], [onView, onEdit, onDelete, onToggleStatus]);
@@ -375,9 +417,11 @@ export default function ServiceListPage() {
     });
 
     // Toggle status mutation
+    // BE chỉ chấp nhận enum: APPROVED | PENDING | REJECTED
+    // Hoạt động (APPROVED) → Tạm dừng (PENDING), và ngược lại
     const toggleStatusMutation = useMutation({
-        mutationFn: ({ serviceId, status }: { serviceId: string; status: 'active' | 'inactive' }) =>
-            serviceApi.toggleServiceStatus(serviceId, status as any),
+        mutationFn: ({ serviceId, status }: { serviceId: string; status: 'APPROVED' | 'PENDING' | 'REJECTED' }) =>
+            serviceApi.toggleServiceStatus(serviceId, status),
         onSuccess: () => {
             toast.success('Cập nhật trạng thái thành công!');
             queryClient.invalidateQueries({ queryKey: ['provider-services'] });
@@ -389,10 +433,12 @@ export default function ServiceListPage() {
     });
 
     const handleView = useCallback((service: Service) => {
+        // Ưu tiên serviceType (backend enum) → type (frontend lowercase) → fallback 'place'
+        const rawType = (service as any).serviceType ?? (service as any).type ?? 'place';
         navigate(buildServiceDetailUrl({
             id: service.id,
-            serviceName: service.serviceName,
-            serviceType: service.serviceType ?? service.type ?? '',
+            serviceName: service.serviceName || 'dich-vu',
+            serviceType: rawType,
             province: service.province,
         }));
     }, [navigate]);
@@ -407,21 +453,61 @@ export default function ServiceListPage() {
     }, []);
 
     // Dùng mutate function trực tiếp (không đưa toggleStatusMutation vào deps).
-    // useMutation trả về object reference mới mỗi lần render => nếu để
-    // toggleStatusMutation trong deps, handleToggleStatus sẽ tạo mới mỗi render
-    // => columns trong ServicesTable recreate => useReactTable cascade re-render.
     const toggleStatusMutate = toggleStatusMutation.mutate;
     const handleToggleStatus = useCallback((service: Service) => {
-        const newStatus = service.status === 'active' ? 'inactive' : 'active';
-        toggleStatusMutate({ serviceId: service.id, status: newStatus });
+        const rawStatus = ((service as any).status || '').toUpperCase();
+        // APPROVED = đang hoạt động → chuyển sang PENDING (tạm dừng)
+        // PENDING / REJECTED / khác → chuyển sang APPROVED (kích hoạt lại)
+        const newStatus = rawStatus === 'APPROVED' ? 'PENDING' : 'APPROVED';
+        toggleStatusMutate({ serviceId: service.id, status: newStatus as 'APPROVED' | 'PENDING' });
     }, [toggleStatusMutate]);
 
 
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-96">
-                <div className="text-lg text-muted-foreground">Đang tải...</div>
+            <div className="w-full space-y-6 pb-8">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div className="space-y-2">
+                        <div className="h-7 w-48 bg-gray-200 rounded-lg animate-pulse" />
+                        <div className="h-4 w-72 bg-gray-100 rounded animate-pulse" />
+                    </div>
+                </div>
+                <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div className="bg-gray-50/60 border-b border-gray-200 px-6 py-4">
+                        <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                    <div className="p-6 space-y-4">
+                        {/* Filter skeleton */}
+                        <div className="flex gap-3">
+                            <div className="h-10 w-64 bg-gray-100 rounded-lg animate-pulse" />
+                            <div className="h-10 w-40 bg-gray-100 rounded-lg animate-pulse" />
+                            <div className="h-10 w-40 bg-gray-100 rounded-lg animate-pulse" />
+                        </div>
+                        {/* Table skeleton */}
+                        <div className="space-y-3">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="flex items-center gap-4 p-4 border-b border-gray-100">
+                                    <div className="w-16 h-16 bg-gray-200 rounded-lg animate-pulse flex-shrink-0" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+                                        <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
+                                    </div>
+                                    <div className="h-6 w-24 bg-green-100 rounded-full animate-pulse" />
+                                    <div className="h-4 w-28 bg-gray-100 rounded animate-pulse" />
+                                    <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
+                                    <div className="h-4 w-10 bg-gray-100 rounded animate-pulse" />
+                                    <div className="h-6 w-20 bg-gray-100 rounded-full animate-pulse" />
+                                    <div className="flex gap-1">
+                                        {[...Array(4)].map((_, j) => (
+                                            <div key={j} className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

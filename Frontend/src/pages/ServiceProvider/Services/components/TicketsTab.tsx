@@ -43,6 +43,8 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
         quantity: '1', // For rooms
         photos: [] as File[],
     });
+    // Ảnh hiện tại từ server (URL string), hiển khi edit
+    const [existingImages, setExistingImages] = useState<string[]>([]);
 
     const fetchData = async () => {
         if (!serviceId) return;
@@ -64,7 +66,7 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                     quantity: r.quantity || 0,
                     image: r.roomImgUrl || r.images?.[0] || r.imageList?.[0]
                 })));
-            } else {
+            } else if (serviceType.toUpperCase() === 'TICKET_VENUE') {
                 const response: any = await ticketApi.getTicketsByService(serviceId.toString());
                 const data = response?.result || response?.data || response;
                 const items = Array.isArray(data) ? data : (data?.content || []);
@@ -77,10 +79,18 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                     description: t.term || '',
                     image: t.imageUrl || t.thumbnailUrl
                 })));
+            } else {
+                // If it's RESTAURANT or PLACE, they don't have tickets/rooms
+                setItems([]);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch data:', error);
-            toast.error(`Không thể tải danh sách ${isHotel ? 'phòng' : 'vé'}`);
+            // Ignore the "Service is not a ticket venue" error
+            if (error?.response?.data?.message?.includes('ticket venue') || error?.message?.includes('ticket venue')) {
+                setItems([]);
+            } else {
+                toast.error(`Không thể tải danh sách ${isHotel ? 'phòng' : 'vé'}`);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -88,7 +98,7 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
 
     useEffect(() => {
         fetchData();
-    }, [serviceId, isHotel]);
+    }, [serviceId, isHotel, serviceType]);
 
     const handleSave = async () => {
         console.log('Attempting to save:', {
@@ -145,6 +155,7 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
 
             setIsAdding(false);
             setEditingId(null);
+            setExistingImages([]);
             setFormData({ name: '', price: '', description: '', type: 'SINGLE', quantity: '1', photos: [] });
             fetchData();
         } catch (error) {
@@ -280,7 +291,24 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
 
                                 <div className="md:col-span-2 space-y-2">
                                     <Label className="text-gray-700 font-medium">Hình ảnh {isHotel ? 'phòng' : 'vé'}</Label>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex flex-wrap items-start gap-3">
+                                        {/* Ảnh hiện tại từ server */}
+                                        {existingImages.map((url, idx) => (
+                                            <div key={`existing-${idx}`} className="relative w-32 h-32 rounded-xl overflow-hidden border border-orange-200 shadow-sm">
+                                                <img src={url} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
+                                                    title="Xóa ảnh này"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                                <span className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[9px] text-center py-0.5">Hiện tại</span>
+                                            </div>
+                                        ))}
+
+                                        {/* Upload ảnh mới */}
                                         <div className="relative group w-32 h-32 border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 hover:border-orange-300 transition-colors">
                                             <input
                                                 type="file"
@@ -302,21 +330,21 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                                 <span className="text-[10px] font-medium">Tải ảnh lên</span>
                                             </div>
                                         </div>
-                                        {formData.photos.length > 0 && (
-                                            <div className="flex gap-2">
-                                                {formData.photos.map((file, idx) => (
-                                                    <div key={idx} className="relative w-32 h-32 rounded-xl overflow-hidden border border-gray-100">
-                                                        <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
-                                                        <button
-                                                            onClick={() => setFormData({ ...formData, photos: formData.photos.filter((_, i) => i !== idx) })}
-                                                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                ))}
+
+                                        {/* Preview ảnh mới upload */}
+                                        {formData.photos.map((file, idx) => (
+                                            <div key={`new-${idx}`} className="relative w-32 h-32 rounded-xl overflow-hidden border border-gray-100">
+                                                <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="preview" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, photos: formData.photos.filter((_, i) => i !== idx) })}
+                                                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                                <span className="absolute bottom-0 left-0 right-0 bg-orange-500/70 text-white text-[9px] text-center py-0.5">Mới</span>
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -417,13 +445,16 @@ const TicketsTab = ({ serviceId, serviceType }: TicketsTabProps) => {
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => {
+                                                    // Set ảnh hiện tại từ server (để hiển trong form)
+                                                    const currentImage = item.image;
+                                                    setExistingImages(currentImage ? [currentImage] : []);
                                                     setFormData({
                                                         name: item.name,
                                                         price: item.price.toString(),
                                                         description: item.description || '',
                                                         type: item.type || 'SINGLE',
                                                         quantity: (item.quantity || 1).toString(),
-                                                        photos: []
+                                                        photos: [] // Chỉ những ảnh mới upload
                                                     });
                                                     setEditingId(item.id);
                                                     setIsAdding(true);

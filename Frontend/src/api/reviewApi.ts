@@ -12,35 +12,45 @@ const USE_MOCK = shouldUseMock(LOCAL_MOCK_OVERRIDE);
 const mockReviews: Review[] = [
     {
         id: '1',
-        user: { id: 'u1', name: 'Nguyễn Văn An', avatar: 'https://i.pravatar.cc/150?img=1' },
-        service: { id: '1', name: 'Khách sạn Majestic Saigon', type: 'hotel' },
+        content: 'Khách sạn rất đẹp, phòng sạch sẽ, nhân viên thân thiện. Sẽ quay lại!',
         rating: 5,
-        comment: 'Khách sạn rất đẹp, phòng sạch sẽ, nhân viên thân thiện. Sẽ quay lại!',
-        status: 'approved',
-        reply: 'Cảm ơn quý khách đã tin tưởng và lựa chọn khách sạn!',
-        repliedAt: '2024-12-21T10:00:00Z',
+        likes: 12,
+        dislikes: 0,
         createdAt: '2024-12-20T15:30:00Z',
-        updatedAt: '2024-12-21T10:00:00Z',
+        userID: 'u1',
+        username: 'Nguyễn Văn An',
+        serviceID: '1',
+        serviceName: 'Khách sạn Majestic Saigon',
+        imageList: [],
+        replies: [
+            { id: 'r1', content: 'Cảm ơn quý khách đã tin tưởng và lựa chọn khách sạn!', createdAt: '2024-12-21T10:00:00Z' }
+        ]
     },
     {
         id: '2',
-        user: { id: 'u2', name: 'Trần Thị Bình' },
-        service: { id: '2', name: 'Dinh Độc Lập', type: 'place' },
+        content: 'Địa điểm lịch sử rất đẹp, nên đến tham quan một lần.',
         rating: 4,
-        comment: 'Địa điểm lịch sử rất đẹp, nên đến tham quan một lần.',
-        status: 'pending',
+        likes: 3,
+        dislikes: 0,
         createdAt: '2024-12-22T09:15:00Z',
-        updatedAt: '2024-12-22T09:15:00Z',
+        userID: 'u2',
+        username: 'Trần Thị Bình',
+        serviceID: '2',
+        serviceName: 'Dinh Độc Lập',
+        imageList: [],
     },
     {
         id: '3',
-        user: { id: 'u3', name: 'Lê Minh Châu', avatar: 'https://i.pravatar.cc/150?img=3' },
-        service: { id: '1', name: 'Khách sạn Majestic Saigon', type: 'hotel' },
+        content: 'Khách sạn ổn nhưng giá hơi cao so với chất lượng.',
         rating: 3,
-        comment: 'Khách sạn ổn nhưng giá hơi cao so với chất lượng.',
-        status: 'approved',
+        likes: 1,
+        dislikes: 0,
         createdAt: '2024-12-19T14:20:00Z',
-        updatedAt: '2024-12-19T14:20:00Z',
+        userID: 'u3',
+        username: 'Lê Minh Châu',
+        serviceID: '1',
+        serviceName: 'Khách sạn Majestic Saigon',
+        imageList: [],
     },
 ];
 
@@ -49,7 +59,7 @@ const mockStats: ReviewStats = {
     pending: 1,
     approved: 2,
     rejected: 0,
-    averageRating: 4.0,
+    averageRating: 4,
     ratingDistribution: { 1: 0, 2: 0, 3: 1, 4: 1, 5: 1 },
 };
 
@@ -72,10 +82,10 @@ export const reviewApi = {
         page: number;
         totalPages: number;
     }> => {
-        if (USE_MOCK) {
+            if (USE_MOCK) {
             await new Promise(resolve => setTimeout(resolve, 400));
             let filtered = [...mockReviews];
-            if (params?.status) filtered = filtered.filter(r => r.status === params.status);
+                if (params?.status) filtered = filtered.filter(r => (r as any).status === params.status);
             if (params?.rating) filtered = filtered.filter(r => r.rating === params.rating);
             return { reviews: filtered, total: filtered.length, page: 1, totalPages: 1 };
         }

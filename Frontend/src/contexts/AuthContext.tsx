@@ -103,6 +103,7 @@ interface User {
     avatarUrl?: string;
     providerType?: 'hotel' | 'ticket' | 'venue' | 'place' | 'both'; // Maps to PROVIDER_HOTEL | PROVIDER_TICKET | PROVIDER_VENUE
     hasService?: boolean; // For providers - whether they have completed service setup
+    hasPendingService?: boolean; // For providers - whether they have a pending submission awaiting review
     serviceId?: string | number; // Primary service ID (for backward compatibility)
     services?: any[]; // Array of all services owned by the provider
     status?: 'active' | 'blocked' | 'pending';
@@ -133,6 +134,7 @@ interface AuthContextType {
     register: (userData: RegisterData) => Promise<any>;
     checkAuth: () => Promise<void>;
     completeServiceSetup: () => void;
+    revertServiceSetup: () => void;
     hasRole: (role: string) => boolean;
 }
 
@@ -487,7 +489,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 ...currentUser,
                 user: {
                     ...currentUser.user,
-                    hasService: true
+                    hasPendingService: true
                 }
             };
             setCurrentUser(updatedUser);
@@ -495,6 +497,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             // In a real app, you would also update this in the backend
             // apiClient.users.updateProfile({ hasService: true });
+        }
+    };
+
+    const revertServiceSetup = () => {
+        if (currentUser && currentUser.user) {
+            const updatedUser = {
+                ...currentUser,
+                user: {
+                    ...currentUser.user,
+                    hasPendingService: false
+                }
+            };
+            setCurrentUser(updatedUser);
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         }
     };
 
@@ -563,6 +579,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             register,
             checkAuth,
             completeServiceSetup,
+            revertServiceSetup,
             hasRole
         }}>
             {children}

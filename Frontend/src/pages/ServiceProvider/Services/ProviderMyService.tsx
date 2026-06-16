@@ -50,13 +50,16 @@ const ProviderMyService = () => {
 
     const [searchParams] = useSearchParams();
     // Nếu có ?serviceId=X trên URL (drill-down từ Dashboard), dùng ID đó
-    // Ngược lại dùng serviceId của chính provider đang đăng nhập
+    // Ngược lại dùng serviceId của chính provider đang đăng nhập hoặc serviceId được lưu ở Dashboard
     const urlServiceId = searchParams.get('serviceId');
 
     const hasService = currentUser?.user?.hasService;
     const serviceType = currentUser?.user?.providerType || 'hotel';
+    
+    // Đọc activeServiceId được lưu từ Dashboard
+    const activeDashboardServiceId = sessionStorage.getItem('travollo_dashboard_active_service_id');
     const ownServiceId = currentUser?.user?.serviceId;
-    const serviceId = urlServiceId ? urlServiceId : ownServiceId;
+    const serviceId = urlServiceId ? urlServiceId : (activeDashboardServiceId ? activeDashboardServiceId : ownServiceId);
 
     // Fallback to default if not found
     const initialServiceData = {
@@ -413,7 +416,7 @@ const ProviderMyService = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="mt-4 max-w-2xl">
+                                    <div className="mt-4 w-full">
                                         <MapPicker 
                                             lat={serviceData.latitude} 
                                             lng={serviceData.longitude} 
@@ -435,7 +438,7 @@ const ProviderMyService = () => {
                                             <span>{serviceData.address}</span>
                                         </div>
                                     </div>
-                                    <div className="max-w-2xl">
+                                    <div className="w-full">
                                         <MapPicker 
                                             lat={serviceData.latitude} 
                                             lng={serviceData.longitude} 
@@ -580,10 +583,16 @@ const ProviderMyService = () => {
                             <div className="flex gap-8 overflow-x-auto pb-1 no-scrollbar">
                                 {[
                                     { id: 'info', label: 'Thông tin' },
-                                    { id: 'tickets', label: serviceType === 'hotel' ? 'Loại phòng' : 'Các loại vé' },
+                                    { id: 'tickets', label: (serviceData?.serviceType?.toLowerCase() || serviceData?.type?.toLowerCase()) === 'hotel' ? 'Loại phòng' : 'Các loại vé' },
                                     { id: 'pricing', label: 'Lịch & Giá' },
                                     { id: 'promotions', label: 'Ưu đãi' }
-                                ].map((tab) => (
+                                ].filter(tab => {
+                                    if (tab.id === 'tickets') {
+                                        const type = (serviceData?.serviceType || serviceData?.type || '').toUpperCase();
+                                        return type === 'HOTEL' || type === 'TICKET_VENUE';
+                                    }
+                                    return true;
+                                }).map((tab) => (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id as any)}
@@ -745,7 +754,10 @@ const ProviderMyService = () => {
                             )}
 
                             {activeTab === 'tickets' && (
-                                <TicketsTab serviceId={serviceId as number} serviceType={serviceType} />
+                                <TicketsTab
+                                    serviceId={serviceId as number}
+                                    serviceType={serviceData?.serviceType || serviceData?.type || serviceType}
+                                />
                             )}
 
                             {activeTab === 'pricing' && (

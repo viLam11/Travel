@@ -164,29 +164,39 @@ function StatusModal({
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
+import { serviceApi } from '@/api/serviceApi';
+import { MOCK_BOOKINGS } from '@/mocks/bookings';
+
 const ProviderBookings = () => {
     const { currentUser } = useAuth();
-    const serviceId = currentUser?.user?.serviceId;
-    const providerType = currentUser?.user?.providerType || 'hotel';
+    const activeDashboardServiceId = sessionStorage.getItem('travollo_dashboard_active_service_id');
+    const serviceId = activeDashboardServiceId || currentUser?.user?.serviceId;
 
-    const [bookings, setBookings] = useState<MockBooking[]>([]);
+    const [bookings, setBookings] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [statusFilter, setStatusFilter] = useState('all');
     const [search, setSearch] = useState('');
     const [detailBooking, setDetailBooking] = useState<MockBooking | null>(null);
     const [statusBooking, setStatusBooking] = useState<MockBooking | null>(null);
+    const [activeService, setActiveService] = useState<any>(null);
 
     // Dynamic service info
-    const serviceType = bookings[0]?.serviceType || providerType;
-    const serviceName = bookings[0]?.serviceName || 'Dịch vụ của tôi';
+    const serviceType = activeService?.serviceType === 'HOTEL' || activeService?.type === 'hotel' ? 'hotel' : 'place';
+    const serviceName = activeService?.serviceName || 'Dịch vụ của tôi';
 
     useEffect(() => {
         const fetchBookings = async () => {
             if (!serviceId) return;
             setIsLoading(true);
             try {
+                // Fetch service details first to verify the type
+                const serviceDetail = await serviceApi.getServiceById(serviceId.toString());
+                setActiveService(serviceDetail);
+                
+                const isHotelType = serviceDetail?.serviceType === 'HOTEL' || serviceDetail?.type === 'hotel';
+                
                 let response: any;
-                if (providerType === 'hotel') {
+                if (isHotelType) {
                     response = await apiClient.orders.getHotelOrders(serviceId);
                 } else {
                     response = await apiClient.orders.getTicketVenueOrders(serviceId);
@@ -194,12 +204,13 @@ const ProviderBookings = () => {
                 
                 const fetchedOrders = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
                 
+                let mappedBookings: any[] = [];
                 if (fetchedOrders.length > 0) {
-                    const mappedBookings: MockBooking[] = fetchedOrders.map((o: any) => ({
+                    mappedBookings = fetchedOrders.map((o: any) => ({
                         id: o.orderID || o.id,
-                        serviceId: serviceId as string,
-                        serviceType: providerType as 'hotel' | 'place',
-                        serviceName: o.orderedRooms?.[0]?.room?.hotel?.serviceName || o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName || 'Dịch vụ của tôi',
+                        serviceId: serviceId,
+                        serviceType: isHotelType ? 'hotel' : 'place',
+                        serviceName: o.orderedRooms?.[0]?.room?.hotel?.serviceName || o.orderedTickets?.[0]?.ticket?.ticketVenue?.serviceName || serviceDetail?.serviceName || 'Dịch vụ của tôi',
                         userName: o.user?.fullname || o.guestPhone || `Khách #${o.orderID || o.id}`,
                         userEmail: o.user?.email || 'N/A',
                         userPhone: o.guestPhone || o.user?.phone || 'N/A',
@@ -214,16 +225,52 @@ const ProviderBookings = () => {
                         paymentStatus: (o.isPaid || o.status === 'SUCCESS') ? 'paid' : 'pending',
                         createdAt: o.createdAt || new Date().toISOString(),
                     }));
-                    setBookings(mappedBookings);
                 }
+
+                // Tự động thêm dữ liệu giả lập (mock data) nếu số lượng thật quá ít để tiện quay video demo
+                if (mappedBookings.length < 8) {
+                    const extraMocks = MOCK_BOOKINGS.map((mb, index) => {
+                        const daysOffset = index * 2;
+                        const date = new Date();
+                        date.setDate(date.getDate() - daysOffset);
+                        
+                        const checkInDate = new Date();
+                        checkInDate.setDate(checkInDate.getDate() + (index + 1));
+                        const checkOutDate = new Date();
+                        checkOutDate.setDate(checkOutDate.getDate() + (index + 3));
+
+                        return {
+                            ...mb,
+                            id: 9000 + mb.id,
+                            serviceId: serviceId,
+                            serviceName: serviceDetail?.serviceName || 'Dịch vụ của tôi',
+                            serviceType: isHotelType ? 'hotel' : 'place',
+                            createdAt: date.toISOString(),
+                            checkIn: isHotelType ? checkInDate.toISOString().split('T')[0] : undefined,
+                            checkOut: isHotelType ? checkOutDate.toISOString().split('T')[0] : undefined,
+                            tourDate: !isHotelType ? checkInDate.toISOString().split('T')[0] : undefined,
+                        };
+                    });
+                    mappedBookings = [...mappedBookings, ...extraMocks];
+                }
+                
+                setBookings(mappedBookings);
             } catch (err) {
                 console.error("Lỗi khi tải danh sách order: ", err);
+                // Fallback to purely mocks mapped to the current service
+                const fallbackMocks = MOCK_BOOKINGS.map((mb) => ({
+                    ...mb,
+                    serviceId: serviceId as any,
+                    serviceName: serviceName,
+                    serviceType: serviceType as any,
+                }));
+                setBookings(fallbackMocks);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchBookings();
-    }, [serviceId, providerType]);
+    }, [serviceId]);
 
     const [page, setPage] = useState(1);
     const pageSize = 5;

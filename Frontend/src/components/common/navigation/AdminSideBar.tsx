@@ -109,6 +109,7 @@ const getNavItems = (currentPath: string, currentUser: any) => {
             icon: <LayoutDashboard />,
             isActive: currentPath === "/provider/dashboard",
             visible: true,
+            disabled: !currentUser?.user?.hasService,
         });
 
         // My Service - Always visible for providers

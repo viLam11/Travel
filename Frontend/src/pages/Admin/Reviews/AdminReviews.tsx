@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/admin/select';
 import { Check, X, ShieldAlert, Flag, Trash2, Ban } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/admin/card';
-import { MOCK_REPORTS, type MockReport } from '@/mocks/reports';
+import { MOCK_REPORTS, type MockReport } from '../../../mocks/reports';
 import { toast } from 'sonner';
 import apiClient from '@/services/apiClient';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -41,6 +41,7 @@ const AdminReviews = () => {
 
     useEffect(() => {
         const fetchAllReports = async () => {
+            const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
             try {
                 setIsLoading(true);
                 let services: any[] = [];
@@ -96,7 +97,7 @@ const AdminReviews = () => {
                     allFetchedReports = results.flat();
                 }
 
-                if (services && services.length > 0) {
+                if (allFetchedReports.length > 0) {
                     setReports(allFetchedReports);
                 } else {
                     setReports(MOCK_REPORTS);
@@ -105,6 +106,13 @@ const AdminReviews = () => {
                 console.error(err);
                 setReports(MOCK_REPORTS);
             } finally {
+                // Add a small randomized delay so skeleton UX feels realistic
+                try {
+                    const delay = 600 + Math.floor(Math.random() * 900); // 600ms - 1500ms
+                    await sleep(delay);
+                } catch (e) {
+                    // ignore
+                }
                 setIsLoading(false);
             }
         };

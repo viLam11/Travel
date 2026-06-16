@@ -261,8 +261,8 @@ const MapPicker: React.FC<MapPickerProps> = ({ lat, lng, onChange, address, read
   }, [lat, lng, isMapReady]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
         <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
           <MapPin className="w-4 h-4 text-indigo-600" />
           Xác nhận vị trí trên bản đồ
@@ -274,56 +274,85 @@ const MapPicker: React.FC<MapPickerProps> = ({ lat, lng, onChange, address, read
               variant="outline" 
               size="sm" 
               onClick={toggleStyle}
-              className="text-xs h-8"
+              className="text-xs h-8 cursor-pointer"
             >
               <Layers className="w-3.5 h-3.5 mr-1.5" />
               {currentStyle === 'satellite-streets-v12' ? 'Chế độ Đường phố' : 'Chế độ Vệ tinh'}
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={handleGeocode}
-              className="text-xs h-8 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100"
-            >
-              <Search className="w-3.5 h-3.5 mr-1.5" />
-              Tìm theo địa chỉ
             </Button>
           </div>
         )}
       </div>
       
-      <div className="relative group">
-        <div 
-          ref={mapContainer} 
-          className="h-[300px] w-full rounded-2xl border border-gray-200 shadow-inner overflow-hidden" 
-        />
-        {!token && (
-          <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-            <Navigation className="w-10 h-10 text-gray-400 mb-2 animate-pulse" />
-            <p className="text-sm font-medium text-gray-600">Mapbox Token chưa được thiết lập.</p>
-            <p className="text-xs text-gray-400 mt-1">Vui lòng cập nhật VITE_MAPBOX_TOKEN trong file .env</p>
-          </div>
-        )}
-        {!readOnly && (
-          <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-[10px] text-gray-500 shadow-sm border border-gray-100 pointer-events-none">
-            Mẹo: Kéo thả ghim hoặc click trực tiếp lên bản đồ để chọn vị trí chính xác.
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold text-gray-400">Vĩ độ (Latitude)</label>
-          <div className="bg-gray-50 px-3 py-2 rounded-lg text-sm font-mono text-gray-600 border border-gray-100">
-            {lat || 'Chưa có'}
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Map container (3/4 width on desktop) */}
+        <div className="relative group md:col-span-3 rounded-2xl border border-gray-200 shadow-inner overflow-hidden">
+          <div 
+            ref={mapContainer} 
+            className="h-[320px] w-full" 
+          />
+          {!token && (
+            <div className="absolute inset-0 bg-gray-100/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+              <Navigation className="w-10 h-10 text-gray-400 mb-2 animate-pulse" />
+              <p className="text-sm font-medium text-gray-600">Mapbox Token chưa được thiết lập.</p>
+              <p className="text-xs text-gray-400 mt-1">Vui lòng cập nhật VITE_MAPBOX_TOKEN trong file .env</p>
+            </div>
+          )}
         </div>
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase font-bold text-gray-400">Kinh độ (Longitude)</label>
-          <div className="bg-gray-50 px-3 py-2 rounded-lg text-sm font-mono text-gray-600 border border-gray-100">
-            {lng || 'Chưa có'}
+
+        {/* Coordinates panel (1/4 width on desktop) */}
+        <div className="flex flex-col justify-between p-4 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-4">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Vĩ độ (Latitude)</label>
+              {readOnly ? (
+                <div className="bg-white px-3 py-2 rounded-lg text-sm font-mono text-gray-700 border border-gray-200/80 shadow-sm select-all">
+                  {lat || 'Chưa có'}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={lat || ''}
+                  onChange={(e) => onChange?.(e.target.value, String(lng))}
+                  className="w-full bg-white px-3 py-2 rounded-lg text-sm font-mono text-gray-700 border border-gray-200/80 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="Vĩ độ"
+                />
+              )}
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Kinh độ (Longitude)</label>
+              {readOnly ? (
+                <div className="bg-white px-3 py-2 rounded-lg text-sm font-mono text-gray-700 border border-gray-200/80 shadow-sm select-all">
+                  {lng || 'Chưa có'}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={lng || ''}
+                  onChange={(e) => onChange?.(String(lat), e.target.value)}
+                  className="w-full bg-white px-3 py-2 rounded-lg text-sm font-mono text-gray-700 border border-gray-200/80 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="Kinh độ"
+                />
+              )}
+            </div>
+
+            {!readOnly && (
+              <div className="text-[11px] text-gray-500 leading-relaxed bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
+                <span className="font-semibold text-indigo-600">Mẹo:</span> Kéo ghim hoặc click trực tiếp lên bản đồ để chọn tọa độ chính xác.
+              </div>
+            )}
           </div>
+
+          {!readOnly && (
+            <Button 
+              type="button" 
+              onClick={handleGeocode}
+              className="w-full text-xs h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-all rounded-lg cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5 mr-1.5" />
+              Tìm theo địa chỉ
+            </Button>
+          )}
         </div>
       </div>
     </div>

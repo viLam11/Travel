@@ -97,16 +97,16 @@ const AdminServiceList = () => {
                     id: s.id,
                     name: s.serviceName || 'Unnamed',
                     location: s.address || s.province?.name || 'Chưa rõ',
-                    provider: { 
-                        name: s.provider?.fullname || s.provider?.username || 'Chưa rõ',
-                        email: s.provider?.email 
-                    },
+                    provider: {
+                            name: s.provider?.fullname || s.provider?.username || s.providerName || s.ownerName || s.username || 'Chưa rõ',
+                            email: s.provider?.email || s.providerEmail || s.ownerEmail || s.email
+                        },
                     type: s.serviceType?.toLowerCase() || 'hotel',
                     status: s.status?.toLowerCase() || 'pending',
                     price: s.averagePrice || 0,
                     totalBookings: 0,
                     rating: s.rating || 0,
-                    image: s.thumbnailUrl
+                    image: (s.imageList && s.imageList.length > 0 && (s.imageList[0].imageUrl || s.imageList[0].url)) ? (s.imageList[0].imageUrl || s.imageList[0].url) : s.thumbnailUrl
                 }));
                 setServices(mapped);
             } catch (error) {
@@ -170,10 +170,10 @@ const AdminServiceList = () => {
     const handleApprove = async (service: any) => {
         setIsActionLoading(true);
         try {
-            await apiClient.post(`/users/${service.id}/handleServiceStatus`, "APPROVED", { headers: { 'Content-Type': 'application/json' }});
+            await apiClient.users.handleServiceStatus(service.id, 'APPROVED');
             setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: 'approved' } : s));
             success(`Đã duyệt dịch vụ: ${service.name}`);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         } finally {
             setIsActionLoading(false);
@@ -183,10 +183,10 @@ const AdminServiceList = () => {
     const handleReject = async (service: any) => {
         setIsActionLoading(true);
         try {
-            await apiClient.post(`/users/${service.id}/handleServiceStatus`, "REJECTED", { headers: { 'Content-Type': 'application/json' }});
+            await apiClient.users.handleServiceStatus(service.id, 'REJECTED', { params: { rejectReason: 'Không phù hợp', reason: 'Không phù hợp' }, headers: { 'X-Reject-Reason': 'Không phù hợp' } });
             setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: 'rejected' } : s));
             info(`Đã từ chối dịch vụ: ${service.name}`);
-        } catch(e) {
+        } catch (e) {
             console.error(e);
         } finally {
             setIsActionLoading(false);

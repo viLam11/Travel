@@ -23,6 +23,8 @@ const ProviderMessagesPage: React.FC = () => {
     // Flag to track if we've handled the redirect state
     const handledRedirect = useRef(false);
 
+    const pendingOptimisticRef = useRef<Array<{ id: string; text: string; senderId: string }>>([]);
+
     // Update ref whenever state changes
     useEffect(() => {
         activeConversationRef.current = activeConversation;
@@ -32,44 +34,72 @@ const ProviderMessagesPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
 
-    // Auto-scroll whenever messages list grows
-    useEffect(() => {
-        if (messages.length > 0) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [messages.length]);
-
     const handleContactAdmin = async () => {
         try {
             // 1. Lấy danh sách users từ BE
             const users = await userApi.getAllUsers();
             
-            // 2. Tìm một tài khoản Admin thật sự trong DB
-            const adminUser = users.find((u: any) => u.role === 'ADMIN');
-            
+            // 2. Tìm một tài khoản Admin thật sự trong DB.
+            // Backend may return `role` (string) or `roles` (string[] or object[]). Handle both.
+            console.log('[ProviderMessages] /users/all response:', users);
+            // Debug: log roles/role for each user to inspect backend shape
+            users.forEach((u: any, idx: number) => {
+                try {
+                    const id = u.userID ?? u.id ?? u.userId ?? u.uuid ?? u.username ?? `idx_${idx}`;
+                    console.log('[ProviderMessages] user.roles check:', { id, roles: u.roles, role: u.role, authorities: u.authorities });
+                } catch (e) {
+                    console.log('[ProviderMessages] user.roles check: <error reading user>', e);
+                }
+            });
+
+            let adminUser = users.find((u: any) => {
+                if (!u) return false;
+                // Normalize roles array entries to strings (handles {authority:'ADMIN'} etc)
+                const roleEntries: string[] = Array.isArray(u.roles)
+                    ? u.roles.map((r: any) => typeof r === 'string' ? r : (r?.authority || r?.name || r?.role || '')).filter(Boolean)
+                    : [];
+
+                // Check for exact admin matches (case-insensitive)
+                if (roleEntries.some(re => ['ADMIN', 'ROLE_ADMIN'].includes(re.toString().toUpperCase()))) return true;
+
+                // Also accept entries that include ADMIN (defensive)
+                if (roleEntries.some(re => re.toString().toUpperCase().includes('ADMIN'))) return true;
+
+                // Fallback to single `role` string
+                const roleStr = (u.role ?? '').toString().toUpperCase();
+                if (roleStr === 'ADMIN' || roleStr === 'ROLE_ADMIN') return true;
+
+                // Heuristic: check email/username for admin keyword (dev fallback)
+                if ((u.email || '').toString().toLowerCase().includes('admin')) return true;
+                if ((u.username || '').toString().toLowerCase().includes('admin')) return true;
+
+                return false;
+            });
+
             if (!adminUser) {
-                toast.error("Không tìm thấy Quản trị viên nào trong hệ thống!");
+                console.log('[ProviderMessages] No Admin found in /users/all response. Aborting contact admin flow.');
+                toast.error('Không tìm thấy Quản trị viên nào trong hệ thống!');
                 return;
             }
 
-            const realAdminId = adminUser.userID;
+            // Log the discovered admin for debugging
+            console.log('[ProviderMessages] Found admin user candidate:', adminUser);
+
+            // backend may use `userID` or `id` as identifier — normalize to string
+            const realAdminId = (adminUser.userID ?? adminUser.id ?? adminUser.userId ?? adminUser.uuid)?.toString();
+            if (!realAdminId) {
+                toast.error("Tài khoản Admin không có id hợp lệ.");
+                return;
+            }
 
             // 3. Kiểm tra xem đã có hội thoại với Admin này chưa
-            let exists = conversations.find(c => c.id === realAdminId || c.participants.some(p => p.role === 'admin'));
+            let exists = conversations.find(c => c.id?.toString() === realAdminId || c.participants.some(p => (p.role || '').toString().toLowerCase() === 'admin'));
             
             if (exists) {
                 handleSelectConversation(exists);
             } else {
-                const adminConv: Conversation = {
-                    id: realAdminId,
-                    participants: [{ id: realAdminId, name: adminUser.fullname || 'Quản Trị Viên (Hỗ trợ)', role: 'admin', avatar: adminUser.avatarUrl || '' }],
-                    lastMessage: undefined,
-                    unreadCount: 0,
-                    updatedAt: new Date().toISOString(),
-                    serviceName: 'Hỗ trợ hệ thống'
-                };
-                setConversations(prev => [adminConv, ...prev]);
-                handleSelectConversation(adminConv);
+                toast.error('Chưa có cuộc hội thoại với Admin. Vui lòng liên hệ sau.');
+                return;
             }
         } catch (error) {
             console.error("Lỗi khi tìm Admin:", error);
@@ -95,34 +125,59 @@ const ProviderMessagesPage: React.FC = () => {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        // Load initial conversations for provider
-        chatApi.getConversations(currentUser?.user?.userID?.toString() || 'provider_101', 'provider').then(data => {
-            setConversations(data);
-            setLoading(false);
-            if (data.length > 0 && window.innerWidth >= 768) {
-                handleSelectConversation(data[0]);
-            }
-        });
+        const initState = (location.state as { openAdminChat?: boolean }) || {};
 
-        // Initialize socket
+        // Initialize socket first
         const token = localStorage.getItem('token') || 'mock_token';
         socketService.connect(token);
+
+        // If page requested to open admin chat, skip bulk fetch and open admin convo directly
+        if (initState.openAdminChat) {
+            setLoading(false);
+            // Defer to handledRedirect logic in the other effect or call directly
+            handleContactAdmin();
+        } else {
+            // Load initial conversations for provider
+            chatApi.getConversations(currentUser?.user?.userID?.toString() || 'provider_101', 'provider').then(data => {
+                setConversations(data);
+                setLoading(false);
+                if (data.length > 0 && window.innerWidth >= 768) {
+                    handleSelectConversation(data[0]);
+                }
+            });
+        }
 
         const destroyListener = socketService.onMessage((msg) => {
             const currentActive = activeConversationRef.current;
 
             setMessages(prev => {
                 if (currentActive?.id !== msg.conversationId) return prev;
+
+                // Tìm optimistic message của Provider khớp (theo text.trim() + senderId)
+                const pendingIdx = pendingOptimisticRef.current.findIndex(
+                    p => p.text.trim() === msg.text.trim() && p.senderId === msg.senderId
+                );
+
+                let baseList = prev;
+                if (pendingIdx !== -1) {
+                    const pendingEntry = pendingOptimisticRef.current[pendingIdx];
+                    pendingOptimisticRef.current.splice(pendingIdx, 1);
+                    baseList = prev.filter(p => p.id !== pendingEntry.id);
+                }
+
                 // Dedup by real server ID
-                if (msg.id && !msg.id.startsWith('msg_') && prev.some(p => p.id === msg.id)) return prev;
+                if (msg.id && !msg.id.startsWith('msg_') && baseList.some(p => p.id === msg.id)) return prev;
+
                 // Dedup by content + sender + time proximity (handles echo-after-optimistic race)
-                const isDuplicate = prev.some(p =>
+                const isDuplicate = baseList.some(p =>
                     p.text.trim() === msg.text.trim() &&
                     p.senderId?.toString() === msg.senderId?.toString() &&
                     Math.abs(new Date(p.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 3000
                 );
                 if (isDuplicate) return prev;
-                return [...prev, msg];
+
+                setTimeout(() => scrollToBottom(), 100);
+                return [...baseList, msg];
             });
 
             setConversations(prev => {
@@ -176,19 +231,27 @@ const ProviderMessagesPage: React.FC = () => {
         setActiveConversation(conversation);
         if (window.innerWidth < 768) setShowSidebar(false);
         setLoadingMessages(true);
+        pendingOptimisticRef.current = []; // Reset pending khi đổi conversation
 
         if (conversation.unreadCount > 0) {
             await chatApi.markAsRead(conversation.id);
             setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, unreadCount: 0 } : c));
         }
 
-        const msgs = await chatApi.getMessages(conversation.id);
-        setMessages(msgs);
+        let msgs: ChatMessage[] = [];
+        try {
+            msgs = await chatApi.getMessages(conversation.id);
+            setMessages(msgs);
+        } catch (err) {
+            console.warn('[ProviderMessages] Failed to load messages for conversation', conversation.id, err);
+            msgs = [];
+            setMessages([]);
+        }
         setLoadingMessages(false);
         scrollToBottom();
 
         // Lấy tên dịch vụ từ tin nhắn đính kèm gần nhất để cập nhật banner dịch vụ cho Provider
-        const attachMsgs = msgs.filter(m => (m.type === 'service' || m.type === 'order') && m.attachmentId);
+        const attachMsgs = msgs.filter((m: ChatMessage) => (m.type === 'service' || m.type === 'order') && m.attachmentId);
         const latestAttachMsg = attachMsgs.length > 0 ? attachMsgs[attachMsgs.length - 1] : null;
         if (latestAttachMsg?.attachmentId) {
             try {
@@ -212,6 +275,8 @@ const ProviderMessagesPage: React.FC = () => {
         }
     };
 
+    
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -226,12 +291,17 @@ const ProviderMessagesPage: React.FC = () => {
 
         const sentMsg = socketService.sendMessage(
             receiverId,
-            currentUser.user.userID.toString(),
-            trimmedText,
-            'user'
+            currentUser.user.userID.toString() || 'provider_101',
+            trimmedText, // Gửi text đã trim
+            (receiver?.role === 'admin' ? 'admin' : 'user') as 'user' | 'provider'
         );
 
         if (sentMsg) {
+            pendingOptimisticRef.current.push({
+                id: sentMsg.id,
+                text: sentMsg.text,
+                senderId: sentMsg.senderId
+            });
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
             setConversations(prev => prev.map(conv => {
@@ -240,6 +310,7 @@ const ProviderMessagesPage: React.FC = () => {
                 }
                 return conv;
             }));
+            scrollToBottom();
         } else {
             toast.error('Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối.');
         }
@@ -267,36 +338,37 @@ const ProviderMessagesPage: React.FC = () => {
         );
     }
 
-    if (!currentUser?.user?.hasService) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 dark:bg-gray-900/30 min-h-[500px] rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 m-6">
-                <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-indigo-100 dark:border-indigo-800/50 rotate-3">
-                    <Zap className="w-10 h-10 text-indigo-400 dark:text-indigo-500" />
+    
+        if (!currentUser?.user?.hasService) {
+            return (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 dark:bg-gray-900/30 min-h-[500px] rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 m-6">
+                    <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-indigo-100 dark:border-indigo-800/50 rotate-3">
+                        <Zap className="w-10 h-10 text-indigo-400 dark:text-indigo-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Sẵn sàng để bắt đầu?</h3>
+                    <p className="text-center max-w-md text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
+                        Bạn chưa có dịch vụ nào đang hoạt động, vì vậy chưa thể nhận tin nhắn từ khách hàng. Hãy thiết lập dịch vụ của bạn để bắt đầu kết nối nhé!
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                        <button 
+                            onClick={() => window.location.href = ROUTES.PROVIDER_MY_SERVICE}
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white h-12 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all cursor-pointer"
+                        >
+                            Thiết lập ngay
+                        </button>
+                        <button 
+                            onClick={handleContactAdmin}
+                            className="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-700 h-12 rounded-xl font-bold hover:bg-gray-50 transition-all cursor-pointer"
+                        >
+                            Chat với Admin
+                        </button>
+                    </div>
+                    <p className="mt-8 text-xs text-muted-foreground flex items-center gap-2">
+                        <ShieldCheck className="w-3 h-3" /> Hỗ trợ kỹ thuật 24/7 luôn sẵn sàng
+                    </p>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Sẵn sàng để bắt đầu?</h3>
-                <p className="text-center max-w-md text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-                    Bạn chưa có dịch vụ nào đang hoạt động, vì vậy chưa thể nhận tin nhắn từ khách hàng. Hãy thiết lập dịch vụ của bạn để bắt đầu kết nối nhé!
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
-                    <button 
-                        onClick={() => window.location.href = ROUTES.PROVIDER_MY_SERVICE}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white h-12 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all cursor-pointer"
-                    >
-                        Thiết lập ngay
-                    </button>
-                    <button 
-                        onClick={handleContactAdmin}
-                        className="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-700 h-12 rounded-xl font-bold hover:bg-gray-50 transition-all cursor-pointer"
-                    >
-                        Chat với Admin
-                    </button>
-                </div>
-                <p className="mt-8 text-xs text-muted-foreground flex items-center gap-2">
-                    <ShieldCheck className="w-3 h-3" /> Hỗ trợ kỹ thuật 24/7 luôn sẵn sàng
-                </p>
-            </div>
-        );
-    }
+            );
+        }
 
     return (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden flex h-[calc(100vh-140px)] min-h-[500px]">
@@ -310,12 +382,12 @@ const ProviderMessagesPage: React.FC = () => {
                         <button 
                             onClick={handleContactAdmin} 
                             title="Liên hệ Hỗ trợ" 
-                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center border shadow-sm ${activeConversation?.participants?.some(p => p.role === 'admin') ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50 hover:bg-indigo-100'}`}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center border shadow-sm ${activeConversation?.participants?.some(p => (p.role || '').toString().toLowerCase() === 'admin') ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50 hover:bg-indigo-100'}`}
                         >
                             Hỗ trợ Admin
                         </button>
                     </div>
-                    {activeConversation?.participants?.some(p => p.role === 'admin') && (
+                    {activeConversation?.participants?.some(p => (p.role || '').toString().toLowerCase() === 'admin') && (
                         <button 
                             onClick={() => {
                                 // Filter out the admin support conversation from the list

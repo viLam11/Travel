@@ -53,18 +53,20 @@ const AVATAR_COLORS = [
 export default function ProviderReviews() {
     const { currentUser } = useAuth();
     const { confirm } = useConfirm();
-    const currentServiceId = currentUser?.user?.serviceId ? Number(currentUser.user.serviceId) : 1;
-    // Fetch service detail to get the real name
-    const { data: serviceDetail } = useQuery({
+    const activeDashboardServiceId = sessionStorage.getItem('travollo_dashboard_active_service_id');
+    const currentServiceId = activeDashboardServiceId || currentUser?.user?.serviceId || '';
+    
+    const { data: serviceDetail, isLoading: isLoadingDetail } = useQuery({
         queryKey: ['serviceDetail', currentServiceId],
         queryFn: async () => {
+            if (!currentServiceId) return null;
             const data = await serviceApi.getServiceById(currentServiceId.toString());
             return data;
         },
         enabled: !!currentServiceId
     });
 
-    const serviceName = serviceDetail?.serviceName || serviceDetail?.name || (currentServiceId === 1 ? "Grand Hotel Saigon" : "Đang tải...");
+    const serviceName = serviceDetail?.serviceName || (serviceDetail as any)?.name || (isLoadingDetail ? "Đang tải tên dịch vụ..." : "Dịch vụ của tôi");
 
     const [mockRepliesState, setMockRepliesState] = useState<Record<number, any[]>>(() => {
         try {
@@ -79,6 +81,26 @@ export default function ProviderReviews() {
     const [editingReply, setEditingReply] = useState<Record<number, boolean>>({});
     const [isSubmittingReply, setIsSubmittingReply] = useState<Record<number, boolean>>({});
 
+    const [apiReviews, setApiReviews] = useState<any[]>([]);
+
+    const { isLoading, refetch } = useQuery({
+        queryKey: ['providerReviews', currentServiceId],
+        queryFn: async () => {
+            try {
+                const response: any = await apiClient.comments.getByServiceId(currentServiceId);
+                const data = response?.result || response?.data || response;
+                const items = Array.isArray(data) ? data : (data?.content || data?.comments || []);
+                setApiReviews(items);
+                return items;
+            } catch (error) {
+                console.error("Lỗi khi tải comments: ", error);
+                return [];
+            }
+        },
+        enabled: !!currentServiceId,
+        staleTime: 0, // Dữ liệu luôn "cũ", React Query sẽ render từ cache ngay lập tức sau đó fetch ngầm API mới
+    });
+
     // State for editing/deleting existing replies
     const [editingReplyId, setEditingReplyId] = useState<number | null>(null);
     const [editReplyValue, setEditReplyValue] = useState<string>('');
@@ -89,6 +111,7 @@ export default function ProviderReviews() {
     const [reportReason, setReportReason] = useState<string>('');
     const [otherReason, setOtherReason] = useState<string>('');
     const [reportedReviews, setReportedReviews] = useState<Set<number>>(new Set());
+    const [isReporting, setIsReporting] = useState<boolean>(false);
 
     const REPORT_REASONS = [
         "Cạnh tranh không lành mạnh, đánh giá ảo",
@@ -97,34 +120,16 @@ export default function ProviderReviews() {
         "Khác"
     ];
 
-    // API Data with React Query to prevent refetching on tab switch
-    const { data: apiReviews = [], isLoading, refetch } = useQuery({
-        queryKey: ['providerReviews', currentServiceId],
-        queryFn: async () => {
-            if (USE_MOCK) return [];
-            try {
-                const response: any = await apiClient.comments.getByServiceId(currentServiceId);
-                const fetchedReviews = response?.content || (Array.isArray(response) ? response : (response?.data || response?.items || []));
-                return fetchedReviews || [];
-            } catch (err) {
-                console.error("Failed to fetch provider reviews:", err);
-                return [];
-            }
-        },
-        enabled: !!currentServiceId,
-        staleTime: 0, // Dữ liệu luôn "cũ", React Query sẽ render từ cache ngay lập tức sau đó fetch ngầm API mới
-    });
-
     const providerReviews = useMemo(() => {
         const useMockData = USE_MOCK || apiReviews.length === 0;
 
         if (useMockData) {
-            let mockSource = MOCK_REVIEWS.filter(review => review.serviceId === currentServiceId && review.status === 'approved');
+            let mockSource = MOCK_REVIEWS.filter(review => String(review.serviceId) === String(currentServiceId) && review.status === 'approved');
             if (mockSource.length === 0) {
                 mockSource = MOCK_REVIEWS.filter(review => review.serviceId === 1 && review.status === 'approved')
                     .map(r => ({
                         ...r,
-                        serviceId: currentServiceId,
+                        serviceId: currentServiceId as any,
                         serviceName: serviceName
                     }));
             }
@@ -373,12 +378,30 @@ export default function ProviderReviews() {
         }
     };
 
-    const submitReport = () => {
-        if (reportingReviewId !== null) {
+    const submitReport = async () => {
+        if (reportingReviewId === null) return;
+        const reason = reportReason === 'Khác' ? otherReason : reportReason;
+        setIsReporting(true);
+        try {
+            if (USE_MOCK) {
+                // Local-only: simulate success
+                await new Promise(resolve => setTimeout(resolve, 400));
+            } else {
+                await apiClient.comments.report(reportingReviewId, reason);
+            }
+
             setReportedReviews(prev => new Set(prev).add(reportingReviewId));
+            toast.success('Báo cáo đã được gửi. Cảm ơn bạn.');
+            // Refresh comments to reflect any backend changes
+            refetch();
             setReportingReviewId(null);
             setReportReason('');
             setOtherReason('');
+        } catch (error) {
+            console.error('Report error:', error);
+            toast.error('Không thể gửi báo cáo. Vui lòng thử lại sau.');
+        } finally {
+            setIsReporting(false);
         }
     };
 

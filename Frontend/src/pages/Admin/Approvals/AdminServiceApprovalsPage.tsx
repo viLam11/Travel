@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/admin/badge';
 import { Input } from '@/components/ui/admin/input';
 import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/services/apiClient';
+import { serviceDetailApi } from '@/api/serviceDetailApi';
 import Pagination from '@/components/common/Pagination';
 
 // Types
@@ -42,6 +43,7 @@ interface ServiceUpdateReq {
     provinceName: string;
     tags?: string;
     rating?: number;
+    images?: string[];
 }
 
 const STATUS_BADGE_CONFIG: Record<string, { label: string, className: string }> = {
@@ -69,8 +71,8 @@ export const AdminServiceApprovalsPage: React.FC = () => {
             const services = Array.isArray(res) ? res : (res?.content ?? []);
             const mapped: ServiceUpdateReq[] = services.map((s: any) => ({
                 id: s.id,
-                providerId: s.provider?.userID?.toString() || 'Unknown',
-                providerName: s.provider?.fullname || s.provider?.username || 'Nhà cung cấp ẩn danh',
+                providerId: (s.provider?.userID || s.providerId || s.ownerId || s.userID || s.createdBy || s.provider?.id)?.toString() || 'Unknown',
+                providerName: s.provider?.fullname || s.provider?.username || s.providerName || s.ownerName || s.username || 'Nhà cung cấp ẩn danh',
                 serviceName: s.serviceName || 'Dịch vụ chưa đặt tên',
                 serviceType: s.serviceType || 'HOTEL',
                 status: s.status?.toLowerCase() || 'pending',
@@ -127,9 +129,7 @@ export const AdminServiceApprovalsPage: React.FC = () => {
     const handleApprove = async (id: string) => {
         setIsProcessing(id);
         try {
-            await apiClient.post(`/users/${id}/handleServiceStatus`, "APPROVED", {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            await apiClient.users.handleServiceStatus(id, 'APPROVED');
             setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved' } : r));
             
             // Nếu đang chọn chính request này thì update state selected luôn
@@ -149,10 +149,8 @@ export const AdminServiceApprovalsPage: React.FC = () => {
     const confirmReject = async () => {
         if (selectedReq && rejectReason.trim()) {
             setIsProcessing(selectedReq.id);
-            try {
-                await apiClient.post(`/users/${selectedReq.id}/handleServiceStatus`, "REJECTED", {
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                try {
+                    await apiClient.users.handleServiceStatus(selectedReq.id, 'REJECTED', { params: { rejectReason, reason: rejectReason }, headers: { 'X-Reject-Reason': rejectReason } });
                 setRequests(prev => prev.map(r => r.id === selectedReq.id ? { ...r, status: 'rejected' } : r));
                 
                 // Update selected request status
@@ -167,6 +165,18 @@ export const AdminServiceApprovalsPage: React.FC = () => {
             } finally {
                 setIsProcessing(null);
             }
+        }
+    };
+
+    const handleSelect = async (req: ServiceUpdateReq) => {
+        setSelectedReq(req);
+        try {
+            const detail = await serviceDetailApi.getServiceDetail(undefined, req.serviceType, req.id);
+            if (detail?.images && detail.images.length > 0) {
+                setSelectedReq(prev => prev ? { ...prev, images: detail.images } : prev);
+            }
+        } catch (err) {
+            console.error('Failed to fetch service detail for gallery', err);
         }
     };
 
@@ -273,7 +283,7 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                                             <tr 
                                                 key={req.id} 
                                                 className={`hover:bg-muted/50 transition-colors cursor-pointer ${selectedReq?.id === req.id ? 'bg-muted' : ''}`}
-                                                onClick={() => setSelectedReq(req)}
+                                                onClick={() => handleSelect(req)}
                                             >
                                                 <td className="px-6 py-4">
                                                     <div>
@@ -340,6 +350,17 @@ export const AdminServiceApprovalsPage: React.FC = () => {
                                             alt={selectedReq.serviceName} 
                                             className="w-full h-full object-cover"
                                         />
+                                    </div>
+                                )}
+
+                                {/* Gallery thumbnails (if present) */}
+                                {selectedReq.images && selectedReq.images.length > 0 && (
+                                    <div className="grid grid-cols-4 gap-2 mt-3">
+                                        {selectedReq.images.map((img, idx) => (
+                                            <div key={idx} className="aspect-square rounded-lg overflow-hidden border border-border/30">
+                                                <img src={img} alt={`gallery-${idx}`} className="w-full h-full object-cover" />
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 

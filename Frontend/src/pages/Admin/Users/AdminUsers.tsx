@@ -88,26 +88,41 @@ const AdminUsers = () => {
         queryKey: ['adminUsers'],
         queryFn: async () => {
             const data = await userApi.getAllUsers();
-            return data.map((u: any) => ({
-                id: u.userID !== undefined && u.userID !== null ? u.userID : u.id,
-                name: u.fullname || u.username || 'Anonymous',
-                email: u.email,
-                avatar: u.avatarUrl,
-                role: (u.role === 'ADMIN' || u.role === 'ROLE_ADMIN' ? 'admin' : (u.role?.includes('PROVIDER') ? 'provider' : 'user')) as 'admin' | 'provider' | 'user',
-                status: (u.active ? 'active' : 'blocked') as "active" | "pending" | "blocked",
-                joinDate: u.createdAt || new Date().toISOString(),
-                lastLogin: u.lastLoginAt || new Date().toISOString(),
-                phone: u.phone,
-                providerType: (() => {
-                    const roles: string[] = Array.isArray(u.roles) ? u.roles.map((r: any) => typeof r === 'string' ? r : r.authority || r.name || '').filter(Boolean) : [u.role || ''];
-                    const hasHotel = roles.some(r => r.includes('PROVIDER_HOTEL'));
-                    const hasTicket = roles.some(r => r.includes('PROVIDER_TICKET') || r.includes('PROVIDER_VENUE'));
-                    if (hasHotel && hasTicket) return 'both';
-                    if (hasHotel) return 'hotel';
-                    if (hasTicket) return 'tour';
-                    return undefined;
-                })() as "hotel" | "tour" | "both" | undefined
-            }));
+            return data.map((u: any) => {
+                // Normalize roles to an array of strings
+                const rolesArr: string[] = Array.isArray(u.roles)
+                    ? u.roles.map((r: any) => (typeof r === 'string' ? r : r.authority || r.name || '')).filter(Boolean)
+                    : (u.role ? [u.role] : []);
+
+                // Determine primary role for UI: admin > provider > user
+                const isAdmin = rolesArr.some(r => r.toUpperCase().includes('ADMIN'));
+                const isProvider = rolesArr.some(r => r.toUpperCase().includes('PROVIDER'));
+                const mappedRole = isAdmin ? 'admin' : (isProvider ? 'provider' : 'user');
+
+                // Determine provider type when applicable
+                const hasHotel = rolesArr.some(r => r.toUpperCase().includes('PROVIDER_HOTEL'));
+                const hasTicket = rolesArr.some(r => r.toUpperCase().includes('PROVIDER_TICKET') || r.toUpperCase().includes('PROVIDER_VENUE'));
+                let providerType: "hotel" | "tour" | "both" | undefined;
+                if (hasHotel && hasTicket) providerType = 'both';
+                else if (hasHotel) providerType = 'hotel';
+                else if (hasTicket) providerType = 'tour';
+
+                // Normalize status: if `enabled` is false => blocked; else if `active` is false => pending; else active
+                const status = (u.enabled === false) ? 'blocked' : (u.active === false ? 'pending' : 'active');
+
+                return {
+                    id: u.userID !== undefined && u.userID !== null ? u.userID : u.id,
+                    name: u.fullname || u.username || 'Anonymous',
+                    email: u.email,
+                    avatar: u.avatarUrl,
+                    role: mappedRole as 'admin' | 'provider' | 'user',
+                    status: status as "active" | "pending" | "blocked",
+                    joinDate: u.createdAt || new Date().toISOString(),
+                    lastLogin: u.lastLoginAt || new Date().toISOString(),
+                    phone: u.phone,
+                    providerType: providerType as "hotel" | "tour" | "both" | undefined,
+                };
+            });
         },
         staleTime: 0, // Luôn hiển thị cache ngay lập tức, sau đó chạy ngầm API lấy dữ liệu mới nhất
     });
